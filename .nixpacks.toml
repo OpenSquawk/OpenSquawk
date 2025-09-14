@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ["nodejs_22", "corepack"]
+
+[phases.install]
+cmds = ["corepack enable", "yarn install --check-cache"]
+
+[phases.build]
+cmds = ["yarn build"]
+
+[start]
+cmd = "node .output/server/index.mjs"
+
