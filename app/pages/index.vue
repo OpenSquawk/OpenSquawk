@@ -138,7 +138,7 @@
               <li class="flex gap-3"><span class="chip">5</span><span><b>VATSIM</b>: Checklisten, Etiquette, Live‑Übungen.</span></li>
             </ol>
             <div class="mt-6 flex gap-3">
-              <NuxtLink to="#cta" class="btn btn-primary">Jetzt loslegen</NuxtLink>
+              <NuxtLink to="/learn" class="btn btn-primary">Jetzt loslegen</NuxtLink>
               <NuxtLink to="#faq" class="btn btn-ghost">FAQ</NuxtLink>
             </div>
           </div>
