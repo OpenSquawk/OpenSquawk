@@ -1,0 +1,32 @@
+/* assets/css/global.css */
+
+/* CI-Variablen */
+:root {
+    --bg: #0b1020;
+    --bg2: #0a0f1c;
+    --accent: #22d3ee;
+    --accent2: #0ea5e9;
+    --text: #ffffff;
+    --t2: rgba(255, 255, 255, .80);
+    --t3: rgba(255, 255, 255, .60);
+    --border: rgba(255, 255, 255, .10);
+}
+
+/* Reset + Base */
+html, body, #__nuxt {
+    min-height: 100vh;
+    min-width: 100vw;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, sans-serif;
+    background: radial-gradient(800px 400px at 80% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
+    radial-gradient(600px 300px at 10% -5%, color-mix(in srgb, var(--accent2) 15%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg) 60%, var(--bg2) 100%);
+}
+
+/* Vuetify Overrides global */
+.v-field, .v-textarea, .v-switch, .v-slider {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
