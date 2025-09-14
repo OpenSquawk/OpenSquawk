@@ -1,0 +1,22 @@
+{
+  "name": "opensquawk",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "nuxt": "^4.1.1",
+    "openai": "^5.20.2",
+    "vue": "^3.5.21",
+    "vue-router": "^4.5.1",
+    "vuetify": "3.9.0-beta.1",
+    "vuetify-nuxt-module": "0.18.7"
+  },
+  "packageManager": "yarn@4.9.4"
+}
