@@ -14,7 +14,7 @@
     "dotenv": "^17.2.2",
     "nuxt": "^4.1.1",
     "nuxt-aos": "1.2.5",
-    "openai": "^5.20.2",
+    "openai": "^4.66.0",
     "vue": "^3.5.21",
     "vue-router": "^4.5.1",
     "vuetify": "3.9.0-beta.1",
