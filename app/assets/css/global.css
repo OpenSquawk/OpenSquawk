@@ -30,3 +30,6 @@ html, body, #__nuxt {
     box-shadow: none !important;
 }
 
+.panel {
+    backdrop-filter: blur(5deg);
+}
