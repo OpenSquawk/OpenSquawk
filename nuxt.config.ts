@@ -4,6 +4,7 @@ export default defineNuxtConfig({
     devtools: {enabled: true},
     modules: ['vuetify-nuxt-module', '@nuxtjs/tailwindcss', 'nuxt-aos'],
     aos: {once: true, duration: 600, easing: 'ease-out'},
+    app: {head: {link: [{rel: 'icon', type: 'image/jpeg', href: '/img/logo.jpeg'}]}},
     runtimeConfig: {
         openaiKey: process.env.OPENAI_API_KEY,     // server-only
         llmModel: process.env.LLM_MODEL || 'gpt-5-nano',
