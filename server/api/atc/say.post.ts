@@ -111,7 +111,7 @@ export default defineEventHandler(async (event) => {
         }
 
         await ensureDir(baseDir);
-        await writeFile(fileWav, audioBuffer);
+        // await writeFile(fileWav, audioBuffer);
 
         const meta = {
             id,
