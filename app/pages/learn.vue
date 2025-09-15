@@ -204,7 +204,138 @@
           </div>
         </div>
 
-        <div class="col">
+
+        <div v-if="!textReadback" class="col">
+          <div class="label">Deine Readback</div>
+
+          <!-- PTT Toggle -->
+          <div class="ptt-toggle">
+            <button
+                class="btn soft"
+                :class="{ active: usePTT }"
+                @click="usePTT = !usePTT"
+            >
+              <v-icon>{{ usePTT ? 'mdi-microphone' : 'mdi-keyboard' }}</v-icon>
+              {{ usePTT ? 'PTT Mode' : 'Text Mode' }}
+            </button>
+          </div>
+
+          <!-- Text Input (wenn PTT aus) -->
+          <v-textarea
+              v-if="!usePTT"
+              v-model="userInput"
+              rows="4"
+              class="input"
+              placeholder="Tippen Sie Ihre Readback"
+          />
+
+          <!-- PTT Interface (wenn PTT an) -->
+          <div v-if="usePTT" class="ptt-interface">
+            <div class="ptt-status">
+              <div class="status-indicator"
+                   :class="{ recording: tts.isRecording.value, processing: tts.isLoading.value }">
+                <v-icon size="24">
+                  {{
+                    tts.isRecording.value ? 'mdi-record-rec' : tts.isLoading.value ? 'mdi-loading mdi-spin' : 'mdi-microphone'
+                  }}
+                </v-icon>
+              </div>
+              <div class="status-text">
+                {{
+                  tts.isRecording.value ? 'Aufnahme läuft...' :
+                      tts.isLoading.value ? 'Verarbeitung...' :
+                          'Bereit für Aufnahme'
+                }}
+              </div>
+            </div>
+
+            <!-- PTT Button -->
+            <button
+                class="btn-ptt"
+                :class="{ recording: tts.isRecording.value, disabled: tts.isLoading.value }"
+                @mousedown="startPTT"
+                @mouseup="stopPTT"
+                @touchstart="startPTT"
+                @touchend="stopPTT"
+                :disabled="tts.isLoading.value"
+            >
+              <v-icon size="32">mdi-radio-handheld</v-icon>
+              <span>{{ tts.isRecording.value ? 'Recording...' : 'Hold to Talk' }}</span>
+            </button>
+
+            <!-- Letztes Readback anzeigen -->
+            <div v-if="lastTranscription" class="transcription">
+              <div class="transcription-label">Ihr Readback:</div>
+              <div class="transcription-text">{{ lastTranscription }}</div>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="row">
+            <button
+                v-if="!usePTT"
+                class="btn primary"
+                :disabled="evaluating"
+                @click="evaluate"
+            >
+              <v-icon>mdi-check</v-icon>
+              Prüfen
+            </button>
+
+            <button
+                v-if="usePTT && lastTranscription"
+                class="btn primary"
+                :disabled="tts.isLoading.value"
+                @click="evaluatePTT"
+            >
+              <v-icon>mdi-check</v-icon>
+              Bewerten
+            </button>
+
+            <button class="btn ghost" @click="clearInput">
+              <v-icon>mdi-eraser</v-icon>
+              Löschen
+            </button>
+          </div>
+
+          <!-- Ergebnis (für beide Modi) -->
+          <div v-if="result" class="score">
+            <div class="score-num">{{ result.score }}%</div>
+            <div class="muted small">
+      <span v-if="!usePTT">
+        Keywords: {{ result.hits }}/{{ activeLesson.keywords.length }} · Ähnlichkeit: {{
+          Math.round(result.sim * 100)
+        }}%
+      </span>
+              <span v-else>
+        Genauigkeit: {{ Math.round(result.evaluation.accuracy * 100) }}% ·
+        Keywords: {{ result.evaluation.keywordMatch * 100 }}%
+      </span>
+            </div>
+
+            <!-- PTT-spezifisches Feedback -->
+            <div v-if="usePTT && result.evaluation" class="ptt-feedback">
+              <div class="feedback-text">{{ result.evaluation.feedback }}</div>
+              <div v-if="result.evaluation.mistakes" class="mistakes">
+                <strong>Verbesserungen:</strong>
+                <ul>
+                  <li v-for="mistake in result.evaluation.mistakes" :key="mistake">{{ mistake }}</li>
+                </ul>
+              </div>
+              <div v-if="result.playAgain" class="replay-notice">
+                <v-icon>mdi-repeat</v-icon>
+                Funkspruch wird wiederholt...
+              </div>
+            </div>
+          </div>
+
+          <!-- Fehler anzeigen -->
+          <div v-if="tts.error.value" class="error-message">
+            <v-icon>mdi-alert</v-icon>
+            {{ tts.error.value }}
+          </div>
+        </div>
+        <div v-else class="col">
           <div class="label">Deine Readback</div>
           <v-textarea v-model="userInput" rows="4" class="input" placeholder="Tippen (PTT später)"/>
           <div class="row">
@@ -298,6 +429,7 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
 import {ref, computed, watch} from 'vue'
 import useRadioTTS from "../../composables/radioTtsNew";
@@ -305,6 +437,7 @@ import learnModules, {Lesson, ModuleDef} from "../../composables/learnModules";
 
 /** AUDIO **/
 const tts = useRadioTTS()
+const textReadback = ref(false)
 
 // Server TTS verwenden
 function speak(text: string) {
@@ -491,31 +624,31 @@ function hits(text: string, kws: string[]) {
   return kws.reduce((s, k) => s + (T.includes(norm(k)) ? 1 : 0), 0)
 }
 
-async function evaluate() {
-  if (!current.value || !activeLesson.value) return
-  evaluating.value = true
-  await new Promise(r => setTimeout(r, 160))
-  const s = sim(userInput.value, activeLesson.value.target)
-  const h = hits(userInput.value, activeLesson.value.keywords)
-  const kwScore = activeLesson.value.keywords.length ? (h / activeLesson.value.keywords.length) : 1
-  const score = Math.round(((kwScore * 0.6) + (s * 0.4)) * 100)
-  result.value = {score, sim: s, hits: h}
-  const modId = current.value.id, lesId = activeLesson.value.id
-  if (!progress.value[modId]) progress.value[modId] = {}
-  const prev = progress.value[modId][lesId]?.best || 0
-  const best = Math.max(prev, score)
-  const passedBefore = progress.value[modId][lesId]?.done || false
-  progress.value[modId][lesId] = {best, done: best >= 80}
-  let gained = 0
-  if (best >= 80 && !passedBefore) gained += 40
-  if (score >= 95) gained += 15
-  if (score >= 80 && userInput.value.length <= activeLesson.value.target.length + 8) gained += 10
-  if (gained) {
-    xp.value += gained;
-    toastNow(`+${gained} XP · ${activeLesson.value.title}`)
-  }
-  evaluating.value = false
-}
+// async function evaluate() {
+//   if (!current.value || !activeLesson.value) return
+//   evaluating.value = true
+//   await new Promise(r => setTimeout(r, 160))
+//   const s = sim(userInput.value, activeLesson.value.target)
+//   const h = hits(userInput.value, activeLesson.value.keywords)
+//   const kwScore = activeLesson.value.keywords.length ? (h / activeLesson.value.keywords.length) : 1
+//   const score = Math.round(((kwScore * 0.6) + (s * 0.4)) * 100)
+//   result.value = {score, sim: s, hits: h}
+//   const modId = current.value.id, lesId = activeLesson.value.id
+//   if (!progress.value[modId]) progress.value[modId] = {}
+//   const prev = progress.value[modId][lesId]?.best || 0
+//   const best = Math.max(prev, score)
+//   const passedBefore = progress.value[modId][lesId]?.done || false
+//   progress.value[modId][lesId] = {best, done: best >= 80}
+//   let gained = 0
+//   if (best >= 80 && !passedBefore) gained += 40
+//   if (score >= 95) gained += 15
+//   if (score >= 80 && userInput.value.length <= activeLesson.value.target.length + 8) gained += 10
+//   if (gained) {
+//     xp.value += gained;
+//     toastNow(`+${gained} XP · ${activeLesson.value.title}`)
+//   }
+//   evaluating.value = false
+// }
 
 function fillTarget() {
   if (activeLesson.value) userInput.value = activeLesson.value.target
@@ -559,6 +692,171 @@ function tilt(e: MouseEvent) {
 function testBeep() {
   speak('Test message. Radio check, one two three.')
 }
+
+// Diese Ergänzungen in Ihr <script setup> von learn.vue hinzufügen:
+
+// PTT State hinzufügen
+const usePTT = ref(false)
+const lastTranscription = ref('')
+const pttResult = ref<any>(null)
+
+// PTT Funktionen
+async function startPTT() {
+  if (!activeLesson.value || tts.isLoading.value) return
+
+  try {
+    await tts.startRecording()
+  } catch (error) {
+    console.error('PTT start failed:', error)
+  }
+}
+
+async function stopPTT() {
+  if (!tts.isRecording.value) return
+
+  try {
+    const audioBlob = await tts.stopRecording()
+    if (audioBlob && activeLesson.value) {
+      // Transkription durchführen
+      const pttResponse = await tts.submitPTT(audioBlob, {
+        expectedText: activeLesson.value.target,
+        moduleId: current.value!.id,
+        lessonId: activeLesson.value.id,
+        format: 'webm'
+      })
+
+      lastTranscription.value = pttResponse.transcription
+      pttResult.value = pttResponse
+
+      // Automatisch bewerten falls gewünscht
+      if (pttResponse.success) {
+        await evaluatePTT()
+      }
+
+      // Funkspruch wiederholen falls empfohlen
+      if (pttResponse.playAgain && activeLesson.value) {
+        setTimeout(() => {
+          speak(activeLesson.value!.target)
+        }, 1000)
+      }
+    }
+  } catch (error) {
+    console.error('PTT processing failed:', error)
+  }
+}
+
+async function evaluatePTT() {
+  if (!pttResult.value || !activeLesson.value || !current.value) return
+
+  evaluating.value = true
+
+  try {
+    // PTT Ergebnis in normales Result-Format konvertieren
+    const pttEval = pttResult.value.evaluation
+
+    result.value = {
+      score: pttEval.score,
+      sim: pttEval.accuracy,
+      hits: Math.round(pttEval.keywordMatch * (activeLesson.value.keywords?.length || 0)),
+      evaluation: pttEval,
+      isPTT: true
+    }
+
+    // XP vergeben wie bei normalem Evaluate
+    const modId = current.value.id
+    const lesId = activeLesson.value.id
+    const score = pttEval.score
+
+    if (!progress.value[modId]) progress.value[modId] = {}
+    const prev = progress.value[modId][lesId]?.best || 0
+    const best = Math.max(prev, score)
+    const passedBefore = progress.value[modId][lesId]?.done || false
+    progress.value[modId][lesId] = {best, done: best >= 80}
+
+    let gained = 0
+    if (best >= 80 && !passedBefore) gained += 40
+    if (score >= 95) gained += 15
+    if (score >= 80) gained += 10
+
+    if (gained) {
+      xp.value += gained
+      toastNow(`+${gained} XP · ${activeLesson.value.title}`)
+    }
+
+  } catch (error) {
+    console.error('PTT evaluation failed:', error)
+  } finally {
+    evaluating.value = false
+  }
+}
+
+function clearInput() {
+  if (usePTT.value) {
+    lastTranscription.value = ''
+    pttResult.value = null
+  } else {
+    userInput.value = ''
+  }
+  result.value = null
+}
+
+// Bestehende evaluate() Funktion erweitern um PTT-Check
+async function evaluate() {
+  if (usePTT.value) {
+    return evaluatePTT()
+  }
+
+  // Ihr bestehender evaluate() Code bleibt unverändert...
+  if (!current.value || !activeLesson.value) return
+  evaluating.value = true
+  await new Promise(r => setTimeout(r, 160))
+  const s = sim(userInput.value, activeLesson.value.target)
+  const h = hits(userInput.value, activeLesson.value.keywords)
+  const kwScore = activeLesson.value.keywords.length ? (h / activeLesson.value.keywords.length) : 1
+  const score = Math.round(((kwScore * 0.6) + (s * 0.4)) * 100)
+  result.value = {score, sim: s, hits: h}
+  const modId = current.value.id, lesId = activeLesson.value.id
+  if (!progress.value[modId]) progress.value[modId] = {}
+  const prev = progress.value[modId][lesId]?.best || 0
+  const best = Math.max(prev, score)
+  const passedBefore = progress.value[modId][lesId]?.done || false
+  progress.value[modId][lesId] = {best, done: best >= 80}
+  let gained = 0
+  if (best >= 80 && !passedBefore) gained += 40
+  if (score >= 95) gained += 15
+  if (score >= 80 && userInput.value.length <= activeLesson.value.target.length + 8) gained += 10
+  if (gained) {
+    xp.value += gained;
+    toastNow(`+${gained} XP · ${activeLesson.value.title}`)
+  }
+  evaluating.value = false
+}
+
+// Optional: Keyboard Shortcuts für PTT
+onMounted(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Leertaste für PTT (wie bei echten Funkgeräten)
+    if (e.code === 'Space' && usePTT.value && !tts.isRecording.value) {
+      e.preventDefault()
+      startPTT()
+    }
+  }
+
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.code === 'Space' && usePTT.value && tts.isRecording.value) {
+      e.preventDefault()
+      stopPTT()
+    }
+  }
+
+  document.addEventListener('keydown', handleKeyDown)
+  document.addEventListener('keyup', handleKeyUp)
+
+  onUnmounted(() => {
+    document.removeEventListener('keydown', handleKeyDown)
+    document.removeEventListener('keyup', handleKeyUp)
+  })
+})
 </script>
 
 <style scoped>
@@ -1046,5 +1344,160 @@ function testBeep() {
   .stats {
     display: none
   }
+}
+
+
+/* PTT-spezifische Styles */
+.ptt-toggle {
+  margin-bottom: 12px;
+}
+
+.ptt-toggle .btn.active {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: var(--accent);
+}
+
+.ptt-interface {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.ptt-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.status-indicator {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.status-indicator.recording {
+  border-color: #f44336;
+  background: color-mix(in srgb, #f44336 20%, transparent);
+  animation: pulse 1s infinite;
+}
+
+.status-indicator.processing {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.status-text {
+  font-size: 14px;
+  color: var(--t2);
+}
+
+.btn-ptt {
+  width: 100%;
+  padding: 20px;
+  border: 2px solid var(--border);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-ptt:hover:not(.disabled) {
+  background: color-mix(in srgb, var(--text) 12%, transparent);
+  transform: translateY(-2px);
+}
+
+.btn-ptt.recording {
+  border-color: #f44336;
+  background: color-mix(in srgb, #f44336 15%, transparent);
+  animation: pulse 1s infinite;
+}
+
+.btn-ptt.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.transcription {
+  margin-top: 16px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 6px;
+}
+
+.transcription-label {
+  font-size: 12px;
+  color: var(--t3);
+  margin-bottom: 4px;
+}
+
+.transcription-text {
+  font-weight: 500;
+}
+
+.ptt-feedback {
+  margin-top: 12px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  border-radius: 6px;
+}
+
+.feedback-text {
+  margin-bottom: 8px;
+  font-style: italic;
+}
+
+.mistakes {
+  margin-top: 8px;
+}
+
+.mistakes ul {
+  margin: 4px 0 0 16px;
+}
+
+.mistakes li {
+  margin: 2px 0;
+  font-size: 13px;
+}
+
+.replay-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.error-message {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, #f44336 10%, transparent);
+  border: 1px solid color-mix(in srgb, #f44336 30%, transparent);
+  border-radius: 6px;
+  color: #ff6b6b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
 }
 </style>
