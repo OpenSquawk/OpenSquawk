@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
         }
 
         // Nur Audio-Dateien servieren
-        const allowedExtensions = ['.ogg', '.wav', '.mp3'];
+        const allowedExtensions = ['.wav', '.mp3', '.ogg'];
         const hasValidExtension = allowedExtensions.some(ext => filePath.toLowerCase().endsWith(ext));
 
         if (!hasValidExtension) {
