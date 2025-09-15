@@ -720,7 +720,7 @@ const loadFlightPlans = async () => {
   error.value = ''
 
   try {
-    const response = await $fetch(`https://api.vatsim.net/v2/members/${vatsimId.value}/flightplans`)
+    const response = await $fetch(`/api/vatsim/flightplans?cid=${vatsimId.value}`)
 
     if (Array.isArray(response) && response.length > 0) {
       flightPlans.value = response.slice(0, 10)
