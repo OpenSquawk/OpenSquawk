@@ -1,11 +1,11 @@
 // nuxt.config.ts
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
-    devtools: { enabled: true },
+    devtools: {enabled: true},
     ssr: false,
     modules: ['vuetify-nuxt-module', '@nuxtjs/tailwindcss', 'nuxt-aos'],
-    aos: { once: true, duration: 600, easing: 'ease-out' },
-    app: { head: { link: [{ rel: 'icon', type: 'image/jpeg', href: '/img/logo.jpeg' }] } },
+    aos: {once: true, duration: 600, easing: 'ease-out'},
+    app: {head: {link: [{rel: 'icon', type: 'image/jpeg', href: '/img/logo.jpeg'}]}},
     runtimeConfig: {
         openaiKey: process.env.OPENAI_API_KEY,
         llmModel: process.env.LLM_MODEL || 'gpt-5-nano',
@@ -38,6 +38,6 @@ export default defineNuxtConfig({
         }
     },
     css: [
-        '~/assets/css/global.css'
+        '~/assets/css/global.css', '~/assets/css/opensquawk-glass.css'
     ],
 })

@@ -21,7 +21,7 @@
           <div class="chip inline">
             <v-icon size="16" class="text-accent">mdi-radio-handheld</v-icon>
             <span class="ml-1">L {{ cfg.radioLevel }}</span>
-            <input type="range" min="1" max="5" step="1" v-model.number="cfg.radioLevel" />
+            <input type="range" min="1" max="5" step="1" v-model.number="cfg.radioLevel"/>
           </div>
 
           <button class="btn ghost" @click="panel='progress'">
@@ -66,7 +66,9 @@
               </button>
             </div>
             <div class="season">
-              <div class="bar"><div class="fill" :style="{ width: seasonPct + '%' }"></div></div>
+              <div class="bar">
+                <div class="fill" :style="{ width: seasonPct + '%' }"></div>
+              </div>
               <div class="meta"><span>Season 1 · Ground School</span><span>{{ seasonPct }}%</span></div>
             </div>
           </div>
@@ -116,7 +118,9 @@
               <div class="muted">{{ doneCount(m.id) }}/{{ m.lessons.length }}</div>
             </div>
             <div class="muted small">{{ m.subtitle }}</div>
-            <div class="line"><div class="line-fill" :style="{ width: pct(m.id)+'%' }"></div></div>
+            <div class="line">
+              <div class="line-fill" :style="{ width: pct(m.id)+'%' }"></div>
+            </div>
             <div class="tile-actions">
               <button class="btn primary" :disabled="!isModuleUnlocked(m.id)" @click="openModule(m.id)">
                 <v-icon size="18">mdi-play</v-icon>
@@ -143,7 +147,9 @@
           <span class="muted">/ {{ current.title }}</span>
         </div>
         <div class="stats">
-          <span class="stat"><v-icon size="18">mdi-progress-check</v-icon> {{ doneCount(current.id) }}/{{ current.lessons.length }}</span>
+          <span class="stat"><v-icon size="18">mdi-progress-check</v-icon> {{
+              doneCount(current.id)
+            }}/{{ current.lessons.length }}</span>
           <span class="stat"><v-icon size="18">mdi-star</v-icon> Ø {{ avgScore(current.id) }}%</span>
         </div>
       </div>
@@ -215,7 +221,8 @@
           <div v-if="result" class="score">
             <div class="score-num">{{ result.score }}%</div>
             <div class="muted small">
-              Keywords: {{ result.hits }}/{{ activeLesson.keywords.length }} · Ähnlichkeit: {{ Math.round(result.sim * 100) }}%
+              Keywords: {{ result.hits }}/{{ activeLesson.keywords.length }} · Ähnlichkeit:
+              {{ Math.round(result.sim * 100) }}%
             </div>
           </div>
         </div>
@@ -292,144 +299,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import {ref, computed, watch} from 'vue'
 import useRadioTTS from "../../composables/radioTtsNew";
+import learnModules, {Lesson, ModuleDef} from "../../composables/learnModules";
 
 /** AUDIO **/
 const tts = useRadioTTS()
+
 function speak(text: string) {
   if (cfg.value.tts) {
     tts.speakBrowser(text)
   } else {
-    tts.speakServer(text, { level: cfg.value.radioLevel, voice: cfg.value.voice || 'alloy' })
+    tts.speakServer(text, {level: cfg.value.radioLevel, voice: cfg.value.voice || 'alloy'})
   }
 }
-function stopAudio(){ tts.stop() }
 
-/** MODULES **/
-type Lesson = { id: string; title: string; desc: string; target: string; hints: string[]; keywords: string[] }
-type ModuleDef = { id: string; title: string; subtitle: string; art: string; lessons: Lesson[] }
+function stopAudio() {
+  tts.stop()
+}
 
-const modules = ref<ModuleDef[]>([
-  // NEW: ICAO Kapitel
-  {
-    id: 'icao',
-    title: 'ICAO Alphabet',
-    subtitle: 'Alphabets & Numbers',
-    art: 'https://images.unsplash.com/photo-1488085061387-422e29b40080?q=80&w=1600&auto=format&fit=crop',
-    lessons: [
-      {
-        id: 'alpha',
-        title: 'Alphabet A–M',
-        desc: 'Alpha bis Mike sprechen.',
-        target: 'Alpha Bravo Charlie Delta Echo Foxtrot Golf Hotel India Juliett Kilo Lima Mike.',
-        hints: ['konstant sprechen', 'deutlich trennen'],
-        keywords: ['Alpha','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel','India','Juliett','Kilo','Lima','Mike']
-      },
-      {
-        id: 'alpha2',
-        title: 'Alphabet N–Z',
-        desc: 'November bis Zulu.',
-        target: 'November Oscar Papa Quebec Romeo Sierra Tango Uniform Victor Whiskey X-ray Yankee Zulu.',
-        hints: ['X-ray mit hyphen','Juliett mit zwei t'],
-        keywords: ['November','Oscar','Papa','Quebec','Romeo','Sierra','Tango','Uniform','Victor','Whiskey','X-ray','Yankee','Zulu']
-      },
-      {
-        id: 'numbers',
-        title: 'Zahlen',
-        desc: 'ICAO-Nummernlesen.',
-        target: 'Tree Fower Fife Six Seven Eight Niner Zero.',
-        hints: ['Nine → Niner', 'Three → Tree', 'Four → Fower', 'Five → Fife'],
-        keywords: ['Tree','Fower','Fife','Niner']
-      },
-      {
-        id: 'callsign-icao',
-        title: 'Callsign Buchstabieren',
-        desc: 'Beispiel-Callsign.',
-        target: 'DLH one two three, Lufthansa one two three.',
-        hints: ['DLH → Lufthansa', 'Nummern ICAO'],
-        keywords: ['Lufthansa','DLH','one','two','three']
-      }
-    ]
-  },
-  {
-    id: 'basics',
-    title: 'Basics',
-    subtitle: 'Callsign · Struktur · Zahlen',
-    art: 'https://images.unsplash.com/photo-1541392822270-85b2ff6c4577?q=80&w=1600&auto=format&fit=crop',
-    lessons: [
-      {
-        id: 'checkin',
-        title: 'Check-in',
-        desc: 'Erster Call korrekt.',
-        target: 'Frankfurt Ground, Lufthansa one two three at stand A12, request taxi.',
-        hints: ['Station • Callsign • Position • Intent'],
-        keywords: ['Frankfurt Ground','Lufthansa','stand','request taxi']
-      },
-      {
-        id: 'readback', title: 'Short Readback', desc: 'Kurz bestätigen.',
-        target: 'Lufthansa one two three, roger.',
-        hints: ['Callsign + roger/affirm'], keywords: ['roger','affirm']
-      }
-    ]
-  },
-  {
-    id: 'ground',
-    title: 'Ground',
-    subtitle: 'Taxi • Hold Short • Handoff',
-    art: 'https://images.unsplash.com/photo-1523961131990-5ea7c61b2107?q=80&w=1600&auto=format&fit=crop',
-    lessons: [
-      {
-        id: 'taxi1', title: 'Taxi-Clearance', desc: 'Via A, A5, B2.',
-        target: 'Lufthansa one two three, taxi to runway two five via A, A five, B two, hold short runway two five.',
-        hints: ['Taxi to runway • via • hold short'], keywords: ['taxi to runway','via','hold short']
-      },
-      {
-        id: 'handoff', title: 'Handoff', desc: 'Frequenzwechsel.',
-        target: 'Contact Tower on one one niner decimal five, Lufthansa one two three.',
-        hints: ['Contact Tower on … • decimal'], keywords: ['Contact Tower','decimal']
-      }
-    ]
-  },
-  {
-    id: 'departure',
-    title: 'Departure',
-    subtitle: 'Line up • Takeoff',
-    art: 'https://images.unsplash.com/photo-1494412685616-a5d310fbb07d?q=80&w=1600&auto=format&fit=crop',
-    lessons: [
-      { id: 'lineup', title: 'Line up', desc: 'Aufrollen und warten.',
-        target: 'Lufthansa one two three, line up and wait runway two five.',
-        hints: ['line up and wait'], keywords: ['line up and wait'] }
-    ]
-  },
-  {
-    id: 'arrival',
-    title: 'Arrival',
-    subtitle: 'Approach • Vacate',
-    art: 'https://images.unsplash.com/photo-1542089363-07b2d92aacc3?q=80&w=1600&auto=format&fit=crop',
-    lessons: [
-      { id: 'vacate', title: 'Vacate', desc: 'Verlasse Bahn, melde frei.',
-        target: 'Lufthansa one two three, vacated runway two five via A six.',
-        hints: ['vacated runway • via taxiway'], keywords: ['vacated','runway'] }
-    ]
-  },
-  {
-    id: 'vatsim',
-    title: 'VATSIM',
-    subtitle: 'Netiquette • Connect',
-    art: 'https://images.unsplash.com/photo-1508264769638-658b34d79f6e?q=80&w=1600&auto=format&fit=crop',
-    lessons: [
-      { id: 'checkin', title: 'IFR Check-in', desc: 'Erster Online-Call.',
-        target: 'Frankfurt Ground, Lufthansa one two three, A320 at stand A12, IFR to Munich, information Bravo, request clearance.',
-        hints: ['IFR/VFR • ATIS Info • Request'], keywords: ['IFR','information','request clearance'] }
-    ]
-  }
-])
+
 
 /** STATE **/
-const panel = ref<'hub'|'module'|'progress'>('hub')
-const current = ref<ModuleDef|null>(null)
-const activeLesson = ref<Lesson|null>(null)
+const panel = ref<'hub' | 'module' | 'progress'>('hub')
+const current = ref<ModuleDef | null>(null)
+const activeLesson = ref<Lesson | null>(null)
 const userInput = ref('')
 
 const toast = ref({show: false, text: ''})
@@ -455,6 +349,8 @@ watch(() => cfg.value.kwWeight, v => localStorage.setItem('os_cfg_kw', JSON.stri
 watch(() => cfg.value.radioLevel, v => localStorage.setItem('os_cfg_level', JSON.stringify({v})))
 watch(() => cfg.value.voice, v => localStorage.setItem('os_cfg_voice', JSON.stringify({v})))
 
+const modules = learnModules
+
 /** HUB / FLOW **/
 function isModuleUnlocked(id: string) {
   if (id === 'icao') return true
@@ -462,11 +358,13 @@ function isModuleUnlocked(id: string) {
   const prev = modules.value[order - 1]
   return prev ? pct(prev.id) >= 80 : true
 }
+
 function openModule(id: string) {
   current.value = modules.value.find(m => m.id === id) || null
   activeLesson.value = null
   panel.value = 'module'
 }
+
 function quickContinue(id: string) {
   openModule(id)
   const m = current.value!
@@ -474,22 +372,32 @@ function quickContinue(id: string) {
   const next = m.lessons.find(l => !(mp[l.id]?.done))
   activeLesson.value = next || m.lessons[0]
 }
+
 function selectLesson(l: Lesson) {
   activeLesson.value = l
   userInput.value = ''
 }
-function bestScore(modId: string, lesId: string) { return progress.value[modId]?.[lesId]?.best || 0 }
+
+function bestScore(modId: string, lesId: string) {
+  return progress.value[modId]?.[lesId]?.best || 0
+}
+
 function doneCount(modId: string) {
-  const m = modules.value.find(x => x.id === modId); if (!m) return 0
+  const m = modules.value.find(x => x.id === modId);
+  if (!m) return 0
   const mp = progress.value[modId] || {}
   return m.lessons.filter(l => mp[l.id]?.done).length
 }
+
 function pct(modId: string) {
-  const m = modules.value.find(x => x.id === modId); if (!m) return 0
+  const m = modules.value.find(x => x.id === modId);
+  if (!m) return 0
   return Math.round(doneCount(modId) / m.lessons.length * 100)
 }
+
 function avgScore(modId: string) {
-  const m = modules.value.find(x => x.id === modId); if (!m) return 0
+  const m = modules.value.find(x => x.id === modId);
+  if (!m) return 0
   const mp = progress.value[modId] || {}
   const arr = m.lessons.map(l => mp[l.id]?.best || 0)
   const s = arr.reduce((a, b) => a + b, 0)
@@ -499,19 +407,42 @@ function avgScore(modId: string) {
 /** EVALUATION (leicht) **/
 const evaluating = ref(false)
 const result = ref<{ score: number, sim: number, hits: number } | null>(null)
-function norm(s: string) { return s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim() }
+
+function norm(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
 function lev(a: string, b: string) {
-  const m = a.length, n = b.length; if (!m) return n; if (!n) return m
-  const dp = new Array(n + 1).fill(0); for (let j = 0; j <= n; j++) dp[j] = j
-  for (let i = 1; i <= m; i++) { let p = dp[0]; dp[0] = i
-    for (let j = 1; j <= n; j++) { const t = dp[j]; const c = a[i-1]===b[j-1]?0:1
-      dp[j] = Math.min(dp[j]+1, dp[j-1]+1, p+c); p = t } }
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m
+  const dp = new Array(n + 1).fill(0);
+  for (let j = 0; j <= n; j++) dp[j] = j
+  for (let i = 1; i <= m; i++) {
+    let p = dp[0];
+    dp[0] = i
+    for (let j = 1; j <= n; j++) {
+      const t = dp[j];
+      const c = a[i - 1] === b[j - 1] ? 0 : 1
+      dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, p + c);
+      p = t
+    }
+  }
   return dp[n]
 }
+
 function sim(a: string, b: string) {
-  const A = norm(a), B = norm(b); const d = lev(A,B); const M = Math.max(A.length,B.length)||1; return 1 - d / M
+  const A = norm(a), B = norm(b);
+  const d = lev(A, B);
+  const M = Math.max(A.length, B.length) || 1;
+  return 1 - d / M
 }
-function hits(text: string, kws: string[]) { const T = norm(text); return kws.reduce((s,k)=>s+(T.includes(norm(k))?1:0),0) }
+
+function hits(text: string, kws: string[]) {
+  const T = norm(text);
+  return kws.reduce((s, k) => s + (T.includes(norm(k)) ? 1 : 0), 0)
+}
+
 async function evaluate() {
   if (!current.value || !activeLesson.value) return
   evaluating.value = true
@@ -531,10 +462,16 @@ async function evaluate() {
   if (best >= 80 && !passedBefore) gained += 40
   if (score >= 95) gained += 15
   if (score >= 80 && userInput.value.length <= activeLesson.value.target.length + 8) gained += 10
-  if (gained) { xp.value += gained; toastNow(`+${gained} XP · ${activeLesson.value.title}`) }
+  if (gained) {
+    xp.value += gained;
+    toastNow(`+${gained} XP · ${activeLesson.value.title}`)
+  }
   evaluating.value = false
 }
-function fillTarget() { if (activeLesson.value) userInput.value = activeLesson.value.target }
+
+function fillTarget() {
+  if (activeLesson.value) userInput.value = activeLesson.value.target
+}
 
 /** DAILIES **/
 const dailies = ref([
@@ -542,16 +479,27 @@ const dailies = ref([
   {id: 'd2', title: '1 Modul starten', sub: 'Belohnung: +20 XP', reward: 20},
   {id: 'd3', title: 'Zielphrase abspielen', sub: 'Belohnung: +10 XP', reward: 10}
 ])
+
 function startDaily(d: { id: string; reward: number; title: string }) {
-  xp.value += d.reward; toastNow(`Daily: ${d.title} · +${d.reward} XP`); dailies.value = dailies.value.filter(x => x.id !== d.id)
+  xp.value += d.reward;
+  toastNow(`Daily: ${d.title} · +${d.reward} XP`);
+  dailies.value = dailies.value.filter(x => x.id !== d.id)
 }
 
 /** UI helpers **/
-function toastNow(t: string) { toast.value.text = t; toast.value.show = true }
-function resetAll() { localStorage.clear(); location.reload() }
+function toastNow(t: string) {
+  toast.value.text = t;
+  toast.value.show = true
+}
+
+function resetAll() {
+  localStorage.clear();
+  location.reload()
+}
 
 /** Hero Tilt **/
 const worldTiltStyle = ref<any>({})
+
 function tilt(e: MouseEvent) {
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
   const dx = (e.clientX - (rect.left + rect.width / 2)) / rect.width
@@ -560,7 +508,9 @@ function tilt(e: MouseEvent) {
 }
 
 /** Quick demo beep via speak() **/
-function testBeep(){ speak('Test message. Radio check, one two three.') }
+function testBeep() {
+  speak('Test message. Radio check, one two three.')
+}
 </script>
 
 <style scoped>
@@ -575,109 +525,477 @@ function testBeep(){ speak('Test message. Radio check, one two three.') }
   --border: rgba(255, 255, 255, .10);
 }
 
-.scene { min-height: 100vh; background: var(--bg); color: var(--text) }
-.container { max-width: 1200px; margin: 0 auto; padding: 20px }
-.h1 { font-size: clamp(32px, 5vw, 48px); font-weight: 600; line-height: 1.2 }
-.h2 { font-size: clamp(24px, 3.5vw, 32px); font-weight: 600; line-height: 1.25 }
-.h3 { font-size: 20px; font-weight: 600 }
-.muted { color: var(--t3) } .small { font-size: 13px } .strong { font-weight: 600 }
-.text-accent { color: var(--accent) }
+.scene {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text)
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px
+}
+
+.h1 {
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 600;
+  line-height: 1.2
+}
+
+.h2 {
+  font-size: clamp(24px, 3.5vw, 32px);
+  font-weight: 600;
+  line-height: 1.25
+}
+
+.h3 {
+  font-size: 20px;
+  font-weight: 600
+}
+
+.muted {
+  color: var(--t3)
+}
+
+.small {
+  font-size: 13px
+}
+
+.strong {
+  font-weight: 600
+}
+
+.text-accent {
+  color: var(--accent)
+}
 
 /* App Bar */
-.hud { position: sticky; top: 0; z-index: 40; border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 85%, transparent) }
-.hud-inner { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px }
-.hud-left { display: flex; align-items: center; gap: 10px }
-.brand { font-weight: 600 } .mode { color: var(--t2) } .sep { color: var(--t3) }
-.hud-right { display: flex; gap: 8px; align-items: center }
-.icon-btn { border: 1px solid var(--border); background: transparent; padding: 6px; display: inline-flex; align-items: center }
+.hud {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 85%, transparent)
+}
+
+.hud-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px
+}
+
+.hud-left {
+  display: flex;
+  align-items: center;
+  gap: 10px
+}
+
+.brand {
+  font-weight: 600
+}
+
+.mode {
+  color: var(--t2)
+}
+
+.sep {
+  color: var(--t3)
+}
+
+.hud-right {
+  display: flex;
+  gap: 8px;
+  align-items: center
+}
+
+.icon-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center
+}
+.icon-btn:hover {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  transform: scale(1.05);
+}
 
 /* Chips/Controls */
-.chip { display: inline-flex; align-items: center; padding: 6px 10px; border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--text) 6%, transparent); font-size: 12px }
-.chip.inline { gap: 8px }
-.chip.inline input[type="range"] { width: 120px; accent-color: var(--accent); background: transparent }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  font-size: 12px
+}
+
+.chip.inline {
+  gap: 8px
+}
+
+.chip.inline input[type="range"] {
+  width: 120px;
+  accent-color: var(--accent);
+  background: transparent
+}
 
 /* Hero */
-.hero { background:
-    radial-gradient(800px 400px at 80% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
-    radial-gradient(600px 300px at 10% -5%, color-mix(in srgb, var(--accent2) 15%, transparent), transparent 60%),
-    linear-gradient(180deg, var(--bg) 0%, var(--bg) 60%, var(--bg2) 100%);
-  padding: 18px 0 8px; }
-.hero-panel { display: grid; grid-template-columns: 1.1fr .9fr; gap: 20px; border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--text) 6%, transparent); padding: 20px; transform-style: preserve-3d }
-.hero-left .eyebrow { font-size: 12px; letter-spacing: .16em; color: var(--t3) }
-.actions { display: flex; gap: 10px; margin-top: 12px }
-.season { margin-top: 14px }
-.bar { height: 8px; background: color-mix(in srgb, var(--text) 8%, transparent); border: 1px solid var(--border) }
-.fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)) }
-.meta { display: flex; justify-content: space-between; margin-top: 6px; color: var(--t3); font-size: 12px }
+.hero {
+  background: radial-gradient(800px 400px at 80% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
+  radial-gradient(600px 300px at 10% -5%, color-mix(in srgb, var(--accent2) 15%, transparent), transparent 60%),
+  linear-gradient(180deg, var(--bg) 0%, var(--bg) 60%, var(--bg2) 100%);
+  margin-top: -3em;
+  padding: 18px 0 8px;
+  padding-top: 4em;
+}
 
-.hero-right .rail-title { color: var(--t3); display: flex; align-items: center; gap: 6px; margin-bottom: 6px }
-.rail { display: flex; gap: 10px; overflow: auto }
-.card { border: 1px solid var(--border); background: color-mix(in srgb, var(--text) 6%, transparent);
-  padding: 12px; min-width: 240px }
-.card-head { display: flex; justify-content: space-between; align-items: center }
-.badge { border: 1px solid var(--border); padding: 2px 6px; font-size: 12px; color: var(--t2) }
-.card-title { font-weight: 600; margin: 6px 0 2px }
+.hero-panel {
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap: 20px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  padding: 20px;
+  transform-style: preserve-3d
+}
+
+.hero-left .eyebrow {
+  font-size: 12px;
+  letter-spacing: .16em;
+  color: var(--t3)
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px
+}
+
+.season {
+  margin-top: 14px
+}
+
+.bar {
+  height: 8px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  border: 1px solid var(--border)
+}
+
+.fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2))
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  color: var(--t3);
+  font-size: 12px
+}
+
+.hero-right .rail-title {
+  color: var(--t3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px
+}
+
+.rail {
+  display: flex;
+  gap: 10px;
+  overflow: auto
+}
+
+.card {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  padding: 12px;
+  min-width: 240px
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center
+}
+
+.badge {
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  font-size: 12px;
+  color: var(--t2)
+}
+
+.card-title {
+  font-weight: 600;
+  margin: 6px 0 2px
+}
 
 /* Buttons */
-.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); font-weight: 600 }
-.btn:hover { background: color-mix(in srgb, var(--text) 10%, transparent) }
-.btn.primary { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 90%, transparent), color-mix(in srgb, var(--accent) 70%, transparent));
-  color: #061318; border-color: color-mix(in srgb, var(--accent) 60%, transparent) }
-.btn.soft { background: color-mix(in srgb, var(--text) 8%, transparent) }
-.btn.ghost { background: transparent }
-.btn.mini { padding: 6px 10px; font-size: 12px }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text);
+  font-weight: 600
+}
+
+.btn:hover {
+  background: color-mix(in srgb, var(--text) 10%, transparent)
+}
+
+.btn.primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 90%, transparent), color-mix(in srgb, var(--accent) 70%, transparent));
+  color: #061318;
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent)
+}
+
+.btn.soft {
+  background: color-mix(in srgb, var(--text) 8%, transparent)
+}
+
+.btn.ghost {
+  background: transparent
+}
+
+.btn.mini {
+  padding: 6px 10px;
+  font-size: 12px
+}
 
 /* HUB tiles */
-.hub-head { margin: 6px 0 10px }
-.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px }
-.tile { border: 1px solid var(--border); background: color-mix(in srgb, var(--text) 6%, transparent); display: flex; flex-direction: column }
-.tile.locked { filter: saturate(.7) brightness(.9) }
-.tile-media { height: 140px; background-size: cover; background-position: center }
-.tile-body { padding: 12px }
-.tile-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px }
-.tile-title { font-weight: 600; display: flex; align-items: center; gap: 6px }
-.line { height: 8px; border: 1px solid var(--border); background: color-mix(in srgb, var(--text) 8%, transparent) }
-.line-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)) }
-.tile-actions { display: flex; gap: 8px; margin-top: 10px }
+.hub-head {
+  margin: 6px 0 10px
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px
+}
+
+.tile {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  display: flex;
+  flex-direction: column
+}
+
+.tile.locked {
+  filter: saturate(.7) brightness(.9)
+}
+
+.tile-media {
+  height: 140px;
+  background-size: cover;
+  background-position: center
+}
+
+.tile-body {
+  padding: 12px
+}
+
+.tile-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px
+}
+
+.tile-title {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px
+}
+
+.line {
+  height: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 8%, transparent)
+}
+
+.line-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2))
+}
+
+.tile-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px
+}
 
 /* Play */
-.play .play-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px }
-.crumbs { display: flex; align-items: center; gap: 8px }
-.link { background: transparent; border: 0; color: var(--text); display: inline-flex; align-items: center; gap: 6px }
-.stats { display: flex; gap: 8px }
-.stat { border: 1px solid var(--border); padding: 6px 10px; background: color-mix(in srgb, var(--text) 6%, transparent) }
+.play .play-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 10px
+}
 
-.lesson-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px }
-.lesson { text-align: left; border: 1px solid var(--border); padding: 12px; background: color-mix(in srgb, var(--text) 5%, transparent); cursor: pointer }
-.lesson.active { outline: 1px solid color-mix(in srgb, var(--accent) 50%, transparent) }
-.lesson.ok { border-color: color-mix(in srgb, #4caf50 60%, transparent) }
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px
+}
 
-.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px }
-.tag { border: 1px dashed color-mix(in srgb, var(--text) 25%, transparent); color: var(--t3); font-size: 11px; padding: 2px 6px }
+.link {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px
+}
 
-.console { display: grid; grid-template-columns: 1.1fr .9fr; gap: 12px; margin-top: 12px }
-.col .label { font-size: 12px; letter-spacing: .12em; color: var(--t3); margin-bottom: 6px }
-.panel { border: 1px solid var(--border); background: color-mix(in srgb, var(--text) 6%, transparent); padding: 12px; backdrop-filter: blur(10px) }
-.target-row { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start }
-.row { display: flex; gap: 8px; margin-top: 8px } .row.between { justify-content: space-between } .row.end { justify-content: flex-end }
+.stats {
+  display: flex;
+  gap: 8px
+}
 
-.input :deep(textarea) { background: color-mix(in srgb, var(--text) 6%, transparent); border: 1px solid var(--border); color: var(--text) }
-.score { margin-top: 8px } .score-num { font-size: 28px; font-weight: 700 }
+.stat {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--text) 6%, transparent)
+}
+
+.lesson-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px
+}
+
+.lesson {
+  text-align: left;
+  border: 1px solid var(--border);
+  padding: 12px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  cursor: pointer
+}
+
+.lesson.active {
+  outline: 1px solid color-mix(in srgb, var(--accent) 50%, transparent)
+}
+
+.lesson.ok {
+  border-color: color-mix(in srgb, #4caf50 60%, transparent)
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px
+}
+
+.tag {
+  border: 1px dashed color-mix(in srgb, var(--text) 25%, transparent);
+  color: var(--t3);
+  font-size: 11px;
+  padding: 2px 6px
+}
+
+.console {
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap: 12px;
+  margin-top: 12px
+}
+
+.col .label {
+  font-size: 12px;
+  letter-spacing: .12em;
+  color: var(--t3);
+  margin-bottom: 6px
+}
+
+.panel {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  padding: 12px;
+  backdrop-filter: blur(10px)
+}
+
+.target-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px
+}
+
+.row.between {
+  justify-content: space-between
+}
+
+.row.end {
+  justify-content: flex-end
+}
+
+.input :deep(textarea) {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text)
+}
+
+.score {
+  margin-top: 8px
+}
+
+.score-num {
+  font-size: 28px;
+  font-weight: 700
+}
 
 /* Progress */
-.progress-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 10px }
-.list { margin-top: 8px }
-.list-row { display: flex; justify-content: space-between; border-bottom: 1px dashed color-mix(in srgb, var(--text) 12%, transparent); padding: 8px 0 }
-.list-row:last-child { border-bottom: 0 }
+.progress-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 10px
+}
+
+.list {
+  margin-top: 8px
+}
+
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed color-mix(in srgb, var(--text) 12%, transparent);
+  padding: 8px 0
+}
+
+.list-row:last-child {
+  border-bottom: 0
+}
 
 /* Responsive */
 @media (max-width: 980px) {
-  .hero-panel { grid-template-columns: 1fr }
-  .console { grid-template-columns: 1fr }
-  .stats { display: none }
+  .hero-panel {
+    grid-template-columns: 1fr
+  }
+
+  .console {
+    grid-template-columns: 1fr
+  }
+
+  .stats {
+    display: none
+  }
 }
 </style>
