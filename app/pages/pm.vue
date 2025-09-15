@@ -6,7 +6,7 @@
         <div>
           <p class="text-xs uppercase tracking-[0.35em] text-cyan-400/80">OpenSquawk</p>
           <h1 class="text-2xl font-semibold">Pilot Monitoring</h1>
-          <p class="mt-1 text-sm text-white/70">Mobile First • VATSIM Companion • PTT</p>
+          <p class="mt-1 text-sm text-white/70">VATSIM Companion • PTT</p>
         </div>
         <v-icon icon="mdi-airplane-takeoff" size="36" class="text-cyan-300" />
       </header>
