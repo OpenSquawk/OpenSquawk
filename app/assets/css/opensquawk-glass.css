@@ -1,0 +1,236 @@
+/* === iOS-Style Glassmorphism Add-on === */
+:root {
+    /* feinere Glas-Parameter */
+    --glass-bg: color-mix(in srgb, var(--text) 7%, transparent);
+    --glass-border: color-mix(in srgb, var(--text) 16%, transparent);
+    --glass-highlight: rgba(255, 255, 255, .10);
+    --glass-shadow: 0 10px 32px rgba(0, 0, 0, .35);
+    --glass-radius: 18px;
+    --glass-blur: 18px;
+    --glass-sat: 140%;
+    --glass-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 0 .03 0'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* generische Glasfläche */
+.glass,
+.panel,
+.card,
+.tile,
+.lesson,
+.stat,
+.chip,
+.hud,
+.dialog {
+    background: var(--glass-noise),
+    var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--glass-radius);
+    box-shadow: inset 0 1px 0 var(--glass-highlight),
+    0 1px 0 rgba(255, 255, 255, .02),
+    var(--glass-shadow);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+}
+
+/* App Bar (transluzent, sticky) */
+.hud {
+    background: linear-gradient(180deg,
+    color-mix(in srgb, var(--bg) 55%, transparent),
+    color-mix(in srgb, var(--bg) 85%, transparent) 60%),
+    var(--glass-noise);
+    border-bottom: 1px solid var(--glass-border);
+    border-radius: 0 0 14px 14px;
+}
+
+/* Panels etwas luftiger */
+.panel {
+    padding: 14px;
+}
+
+/* Buttons – iOS-Glanz & Lift */
+.btn {
+    border-radius: calc(var(--glass-radius) - 6px);
+    transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08),
+    0 6px 18px rgba(0, 0, 0, .28);
+    background: linear-gradient(180deg,
+    color-mix(in srgb, var(--text) 8%, transparent),
+    color-mix(in srgb, var(--text) 4%, transparent));
+}
+
+/* crazy hover effect should be like glas ui 3d transformation with bounced curve without moving */
+.btn:not([disabled]):hover {
+    transform: scaleX(1.03) scaleY(0.98);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12),
+    0 14px 26px rgba(0, 0, 0, .36);
+    background: linear-gradient(180deg,
+    color-mix(in srgb, var(--text) 12%, transparent),
+    color-mix(in srgb, var(--text) 6%, transparent));
+}
+
+.btn[disabled] {
+    opacity: .4;
+    box-shadow: none;
+    background: linear-gradient(180deg,
+    color-mix(in srgb, var(--text) 5%, transparent),
+    color-mix(in srgb, var(--text) 2%, transparent));
+}
+
+.btn[disabled]:hover {
+    cursor: not-allowed;
+}
+
+.btn.primary {
+    background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 92%, transparent),
+    color-mix(in srgb, var(--accent2) 70%, transparent));
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+    color: #051217;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18),
+    0 10px 26px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.btn.primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .28), transparent 40%);
+    pointer-events: none;
+}
+
+/* Chips – feiner Rand, leicht leuchtend */
+.chip {
+    background: linear-gradient(180deg,
+    color-mix(in srgb, var(--text) 7%, transparent),
+    color-mix(in srgb, var(--text) 4%, transparent));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+/* Karten/Kacheln – zarter Hover */
+.card, .tile, .lesson {
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.card:hover, .tile:hover, .lesson:hover {
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .36);
+    border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+/* Fortschrittsbalken – Glasfüllung */
+.line {
+    background: linear-gradient(180deg,
+    color-mix(in srgb, var(--text) 8%, transparent),
+    color-mix(in srgb, var(--text) 3%, transparent));
+    border: 1px solid var(--glass-border);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.line-fill {
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    filter: saturate(130%);
+}
+
+/* Textareas / Inputs im Glas */
+.input :deep(textarea),
+:deep(.v-field__input) {
+    background: linear-gradient(180deg,
+    color-mix(in srgb, var(--text) 7%, transparent),
+    color-mix(in srgb, var(--text) 3%, transparent));
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    color: var(--text);
+    backdrop-filter: blur(var(--glass-blur));
+}
+
+:deep(.v-field--variant-outlined .v-field__outline) {
+    display: none;
+}
+
+/* Dialog runder + stärkerer Blur */
+.dialog {
+    border-radius: 22px;
+    backdrop-filter: blur(22px) saturate(150%);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+/* iOS-Range (Slider) – Track & Thumb */
+.chip.inline input[type="range"] {
+    height: 24px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+}
+
+.chip.inline input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(180deg,
+    color-mix(in srgb, var(--text) 12%, transparent),
+    color-mix(in srgb, var(--text) 5%, transparent));
+    border: 1px solid var(--glass-border);
+}
+
+.chip.inline input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #fff, #dfe7ef);
+    border: 1px solid rgba(0, 0, 0, .15);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .85);
+}
+
+.chip.inline input[type="range"]::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(180deg,
+    color-mix(in srgb, var(--text) 12%, transparent),
+    color-mix(in srgb, var(--text) 5%, transparent));
+    border: 1px solid var(--glass-border);
+}
+
+.chip.inline input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #fff, #dfe7ef);
+    border: 1px solid rgba(0, 0, 0, .15);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .85);
+}
+
+/* Snackbar – glasiger Toast */
+:deep(.v-snackbar) {
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 22%, transparent),
+    color-mix(in srgb, var(--bg2) 60%, transparent));
+}
+
+/* Fokus-Ring – iOS-Style */
+*:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+    outline-offset: 2px;
+    border-radius: 12px;
+}
+
+/* Weniger Transparenz, falls gewünscht */
+@media (prefers-reduced-transparency: reduce) {
+    .glass,
+    .panel,
+    .card,
+    .tile,
+    .lesson,
+    .stat,
+    .chip,
+    .hud,
+    .dialog {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: color-mix(in srgb, var(--text) 10%, transparent);
+    }
+}
