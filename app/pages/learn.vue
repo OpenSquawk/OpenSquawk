@@ -306,18 +306,66 @@ import learnModules, {Lesson, ModuleDef} from "../../composables/learnModules";
 /** AUDIO **/
 const tts = useRadioTTS()
 
+// Server TTS verwenden
 function speak(text: string) {
   if (cfg.value.tts) {
     tts.speakBrowser(text)
   } else {
-    tts.speakServer(text, {level: cfg.value.radioLevel, voice: cfg.value.voice || 'alloy'})
+    tts.speakServer(text, {
+      level: cfg.value.radioLevel,
+      voice: cfg.value.voice || 'alloy',
+      moduleId: current.value?.id,
+      lessonId: activeLesson.value?.id
+    })
   }
 }
+
+// PTT-Button hinzufügen (optional)
+const handlePTT = async () => {
+  if (tts.isRecording.value) {
+    const audioBlob = await tts.stopRecording()
+    if (audioBlob && activeLesson.value) {
+      const result = await tts.submitPTT(audioBlob, {
+        expectedText: activeLesson.value.target,
+        moduleId: current.value!.id,
+        lessonId: activeLesson.value.id
+      })
+
+      // Bewertung anzeigen
+      console.log('PTT Score:', result.evaluation.score)
+      if (result.playAgain) {
+        speak(activeLesson.value.target) // Nochmal abspielen
+      }
+    }
+  } else {
+    await tts.startRecording()
+  }
+}
+
+// Zufällige Phrase für Lektion generieren
+const generateRandomPhrase = async () => {
+  if (current.value && activeLesson.value) {
+    const response = await tts.generatePhrase({
+      moduleId: current.value.id,
+      lessonId: activeLesson.value.id,
+      type: 'instruction'
+    })
+
+    // Generierte Phrase abspielen
+    if (response.phrases[0]) {
+      speak(response.phrases[0].original)
+    }
+  }
+}
+
+onMounted(() => {
+  // Browser benötigt Mikrofon-Berechtigung
+  navigator.mediaDevices.getUserMedia({audio: true})
+})
 
 function stopAudio() {
   tts.stop()
 }
-
 
 
 /** STATE **/
@@ -617,6 +665,7 @@ function testBeep() {
   display: inline-flex;
   align-items: center
 }
+
 .icon-btn:hover {
   background: color-mix(in srgb, var(--text) 6%, transparent);
   transform: scale(1.05);
