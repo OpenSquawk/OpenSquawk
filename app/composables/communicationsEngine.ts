@@ -1,5 +1,5 @@
 // composables/communicationsEngine.ts
-import { ref, computed } from 'vue'
+import {ref, computed} from 'vue'
 
 export interface CommunicationStep {
     id: string
@@ -62,6 +62,10 @@ const ICAO_NUMBERS: Record<string, string> = {
     '5': 'fife', '6': 'six', '7': 'seven', '8': 'eight', '9': 'niner'
 }
 
+// FLIGHT_PHASES
+export const FLIGHT_PHASES = ['clearance', 'ground', 'tower', 'departure', 'approach', 'landing'] as const
+type FlightPhase = typeof FLIGHT_PHASES[number]
+
 // Comprehensive Communication Steps for Complete Flight
 export const COMMUNICATION_STEPS: CommunicationStep[] = [
     // Phase 1: Clearance Delivery
@@ -77,7 +81,7 @@ export const COMMUNICATION_STEPS: CommunicationStep[] = [
         pilotResponse: 'Cleared to ${arrival}, ${sid} departure, runway ${runway}, squawk ${squawk}, departure ${departureFreq}, ${callsign}',
         atcResponse: '${callsign}, readback correct, report ready for startup',
         nextStep: 'startup_request',
-        audioEffects: { static: 15, distortion: 5, volume: 85 }
+        audioEffects: {static: 15, distortion: 5, volume: 85}
     },
 
     // Phase 2: Startup
@@ -92,7 +96,7 @@ export const COMMUNICATION_STEPS: CommunicationStep[] = [
         atc: '${callsign}, startup approved, for pushback contact Ground on ${groundFreq}',
         pilotResponse: 'Startup approved, Ground ${groundFreq}, ${callsign}',
         nextStep: 'pushback_request',
-        audioEffects: { static: 12, distortion: 3, volume: 88 }
+        audioEffects: {static: 12, distortion: 3, volume: 88}
     },
 
     // Phase 3: Ground - Pushback
@@ -109,7 +113,7 @@ export const COMMUNICATION_STEPS: CommunicationStep[] = [
         atcResponse: '${callsign}, pushback complete, start engines when ready',
         nextStep: 'taxi_request',
         callback: () => console.log('Pushback phase completed'),
-        audioEffects: { static: 18, distortion: 7, volume: 82 }
+        audioEffects: {static: 18, distortion: 7, volume: 82}
     },
 
     // Phase 4: Ground - Taxi
@@ -125,9 +129,9 @@ export const COMMUNICATION_STEPS: CommunicationStep[] = [
         pilotResponse: 'Taxi to runway ${runway} via ${taxiRoute}, hold short of runway ${runway}, ${callsign}',
         nextStep: 'tower_handoff',
         conditions: [
-            { type: 'contains', value: 'give way', nextStep: 'give_way' }
+            {type: 'contains', value: 'give way', nextStep: 'give_way'}
         ],
-        audioEffects: { static: 20, distortion: 8, volume: 80 }
+        audioEffects: {static: 20, distortion: 8, volume: 80}
     },
 
     // Ground - Give Way (Optional)
@@ -141,7 +145,7 @@ export const COMMUNICATION_STEPS: CommunicationStep[] = [
         atc: '${callsign}, give way to the ${trafficType} from your ${direction}',
         pilotResponse: 'Give way to ${trafficType} from ${direction}, ${callsign}',
         nextStep: 'taxi_continue',
-        audioEffects: { static: 22, distortion: 10, volume: 78 }
+        audioEffects: {static: 22, distortion: 10, volume: 78}
     },
 
     {
@@ -154,7 +158,7 @@ export const COMMUNICATION_STEPS: CommunicationStep[] = [
         atc: '${callsign}, continue taxi',
         pilotResponse: 'Continue taxi, ${callsign}',
         nextStep: 'tower_handoff',
-        audioEffects: { static: 18, distortion: 6, volume: 85 }
+        audioEffects: {static: 18, distortion: 6, volume: 85}
     },
 
     // Phase 5: Tower Handoff
@@ -169,7 +173,7 @@ export const COMMUNICATION_STEPS: CommunicationStep[] = [
         pilotResponse: 'Contact Tower ${towerFreq}, ${callsign}',
         nextStep: 'tower_checkin',
         callback: () => console.log('Switching to Tower frequency'),
-        audioEffects: { static: 15, distortion: 5, volume: 88 }
+        audioEffects: {static: 15, distortion: 5, volume: 88}
     },
 
     // Phase 6: Tower - Check In
@@ -184,7 +188,7 @@ export const COMMUNICATION_STEPS: CommunicationStep[] = [
         atc: '${callsign}, ${airport} Tower, good day, line up and wait runway ${runway}',
         pilotResponse: 'Line up and wait runway ${runway}, ${callsign}',
         nextStep: 'takeoff_clearance',
-        audioEffects: { static: 10, distortion: 3, volume: 90 }
+        audioEffects: {static: 10, distortion: 3, volume: 90}
     },
 
     // Phase 7: Tower - Takeoff
@@ -199,9 +203,9 @@ export const COMMUNICATION_STEPS: CommunicationStep[] = [
         pilotResponse: 'Cleared for takeoff runway ${runway}, ${callsign}',
         nextStep: 'departure_handoff',
         conditions: [
-            { type: 'timeout', value: 30000, nextStep: 'departure_handoff' }
+            {type: 'timeout', value: 30000, nextStep: 'departure_handoff'}
         ],
-        audioEffects: { static: 8, distortion: 2, volume: 92 }
+        audioEffects: {static: 8, distortion: 2, volume: 92}
     },
 
     // Phase 8: Departure Handoff
@@ -216,7 +220,7 @@ export const COMMUNICATION_STEPS: CommunicationStep[] = [
         pilotResponse: 'Contact ${airport} Departure ${departureFreq}, ${callsign}',
         nextStep: 'departure_checkin',
         callback: () => console.log('Switching to Departure frequency'),
-        audioEffects: { static: 12, distortion: 4, volume: 88 }
+        audioEffects: {static: 12, distortion: 4, volume: 88}
     },
 
     // Phase 9: Departure Control
@@ -231,7 +235,7 @@ export const COMMUNICATION_STEPS: CommunicationStep[] = [
         atc: '${callsign}, ${airport} Departure, radar contact, climb flight level ${flightLevel}',
         pilotResponse: 'Climb flight level ${flightLevel}, ${callsign}',
         nextStep: 'enroute_handoff',
-        audioEffects: { static: 15, distortion: 6, volume: 85 }
+        audioEffects: {static: 15, distortion: 6, volume: 85}
     },
 
     // Phase 10: Enroute
@@ -246,7 +250,7 @@ export const COMMUNICATION_STEPS: CommunicationStep[] = [
         pilotResponse: 'Contact ${centerName} ${centerFreq}, ${callsign}',
         nextStep: 'flight_complete',
         callback: () => console.log('Flight handed off to enroute control'),
-        audioEffects: { static: 20, distortion: 8, volume: 82 }
+        audioEffects: {static: 20, distortion: 8, volume: 82}
     }
 ]
 
