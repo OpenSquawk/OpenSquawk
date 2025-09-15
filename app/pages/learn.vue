@@ -624,32 +624,6 @@ function hits(text: string, kws: string[]) {
   return kws.reduce((s, k) => s + (T.includes(norm(k)) ? 1 : 0), 0)
 }
 
-// async function evaluate() {
-//   if (!current.value || !activeLesson.value) return
-//   evaluating.value = true
-//   await new Promise(r => setTimeout(r, 160))
-//   const s = sim(userInput.value, activeLesson.value.target)
-//   const h = hits(userInput.value, activeLesson.value.keywords)
-//   const kwScore = activeLesson.value.keywords.length ? (h / activeLesson.value.keywords.length) : 1
-//   const score = Math.round(((kwScore * 0.6) + (s * 0.4)) * 100)
-//   result.value = {score, sim: s, hits: h}
-//   const modId = current.value.id, lesId = activeLesson.value.id
-//   if (!progress.value[modId]) progress.value[modId] = {}
-//   const prev = progress.value[modId][lesId]?.best || 0
-//   const best = Math.max(prev, score)
-//   const passedBefore = progress.value[modId][lesId]?.done || false
-//   progress.value[modId][lesId] = {best, done: best >= 80}
-//   let gained = 0
-//   if (best >= 80 && !passedBefore) gained += 40
-//   if (score >= 95) gained += 15
-//   if (score >= 80 && userInput.value.length <= activeLesson.value.target.length + 8) gained += 10
-//   if (gained) {
-//     xp.value += gained;
-//     toastNow(`+${gained} XP · ${activeLesson.value.title}`)
-//   }
-//   evaluating.value = false
-// }
-
 function fillTarget() {
   if (activeLesson.value) userInput.value = activeLesson.value.target
 }
