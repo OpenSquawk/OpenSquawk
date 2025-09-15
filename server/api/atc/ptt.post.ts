@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { openai, LLM_MODEL, normalizeATC } from "../../utils/openai";
+import { createReadStream } from "node:fs"; // ← Diesen Import hinzufügen!
 
 interface PTTRequest {
     audio: string; // Base64 encoded audio
@@ -232,7 +233,7 @@ export default defineEventHandler(async (event) => {
 
         // 3. OpenAI Whisper für Transkription
         const transcription = await openai.audio.transcriptions.create({
-            file: await readFile(audioFileForWhisper),
+            file: createReadStream(audioFileForWhisper), // ReadStream
             model: "whisper-1",
             language: "en", // ATC ist standardmäßig auf Englisch
             prompt: "This is ATC radio communication with aviation phraseology including callsigns, runway numbers, and standard procedures.",
@@ -273,7 +274,6 @@ export default defineEventHandler(async (event) => {
     } catch (error) {
         // Cleanup bei Fehler
         await rm(tmpAudioInput).catch(() => {});
-        await rm(tmpAudioWav).catch(() => {});
 
         if (error.statusCode) {
             throw error;
