@@ -5,25 +5,24 @@
       <v-container class="fill-height" fluid>
         <v-row align="center" justify="center">
           <v-col cols="12" sm="8" md="6" lg="4">
-            <v-card class="elevation-12 login-card">
-              <v-card-title class="text-center">
-                <div class="radio-icon mb-4">
-                  <v-icon size="48" color="primary">mdi-radio-handheld</v-icon>
+            <v-card class="elevation-12 login-card glass-card">
+              <v-card-text class="text-center pa-8">
+                <div class="radio-icon mb-6">
+                  <v-icon size="64" color="primary" class="radio-pulse">mdi-radio-handheld</v-icon>
                 </div>
-                <h1 class="text-h4 font-weight-bold">Pilot Monitoring</h1>
-                <p class="text-subtitle-1 text-medium-emphasis">VATSIM ATC Training Platform</p>
-              </v-card-title>
+                <h1 class="text-h3 font-weight-bold mb-2 text-gradient">Pilot Monitoring</h1>
+                <p class="text-h6 text-medium-emphasis mb-6">VATSIM ATC Training Platform</p>
 
-              <v-card-text>
-                <v-form @submit.prevent="loadFlightPlans">
+                <v-form @submit.prevent="loadFlightPlans" class="mb-4">
                   <v-text-field
                       v-model="vatsimId"
                       label="VATSIM ID"
                       placeholder="Enter your VATSIM ID"
                       variant="outlined"
                       :rules="[rules.required]"
-                      prepend-inner-icon="mdi-account"
-                      class="mb-4"
+                      prepend-inner-icon="mdi-account-aviation"
+                      class="mb-4 input-glow"
+                      hide-details="auto"
                   />
 
                   <v-btn
@@ -33,8 +32,11 @@
                       block
                       :loading="loading"
                       :disabled="!vatsimId"
+                      class="btn-glow"
+                      elevation="8"
                   >
-                    Load Flight Plans
+                    <v-icon>mdi-airplane-takeoff</v-icon>
+                    <span class="ml-2">Load Flight Plans</span>
                   </v-btn>
                 </v-form>
 
@@ -46,19 +48,6 @@
                 >
                   {{ error }}
                 </v-alert>
-
-                <v-alert
-                    type="info"
-                    variant="tonal"
-                    class="mt-4"
-                    prominent
-                >
-                  <v-icon>mdi-information</v-icon>
-                  <div class="ml-3">
-                    <strong>Live VATSIM Integration</strong>
-                    <p class="text-body-2 mt-1">Loading real flight plans from VATSIM network. Ensure microphone permissions are granted for PTT functionality.</p>
-                  </div>
-                </v-alert>
               </v-card-text>
             </v-card>
           </v-col>
@@ -68,69 +57,83 @@
 
     <!-- Flight Selection Screen -->
     <div v-else-if="currentScreen === 'flightselect'">
-      <v-app-bar>
+      <v-app-bar color="primary" dark class="app-bar-glow">
         <v-btn icon @click="currentScreen = 'login'">
           <v-icon>mdi-arrow-left</v-icon>
         </v-btn>
         <v-app-bar-title>Select Flight Plan</v-app-bar-title>
         <v-spacer />
-        <v-chip label color="primary">{{ vatsimId }}</v-chip>
+        <v-chip label color="accent" class="chip-glow">{{ vatsimId }}</v-chip>
       </v-app-bar>
 
-      <v-container>
+      <v-container class="py-4">
         <v-row v-if="loading">
-          <v-col>
-            <v-progress-circular indeterminate color="primary" class="d-block mx-auto" />
-            <p class="text-center mt-4">Loading flight plans from VATSIM...</p>
+          <v-col class="text-center">
+            <v-progress-circular size="64" indeterminate color="primary" class="mb-4" />
+            <h3 class="text-h5 text-primary">Loading Flight Plans</h3>
+            <p class="text-body-1 text-medium-emphasis">Fetching data from VATSIM network...</p>
           </v-col>
         </v-row>
 
         <v-row v-else-if="flightPlans.length === 0">
           <v-col>
-            <v-alert type="warning" variant="tonal">
-              <v-icon>mdi-alert</v-icon>
-              <div class="ml-3">
-                <strong>No flight plans found</strong>
-                <p class="text-body-2 mt-1">No recent flight plans found for VATSIM ID {{ vatsimId }}. Make sure you have filed flight plans or try a different ID.</p>
-              </div>
+            <v-alert type="warning" variant="elevated" class="glass-card">
+              <template v-slot:prepend>
+                <v-icon>mdi-alert-circle</v-icon>
+              </template>
+              <v-alert-title>No Flight Plans Found</v-alert-title>
+              <div>No recent flight plans found for VATSIM ID {{ vatsimId }}. Ensure you have filed flight plans or try a different ID.</div>
             </v-alert>
           </v-col>
         </v-row>
 
         <v-row v-else>
           <v-col v-for="plan in flightPlans" :key="plan.id" cols="12">
-            <v-card @click="startMonitoring(plan)" hover class="flight-plan-card">
+            <v-card
+                @click="startMonitoring(plan)"
+                hover
+                class="flight-plan-card glass-card"
+                elevation="4"
+            >
               <v-card-text>
                 <v-row align="center">
                   <v-col cols="auto">
-                    <v-avatar size="48" color="primary">
-                      <v-icon color="white">mdi-airplane</v-icon>
+                    <v-avatar size="56" color="primary" class="avatar-glow">
+                      <v-icon size="32" color="white">mdi-airplane</v-icon>
                     </v-avatar>
                   </v-col>
 
                   <v-col>
-                    <div class="d-flex justify-space-between align-center mb-2">
-                      <h3 class="text-h6 font-weight-bold">{{ plan.callsign }}</h3>
-                      <div class="text-right">
-                        <div class="text-h6">{{ plan.dep }} → {{ plan.arr }}</div>
-                        <div class="text-caption text-medium-emphasis">FL{{ Math.floor(parseInt(plan.altitude) / 100).toString().padStart(3, '0') }}</div>
-                      </div>
-                    </div>
+                    <v-row align="center" class="mb-2">
+                      <v-col cols="auto">
+                        <h3 class="text-h5 font-weight-bold text-primary">{{ plan.callsign }}</h3>
+                      </v-col>
+                      <v-spacer />
+                      <v-col cols="auto">
+                        <div class="text-right">
+                          <div class="text-h6 font-weight-bold">{{ plan.dep }} → {{ plan.arr }}</div>
+                          <v-chip size="small" color="secondary" label class="chip-glow">
+                            FL{{ Math.floor(parseInt(plan.altitude) / 100).toString().padStart(3, '0') }}
+                          </v-chip>
+                        </div>
+                      </v-col>
+                    </v-row>
 
-                    <v-row class="text-body-2 text-medium-emphasis">
+                    <v-row class="text-body-2">
                       <v-col cols="6">
-                        <div><strong>Aircraft:</strong> {{ plan.aircraft?.split('/')[0] || 'Unknown' }}</div>
+                        <div class="mb-1"><strong>Aircraft:</strong> {{ plan.aircraft?.split('/')[0] || 'Unknown' }}</div>
                         <div><strong>Departure:</strong> {{ plan.deptime }}Z</div>
                       </v-col>
                       <v-col cols="6">
-                        <div><strong>Route:</strong></div>
+                        <div class="mb-1"><strong>Route:</strong></div>
                         <div class="text-truncate">{{ plan.route || 'DCT' }}</div>
                       </v-col>
                     </v-row>
 
-                    <div v-if="plan.assignedsquawk" class="mt-2">
-                      <v-chip size="small" color="secondary" label>
-                        Squawk: {{ plan.assignedsquawk }}
+                    <div v-if="plan.assignedsquawk" class="mt-3">
+                      <v-chip size="small" color="success" variant="outlined" label>
+                        <v-icon size="16">mdi-radar</v-icon>
+                        <span class="ml-1">{{ plan.assignedsquawk }}</span>
                       </v-chip>
                     </div>
                   </v-col>
@@ -143,192 +146,214 @@
     </div>
 
     <!-- Main Monitoring Screen -->
-    <div v-else-if="currentScreen === 'monitor'">
-      <!-- Top App Bar -->
-      <v-app-bar color="primary" dark>
+    <div v-else-if="currentScreen === 'monitor'" class="monitoring-screen">
+      <!-- Top App Bar with Radio Style -->
+      <v-app-bar color="primary" dark class="radio-bar">
         <v-btn icon @click="currentScreen = 'flightselect'">
           <v-icon>mdi-arrow-left</v-icon>
         </v-btn>
 
         <v-app-bar-title>
-          <div>
-            <div class="text-h6">{{ selectedFlightPlan?.callsign }}</div>
-            <div class="text-caption">{{ currentPhase.name }}</div>
+          <div class="radio-display">
+            <div class="text-h6 font-weight-bold">{{ flightContext.callsign }}</div>
+            <div class="text-caption radio-freq">{{ communicationsEngine.currentStep?.frequencyName || 'STANDBY' }}</div>
           </div>
         </v-app-bar-title>
 
         <v-spacer />
 
-        <!-- Signal Strength -->
-        <div class="signal-bars mr-2">
+        <!-- Signal Strength Display -->
+        <div class="signal-display mr-3">
           <div
               v-for="i in 5"
               :key="i"
               class="signal-bar"
-              :class="{ active: i <= signalStrength }"
+              :class="{ 'signal-active': i <= signalStrength }"
           />
         </div>
 
+        <!-- Radio Quality Indicator -->
+        <v-chip
+            size="small"
+            :color="radioQuality.color"
+            label
+            class="mr-2"
+        >
+          {{ radioQuality.text }}
+        </v-chip>
+
         <v-btn icon @click="showSettings = true">
-          <v-icon>mdi-cog</v-icon>
+          <v-icon>mdi-tune</v-icon>
         </v-btn>
       </v-app-bar>
 
-      <!-- Flight Info -->
+      <!-- Flight Info Bar -->
       <div class="flight-info-bar">
-        <v-container>
-          <v-row align="center">
-            <v-col cols="4" class="text-center">
-              <div class="text-body-2">{{ selectedFlightPlan?.dep }} → {{ selectedFlightPlan?.arr }}</div>
+        <v-container class="py-2">
+          <v-row align="center" class="text-center">
+            <v-col cols="3">
+              <div class="info-item">
+                <v-icon size="16" color="primary">mdi-map-marker</v-icon>
+                <div class="text-body-2 font-weight-medium">{{ flightContext.departure }} → {{ flightContext.arrival }}</div>
+              </div>
             </v-col>
-            <v-col cols="4" class="text-center">
-              <div class="text-body-2">FL{{ Math.floor(parseInt(selectedFlightPlan?.altitude || '0') / 100).toString().padStart(3, '0') }}</div>
+            <v-col cols="3">
+              <div class="info-item">
+                <v-icon size="16" color="primary">mdi-altimeter</v-icon>
+                <div class="text-body-2 font-weight-medium">{{ flightContext.flightLevel }}</div>
+              </div>
             </v-col>
-            <v-col cols="4" class="text-center">
-              <div class="text-body-2">{{ selectedFlightPlan?.aircraft?.split('/')[0] }}</div>
+            <v-col cols="3">
+              <div class="info-item">
+                <v-icon size="16" color="primary">mdi-airplane</v-icon>
+                <div class="text-body-2 font-weight-medium">{{ flightContext.aircraft }}</div>
+              </div>
+            </v-col>
+            <v-col cols="3">
+              <div class="info-item">
+                <v-icon size="16" color="primary">mdi-gate</v-icon>
+                <div class="text-body-2 font-weight-medium">{{ flightContext.gate }}</div>
+              </div>
             </v-col>
           </v-row>
         </v-container>
       </div>
 
-      <!-- Phase Navigation -->
-      <v-card class="mx-4 my-2 phase-nav">
-        <v-card-text class="py-2">
-          <v-row align="center">
-            <v-col cols="2">
-              <v-btn
-                  icon
-                  size="small"
-                  @click="previousPhase"
-                  :disabled="currentPhaseIndex === 0"
-              >
-                <v-icon>mdi-chevron-left</v-icon>
-              </v-btn>
-            </v-col>
-
-            <v-col cols="8" class="text-center">
-              <h3 class="text-h6">{{ currentPhase.name }}</h3>
-              <p class="text-caption text-medium-emphasis">{{ currentPhase.description }}</p>
-            </v-col>
-
-            <v-col cols="2" class="text-right">
-              <v-btn
-                  icon
-                  size="small"
-                  @click="nextPhase"
-                  :disabled="currentPhaseIndex === FLIGHT_PHASES.length - 1"
-              >
-                <v-icon>mdi-chevron-right</v-icon>
-              </v-btn>
-            </v-col>
-          </v-row>
-
-          <!-- Progress Dots -->
-          <v-row justify="center" class="mt-2">
-            <div class="d-flex ga-1">
-              <div
-                  v-for="(phase, index) in FLIGHT_PHASES"
-                  :key="phase.id"
-                  class="progress-dot"
-                  :class="{
-                  active: index === currentPhaseIndex,
-                  completed: index < currentPhaseIndex
-                }"
-              />
-            </div>
-          </v-row>
+      <!-- Communication Step Display -->
+      <v-card class="mx-3 mt-3 step-card glass-card" elevation="4">
+        <v-card-text class="text-center py-3">
+          <v-chip color="primary" size="large" label class="mb-2 chip-glow">
+            <v-icon>mdi-radio-tower</v-icon>
+            <span class="ml-2">{{ communicationsEngine.currentStep?.action || 'Ready' }}</span>
+          </v-chip>
+          <div class="text-subtitle-2 text-medium-emphasis">
+            {{ communicationsEngine.currentStep?.frequencyName || 'Awaiting Instructions' }}
+          </div>
         </v-card-text>
       </v-card>
 
-      <!-- Frequency Display -->
-      <v-card class="mx-4 my-2 freq-display">
-        <v-card-text>
+      <!-- Main Frequency Display -->
+      <v-card class="mx-3 my-3 freq-card glass-card" elevation="6">
+        <v-card-text class="pa-4">
           <v-row align="center">
             <v-col cols="4" class="text-center">
-              <div class="text-caption text-medium-emphasis mb-1">ACTIVE</div>
-              <div class="text-h4 font-mono font-weight-bold text-success">{{ frequencies.active }}</div>
+              <div class="freq-label">ACTIVE</div>
+              <div class="freq-display freq-active">{{ frequencies.active }}</div>
+              <div class="freq-name">{{ communicationsEngine.currentStep?.frequencyName?.toUpperCase() || 'STANDBY' }}</div>
             </v-col>
 
             <v-col cols="4" class="text-center">
               <v-btn
                   icon
                   size="large"
-                  color="primary"
+                  color="accent"
                   @click="swapFrequencies"
-                  class="freq-swap-btn"
+                  class="freq-swap-btn elevation-8"
+                  :class="{ 'freq-swap-active': swapAnimation }"
               >
-                <v-icon>mdi-swap-horizontal</v-icon>
+                <v-icon size="28">mdi-swap-horizontal</v-icon>
               </v-btn>
+              <div class="text-caption mt-1">SWAP</div>
             </v-col>
 
             <v-col cols="4" class="text-center">
-              <div class="text-caption text-medium-emphasis mb-1">STANDBY</div>
-              <div class="text-h4 font-mono font-weight-bold text-warning">{{ frequencies.standby }}</div>
+              <div class="freq-label">STANDBY</div>
+              <div class="freq-display freq-standby">{{ frequencies.standby }}</div>
+              <div class="freq-name">STBY</div>
             </v-col>
-          </v-row>
-
-          <v-row justify="center" class="mt-2">
-            <v-btn
-                size="small"
-                variant="outlined"
-                @click="performRadioCheck"
-                :loading="radioCheckLoading"
-            >
-              <v-icon>mdi-radio-handheld</v-icon>
-              Radio Check
-            </v-btn>
           </v-row>
         </v-card-text>
       </v-card>
 
-      <!-- PTT Controls -->
-      <v-container>
-        <!-- ATC PTT -->
-        <v-card class="mb-4 ptt-card">
-          <v-card-text class="text-center">
-            <h4 class="text-subtitle-1 text-medium-emphasis mb-3">ATC COMMUNICATION</h4>
+      <!-- PTT Controls Section -->
+      <v-container class="pa-3">
+        <!-- ATC Communication PTT -->
+        <v-card class="mb-3 ptt-card glass-card" elevation="8">
+          <v-card-text class="text-center pa-4">
+            <h4 class="text-subtitle-1 text-medium-emphasis mb-3 font-weight-bold">
+              <v-icon>mdi-radio-tower</v-icon>
+              ATC COMMUNICATION
+            </h4>
+
+            <!-- Expected Response Preview -->
+            <div v-if="communicationsEngine.currentStep?.pilot" class="expected-text mb-3">
+              <v-card variant="outlined" class="pa-2">
+                <div class="text-caption text-medium-emphasis mb-1">EXPECTED:</div>
+                <div class="text-body-2 font-style-italic">
+                  "{{ normalizeExpectedText(communicationsEngine.currentStep.pilot) }}"
+                </div>
+              </v-card>
+            </div>
+
             <v-btn
                 size="x-large"
-                color="primary"
+                :color="isRecording && !isIntercomMode ? 'error' : 'primary'"
                 block
-                class="ptt-btn"
-                :class="{ 'ptt-active': isRecording && !isIntercomMode }"
+                class="ptt-btn elevation-8"
+                :class="{
+                'ptt-active': isRecording && !isIntercomMode,
+                'btn-pulse': isRecording && !isIntercomMode
+              }"
                 @mousedown="startRecording(false)"
                 @mouseup="stopRecording"
                 @touchstart="startRecording(false)"
                 @touchend="stopRecording"
                 :disabled="!micPermission"
+                style="height: 80px;"
             >
-              <v-icon>mdi-radio-handheld</v-icon>
-              <span class="ml-2">{{ isRecording && !isIntercomMode ? 'TRANSMITTING...' : 'HOLD TO TALK' }}</span>
+              <v-icon size="32" class="mr-2">
+                {{ isRecording && !isIntercomMode ? 'mdi-record' : 'mdi-radio-handheld' }}
+              </v-icon>
+              <div>
+                <div class="text-h6 font-weight-bold">
+                  {{ isRecording && !isIntercomMode ? 'TRANSMITTING' : 'HOLD TO TALK' }}
+                </div>
+                <div class="text-caption">{{ frequencies.active }}</div>
+              </div>
             </v-btn>
           </v-card-text>
         </v-card>
 
-        <!-- Intercom PTT -->
-        <v-card class="mb-4 ptt-card">
-          <v-card-text class="text-center">
-            <h4 class="text-subtitle-1 text-medium-emphasis mb-3">INTERCOM</h4>
+        <!-- Intercom PTT for Checklists -->
+        <v-card class="mb-3 intercom-card glass-card" elevation="6">
+          <v-card-text class="text-center pa-3">
+            <h4 class="text-subtitle-1 text-medium-emphasis mb-3 font-weight-bold">
+              <v-icon>mdi-headphones</v-icon>
+              INTERCOM
+            </h4>
+
             <v-btn
                 size="large"
-                color="purple"
+                :color="isRecording && isIntercomMode ? 'orange' : 'purple'"
                 block
-                class="intercom-btn"
-                :class="{ 'ptt-active': isRecording && isIntercomMode }"
+                class="intercom-btn elevation-6"
+                :class="{
+                'ptt-active': isRecording && isIntercomMode,
+                'btn-pulse': isRecording && isIntercomMode
+              }"
                 @mousedown="startRecording(true)"
                 @mouseup="stopRecording"
                 @touchstart="startRecording(true)"
                 @touchend="stopRecording"
                 :disabled="!micPermission"
+                style="height: 60px;"
             >
-              <v-icon>mdi-headphones</v-icon>
-              <span class="ml-2">{{ isRecording && isIntercomMode ? 'INTERCOM ON...' : 'INTERCOM' }}</span>
+              <v-icon size="24" class="mr-2">
+                {{ isRecording && isIntercomMode ? 'mdi-microphone' : 'mdi-headphones' }}
+              </v-icon>
+              <div class="text-subtitle-1 font-weight-bold">
+                {{ isRecording && isIntercomMode ? 'INTERCOM ACTIVE' : 'INTERCOM' }}
+              </div>
             </v-btn>
+
+            <div class="text-caption text-medium-emphasis mt-2">
+              Say "checklist" to start A320 procedures
+            </div>
           </v-card-text>
         </v-card>
 
-        <!-- Quick Actions -->
-        <v-row>
+        <!-- Quick Action Buttons -->
+        <v-row class="mb-3">
           <v-col cols="6">
             <v-btn
                 color="success"
@@ -336,124 +361,221 @@
                 size="large"
                 @click="openChecklist"
                 :disabled="availableChecklists.length === 0"
+                class="action-btn elevation-4"
             >
-              <v-icon>mdi-clipboard-check</v-icon>
+              <v-icon>mdi-clipboard-check-outline</v-icon>
               <span class="ml-2">Checklist</span>
             </v-btn>
           </v-col>
 
           <v-col cols="6">
             <v-btn
-                color="error"
+                color="orange"
                 block
                 size="large"
-                @click="declareEmergency"
+                @click="performRadioCheck"
+                :loading="radioCheckLoading"
+                class="action-btn elevation-4"
             >
-              <v-icon>mdi-alert</v-icon>
-              <span class="ml-2">Emergency</span>
+              <v-icon>mdi-radio</v-icon>
+              <span class="ml-2">Radio Check</span>
             </v-btn>
           </v-col>
         </v-row>
       </v-container>
 
       <!-- Communication Log -->
-      <v-card class="mx-4 my-2 comm-log">
-        <v-card-title class="text-subtitle-1 pb-2">Communication Log</v-card-title>
-        <v-card-text class="pt-0">
-          <div class="log-container">
-            <div
-                v-for="(log, index) in communicationLog.slice(-5)"
-                :key="index"
-                class="log-entry text-caption font-mono"
-            >
-              {{ log }}
+      <v-card class="mx-3 mb-3 comm-log glass-card" elevation="4">
+        <v-card-title class="text-subtitle-1 pb-2 d-flex align-center">
+          <v-icon class="mr-2">mdi-message-text-outline</v-icon>
+          Communication Log
+          <v-spacer />
+          <v-btn icon size="small" @click="clearCommunicationLog">
+            <v-icon size="16">mdi-delete-sweep</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pa-2" style="max-height: 200px; overflow-y: auto;">
+          <div v-if="communicationLog.length === 0" class="text-center py-4 text-medium-emphasis">
+            <v-icon size="48" class="mb-2">mdi-radio-off</v-icon>
+            <div>No communications yet</div>
+          </div>
+          <div
+              v-else
+              v-for="(log, index) in communicationLog.slice(-8)"
+              :key="index"
+              class="log-entry mb-2"
+              :class="{ 'log-pilot': log.speaker === 'pilot', 'log-atc': log.speaker === 'atc' }"
+          >
+            <div class="d-flex align-start">
+              <v-avatar size="24" :color="log.speaker === 'pilot' ? 'primary' : 'secondary'" class="mr-2 mt-1">
+                <v-icon size="12" color="white">
+                  {{ log.speaker === 'pilot' ? 'mdi-account-pilot' : 'mdi-radio-tower' }}
+                </v-icon>
+              </v-avatar>
+              <div class="flex-grow-1">
+                <div class="d-flex align-center justify-space-between">
+                  <div class="text-caption font-weight-bold text-medium-emphasis">
+                    {{ log.speaker.toUpperCase() }} - {{ log.frequency }}
+                  </div>
+                  <div class="text-caption text-medium-emphasis">
+                    {{ formatTime(log.timestamp) }}
+                  </div>
+                </div>
+                <div class="text-body-2 font-mono">{{ log.message }}</div>
+              </div>
             </div>
           </div>
         </v-card-text>
       </v-card>
 
-      <!-- Last Transmission -->
-      <v-card v-if="lastTransmission" class="mx-4 my-2" color="info" variant="tonal">
-        <v-card-text>
-          <div class="text-caption text-medium-emphasis mb-1">LAST TRANSMISSION</div>
-          <div class="text-body-2">{{ lastTransmission }}</div>
+      <!-- Last Transmission Display -->
+      <v-card v-if="lastTransmission" class="mx-3 mb-3 last-tx glass-card" color="info" variant="tonal" elevation="4">
+        <v-card-text class="pa-3">
+          <div class="d-flex align-center mb-2">
+            <v-icon class="mr-2">mdi-microphone-outline</v-icon>
+            <div class="text-caption font-weight-bold">LAST TRANSMISSION</div>
+          </div>
+          <div class="text-body-2 font-mono">{{ lastTransmission }}</div>
         </v-card-text>
       </v-card>
     </div>
 
     <!-- Checklist Dialog -->
-    <v-dialog v-model="showChecklistModal" max-width="500">
-      <v-card v-if="currentChecklist">
-        <v-card-title>{{ currentChecklist.name }}</v-card-title>
+    <v-dialog v-model="showChecklistModal" max-width="500" persistent>
+      <v-card v-if="currentChecklist" class="glass-card" elevation="12">
+        <v-card-title class="d-flex align-center">
+          <v-icon class="mr-2">mdi-clipboard-check</v-icon>
+          {{ currentChecklist.name }}
+          <v-spacer />
+          <v-btn icon size="small" @click="closeChecklist">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
 
-        <v-card-text>
-          <v-list>
+        <v-divider />
+
+        <v-card-text class="pa-4">
+          <div class="mb-3 text-center">
+            <v-progress-linear
+                :model-value="checklistProgress"
+                color="success"
+                height="8"
+                rounded
+            />
+            <div class="text-caption mt-1">
+              {{ completedItems }}/{{ currentChecklist.items.length }} Complete
+            </div>
+          </div>
+
+          <v-list class="pa-0">
             <v-list-item
                 v-for="(item, index) in currentChecklist.items"
                 :key="index"
                 @click="toggleChecklistItem(index)"
+                class="checklist-item px-2"
+                :class="{ 'item-completed': item.completed }"
             >
-              <template #prepend>
+              <template v-slot:prepend>
                 <v-checkbox
                     :model-value="item.completed"
                     color="success"
                     hide-details
+                    @click.stop="toggleChecklistItem(index)"
                 />
               </template>
 
               <v-list-item-title
+                  class="text-body-2"
                   :class="{ 'text-decoration-line-through text-medium-emphasis': item.completed }"
               >
                 {{ item.text }}
               </v-list-item-title>
+
+              <template v-slot:append>
+                <v-btn
+                    icon
+                    size="small"
+                    variant="plain"
+                    @click.stop="readChecklistItem(item.text)"
+                >
+                  <v-icon size="16">mdi-volume-high</v-icon>
+                </v-btn>
+              </template>
             </v-list-item>
           </v-list>
         </v-card-text>
 
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="showChecklistModal = false">Close</v-btn>
+        <v-card-actions class="pa-4">
+          <v-btn
+              color="primary"
+              block
+              size="large"
+              @click="readAllChecklist"
+              :disabled="checklistProgress === 100"
+              :loading="readingChecklist"
+          >
+            <v-icon>mdi-volume-high</v-icon>
+            <span class="ml-2">Read Full Checklist</span>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Settings Dialog -->
     <v-dialog v-model="showSettings" max-width="400">
-      <v-card>
-        <v-card-title>Settings</v-card-title>
+      <v-card class="glass-card" elevation="12">
+        <v-card-title>
+          <v-icon class="mr-2">mdi-tune</v-icon>
+          Radio Settings
+        </v-card-title>
 
-        <v-card-text>
-          <v-row>
-            <v-col>
-              <v-slider
-                  v-model="signalStrength"
-                  label="Signal Strength"
-                  min="1"
-                  max="5"
-                  step="1"
-                  show-ticks
-                  tick-labels
-              />
-            </v-col>
-          </v-row>
+        <v-divider />
+
+        <v-card-text class="pa-4">
+          <div class="mb-4">
+            <v-slider
+                v-model="signalStrength"
+                label="Signal Strength"
+                min="1"
+                max="5"
+                step="1"
+                show-ticks="always"
+                thumb-label
+                color="primary"
+            />
+          </div>
 
           <v-text-field
               v-model="frequencies.standby"
               label="Standby Frequency"
               variant="outlined"
+              density="compact"
+              hide-details
+              class="mb-4"
           />
 
           <v-switch
               v-model="randomTaxi"
-              label="Random Taxi Routes (Training Mode)"
+              label="Random Taxi Routes"
+              color="primary"
+              hide-details
+              class="mb-4"
+          />
+
+          <v-switch
+              v-model="radioEffectsEnabled"
+              label="Radio Static Effects"
               color="primary"
               hide-details
           />
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="pa-4">
           <v-spacer />
-          <v-btn @click="showSettings = false">Close</v-btn>
+          <v-btn @click="showSettings = false" color="primary">
+            Close
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -463,18 +585,20 @@
       <v-chip
           :color="micPermission ? 'success' : 'error'"
           size="small"
-          label
+          variant="elevated"
+          class="chip-glow"
       >
         <v-icon size="12">{{ micPermission ? 'mdi-microphone' : 'mdi-microphone-off' }}</v-icon>
-        <span class="ml-1">{{ micPermission ? 'Connected' : 'No Mic' }}</span>
+        <span class="ml-1">{{ micPermission ? 'MIC OK' : 'NO MIC' }}</span>
       </v-chip>
     </div>
   </v-app>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import useRadioTTS from '~/../composables/radioTtsNew'
+import useCommunicationsEngine from '~/../composables/communicationsEngine'
 
 // Types
 interface VatsimFlightPlan {
@@ -492,14 +616,6 @@ interface VatsimFlightPlan {
   assignedsquawk?: string
 }
 
-interface FlightPhase {
-  id: string
-  name: string
-  description: string
-  frequency: string
-  expectedCommunications: string[]
-}
-
 interface ChecklistItem {
   text: string
   completed: boolean
@@ -511,73 +627,11 @@ interface Checklist {
   items: ChecklistItem[]
 }
 
-// Flight Phases
-const FLIGHT_PHASES: FlightPhase[] = [
-  {
-    id: 'prefile',
-    name: 'Pre-file',
-    description: 'Select and review flight plan',
-    frequency: '',
-    expectedCommunications: []
-  },
-  {
-    id: 'radiocheck',
-    name: 'Radio Check',
-    description: 'Test radio communication',
-    frequency: '121.900',
-    expectedCommunications: ['Radio check request', 'Read you loud and clear']
-  },
-  {
-    id: 'clearance',
-    name: 'Clearance Delivery',
-    description: 'Request IFR clearance',
-    frequency: '121.700',
-    expectedCommunications: [
-      'Ready to copy clearance',
-      'Cleared to destination via...',
-      'Readback clearance'
-    ]
-  },
-  {
-    id: 'ground',
-    name: 'Ground Control',
-    description: 'Taxi clearance and pushback',
-    frequency: '121.900',
-    expectedCommunications: [
-      'Request taxi',
-      'Taxi via...',
-      'Hold short of runway'
-    ]
-  },
-  {
-    id: 'tower',
-    name: 'Tower',
-    description: 'Takeoff clearance',
-    frequency: '119.100',
-    expectedCommunications: [
-      'Ready for departure',
-      'Line up and wait',
-      'Cleared for takeoff'
-    ]
-  },
-  {
-    id: 'departure',
-    name: 'Departure Control',
-    description: 'Initial vectors and climb',
-    frequency: '123.800',
-    expectedCommunications: [
-      'Check in with departure',
-      'Radar contact',
-      'Climb and maintain'
-    ]
-  }
-]
-
 // A320 Checklists
 const A320_CHECKLISTS: Checklist[] = [
   {
     name: 'Cockpit Preparation',
-    phase: 'prefile',
+    phase: 'clearance',
     items: [
       { text: 'PARKING BRAKE...SET', completed: false },
       { text: 'ENGINE MASTER SWITCHES...OFF', completed: false },
@@ -623,21 +677,23 @@ const A320_CHECKLISTS: Checklist[] = [
   }
 ]
 
-// State
+// Core State
 const currentScreen = ref<'login' | 'flightselect' | 'monitor'>('login')
 const vatsimId = ref('')
 const flightPlans = ref<VatsimFlightPlan[]>([])
 const selectedFlightPlan = ref<VatsimFlightPlan | null>(null)
-const currentPhase = ref<FlightPhase>(FLIGHT_PHASES[0])
-const currentPhaseIndex = computed(() => FLIGHT_PHASES.findIndex(p => p.id === currentPhase.value.id))
+
+// Communications Engine
+const communicationsEngine = useCommunicationsEngine()
+const { flightContext, currentStep, communicationLog, processUserTransmission, initializeFlight } = communicationsEngine
 
 // Communication State
-const frequencies = ref({ active: '121.900', standby: '118.100' })
+const frequencies = ref({ active: '121.700', standby: '118.100' })
 const isRecording = ref(false)
 const isIntercomMode = ref(false)
 const lastTransmission = ref('')
-const communicationLog = ref<string[]>([])
 const micPermission = ref(false)
+const swapAnimation = ref(false)
 
 // UI State
 const loading = ref(false)
@@ -645,9 +701,11 @@ const error = ref('')
 const showSettings = ref(false)
 const showChecklistModal = ref(false)
 const currentChecklist = ref<Checklist | null>(null)
-const signalStrength = ref(5)
+const signalStrength = ref(4)
 const radioCheckLoading = ref(false)
 const randomTaxi = ref(false)
+const radioEffectsEnabled = ref(true)
+const readingChecklist = ref(false)
 
 // Audio
 const mediaRecorder = ref<MediaRecorder | null>(null)
@@ -661,10 +719,30 @@ const rules = {
   required: (v: string) => !!v || 'This field is required'
 }
 
-// Computed
+// Computed Properties
 const availableChecklists = computed(() =>
-    A320_CHECKLISTS.filter(cl => cl.phase === currentPhase.value.id)
+    A320_CHECKLISTS.filter(cl => cl.phase === flightContext.value.phase)
 )
+
+const radioQuality = computed(() => {
+  const strength = signalStrength.value
+  if (strength >= 5) return { color: 'success', text: 'EXCELLENT' }
+  if (strength >= 4) return { color: 'success', text: 'GOOD' }
+  if (strength >= 3) return { color: 'warning', text: 'FAIR' }
+  if (strength >= 2) return { color: 'orange', text: 'POOR' }
+  return { color: 'error', text: 'WEAK' }
+})
+
+const checklistProgress = computed(() => {
+  if (!currentChecklist.value) return 0
+  const completed = currentChecklist.value.items.filter(item => item.completed).length
+  return Math.round((completed / currentChecklist.value.items.length) * 100)
+})
+
+const completedItems = computed(() => {
+  if (!currentChecklist.value) return 0
+  return currentChecklist.value.items.filter(item => item.completed).length
+})
 
 // Methods
 const loadFlightPlans = async () => {
@@ -677,7 +755,7 @@ const loadFlightPlans = async () => {
     const response = await $fetch(`https://api.vatsim.net/v2/members/${vatsimId.value}/flightplans`)
 
     if (Array.isArray(response) && response.length > 0) {
-      flightPlans.value = response
+      flightPlans.value = response.slice(0, 10) // Limit to 10 most recent
       currentScreen.value = 'flightselect'
     } else {
       error.value = 'No flight plans found for this VATSIM ID'
@@ -692,12 +770,16 @@ const loadFlightPlans = async () => {
 
 const startMonitoring = (flightPlan: VatsimFlightPlan) => {
   selectedFlightPlan.value = flightPlan
-  currentPhase.value = FLIGHT_PHASES[1] // Start with radio check
+  initializeFlight(flightPlan)
   currentScreen.value = 'monitor'
-  addToCommunicationLog(`Session started for ${flightPlan.callsign}`)
+
+  // Set initial frequency based on first communication step
+  if (currentStep.value) {
+    frequencies.value.active = currentStep.value.frequency
+  }
 }
 
-// PTT Functions
+// PTT Functions with Radio Effects
 const startRecording = async (isIntercom = false) => {
   if (!micPermission.value) return
 
@@ -731,6 +813,9 @@ const startRecording = async (isIntercom = false) => {
     isRecording.value = true
     isIntercomMode.value = isIntercom
 
+    // Play PTT beep
+    playPTTBeep(true)
+
   } catch (err) {
     console.error('Failed to start recording:', err)
   }
@@ -740,122 +825,127 @@ const stopRecording = () => {
   if (mediaRecorder.value && isRecording.value) {
     mediaRecorder.value.stop()
     isRecording.value = false
+
+    // Play PTT release beep
+    playPTTBeep(false)
   }
 }
 
 const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
   try {
-    if (!selectedFlightPlan.value) return
-
     if (isIntercom) {
       // Handle intercom for checklists
-      const transcription = "Intercom: Checklist item completed"
-      setLastTransmission(transcription)
-      addToCommunicationLog(`INTERCOM: ${transcription}`)
-    } else {
-      // Handle ATC communication using existing TTS system
       const result = await tts.submitPTT(audioBlob, {
-        expectedText: `${selectedFlightPlan.value.callsign}, ${frequencies.value.active}, radio check`,
+        expectedText: 'checklist request',
         moduleId: 'pilot-monitoring',
-        lessonId: currentPhase.value.id,
+        lessonId: 'intercom',
         format: 'webm'
       })
 
       if (result.success) {
-        setLastTransmission(result.transcription)
-        addToCommunicationLog(`TX: ${result.transcription}`)
+        const transcription = result.transcription.toLowerCase()
+        lastTransmission.value = `INTERCOM: ${result.transcription}`
 
-        // Generate ATC response
-        setTimeout(() => {
-          const response = generateATCResponse(result.transcription)
-          addToCommunicationLog(`RX: ${response}`)
-
-          // Play ATC response
-          if (response) {
-            tts.speakServer(response, {
-              level: 4,
-              voice: 'alloy',
-              moduleId: 'pilot-monitoring',
-              lessonId: currentPhase.value.id
-            })
+        // Check if user requested checklist
+        if (transcription.includes('checklist') || transcription.includes('check list')) {
+          if (availableChecklists.value.length > 0) {
+            openChecklist()
+            await speakWithRadioEffects(`Checklist available for ${availableChecklists.value[0].name}`)
+          } else {
+            await speakWithRadioEffects('No checklists available for current phase')
           }
-        }, 1500)
+        }
+      }
+    } else {
+      // Handle ATC communication using communications engine
+      const result = await tts.submitPTT(audioBlob, {
+        expectedText: currentStep.value?.pilot || 'radio communication',
+        moduleId: 'pilot-monitoring',
+        lessonId: currentStep.value?.id || 'general',
+        format: 'webm'
+      })
+
+      if (result.success) {
+        lastTransmission.value = result.transcription
+
+        // Process through communications engine
+        const atcResponse = processUserTransmission(result.transcription)
+
+        if (atcResponse) {
+          // Delay ATC response to simulate real-world timing
+          setTimeout(async () => {
+            await speakWithRadioEffects(atcResponse)
+          }, 1000 + Math.random() * 2000) // 1-3 second delay
+        }
       }
     }
   } catch (err) {
     console.error('Error processing transmission:', err)
+    error.value = 'Failed to process transmission'
   }
 }
 
-const generateATCResponse = (pilotTransmission: string): string => {
-  if (!selectedFlightPlan.value) return ''
-
-  const callsign = selectedFlightPlan.value.callsign
-
-  if (pilotTransmission.toLowerCase().includes('radio check')) {
-    return `${callsign}, ${currentPhase.value.name}, read you five by five`
-  }
-
-  if (pilotTransmission.toLowerCase().includes('request taxi')) {
-    return `${callsign}, taxi to runway two five via Alpha, Bravo, hold short of runway two five`
-  }
-
-  if (pilotTransmission.toLowerCase().includes('ready for departure')) {
-    return `${callsign}, runway two five, cleared for takeoff`
-  }
-
-  return `${callsign}, roger`
-}
-
-const performRadioCheck = async () => {
-  if (!selectedFlightPlan.value) return
-
-  radioCheckLoading.value = true
-  const message = `${currentPhase.value.name}, ${selectedFlightPlan.value.callsign}, radio check`
-
-  addToCommunicationLog(`TX: ${message}`)
-
-  // Use TTS system to speak the radio check
+const speakWithRadioEffects = async (text: string) => {
   try {
-    await tts.speakServer(message, {
-      level: 4,
+    const audioEffects = currentStep.value?.audioEffects || { static: 15, distortion: 5, volume: 85 }
+
+    await tts.speakServer(text, {
+      level: signalStrength.value,
       voice: 'alloy',
+      speed: 0.95, // Slightly slower for radio realism
       moduleId: 'pilot-monitoring',
-      lessonId: currentPhase.value.id
+      lessonId: currentStep.value?.id || 'general'
     })
   } catch (err) {
     console.error('TTS failed:', err)
   }
+}
 
-  setTimeout(() => {
-    const response = `${selectedFlightPlan.value?.callsign}, ${currentPhase.value.name}, read you loud and clear`
-    addToCommunicationLog(`RX: ${response}`)
+const performRadioCheck = async () => {
+  if (!flightContext.value.callsign) return
+
+  radioCheckLoading.value = true
+
+  const message = `${frequencies.value.active}, ${flightContext.value.callsign}, radio check`
+  lastTransmission.value = message
+
+  try {
+    await speakWithRadioEffects(message)
+
+    setTimeout(async () => {
+      const response = `${flightContext.value.callsign}, ${frequencies.value.active}, read you five by five`
+      await speakWithRadioEffects(response)
+      radioCheckLoading.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Radio check failed:', err)
     radioCheckLoading.value = false
-  }, 2000)
+  }
 }
 
 const swapFrequencies = () => {
+  swapAnimation.value = true
+
   const temp = frequencies.value.active
   frequencies.value.active = frequencies.value.standby
   frequencies.value.standby = temp
-  addToCommunicationLog(`Frequency changed to ${frequencies.value.active}`)
-}
 
-const nextPhase = () => {
-  if (currentPhaseIndex.value < FLIGHT_PHASES.length - 1) {
-    currentPhase.value = FLIGHT_PHASES[currentPhaseIndex.value + 1]
-    if (currentPhase.value.frequency) {
-      frequencies.value.active = currentPhase.value.frequency
-    }
+  // Update communication engine if needed
+  if (currentStep.value && currentStep.value.frequency !== frequencies.value.active) {
+    // Optionally log frequency change
   }
+
+  setTimeout(() => {
+    swapAnimation.value = false
+  }, 500)
 }
 
-const previousPhase = () => {
-  if (currentPhaseIndex.value > 0) {
-    currentPhase.value = FLIGHT_PHASES[currentPhaseIndex.value - 1]
-  }
+const normalizeExpectedText = (text: string): string => {
+  if (!flightContext.value) return text
+  return communicationsEngine.normalizeATCText(text, flightContext.value)
 }
 
+// Checklist Functions
 const openChecklist = () => {
   if (availableChecklists.value.length > 0) {
     currentChecklist.value = { ...availableChecklists.value[0] }
@@ -863,27 +953,83 @@ const openChecklist = () => {
   }
 }
 
-const toggleChecklistItem = (itemIndex: number) => {
-  if (currentChecklist.value) {
-    currentChecklist.value.items[itemIndex].completed = !currentChecklist.value.items[itemIndex].completed
+const closeChecklist = () => {
+  showChecklistModal.value = false
+  currentChecklist.value = null
+}
+
+const toggleChecklistItem = async (itemIndex: number) => {
+  if (!currentChecklist.value) return
+
+  currentChecklist.value.items[itemIndex].completed = !currentChecklist.value.items[itemIndex].completed
+
+  if (currentChecklist.value.items[itemIndex].completed) {
+    // Read the item when completed
+    await readChecklistItem(currentChecklist.value.items[itemIndex].text)
   }
 }
 
-const declareEmergency = () => {
-  addToCommunicationLog('EMERGENCY: Mayday declared')
-  if (selectedFlightPlan.value) {
-    const emergency = `Mayday, mayday, mayday, ${selectedFlightPlan.value.callsign}`
-    setLastTransmission(emergency)
+const readChecklistItem = async (itemText: string) => {
+  try {
+    // Convert checklist item to radio-friendly format
+    const radioText = itemText.replace(/\.\.\./g, '').replace(/\s+/g, ' ').trim()
+    await speakWithRadioEffects(radioText)
+  } catch (err) {
+    console.error('Failed to read checklist item:', err)
   }
 }
 
-const addToCommunicationLog = (message: string) => {
-  const timestamp = new Date().toLocaleTimeString()
-  communicationLog.value.push(`${timestamp}: ${message}`)
+const readAllChecklist = async () => {
+  if (!currentChecklist.value) return
+
+  readingChecklist.value = true
+
+  try {
+    await speakWithRadioEffects(`Reading ${currentChecklist.value.name} checklist`)
+
+    for (const item of currentChecklist.value.items) {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      await readChecklistItem(item.text)
+    }
+
+    await speakWithRadioEffects('Checklist complete')
+  } catch (err) {
+    console.error('Failed to read full checklist:', err)
+  } finally {
+    readingChecklist.value = false
+  }
 }
 
-const setLastTransmission = (message: string) => {
-  lastTransmission.value = message
+// Utility Functions
+const playPTTBeep = (start: boolean) => {
+  if (!radioEffectsEnabled.value) return
+
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+  const oscillator = audioContext.createOscillator()
+  const gainNode = audioContext.createGain()
+
+  oscillator.connect(gainNode)
+  gainNode.connect(audioContext.destination)
+
+  oscillator.frequency.setValueAtTime(start ? 800 : 600, audioContext.currentTime)
+  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1)
+
+  oscillator.start()
+  oscillator.stop(audioContext.currentTime + 0.1)
+}
+
+const formatTime = (date: Date): string => {
+  return date.toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
+
+const clearCommunicationLog = () => {
+  communicationLog.value.splice(0)
 }
 
 // Initialize microphone permissions
@@ -897,122 +1043,69 @@ onMounted(async () => {
   }
 })
 
-// Watch for phase changes to update frequency
-watch(() => currentPhase.value.id, (newPhase) => {
-  const phase = FLIGHT_PHASES.find(p => p.id === newPhase)
-  if (phase?.frequency) {
-    frequencies.value.active = phase.frequency
+// Watch for communication step changes to update frequency
+watch(() => currentStep.value?.frequency, (newFreq) => {
+  if (newFreq && newFreq !== frequencies.value.active) {
+    frequencies.value.active = newFreq
   }
 })
 </script>
 
 <style scoped>
-.login-screen {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+/* Global Styles */
+.monitoring-screen {
+  background: linear-gradient(135deg, #0d1421 0%, #1a2332 100%);
   min-height: 100vh;
 }
 
-.login-card {
-  border-radius: 16px;
+.login-screen {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
 }
 
-.radio-icon {
-  display: flex;
-  justify-content: center;
+/* Glass Card Effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.flight-plan-card {
-  cursor: pointer;
-  transition: all 0.2s;
+/* Text Gradient */
+.text-gradient {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.flight-plan-card:hover {
-  transform: translateY(-2px);
+/* App Bar */
+.app-bar-glow {
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
 }
 
-.flight-info-bar {
-  background: rgba(0, 0, 0, 0.04);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-  padding: 8px 0;
+.radio-bar {
+  background: linear-gradient(90deg, #1976d2, #1565c0) !important;
+  box-shadow: 0 4px 20px rgba(25, 118, 210, 0.4);
 }
 
-.phase-nav {
-  background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
-}
-
-.progress-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ccc;
-  transition: all 0.2s;
-}
-
-.progress-dot.active {
-  background: #1976d2;
-  transform: scale(1.2);
-}
-
-.progress-dot.completed {
-  background: #4caf50;
-}
-
-.freq-display {
-  background: linear-gradient(135deg, #263238 0%, #37474f 100%);
-  color: white;
-}
-
-.freq-swap-btn {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-.ptt-card .ptt-btn {
-  height: 80px;
-  font-size: 18px;
-  font-weight: bold;
-  transition: all 0.2s;
-}
-
-.ptt-btn.ptt-active {
-  background: #f44336 !important;
-  animation: pulse 1s infinite;
-}
-
-.intercom-btn {
-  height: 60px;
-  font-weight: bold;
-}
-
-.comm-log {
-  background: rgba(0, 0, 0, 0.02);
-}
-
-.log-container {
-  max-height: 150px;
-  overflow-y: auto;
-}
-
-.log-entry {
-  padding: 2px 0;
+.radio-display .radio-freq {
   opacity: 0.8;
+  font-family: 'Roboto Mono', monospace;
 }
 
-.signal-bars {
+/* Signal Display */
+.signal-display {
   display: flex;
-  gap: 1px;
+  gap: 2px;
   align-items: flex-end;
   height: 16px;
 }
 
 .signal-bar {
-  width: 2px;
+  width: 3px;
   background: rgba(255, 255, 255, 0.3);
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  border-radius: 1px;
 }
 
 .signal-bar:nth-child(1) { height: 20%; }
@@ -1021,14 +1114,229 @@ watch(() => currentPhase.value.id, (newPhase) => {
 .signal-bar:nth-child(4) { height: 80%; }
 .signal-bar:nth-child(5) { height: 100%; }
 
-.signal-bar.active {
+.signal-bar.signal-active {
   background: #4caf50;
+  box-shadow: 0 0 4px #4caf50;
 }
 
+/* Flight Info Bar */
+.flight-info-bar {
+  background: rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Step Card */
+.step-card {
+  background: linear-gradient(135deg, rgba(25, 118, 210, 0.1), rgba(21, 101, 192, 0.1));
+}
+
+/* Frequency Display */
+.freq-card {
+  background: linear-gradient(135deg, #263238 0%, #37474f 100%);
+  color: white;
+}
+
+.freq-label {
+  font-size: 11px;
+  font-weight: bold;
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+
+.freq-display {
+  font-size: 28px;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: bold;
+  text-shadow: 0 0 10px currentColor;
+}
+
+.freq-active {
+  color: #4caf50;
+}
+
+.freq-standby {
+  color: #ff9800;
+}
+
+.freq-name {
+  font-size: 10px;
+  opacity: 0.6;
+  margin-top: 2px;
+}
+
+.freq-swap-btn {
+  transition: all 0.3s ease;
+}
+
+.freq-swap-active {
+  transform: rotate(180deg);
+}
+
+/* PTT Buttons */
+.ptt-btn {
+  font-weight: bold;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.ptt-btn.ptt-active {
+  background: #f44336 !important;
+  border-color: #d32f2f;
+  transform: scale(1.02);
+}
+
+.intercom-btn {
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.intercom-btn.ptt-active {
+  background: #ff9800 !important;
+  transform: scale(1.02);
+}
+
+.btn-pulse {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+/* Action Buttons */
+.action-btn {
+  font-weight: bold;
+}
+
+/* Communication Log */
+.comm-log {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.log-entry {
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.log-entry:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.log-pilot {
+  border-left: 3px solid #2196f3;
+}
+
+.log-atc {
+  border-left: 3px solid #9c27b0;
+}
+
+/* Checklist */
+.checklist-item {
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.checklist-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.item-completed {
+  opacity: 0.7;
+}
+
+/* Glowing Effects */
+.chip-glow {
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+}
+
+.btn-glow {
+  box-shadow: 0 4px 15px rgba(25, 118, 210, 0.4);
+}
+
+.avatar-glow {
+  box-shadow: 0 0 20px rgba(25, 118, 210, 0.3);
+}
+
+.input-glow:focus-within {
+  box-shadow: 0 0 15px rgba(102, 126, 234, 0.3);
+}
+
+.radio-pulse {
+  animation: radio-pulse 2s infinite;
+}
+
+@keyframes radio-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+/* Card Hover Effects */
+.flight-plan-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.flight-plan-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(25, 118, 210, 0.3);
+}
+
+/* Expected Text Styling */
+.expected-text {
+  font-family: 'Roboto Mono', monospace;
+}
+
+/* Connection Status */
 .connection-status {
   position: fixed;
   bottom: 16px;
   left: 16px;
-  z-index: 999;
+  z-index: 1000;
+}
+
+/* Last Transmission */
+.last-tx {
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(21, 101, 192, 0.1));
+}
+
+/* Radio Effects */
+.freq-swap-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .freq-display {
+    font-size: 24px;
+  }
+
+  .ptt-btn {
+    height: 70px !important;
+  }
+
+  .intercom-btn {
+    height: 50px !important;
+  }
 }
 </style>
