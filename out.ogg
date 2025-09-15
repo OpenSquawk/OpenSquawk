@@ -1,0 +1,1 @@
+{"error":true,"message":"[wav @ 0x14e704c40] invalid start code [255][243][228][196] in RIFF header\n[in#0 @ 0x600001370900] Error opening input: Invalid data found when processing input\nError opening input file pipe:0.\nError opening input files: Invalid data found when processing input\n"}
