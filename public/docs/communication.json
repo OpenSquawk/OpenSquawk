@@ -1,198 +1,185 @@
-{
-  "meta": {
-    "filename": "vatsim_communication_template.json",
-    "source": ":contentReference[oaicite:0]{index=0}"
+[
+  {
+    "frequency": "Delivery",
+    "action": "Flight Plan",
+    "pilot": "Delivery, good day, ${callsign} at stand ${gate}, with information ${atis}, requesting clearance to ${destination}",
+    "atc": "${callsign}, ${airport} Delivery, good day, clearance is to ${destination}, ${departureRoute} departure, runway ${runway}, squawk ${squawk}",
+    "pilotResponse": "Cleared to ${destination}, ${departureRoute} departure, runway ${runway}, squawk ${squawk}, ${callsign}"
+    "atcResponse": "${callsign}, readback is correct, report ready for startup"
   },
-  "columns": ["frequency", "action", "pilot", "atc", "pilotResponse"],
-  "rows": [
-    {
-      "frequency": "Delivery",
-      "action": "Flight Plan",
-      "pilot": "Delivery, good day, ${callsign} at stand ${gate}, with information ${atis}, requesting clearance to ${destination}",
-      "atc": "${callsign}, ${airport} Delivery, good day, clearance is to ${destination}, ${departureRoute} departure, runway ${runway}, squawk ${squawk}",
-      "pilotResponse": "Cleared to ${destination}, ${departureRoute} departure, runway ${runway}, squawk ${squawk}, ${callsign}"
-    },
-    {
-      "frequency": "Delivery",
-      "action": "Flight Plan – ATC Reply",
-      "pilot": "",
-      "atc": "${callsign}, readback is correct, report ready for startup",
-      "pilotResponse": "Wilco, ${callsign}"
-    },
-    {
-      "frequency": "Startup",
-      "action": "Clearance",
-      "pilot": "${callsign} is ready for startup.",
-      "atc": "${callsign}, roger, startup is approved, for the pushback contact ground on ${groundFreq}",
-      "pilotResponse": "Startup approved and contact ground on ${groundFreq} for the pushback, ${callsign}, bye bye"
-    },
-    {
-      "frequency": "Ground",
-      "action": "Pushback",
-      "pilot": "Ground, good day, ${callsign} at stand ${gate}, requesting pushback",
-      "atc": "${callsign}, ${airport} Ground, good day, pushback is approved.",
-      "pilotResponse": "Pushback approved, ${callsign}"
-    },
-    {
-      "frequency": "Taxi",
-      "action": "Taxiing",
-      "pilot": "${callsign}, request taxi",
-      "atc": "${callsign}, taxi to ${holdingPointOrRunway} via ${taxiRoute}",
-      "pilotResponse": "Taxi to ${holdingPointOrRunway} via ${taxiRoute}, ${callsign}"
-    },
-    {
-      "frequency": "Ground",
-      "action": "Give way to airplane",
-      "pilot": "",
-      "atc": "${callsign}, give way to the ${otherAirline} ${otherType} from the ${direction}",
-      "pilotResponse": "Give way to the ${otherAirline} ${otherType} from the ${direction}, ${callsign}"
-    },
-    {
-      "frequency": "Tower",
-      "action": "Handoff to Tower",
-      "pilot": "",
-      "atc": "${callsign}, at ${holdingPointOrRunway} hold short and contact Tower on ${towerFreq}, bye bye",
-      "pilotResponse": "At ${holdingPointOrRunway} hold short and contact Tower on ${towerFreq}, ${callsign}"
-    },
-    {
-      "frequency": "Tower",
-      "action": "Lineup and Wait",
-      "pilot": "${airport} Tower, good day, ${callsign} at ${holdingPoint}, ready for departure",
-      "atc": "${callsign}, ${airport} Tower, good day, line up and wait runway ${runway}",
-      "pilotResponse": "Line up and wait runway ${runway}, ${callsign}"
-    },
-    {
-      "frequency": "Tower",
-      "action": "Takeoff Clearance",
-      "pilot": "",
-      "atc": "${callsign}, wind ${wind}, runway ${runway}, cleared for takeoff.",
-      "pilotResponse": "Cleared for takeoff runway ${runway}, ${callsign}"
-    },
-    {
-      "frequency": "Departure",
-      "action": "Handoff to Departure",
-      "pilot": "",
-      "atc": "${callsign}, contact ${airport} Departure on ${depFreq}, bye bye",
-      "pilotResponse": "Contact ${airport} Departure on ${depFreq}, ${callsign}, bye bye"
-    },
-    {
-      "frequency": "Departure",
-      "action": "Contacting Departure",
-      "pilot": "${airport} Departure, good day, ${callsign}, passing ${altitude}, ${depRouteOrHeading}",
-      "atc": "${callsign}, ${airport} Departure, identified, climb ${flightLevel}",
-      "pilotResponse": "Climb ${flightLevel}, ${callsign}"
-    },
-    {
-      "frequency": "Enroute",
-      "action": "Direct Route",
-      "pilot": "",
-      "atc": "${callsign}, direct to ${vorFix}",
-      "pilotResponse": "Direct ${vorFix}, ${callsign}"
-    },
-    {
-      "frequency": "Enroute",
-      "action": "Handoff to Nearest Center",
-      "pilot": "",
-      "atc": "${callsign}, contact ${nearestCenter} on ${centerFreq}, bye bye",
-      "pilotResponse": "Contact ${nearestCenter} on ${centerFreq}, ${callsign}, bye bye"
-    },
-    {
-      "frequency": "Center",
-      "action": "Contacting Center",
-      "pilot": "${nearestCenter}, good day, ${callsign}, passing ${altitude}, inbound ${vorFixOrHeading}",
-      "atc": "${callsign}, ${nearestCenter}, radar contact, climb ${flightLevel}",
-      "pilotResponse": "Climb ${flightLevel}, ${callsign}"
-    },
-    {
-      "frequency": "Descent",
-      "action": "Request Descent",
-      "pilot": "${callsign}, request descent",
-      "atc": "${callsign}, descend to ${flightLevel}",
-      "pilotResponse": "Descending to ${flightLevel}, ${callsign}"
-    },
-    {
-      "frequency": "Center",
-      "action": "Handoff to another center",
-      "pilot": "",
-      "atc": "${callsign}, contact ${nextCenter} on ${nextCenterFreq}, bye bye",
-      "pilotResponse": "Contact ${nextCenter} on ${nextCenterFreq}, ${callsign}, bye bye"
-    },
-    {
-      "frequency": "Center",
-      "action": "Contacting another center and getting an approach",
-      "pilot": "${nextCenter}, good day, ${callsign}, passing ${altitude} for ${flightLevel}, inbound ${vorFixOrHeading}",
-      "atc": "${callsign}, good day, radar contact, ${star}, expect ${approachType} runway ${runway}, descend ${flightLevel}",
-      "pilotResponse": "${star}, ${approachType} runway ${runway} and descend ${flightLevel}, ${callsign}"
-    },
-    {
-      "frequency": "Approach",
-      "action": "Handoff to Approach",
-      "pilot": "",
-      "atc": "${callsign}, contact ${arrivalAirport} Approach on ${approachFreq}, bye bye",
-      "pilotResponse": "Contact ${arrivalAirport} Approach on ${approachFreq}, ${callsign}, bye bye"
-    },
-    {
-      "frequency": "Approach",
-      "action": "Contacting Approach",
-      "pilot": "${arrivalAirport} Approach, good day, ${callsign}, ${flightLevel}, ${star}",
-      "atc": "${callsign}, ${arrivalAirport} Approach, good day, continue approach",
-      "pilotResponse": "Continue approach, ${callsign}"
-    },
-    {
-      "frequency": "Approach",
-      "action": "Vectoring",
-      "pilot": "",
-      "atc": "${callsign}, descend ${flightLevel} and after ${vorFix} fly heading ${heading}",
-      "pilotResponse": "Descend ${flightLevel} and after ${vorFix} fly heading ${heading}, ${callsign}"
-    },
-    {
-      "frequency": "Approach",
-      "action": "Vectoring 2",
-      "pilot": "",
-      "atc": "${callsign}, fly heading ${heading}, descend ${flightLevel}, QNH ${qnh}",
-      "pilotResponse": "Fly heading ${heading}, descend ${flightLevel} on QNH ${qnh}, ${callsign}"
-    },
-    {
-      "frequency": "Approach",
-      "action": "Vectoring 3",
-      "pilot": "",
-      "atc": "${callsign}, turn left heading ${heading}, speed ${speed}",
-      "pilotResponse": "Left heading ${heading} and speed ${speed}, ${callsign}"
-    },
-    {
-      "frequency": "Approach",
-      "action": "Cleared Approach",
-      "pilot": "",
-      "atc": "${callsign}, turn left heading ${heading}, cleared ${approachType} runway ${runway}",
-      "pilotResponse": "Turn left heading ${heading}, cleared ${approachType} runway ${runway}, ${callsign}"
-    },
-    {
-      "frequency": "Tower",
-      "action": "Handoff to Tower",
-      "pilot": "",
-      "atc": "${callsign}, contact ${arrivalAirport} Tower on ${towerFreq}, bye bye",
-      "pilotResponse": "Contact ${arrivalAirport} Tower on ${towerFreq}, ${callsign}, bye bye"
-    },
-    {
-      "frequency": "Tower",
-      "action": "Contacting Tower",
-      "pilot": "${arrivalAirport} Tower, ${callsign}, ${approachType} runway ${runway}",
-      "atc": "${callsign}, good day, ${sequenceInfo}",
-      "pilotResponse": ""
-    },
-    {
-      "frequency": "Tower",
-      "action": "Landing Clearance",
-      "pilot": "",
-      "atc": "${callsign}, wind ${wind}, runway ${runway}, cleared to land",
-      "pilotResponse": "Cleared to land runway ${runway}, ${callsign}"
-    },
-    {
-      "frequency": "Ground",
-      "action": "Taxiing (Arrival)",
-      "pilot": "${callsign}, ${arrivalAirport} Ground, taxi to stand ${stand} via ${taxiRoute}",
-      "atc": "Taxi to stand ${stand} via ${taxiRoute}, ${callsign}",
-      "pilotResponse": ""
-    }
-  ]
-}
+  {
+    "frequency": "Startup",
+    "action": "Clearance",
+    "pilot": "${callsign} is ready for startup.",
+    "atc": "${callsign}, roger, startup is approved, for the pushback contact ground on ${groundFreq}",
+    "pilotResponse": "Startup approved and contact ground on ${groundFreq} for the pushback, ${callsign}, bye bye"
+  },
+  {
+    "frequency": "Ground",
+    "action": "Pushback",
+    "pilot": "Ground, good day, ${callsign} at stand ${gate}, requesting pushback",
+    "atc": "${callsign}, ${airport} Ground, good day, pushback is approved.",
+    "pilotResponse": "Pushback approved, ${callsign}"
+  },
+  {
+    "frequency": "Taxi",
+    "action": "Taxiing",
+    "pilot": "${callsign}, request taxi",
+    "atc": "${callsign}, taxi to ${holdingPointOrRunway} via ${taxiRoute}",
+    "pilotResponse": "Taxi to ${holdingPointOrRunway} via ${taxiRoute}, ${callsign}"
+  },
+  {
+    "frequency": "Ground",
+    "action": "Give way to airplane",
+    "pilot": "",
+    "atc": "${callsign}, give way to the ${otherAirline} ${otherType} from the ${direction}",
+    "pilotResponse": "Give way to the ${otherAirline} ${otherType} from the ${direction}, ${callsign}"
+  },
+  {
+    "frequency": "Tower",
+    "action": "Handoff to Tower",
+    "pilot": "",
+    "atc": "${callsign}, at ${holdingPointOrRunway} hold short and contact Tower on ${towerFreq}, bye bye",
+    "pilotResponse": "At ${holdingPointOrRunway} hold short and contact Tower on ${towerFreq}, ${callsign}"
+  },
+  {
+    "frequency": "Tower",
+    "action": "Lineup and Wait",
+    "pilot": "${airport} Tower, good day, ${callsign} at ${holdingPoint}, ready for departure",
+    "atc": "${callsign}, ${airport} Tower, good day, line up and wait runway ${runway}",
+    "pilotResponse": "Line up and wait runway ${runway}, ${callsign}"
+  },
+  {
+    "frequency": "Tower",
+    "action": "Takeoff Clearance",
+    "pilot": "",
+    "atc": "${callsign}, wind ${wind}, runway ${runway}, cleared for takeoff.",
+    "pilotResponse": "Cleared for takeoff runway ${runway}, ${callsign}"
+  },
+  {
+    "frequency": "Departure",
+    "action": "Handoff to Departure",
+    "pilot": "",
+    "atc": "${callsign}, contact ${airport} Departure on ${depFreq}, bye bye",
+    "pilotResponse": "Contact ${airport} Departure on ${depFreq}, ${callsign}, bye bye"
+  },
+  {
+    "frequency": "Departure",
+    "action": "Contacting Departure",
+    "pilot": "${airport} Departure, good day, ${callsign}, passing ${altitude}, ${depRouteOrHeading}",
+    "atc": "${callsign}, ${airport} Departure, identified, climb ${flightLevel}",
+    "pilotResponse": "Climb ${flightLevel}, ${callsign}"
+  },
+  {
+    "frequency": "Enroute",
+    "action": "Direct Route",
+    "pilot": "",
+    "atc": "${callsign}, direct to ${vorFix}",
+    "pilotResponse": "Direct ${vorFix}, ${callsign}"
+  },
+  {
+    "frequency": "Enroute",
+    "action": "Handoff to Nearest Center",
+    "pilot": "",
+    "atc": "${callsign}, contact ${nearestCenter} on ${centerFreq}, bye bye",
+    "pilotResponse": "Contact ${nearestCenter} on ${centerFreq}, ${callsign}, bye bye"
+  },
+  {
+    "frequency": "Center",
+    "action": "Contacting Center",
+    "pilot": "${nearestCenter}, good day, ${callsign}, passing ${altitude}, inbound ${vorFixOrHeading}",
+    "atc": "${callsign}, ${nearestCenter}, radar contact, climb ${flightLevel}",
+    "pilotResponse": "Climb ${flightLevel}, ${callsign}"
+  },
+  {
+    "frequency": "Descent",
+    "action": "Request Descent",
+    "pilot": "${callsign}, request descent",
+    "atc": "${callsign}, descend to ${flightLevel}",
+    "pilotResponse": "Descending to ${flightLevel}, ${callsign}"
+  },
+  {
+    "frequency": "Center",
+    "action": "Handoff to another center",
+    "pilot": "",
+    "atc": "${callsign}, contact ${nextCenter} on ${nextCenterFreq}, bye bye",
+    "pilotResponse": "Contact ${nextCenter} on ${nextCenterFreq}, ${callsign}, bye bye"
+  },
+  {
+    "frequency": "Center",
+    "action": "Contacting another center and getting an approach",
+    "pilot": "${nextCenter}, good day, ${callsign}, passing ${altitude} for ${flightLevel}, inbound ${vorFixOrHeading}",
+    "atc": "${callsign}, good day, radar contact, ${star}, expect ${approachType} runway ${runway}, descend ${flightLevel}",
+    "pilotResponse": "${star}, ${approachType} runway ${runway} and descend ${flightLevel}, ${callsign}"
+  },
+  {
+    "frequency": "Approach",
+    "action": "Handoff to Approach",
+    "pilot": "",
+    "atc": "${callsign}, contact ${arrivalAirport} Approach on ${approachFreq}, bye bye",
+    "pilotResponse": "Contact ${arrivalAirport} Approach on ${approachFreq}, ${callsign}, bye bye"
+  },
+  {
+    "frequency": "Approach",
+    "action": "Contacting Approach",
+    "pilot": "${arrivalAirport} Approach, good day, ${callsign}, ${flightLevel}, ${star}",
+    "atc": "${callsign}, ${arrivalAirport} Approach, good day, continue approach",
+    "pilotResponse": "Continue approach, ${callsign}"
+  },
+  {
+    "frequency": "Approach",
+    "action": "Vectoring",
+    "pilot": "",
+    "atc": "${callsign}, descend ${flightLevel} and after ${vorFix} fly heading ${heading}",
+    "pilotResponse": "Descend ${flightLevel} and after ${vorFix} fly heading ${heading}, ${callsign}"
+  },
+  {
+    "frequency": "Approach",
+    "action": "Vectoring 2",
+    "pilot": "",
+    "atc": "${callsign}, fly heading ${heading}, descend ${flightLevel}, QNH ${qnh}",
+    "pilotResponse": "Fly heading ${heading}, descend ${flightLevel} on QNH ${qnh}, ${callsign}"
+  },
+  {
+    "frequency": "Approach",
+    "action": "Vectoring 3",
+    "pilot": "",
+    "atc": "${callsign}, turn left heading ${heading}, speed ${speed}",
+    "pilotResponse": "Left heading ${heading} and speed ${speed}, ${callsign}"
+  },
+  {
+    "frequency": "Approach",
+    "action": "Cleared Approach",
+    "pilot": "",
+    "atc": "${callsign}, turn left heading ${heading}, cleared ${approachType} runway ${runway}",
+    "pilotResponse": "Turn left heading ${heading}, cleared ${approachType} runway ${runway}, ${callsign}"
+  },
+  {
+    "frequency": "Tower",
+    "action": "Handoff to Tower",
+    "pilot": "",
+    "atc": "${callsign}, contact ${arrivalAirport} Tower on ${towerFreq}, bye bye",
+    "pilotResponse": "Contact ${arrivalAirport} Tower on ${towerFreq}, ${callsign}, bye bye"
+  },
+  {
+    "frequency": "Tower",
+    "action": "Contacting Tower",
+    "pilot": "${arrivalAirport} Tower, ${callsign}, ${approachType} runway ${runway}",
+    "atc": "${callsign}, good day, ${sequenceInfo}",
+    "pilotResponse": ""
+  },
+  {
+    "frequency": "Tower",
+    "action": "Landing Clearance",
+    "pilot": "",
+    "atc": "${callsign}, wind ${wind}, runway ${runway}, cleared to land",
+    "pilotResponse": "Cleared to land runway ${runway}, ${callsign}"
+  },
+  {
+    "frequency": "Ground",
+    "action": "Taxiing (Arrival)",
+    "pilot": "${callsign}, ${arrivalAirport} Ground, taxi to stand ${stand} via ${taxiRoute}",
+    "atc": "Taxi to stand ${stand} via ${taxiRoute}, ${callsign}",
+    "pilotResponse": ""
+  }
+]
