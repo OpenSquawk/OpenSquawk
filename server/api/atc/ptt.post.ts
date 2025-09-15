@@ -27,6 +27,7 @@ interface PTTResponse {
         accuracy: number; // Text similarity
         keywordMatch: number; // Keyword matching
         recommendation: 'excellent' | 'good' | 'retry' | 'listen_again';
+        atcResponse?: string; // Antwort des ATC (vom LLM generiert)
         feedback: string;
         mistakes?: string[];
     };
@@ -129,11 +130,13 @@ Evaluate the readback and provide:
 1. Brief feedback (max 2 sentences)
 2. Specific mistakes if any
 3. Overall assessment
+4. A short ATC-style response to the pilot's readback (if appropriate)
 
 Be constructive and educational. Focus on aviation safety and standard phraseology.
 
 Response format:
 FEEDBACK: [your feedback]
+ATC_RESPONSE: [your response via ATC phraseology to the pilot]
 MISTAKES: [list mistakes or "None"]
 ASSESSMENT: [excellent/good/needs_improvement/unacceptable]`;
 
@@ -141,12 +144,13 @@ ASSESSMENT: [excellent/good/needs_improvement/unacceptable]`;
         const completion = await openai.chat.completions.create({
             model: LLM_MODEL,
             messages: [{ role: "user", content: prompt }],
-            max_tokens: 300,
-            temperature: 0.3
         });
 
         const response = completion.choices[0]?.message?.content || "";
+        console.log("LLM Evaluation Response:", response);
+
         const feedback = response.match(/FEEDBACK: (.+?)(?=MISTAKES:|$)/)?.[1]?.trim() || "Good attempt.";
+        const atcResponse = response.match(/ATC_RESPONSE: (.+?)(?=MISTAKES:|$)/)?.[1]?.trim() || "Noted.";
         const mistakes = response.match(/MISTAKES: (.+?)(?=ASSESSMENT:|$)/)?.[1]?.trim();
         const assessment = response.match(/ASSESSMENT: (.+)/)?.[1]?.trim() || "good";
 
@@ -170,6 +174,7 @@ ASSESSMENT: [excellent/good/needs_improvement/unacceptable]`;
             accuracy,
             keywordMatch,
             recommendation,
+            atcResponse,
             feedback,
             mistakes: mistakes && mistakes !== "None" ? [mistakes] : undefined,
             playAgain
