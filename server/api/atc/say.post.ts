@@ -1,3 +1,4 @@
+// server/api/atc/say.post.ts
 import { createError, readBody } from "h3";
 import { writeFile, readFile, mkdir, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -7,78 +8,90 @@ import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { openai, TTS_MODEL, normalizeATC } from "../../utils/openai";
 
-// --- Radio-Filter aus deinem bestehenden Endpoint wiederverwenden ---
-function buildRadioFilter(level: number) {
+// Enhanced Radio Filter für besseren ATC-Sound
+function buildEnhancedRadioFilter(level: number) {
     const L = Math.max(1, Math.min(5, Math.floor(level || 4)));
-    const dropout = (period: number, dur: number) =>
-        `volume=enable='lt(mod(t\\,${period})\\,${dur})':volume=0`;
-    const band = (hp: number, lp: number, gain = 6) =>
-        `highpass=f=${hp},lowpass=f=${lp},compand=attacks=0.02:decays=0.25:points=-80/-900|-70/-20|0/-10|20/-8:gain=${gain}`;
-    const tail = `aecho=0.6:0.7:8:0.08,acompressor=threshold=0.6:ratio=6:attack=20:release=200`;
 
-    const mkCrushMix = (bits: number, mix = 0.25, inLabel = "pre", outLabel = "mix1") => [
-        `[${inLabel}]asplit=2[clean][toCrush]`,
-        `[toCrush]acrusher=bits=${bits}:mix=1[crushed]`,
-        `[clean][crushed]amix=inputs=2:weights=1 ${mix}:duration=shortest[${outLabel}]`,
+    // Basis Audio-Charakteristika für ATC Radio
+    const baseProcessor = (hp: number, lp: number, gain = 8) => [
+        `highpass=f=${hp}`,
+        `lowpass=f=${lp}`,
+        `compand=attacks=0.01:decays=0.15:points=-80/-900|-60/-25|-40/-15|-20/-10|0/-5:gain=${gain}`,
+        `acompressor=threshold=0.4:ratio=8:attack=5:release=100`,
+        `volume=1.1`
+    ].join(',');
+
+    // Authentische Radio-Artefakte
+    const radioArtefacts = (crushLevel: number, noiseLevel: number, staticLevel: number) => [
+        // Bit crushing für digitale Artefakte
+        `acrusher=bits=${crushLevel}:mix=0.3`,
+        // Bandpass + Resonanz für Funkcharakter
+        `bandpass=frequency=1850:width_type=h:width=1200`,
+        `equalizer=frequency=2300:width_type=h:width=800:gain=3`,
+        // Leichtes Saturation für Röhren-Sound
+        `asoftclip=param=2`,
+        // Radio-typisches Rauschen
+        `anoisesrc=color=brown:amplitude=${noiseLevel}:duration=10[noise]`,
+        `[0][noise]amix=inputs=2:weights=1 ${staticLevel}:duration=shortest`
     ];
 
-    const mkNoiseMix = (amp: number, inLabel = "mix1", outLabel = "mix2") => [
-        `anoisesrc=color=white:amplitude=${amp}[ns]`,
-        `[${inLabel}][ns]amix=inputs=2:weights=1 0.25:duration=shortest[${outLabel}]`,
-    ];
+    // Dropout-Simulation (Funkaussetzer)
+    const dropout = (frequency: number, duration: number) =>
+        `volume=enable='lt(mod(t\\,${frequency})\\,${duration})':volume=0.1`;
 
-    const mkDropTail = (inLabel: string, period: number | null, dur: number | null) => {
-        const chain: string[] = [];
-        if (period && dur) chain.push(`[${inLabel}]${dropout(period, dur)}[drop]`);
-        const src = period && dur ? "drop" : inLabel;
-        chain.push(`[${src}]${tail}[out]`);
-        return chain;
-    };
+    // Delay/Echo für Raumklang
+    const spatialEffect = `aecho=0.4:0.5:15:0.3,reverb=roomsize=0.3:damping=0.4`;
+
+    // PTT Click Simulation (leider schwer ohne Audio-Sample)
+    const pttSimulation = `afade=t=in:d=0.05,afade=t=out:d=0.08`;
 
     if (L === 5) {
+        // Kristallklar, moderne digitale Funkanlage
         return [
-            `[0:a]${band(300,3400)},volume=1.2[a]`,
-            `anoisesrc=color=white:amplitude=0.02[ns]`,
-            `[a][ns]amix=inputs=2:weights=1 0.25:duration=shortest[mix]`,
-            `[mix]${tail}[out]`,
-        ].join(";");
+            `[0:a]${baseProcessor(280, 3500, 7)}[clean]`,
+            `anoisesrc=color=white:amplitude=0.01[ns]`,
+            `[clean][ns]amix=inputs=2:weights=1 0.15:duration=shortest[mixed]`,
+            `[mixed]${spatialEffect},${pttSimulation}[out]`
+        ].join(';');
     }
 
     if (L === 4) {
+        // Gute Qualität, leichte Kompression
         return [
-            `[0:a]${band(320,3300)},volume=1.15[pre]`,
-            ...mkNoiseMix(0.03, "pre", "mix"),
-            `[mix]${tail}[out]`,
-        ].join(";");
+            `[0:a]${baseProcessor(300, 3300, 7)}[clean]`,
+            ...radioArtefacts(14, 0.02, 0.2),
+            `${spatialEffect},${pttSimulation}[out]`
+        ].join(';');
     }
 
     if (L === 3) {
+        // Standard ATC Qualität mit typischen Artefakten
         return [
-            `[0:a]${band(350,3200)},volume=1.1[pre]`,
-            ...mkCrushMix(12, 0.22, "pre", "mix1"),
-            ...mkNoiseMix(0.05, "mix1", "mix2"),
-            ...mkDropTail("mix2", 6, 0.06),
-        ].join(";");
+            `[0:a]${baseProcessor(320, 3100, 6)}[clean]`,
+            ...radioArtefacts(12, 0.04, 0.35),
+            `${dropout(8, 0.08)}`,
+            `${spatialEffect},${pttSimulation}[out]`
+        ].join(';');
     }
 
     if (L === 2) {
+        // Schlechtere Verbindung, mehr Störungen
         return [
-            `[0:a]${band(400,3000)},volume=1.05[pre]`,
-            ...mkCrushMix(10, 0.32, "pre", "mix1"),
-            `anoisesrc=color=white:amplitude=0.08[ns]`,
-            `[mix1][ns]amix=inputs=2:weights=1 0.6:duration=shortest[mix2]`,
-            ...mkDropTail("mix2", 4.5, 0.12),
-        ].join(";");
+            `[0:a]${baseProcessor(350, 2900, 6)}[clean]`,
+            ...radioArtefacts(10, 0.07, 0.5),
+            `${dropout(5, 0.15)}`,
+            `${spatialEffect},${pttSimulation}[out]`
+        ].join(';');
     }
 
-    // L === 1
+    // L === 1: Sehr schlechte Verbindung, starke Störungen
     return [
-        `[0:a]${band(500,2600,5)},volume=1.0[pre]`,
-        ...mkCrushMix(8, 0.45, "pre", "mix1"),
-        `anoisesrc=color=white:amplitude=0.12[ns]`,
-        `[mix1][ns]amix=inputs=2:weights=1 0.8:duration=shortest[mix2]`,
-        ...mkDropTail("mix2", 3.5, 0.2),
-    ].join(";");
+        `[0:a]${baseProcessor(400, 2600, 5)}[clean]`,
+        ...radioArtefacts(8, 0.12, 0.7),
+        `${dropout(3, 0.25)}`,
+        `tremolo=f=0.1:d=0.3`,  // Schwankungen
+        `${spatialEffect},${pttSimulation}[out]`
+    ].join(';');
 }
 
 async function sh(cmd: string, args: string[]) {
@@ -87,16 +100,21 @@ async function sh(cmd: string, args: string[]) {
     );
 }
 
-async function applyRadioEffect(input: string, outputWav: string, level = 4) {
-    const filter = buildRadioFilter(level);
-    await sh("ffmpeg", ["-y", "-i", input, "-filter_complex", filter, "-map", "[out]", "-ar", "16000", "-ac", "1", outputWav]);
+async function applyEnhancedRadioEffect(input: string, outputWav: string, level = 4) {
+    const filter = buildEnhancedRadioFilter(level);
+    await sh("ffmpeg", [
+        "-y", "-i", input,
+        "-filter_complex", filter,
+        "-map", "[out]",
+        "-ar", "22050",  // Höhere Sample Rate für bessere Qualität
+        "-ac", "1",      // Mono
+        "-q:a", "3",     // Hohe Qualität
+        outputWav
+    ]);
 }
 
 function outDir() {
-    // Persistenz: env > ./storage/atc > tmp
-    const base =
-        process.env.ATC_OUT_DIR?.trim() ||
-        join(process.cwd(), "storage", "atc");
+    const base = process.env.ATC_OUT_DIR?.trim() || join(process.cwd(), "storage", "atc");
     return base;
 }
 
@@ -105,12 +123,14 @@ async function ensureDir(p: string) {
 }
 
 export default defineEventHandler(async (event) => {
-    // POST { text: string; level?: 1..5; voice?: string; tag?: string }
     const body = await readBody<{
         text?: string;
         level?: number;
         voice?: string;
         tag?: string;
+        speed?: number;
+        moduleId?: string;
+        lessonId?: string;
     }>(event);
 
     const raw = (body?.text || "").trim();
@@ -118,82 +138,114 @@ export default defineEventHandler(async (event) => {
 
     const level = Math.max(1, Math.min(5, Math.floor(body?.level ?? 4)));
     const voice = (body?.voice || "alloy") as string;
+    const speed = Math.max(0.5, Math.min(2.0, body?.speed || 1.0));
 
-    // Wortstamm/Normalisierung: ICAO-Formatierung, Zahl-/Buchstabierlogik etc.
+    // ATC-Normalisierung für realistischen Funkspruch
     const normalized = normalizeATC(raw);
     if (!normalized) throw createError({ statusCode: 400, statusMessage: "normalized text empty" });
 
-    // 1) TTS (clean) -> tmp WAV
-    const tmpClean = join(tmpdir(), `tts-${randomUUID()}.wav`);
-    const tmpRadio = join(tmpdir(), `radio-${randomUUID()}.wav`);
-
-    const tts = await openai.audio.speech.create({
-        model: TTS_MODEL,
-        voice,
-        format: "wav",
-        input: normalized,
-    });
-    await writeFile(tmpClean, Buffer.from(await tts.arrayBuffer()));
-
-    // 2) Radio-Effekt (WAV, 16 kHz mono)
-    await applyRadioEffect(tmpClean, tmpRadio, level);
-
-    // 3) Platzsparend transkodieren: OGG/Opus (VoIP-Profil), ~12 kbps @16 kHz mono
+    // Eindeutige ID und Pfade
     const id = randomUUID();
-    const baseDir = join(outDir(), new Date().toISOString().slice(0, 10)); // YYYY-MM-DD
+    const timestamp = new Date().toISOString();
+    const dateFolder = timestamp.slice(0, 10); // YYYY-MM-DD
+
+    const baseDir = join(outDir(), dateFolder);
     const fileOgg = join(baseDir, `${id}.ogg`);
     const fileJson = join(baseDir, `${id}.json`);
 
-    await ensureDir(baseDir);
-    await sh("ffmpeg", [
-        "-y",
-        "-i", tmpRadio,
-        "-ac", "1",
-        "-ar", "16000",
-        "-c:a", "libopus",
-        "-b:a", "12k",
-        "-application", "voip",
-        fileOgg,
-    ]);
+    // Temp-Dateien
+    const tmpClean = join(tmpdir(), `tts-${id}.wav`);
+    const tmpRadio = join(tmpdir(), `radio-${id}.wav`);
 
-    // 4) JSON-Metadaten neben die Audiodatei schreiben
-    const meta = {
-        id,
-        createdAt: new Date().toISOString(),
-        level,
-        voice,
-        text: raw,
-        normalized,
-        tag: body?.tag || null,
-        files: {
-            ogg: fileOgg,
-        },
-        model: TTS_MODEL,
-        format: "audio/ogg; codecs=opus",
-    };
-    await writeFile(fileJson, JSON.stringify(meta, null, 2), "utf-8");
+    try {
+        // 1) OpenAI TTS - Clean Audio
+        const tts = await openai.audio.speech.create({
+            model: TTS_MODEL,
+            voice,
+            format: "wav",
+            input: normalized,
+            speed
+        });
 
-    // 5) Response (Audio als Base64 + Meta). Optional: nur Pfad zurückgeben, wenn du sparen willst.
-    const oggB64 = (await readFile(fileOgg)).toString("base64");
+        await writeFile(tmpClean, Buffer.from(await tts.arrayBuffer()));
 
-    // Cleanup tmp
-    rm(tmpClean).catch(() => {});
-    rm(tmpRadio).catch(() => {});
+        // 2) Enhanced Radio-Effekt anwenden
+        await applyEnhancedRadioEffect(tmpClean, tmpRadio, level);
 
-    return {
-        ok: true,
-        id,
-        level,
-        voice,
-        text: raw,
-        normalized,
-        audio: {
-            mime: "audio/ogg",
-            base64: oggB64,
-        },
-        stored: {
-            audioPath: fileOgg,
-            jsonPath: fileJson,
-        },
-    };
+        // 3) Zu hochwertigem OGG/Opus komprimieren
+        await ensureDir(baseDir);
+        await sh("ffmpeg", [
+            "-y",
+            "-i", tmpRadio,
+            "-ac", "1",
+            "-ar", "22050",
+            "-c:a", "libopus",
+            "-b:a", "24k",          // Höhere Bitrate für bessere Qualität
+            "-application", "voip",
+            "-frame_duration", "20",
+            fileOgg,
+        ]);
+
+        // 4) Metadaten speichern
+        const meta = {
+            id,
+            createdAt: timestamp,
+            level,
+            voice,
+            speed,
+            text: raw,
+            normalized,
+            tag: body?.tag || null,
+            moduleId: body?.moduleId || null,
+            lessonId: body?.lessonId || null,
+            files: {
+                ogg: fileOgg,
+            },
+            model: TTS_MODEL,
+            format: "audio/ogg; codecs=opus",
+            sampleRate: 22050,
+            channels: 1,
+        };
+
+        await writeFile(fileJson, JSON.stringify(meta, null, 2), "utf-8");
+
+        // 5) Audio als Base64 für sofortige Wiedergabe
+        const oggBuffer = await readFile(fileOgg);
+        const audioBase64 = oggBuffer.toString("base64");
+
+        // 6) Cleanup
+        await rm(tmpClean).catch(() => {});
+        await rm(tmpRadio).catch(() => {});
+
+        return {
+            success: true,
+            id,
+            level,
+            voice,
+            speed,
+            text: raw,
+            normalized,
+            audio: {
+                mime: "audio/ogg; codecs=opus",
+                base64: audioBase64,
+                size: oggBuffer.length
+            },
+            stored: {
+                audioPath: fileOgg,
+                jsonPath: fileJson,
+                url: `/api/atc/audio/${dateFolder}/${id}.ogg`  // Zum späteren Abrufen
+            },
+            meta
+        };
+
+    } catch (error) {
+        // Cleanup bei Fehler
+        await rm(tmpClean).catch(() => {});
+        await rm(tmpRadio).catch(() => {});
+
+        throw createError({
+            statusCode: 500,
+            statusMessage: `TTS generation failed: ${error}`
+        });
+    }
 });
