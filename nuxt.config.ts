@@ -3,7 +3,13 @@ export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
     devtools: {enabled: true},
     ssr: false,
-    modules: ['vuetify-nuxt-module', '@nuxtjs/tailwindcss', 'nuxt-aos'],
+    modules: [
+      'vuetify-nuxt-module',
+      '@nuxtjs/tailwindcss',
+      'nuxt-aos',
+      '@pinia/nuxt',
+      'nuxt-mongoose',
+    ],
     aos: {once: true, duration: 600, easing: 'ease-out'},
     app: {head: {link: [{rel: 'icon', type: 'image/jpeg', href: '/img/logo.jpeg'}]}},
     runtimeConfig: {
