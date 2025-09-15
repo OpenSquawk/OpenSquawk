@@ -73,3 +73,7 @@ bun run preview
 ```
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+
+
+# TTS Config
+if you want to use local tts, install and run pip install "piper-tts[http]" on port 5001, then set USE_PIPER=true in .env
