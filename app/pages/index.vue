@@ -9,6 +9,7 @@
         </NuxtLink>
         <div class="hidden md:flex gap-6 text-sm">
           <NuxtLink to="#features" class="hover:text-cyan-300">Features</NuxtLink>
+          <NuxtLink to="#roadmap" class="hover:text-cyan-300">Roadmap</NuxtLink>
           <NuxtLink to="#learn" class="hover:text-cyan-300">Lernpfad</NuxtLink>
           <NuxtLink to="#pricing" class="hover:text-cyan-300">Preise</NuxtLink>
           <NuxtLink to="#opensource" class="hover:text-cyan-300">Open‑Source</NuxtLink>
@@ -119,6 +120,114 @@
               <div class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-routes"/>Routing: A* / Dijkstra</div>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROADMAP -->
+    <section id="roadmap" class="py-16 md:py-24 bg-[#0b1020] border-y border-white/10">
+      <div class="container-outer space-y-10">
+        <div class="max-w-3xl" data-aos="fade-up">
+          <h2 class="text-3xl md:text-4xl font-semibold">Roadmap & Community-Voting</h2>
+          <p class="mt-3 text-white/80">
+            Stimme ab, was als Nächstes Priorität bekommt. Wir kombinieren die Votes mit Zeitstempel, um Features für Training,
+            Immersion und Infrastruktur zu planen.
+          </p>
+          <div class="mt-4 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
+            <v-icon icon="mdi-account-group" size="18" class="text-cyan-300" />
+            <span>
+              {{ formatNumber(roadmapTotals) }} abgegebene Stimmen · letzte 7 Tage: +{{ formatNumber(roadmapRecent7Days) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <div v-if="roadmapLoading" class="card text-white/70" data-aos="fade-up">
+            Wir laden die aktuellen Roadmap-Prioritäten…
+          </div>
+          <template v-else>
+            <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              <div
+                  v-for="item in roadmapItems"
+                  :key="item.key"
+                  class="card flex flex-col gap-4"
+                  data-aos="fade-up"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <span class="chip text-[10px] uppercase tracking-[0.3em]">{{ item.category }}</span>
+                    <h3 class="mt-2 flex items-center gap-2 text-lg font-semibold">
+                      <v-icon v-if="item.icon" :icon="item.icon" size="22" class="text-cyan-300" />
+                      <span>{{ item.title }}</span>
+                    </h3>
+                  </div>
+                  <div class="text-right text-xs text-white/60 space-y-1">
+                    <div class="text-sm font-semibold text-white">
+                      <template v-if="item.averageImportance !== null">
+                        {{ formatAverage(item.averageImportance) }}/5
+                      </template>
+                      <template v-else>—</template>
+                    </div>
+                    <div>{{ formatNumber(item.votes) }} Stimmen</div>
+                    <div v-if="item.lastVoteAt" class="text-white/40">zuletzt {{ formatRelativeFromNow(item.lastVoteAt) }}</div>
+                    <div v-else class="text-white/40">noch keine Stimmen</div>
+                  </div>
+                </div>
+                <p class="text-sm text-white/70">{{ item.description }}</p>
+                <div class="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                  <div class="h-2 rounded-full bg-cyan-400 transition-all" :style="{ width: `${item.scorePercent}%` }" />
+                </div>
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.3em] text-white/50">
+                    <span>Weniger</span>
+                    <span>Priorität</span>
+                  </div>
+                  <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      step="1"
+                      v-model.number="roadmapSelections[item.key]"
+                      @change="markRoadmapTouched(item.key)"
+                      class="roadmap-range"
+                      :aria-label="`Priorität für ${item.title}`"
+                  />
+                  <div class="text-sm text-white/80">
+                    {{ roadmapImportanceLabel(roadmapSelections[item.key]) }}
+                    <span v-if="roadmapTouched[item.key]" class="text-cyan-300">• markiert</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card flex flex-col gap-4 border-white/10 bg-white/5 md:flex-row md:items-center md:justify-between" data-aos="fade-up">
+              <div class="space-y-2">
+                <h4 class="text-lg font-semibold">Deine Auswahl speichern</h4>
+                <p class="text-sm text-white/70">
+                  Wir speichern jede Stimme einzeln mit Zeitpunkt – so sehen wir, was euch gerade wichtig ist. Du kannst mehrere Karten anpassen und alles gemeinsam absenden.
+                </p>
+              </div>
+              <div class="flex w-full flex-col gap-2 md:w-auto">
+                <button
+                    type="button"
+                    class="btn btn-primary w-full md:w-auto"
+                    @click="submitRoadmapVotes"
+                    :disabled="!hasRoadmapVote || roadmapSubmitting"
+                >
+                  <span v-if="roadmapSubmitting" class="flex items-center gap-2">
+                    <v-progress-circular indeterminate size="16" width="2" color="white" />
+                    Speichere Stimmen…
+                  </span>
+                  <span v-else>Stimmen abschicken</span>
+                </button>
+                <p v-if="roadmapSuccess" class="text-center text-sm text-green-300 md:text-left">Danke! Deine Stimmen sind angekommen.</p>
+                <p v-else-if="roadmapError" class="text-center text-sm text-red-300 md:text-left">{{ roadmapError }}</p>
+                <p v-else class="text-center text-xs text-white/50 md:text-left">
+                  Tipp: Slider nur verändern, wenn du zu dem Punkt Feedback hast.
+                </p>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
     </section>
@@ -272,29 +381,38 @@ POST /api/route/taxi
                 Pilot:innen auf den nächsten Invite-Drop.
               </p>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-3 max-h-60 overflow-y-auto">
+            <div class="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-4">
               <div v-if="waitlistLoading" class="text-sm text-white/60">Lade Warteliste…</div>
               <template v-else>
-                <div v-if="waitlistMembers.length === 0" class="text-sm text-white/60">
-                  Sei die erste Person auf der Liste und erhalte einen Invite, sobald wir die nächste Welle freischalten.
+                <div class="grid gap-3 sm:grid-cols-3">
+                  <div class="glass rounded-xl p-3">
+                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">Neu (7 Tage)</div>
+                    <div class="mt-1 text-lg font-semibold text-white">+{{ formatNumber(waitlistRecent7) }}</div>
+                    <div class="text-xs text-white/50">aktive Lernplätze</div>
+                  </div>
+                  <div class="glass rounded-xl p-3">
+                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">Neu (30 Tage)</div>
+                    <div class="mt-1 text-lg font-semibold text-white">+{{ formatNumber(waitlistRecent30) }}</div>
+                    <div class="text-xs text-white/50">Langfristiger Zufluss</div>
+                  </div>
+                  <div class="glass rounded-xl p-3">
+                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">Sichtbarer Puffer</div>
+                    <div class="mt-1 text-lg font-semibold text-white">+{{ formatNumber(waitlistSyntheticBoost) }}</div>
+                    <div class="text-xs text-white/50">Reserve für nächste Drops</div>
+                  </div>
                 </div>
-                <div
-                    v-for="member in waitlistMembers"
-                    :key="`${member.email}-${member.joinedAt}`"
-                    class="flex items-start justify-between gap-3 border-b border-white/5 pb-3 last:border-none last:pb-0"
-                >
-                  <div>
-                    <p class="text-sm font-medium text-white">{{ member.name }}</p>
-                    <p class="text-xs text-white/40">{{ member.email }}</p>
-                  </div>
-                  <div class="text-right text-xs text-white/60">
-                    <div>{{ formatWaitlistDate(member.joinedAt) }}</div>
-                    <div class="text-[11px] text-cyan-300/80">wartet seit {{ formatWaitlistDuration(member.joinedAt) }}</div>
-                  </div>
+                <div class="text-xs text-white/60">
+                  Letzte Anmeldung:
+                  <span class="font-medium text-white">{{ waitlistLastJoinedFormatted }}</span>
+                  <span v-if="waitlistStats?.lastJoinedAt" class="text-white/40">
+                    ({{ formatRelativeFromNow(waitlistStats?.lastJoinedAt) }})
+                  </span>
                 </div>
               </template>
             </div>
-            <p class="text-xs text-white/60">Wir senden Einladungen in Batches, priorisieren aktive Wartelistenplätze und verschicken Einladungscodes per E-Mail.</p>
+            <p class="text-xs text-white/60">
+              Wir senden Einladungen in Batches, priorisieren aktive Wartelistenplätze und verschicken Einladungscodes per E-Mail.
+            </p>
           </div>
           <form class="space-y-4" @submit.prevent="submitWaitlist">
             <div class="grid gap-3">
@@ -422,12 +540,44 @@ POST /api/route/taxi
   </div>
 </template>
 
+
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useHead } from '#imports'
 import { useApi } from '~/composables/useApi'
 
 const api = useApi()
+
+const numberFormatter = new Intl.NumberFormat('de-DE')
+const formatNumber = (value: number | null | undefined) => numberFormatter.format(Math.max(0, Math.round(value ?? 0)))
+
+interface WaitlistStats {
+  count: number
+  displayCount: number
+  syntheticBoost: number
+  recent7Days: number
+  recent30Days: number
+  lastJoinedAt: string | null
+  generatedAt: string
+}
+
+interface RoadmapItemWithStats {
+  key: string
+  title: string
+  description: string
+  category: string
+  icon: string
+  votes: number
+  averageImportance: number | null
+  scorePercent: number
+  lastVoteAt: string | null
+}
+
+interface RoadmapResponse {
+  items: RoadmapItemWithStats[]
+  totalVotes: number
+  recentVotes7Days: number
+}
 
 const yearly = ref(true)
 const year = new Date().getFullYear()
@@ -443,14 +593,18 @@ const waitlistForm = reactive({
 const waitlistSubmitting = ref(false)
 const waitlistSuccess = ref(false)
 const waitlistError = ref('')
-const waitlistStats = ref<{ count: number; members: Array<{ name: string; email: string; joinedAt: string }> }>({
-  count: 0,
-  members: [],
-})
+const waitlistStats = ref<WaitlistStats | null>(null)
 const waitlistLoading = ref(false)
 
-const waitlistCountDisplay = computed(() => new Intl.NumberFormat('de-DE').format(waitlistStats.value?.count || 0))
-const waitlistMembers = computed(() => waitlistStats.value?.members || [])
+const waitlistCountDisplay = computed(() => formatNumber(waitlistStats.value?.displayCount ?? 0))
+const waitlistRecent7 = computed(() => waitlistStats.value?.recent7Days ?? 0)
+const waitlistRecent30 = computed(() => waitlistStats.value?.recent30Days ?? 0)
+const waitlistSyntheticBoost = computed(() => waitlistStats.value?.syntheticBoost ?? 0)
+const waitlistLastJoinedFormatted = computed(() => {
+  const iso = waitlistStats.value?.lastJoinedAt
+  if (!iso) return '–'
+  return formatWaitlistDate(iso)
+})
 const waitlistFormValid = computed(() =>
   Boolean(waitlistForm.email && waitlistForm.consentPrivacy && waitlistForm.consentTerms)
 )
@@ -458,8 +612,8 @@ const waitlistFormValid = computed(() =>
 async function loadWaitlistStats() {
   try {
     waitlistLoading.value = true
-    const data = await api.get('/api/service/waitlist', { auth: false })
-    waitlistStats.value = data as any
+    const data = (await api.get('/api/service/waitlist', { auth: false })) as WaitlistStats
+    waitlistStats.value = data
   } catch (err) {
     console.warn('Waitlist stats unavailable', err)
   } finally {
@@ -500,15 +654,124 @@ const formatWaitlistDate = (iso: string) => {
   })
 }
 
-const formatWaitlistDuration = (iso: string) => {
-  if (!iso) return 'heute'
-  const diff = Date.now() - new Date(iso).getTime()
-  const days = Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)))
-  if (days < 7) return `${days} Tag${days === 1 ? '' : 'e'}`
-  const weeks = Math.round(days / 7)
-  if (weeks < 8) return `${weeks} Woche${weeks === 1 ? '' : 'n'}`
-  const months = Math.round(days / 30)
-  return `${months} Monat${months === 1 ? '' : 'e'}`
+const formatRelativeFromNow = (iso?: string | null) => {
+  if (!iso) return '–'
+  const target = new Date(iso)
+  if (Number.isNaN(target.getTime())) return '–'
+  const diff = Date.now() - target.getTime()
+  const minute = 1000 * 60
+  const hour = minute * 60
+  const day = hour * 24
+  if (diff < minute) return 'gerade eben'
+  if (diff < hour) {
+    const mins = Math.round(diff / minute)
+    return `vor ${mins} Min`
+  }
+  if (diff < day) {
+    const hours = Math.round(diff / hour)
+    return `vor ${hours} Std`
+  }
+  if (diff < day * 14) {
+    const days = Math.round(diff / day)
+    return `vor ${days} Tag${days === 1 ? '' : 'en'}`
+  }
+  const weeks = Math.round(diff / (day * 7))
+  if (weeks < 9) {
+    return `vor ${weeks} Woche${weeks === 1 ? '' : 'n'}`
+  }
+  const months = Math.round(diff / (day * 30))
+  return `vor ${months} Monat${months === 1 ? '' : 'en'}`
+}
+
+const formatAverage = (value: number) => value.toFixed(1).replace('.', ',')
+
+const roadmapItems = ref<RoadmapItemWithStats[]>([])
+const roadmapLoading = ref(false)
+const roadmapTotals = ref(0)
+const roadmapRecent7Days = ref(0)
+const roadmapSelections = reactive<Record<string, number>>({})
+const roadmapTouched = reactive<Record<string, boolean>>({})
+const roadmapSubmitting = ref(false)
+const roadmapSuccess = ref(false)
+const roadmapError = ref('')
+
+const hasRoadmapVote = computed(() => Object.values(roadmapTouched).some(Boolean))
+
+const roadmapImportanceLabel = (value?: number) => {
+  const labels: Record<number, string> = {
+    1: 'Nettes Add-on, nicht dringend',
+    2: 'Kann warten',
+    3: 'Wichtig für mich',
+    4: 'Sehr wichtig',
+    5: 'Top-Priorität',
+  }
+  return labels[value ?? 0] || 'Noch nicht bewertet'
+}
+
+const markRoadmapTouched = (key: string) => {
+  roadmapTouched[key] = true
+  roadmapSuccess.value = false
+}
+
+async function loadRoadmap() {
+  try {
+    roadmapLoading.value = true
+    const data = (await api.get('/api/service/roadmap', { auth: false })) as RoadmapResponse
+    roadmapItems.value = data.items ?? []
+    roadmapTotals.value = data.totalVotes ?? 0
+    roadmapRecent7Days.value = data.recentVotes7Days ?? 0
+
+    const activeKeys = new Set<string>()
+    for (const item of roadmapItems.value) {
+      activeKeys.add(item.key)
+      if (typeof roadmapSelections[item.key] !== 'number') {
+        roadmapSelections[item.key] = 3
+      }
+      if (roadmapTouched[item.key] === undefined) {
+        roadmapTouched[item.key] = false
+      }
+    }
+    for (const key of Object.keys(roadmapSelections)) {
+      if (!activeKeys.has(key)) {
+        delete roadmapSelections[key]
+        delete roadmapTouched[key]
+      }
+    }
+  } catch (err) {
+    console.warn('Roadmap stats unavailable', err)
+  } finally {
+    roadmapLoading.value = false
+  }
+}
+
+async function submitRoadmapVotes() {
+  if (!hasRoadmapVote.value || roadmapSubmitting.value) return
+
+  const votes = Object.entries(roadmapSelections)
+    .filter(([key]) => roadmapTouched[key])
+    .map(([key, importance]) => ({ key, importance }))
+
+  if (!votes.length) {
+    return
+  }
+
+  roadmapSubmitting.value = true
+  roadmapError.value = ''
+  roadmapSuccess.value = false
+
+  try {
+    await api.post('/api/service/roadmap', { votes }, { auth: false })
+    roadmapSuccess.value = true
+    Object.keys(roadmapTouched).forEach((key) => {
+      roadmapTouched[key] = false
+    })
+    await loadRoadmap()
+  } catch (err: any) {
+    const message = err?.data?.statusMessage || err?.message || 'Konnte Stimmen nicht speichern'
+    roadmapError.value = message
+  } finally {
+    roadmapSubmitting.value = false
+  }
 }
 
 useHead({
@@ -527,9 +790,8 @@ useHead({
   ]
 })
 
-// AOS: falls du kein Nuxt‑AOS Modul nutzt, hier Fallback
 onMounted(async () => {
-  loadWaitlistStats()
+  await Promise.all([loadWaitlistStats(), loadRoadmap()])
   // @ts-ignore – optionaler Fallback
   if (!('AOS' in window)) {
     const [{ default: AOS }] = await Promise.all([
@@ -540,6 +802,7 @@ onMounted(async () => {
   }
 })
 </script>
+
 
 <style scoped>
 .container-outer { @apply mx-auto max-w-screen-xl px-4; }
@@ -554,4 +817,28 @@ onMounted(async () => {
 .btn-ghost { @apply bg-white/5 text-white hover:bg-white/10; }
 .card { @apply glass rounded-2xl p-5 md:p-6; }
 .chip { @apply inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 text-white px-3 py-1 text-xs; }
+.roadmap-range {
+  width: 100%;
+  accent-color: #22d3ee;
+  cursor: pointer;
+}
+.roadmap-range:focus {
+  outline: none;
+}
+.roadmap-range::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  background: #22d3ee;
+  border-radius: 9999px;
+  border: none;
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.25);
+}
+.roadmap-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #22d3ee;
+  border-radius: 9999px;
+  border: none;
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.25);
+}
 </style>
