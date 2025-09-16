@@ -1,7 +1,7 @@
 // server/api/atc/generate.post.ts
 import { createError, readBody } from "h3";
 import { generateATCPhrase, getRandomPhraseForLesson, getPhrasesForLesson } from "../../utils/atcPhrases";
-import { normalizeATC } from "../../utils/openai";
+import { normalizeATC } from "../../utils/openaiOld";
 
 export default defineEventHandler(async (event) => {
     const body = await readBody<{
