@@ -484,14 +484,6 @@
               <span class="text-xs uppercase tracking-[0.3em] text-cyan-300">Letzte Übertragung</span>
             </div>
             <p class="text-sm text-white font-mono">{{ lastTransmission }}</p>
-            <div v-if="lastEvaluation" class="flex items-center gap-2">
-              <v-chip size="x-small" :color="getScoreColor(lastEvaluation.score)" variant="flat">
-                Score: {{ lastEvaluation.score }}%
-              </v-chip>
-              <v-chip size="x-small" color="grey" variant="outlined">
-                {{ lastEvaluation.recommendation }}
-              </v-chip>
-            </div>
           </v-card-text>
         </v-card>
 
@@ -570,7 +562,6 @@ const loading = ref(false)
 const error = ref('')
 const pilotInput = ref('')
 const lastTransmission = ref('')
-const lastEvaluation = ref<any>(null)
 const radioMode = ref<'atc' | 'intercom'>('atc')
 const isRecording = ref(false)
 const micPermission = ref(false)
@@ -609,13 +600,6 @@ const radioQuality = computed(() => {
 const normalizeExpectedText = (text: string): string => {
   if (!flightContext.value) return text
   return normalizeATCText(text, { ...vars.value, ...flags.value })
-}
-
-const getScoreColor = (score: number): string => {
-  if (score >= 90) return 'green'
-  if (score >= 75) return 'cyan'
-  if (score >= 50) return 'orange'
-  return 'red'
 }
 
 // VATSIM Integration
@@ -670,7 +654,6 @@ const backToSetup = () => {
   currentScreen.value = 'login'
   selectedPlan.value = null
   lastTransmission.value = ''
-  lastEvaluation.value = null
   resetCommunications()
 }
 
@@ -745,30 +728,59 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
     const arrayBuffer = await audioBlob.arrayBuffer()
     const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
 
-    const result = await $fetch('/api/atc/ptt', {
-      method: 'POST',
-      body: {
-        audio: base64Audio,
-        expectedText: currentStep.value?.pilot || 'radio communication',
-        moduleId: 'pilot-monitoring',
-        lessonId: currentState.value?.id || 'general',
-        format: 'webm'
-      }
-    })
+    if (isIntercom) {
+      // Handle intercom separately - simple transcription only
+      const result = await $fetch('/api/atc/ptt', {
+        method: 'POST',
+        body: {
+          audio: base64Audio,
+          context: { // Minimal context for intercom
+            state_id: currentState.value?.id || 'INTERCOM',
+            state: {},
+            candidates: [],
+            variables: { callsign: vars.value.callsign },
+            flags: {}
+          },
+          moduleId: 'pilot-monitoring-intercom',
+          lessonId: 'intercom',
+          format: 'webm'
+        }
+      })
 
-    if (result.success) {
-      lastTransmission.value = result.transcription
-      lastEvaluation.value = result.evaluation
-
-      if (isIntercom) {
-        // Handle intercom (for checklists, etc.)
+      if (result.success) {
+        lastTransmission.value = `INTERCOM: ${result.transcription}`
         const transcription = result.transcription.toLowerCase()
         if (transcription.includes('checklist') || transcription.includes('check list')) {
           setTimeout(() => speakWithRadioEffects('Checklist functionality available in advanced mode'), 1000)
         }
-      } else {
-        // Handle ATC communication through Decision Tree
-        await processPilotAndLLM(result.transcription)
+      }
+    } else {
+      // Handle ATC communication - full PTT + Decision in one call
+      const ctx = buildLLMContext('') // Build context first
+
+      const result = await $fetch('/api/atc/ptt', {
+        method: 'POST',
+        body: {
+          audio: base64Audio,
+          context: ctx, // Full LLM context
+          moduleId: 'pilot-monitoring',
+          lessonId: currentState.value?.id || 'general',
+          format: 'webm'
+        }
+      })
+
+      if (result.success) {
+        lastTransmission.value = result.transcription
+
+        // Apply the decision directly from PTT response
+        applyLLMDecision(result.decision)
+
+        // If ATC should respond, speak it
+        if (result.decision.controller_say_tpl && !result.decision.radio_check) {
+          setTimeout(async () => {
+            await speakWithRadioEffects(result.decision.controller_say_tpl!)
+          }, 1000 + Math.random() * 2000)
+        }
       }
     }
   } catch (err) {
@@ -812,7 +824,35 @@ const sendPilotText = async () => {
   pilotInput.value = ''
   lastTransmission.value = text
 
-  await processPilotAndLLM(text)
+  // Process text input directly through decision engine
+  const quickResponse = processPilotTransmission(text)
+
+  if (quickResponse) {
+    // Radio check or emergency was handled directly
+    return
+  }
+
+  // Build context and get LLM decision
+  const ctx = buildLLMContext(text)
+
+  try {
+    const decision = await $fetch('/api/llm/decide', {
+      method: 'POST',
+      body: ctx
+    })
+
+    applyLLMDecision(decision)
+
+    // If ATC should respond, speak it
+    if (decision.controller_say_tpl && !decision.radio_check) {
+      setTimeout(async () => {
+        await speakWithRadioEffects(decision.controller_say_tpl!)
+      }, 1000 + Math.random() * 2000)
+    }
+  } catch (e) {
+    console.error('LLM decision failed', e)
+    lastTransmission.value += ' (LLM failed - logged only)'
+  }
 }
 
 const speakWithRadioEffects = async (text: string) => {
