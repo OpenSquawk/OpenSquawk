@@ -6,18 +6,131 @@
         <div>
           <p class="text-xs uppercase tracking-[0.35em] text-cyan-400/80">OpenSquawk</p>
           <h1 class="text-2xl font-semibold">Pilot Monitoring</h1>
-          <p class="mt-1 text-sm text-white/70">Decision Tree • PTT • Enhanced LLM</p>
+          <p class="mt-1 text-sm text-white/70">Decision Tree • Enhanced LLM • VATSIM</p>
         </div>
         <div class="text-right">
           <v-chip size="small" :color="currentState?.phase === 'Interrupt' ? 'red' : 'cyan'" variant="flat" class="mb-1">
-            {{ currentState?.id }}
+            {{ currentState?.id || 'INIT' }}
           </v-chip>
-          <div class="text-xs text-white/50">{{ currentState?.phase }}</div>
+          <div class="text-xs text-white/50">{{ currentState?.phase || 'Setup' }}</div>
         </div>
       </header>
 
-      <!-- Status Section -->
-      <section class="mb-6 space-y-4">
+      <!-- Login/Flight Selection Screen -->
+      <section v-if="currentScreen === 'login'" class="space-y-6">
+        <v-card class="bg-white/5 backdrop-blur border border-white/10">
+          <v-card-text class="space-y-4">
+            <div>
+              <h2 class="text-lg font-semibold">VATSIM Integration</h2>
+              <p class="text-sm text-white/70">Gib deine CID ein um deine gefilterten Flugpläne zu laden</p>
+            </div>
+            <v-text-field
+                v-model="vatsimId"
+                label="VATSIM CID"
+                variant="outlined"
+                density="comfortable"
+                color="cyan"
+                prepend-inner-icon="mdi-account-circle"
+                hide-details
+                inputmode="numeric"
+            />
+            <v-btn
+                block
+                color="cyan"
+                variant="flat"
+                :loading="loading"
+                @click="loadFlightPlans"
+            >
+              Flugpläne abrufen
+            </v-btn>
+            <v-alert
+                v-if="error"
+                type="warning"
+                density="compact"
+                variant="tonal"
+                class="bg-amber-500/10 text-amber-200"
+            >
+              {{ error }}
+            </v-alert>
+          </v-card-text>
+        </v-card>
+
+        <!-- Demo Mode -->
+        <v-card class="bg-white/5 backdrop-blur border border-white/10">
+          <v-card-text class="space-y-4">
+            <div>
+              <h2 class="text-lg font-semibold">Demo Mode</h2>
+              <p class="text-sm text-white/70">Starte mit einem Beispiel-Flugplan zum Testen</p>
+            </div>
+            <v-btn
+                block
+                color="orange"
+                variant="outlined"
+                @click="startDemoFlight"
+            >
+              Demo starten (DLH39A EDDF→EDDM)
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </section>
+
+      <!-- Flight Selection Screen -->
+      <section v-else-if="currentScreen === 'flightselect'" class="space-y-6">
+        <div class="flex items-center justify-between">
+          <v-btn icon @click="currentScreen = 'login'" class="text-cyan-300">
+            <v-icon>mdi-arrow-left</v-icon>
+          </v-btn>
+          <h2 class="text-lg font-semibold">Verfügbare Flugpläne</h2>
+          <v-chip color="cyan" variant="outlined" size="small">{{ vatsimId }}</v-chip>
+        </div>
+
+        <div v-if="loading" class="text-center py-8">
+          <v-progress-circular indeterminate color="cyan" class="mb-4" />
+          <p class="text-sm text-white/70">Lade Flugpläne von VATSIM...</p>
+        </div>
+
+        <div v-else-if="flightPlans.length === 0" class="text-center py-8">
+          <v-icon size="48" class="text-white/30 mb-4">mdi-airplane-off</v-icon>
+          <p class="text-white/70">Keine Flugpläne gefunden</p>
+          <v-btn color="cyan" variant="outlined" class="mt-4" @click="currentScreen = 'login'">
+            Zurück
+          </v-btn>
+        </div>
+
+        <div v-else class="space-y-3">
+          <v-card
+              v-for="plan in flightPlans"
+              :key="plan.id"
+              class="bg-white/5 border border-white/10 backdrop-blur transition hover:border-cyan-400/60 cursor-pointer"
+              @click="startMonitoring(plan)"
+          >
+            <v-card-text class="space-y-2">
+              <div class="flex items-baseline justify-between">
+                <h3 class="text-xl font-semibold tracking-tight">{{ plan.callsign }}</h3>
+                <span class="text-xs uppercase text-white/50">{{ plan.aircraft?.split('/')[0] }}</span>
+              </div>
+              <div class="flex flex-col gap-1 text-sm text-white/70">
+                <div class="flex items-center gap-2">
+                  <v-icon icon="mdi-map-marker" size="16" class="text-cyan-300" />
+                  <span>{{ plan.dep }} → {{ plan.arr }}</span>
+                </div>
+                <div v-if="plan.altitude" class="flex items-center gap-2">
+                  <v-icon icon="mdi-airplane-takeoff" size="16" class="text-cyan-300" />
+                  <span>FL{{ Math.floor(parseInt(plan.altitude) / 100) }}</span>
+                </div>
+                <div v-if="plan.assignedsquawk" class="flex items-start gap-2">
+                  <v-icon icon="mdi-radar" size="16" class="text-cyan-300" />
+                  <span class="text-xs text-white/60">Squawk: {{ plan.assignedsquawk }}</span>
+                </div>
+              </div>
+            </v-card-text>
+          </v-card>
+        </div>
+      </section>
+
+      <!-- Main Monitoring Screen -->
+      <section v-else class="space-y-6">
+        <!-- Flight Info Card -->
         <v-card class="bg-white/5 backdrop-blur border border-white/10">
           <v-card-text class="space-y-4">
             <div class="flex items-start justify-between gap-3">
@@ -80,46 +193,22 @@
                 <p class="text-xs text-white/40 uppercase tracking-wider">Transmissions</p>
               </div>
             </div>
+
+            <!-- Back to Setup Button -->
+            <v-btn
+                block
+                color="grey"
+                variant="outlined"
+                size="small"
+                @click="backToSetup"
+                prepend-icon="mdi-airplane-off"
+            >
+              Neuen Flug wählen
+            </v-btn>
           </v-card-text>
         </v-card>
-      </section>
 
-      <!-- VATSIM Integration -->
-      <section v-if="!flightContext.callsign" class="mb-6">
-        <v-card class="bg-white/5 backdrop-blur border border-white/10">
-          <v-card-text class="space-y-4">
-            <div>
-              <h2 class="text-lg font-semibold mb-2">VATSIM Integration</h2>
-              <p class="text-sm text-white/70 mb-4">Lade deinen Flugplan von VATSIM</p>
-            </div>
-            <div class="flex gap-3">
-              <v-text-field
-                  v-model="vatsimId"
-                  label="VATSIM CID"
-                  variant="outlined"
-                  density="comfortable"
-                  color="cyan"
-                  hide-details
-                  class="flex-1"
-              />
-              <v-btn
-                  color="cyan"
-                  variant="flat"
-                  :loading="loading"
-                  @click="initializeFromApis"
-              >
-                Laden
-              </v-btn>
-            </div>
-            <div v-if="selectedPlan" class="text-sm text-white/70 bg-black/40 rounded-lg p-3">
-              <strong>Plan:</strong> {{ selectedPlan.callsign }} • {{ selectedPlan.dep }}→{{ selectedPlan.arr }} • Alt {{ selectedPlan.altitude }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </section>
-
-      <!-- Frequency Controls -->
-      <section class="mb-6">
+        <!-- Frequency Controls -->
         <v-card class="bg-white/5 backdrop-blur border border-white/10">
           <v-card-text class="space-y-4">
             <div class="flex items-center justify-between">
@@ -176,11 +265,9 @@
             </div>
           </v-card-text>
         </v-card>
-      </section>
 
-      <!-- Expected Communication -->
-      <section v-if="currentStep" class="mb-6">
-        <v-card class="bg-white/5 border border-white/10">
+        <!-- Expected Communication -->
+        <v-card v-if="currentStep" class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-3">
             <div class="flex items-center justify-between">
               <p class="text-xs uppercase tracking-[0.3em] text-white/40">Erwartete Kommunikation</p>
@@ -204,10 +291,8 @@
             </div>
           </v-card-text>
         </v-card>
-      </section>
 
-      <!-- Push to Talk -->
-      <section class="mb-6">
+        <!-- Push to Talk -->
         <div>
           <p class="mb-2 text-xs uppercase tracking-[0.3em] text-white/40">Push to Talk</p>
           <v-sheet class="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/10 to-transparent p-4 shadow-lg">
@@ -266,10 +351,8 @@
             </ClientOnly>
           </v-sheet>
         </div>
-      </section>
 
-      <!-- Quick Actions -->
-      <section class="mb-6">
+        <!-- Quick Actions -->
         <v-card class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-3">
             <h3 class="text-lg font-semibold">Quick Actions</h3>
@@ -280,6 +363,7 @@
                   @click="performRadioCheck"
                   :loading="radioCheckLoading"
                   prepend-icon="mdi-radio"
+                  density="comfortable"
               >
                 Radio Check
               </v-btn>
@@ -288,16 +372,15 @@
                   variant="outlined"
                   @click="resetCommunications"
                   prepend-icon="mdi-refresh"
+                  density="comfortable"
               >
-                Reset
+                Reset Log
               </v-btn>
             </div>
           </v-card-text>
         </v-card>
-      </section>
 
-      <!-- Manual Input Fallback -->
-      <section class="mb-6">
+        <!-- Manual Input Fallback -->
         <v-card class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-3">
             <div class="flex items-center justify-between">
@@ -319,11 +402,9 @@
             </p>
           </v-card-text>
         </v-card>
-      </section>
 
-      <!-- Next States Debug -->
-      <section v-if="nextCandidates.length > 0" class="mb-6">
-        <v-card class="bg-white/5 border border-white/10">
+        <!-- Next States Debug (only in debug mode) -->
+        <v-card v-if="debugMode && nextCandidates.length > 0" class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-3">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-semibold">Debug: Next States</h3>
@@ -344,10 +425,8 @@
             </div>
           </v-card-text>
         </v-card>
-      </section>
 
-      <!-- Communication Log -->
-      <section class="mb-6">
+        <!-- Communication Log -->
         <v-card class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-3">
             <div class="flex items-center justify-between">
@@ -396,23 +475,27 @@
             </div>
           </v-card-text>
         </v-card>
-      </section>
 
-      <!-- Last Transmission -->
-      <section v-if="lastTransmission" class="mb-6">
-        <v-card class="bg-cyan-500/10 border border-cyan-400/20">
+        <!-- Last Transmission -->
+        <v-card v-if="lastTransmission" class="bg-cyan-500/10 border border-cyan-400/20">
           <v-card-text class="space-y-2">
             <div class="flex items-center gap-2">
               <v-icon icon="mdi-microphone-outline" size="16" class="text-cyan-300" />
               <span class="text-xs uppercase tracking-[0.3em] text-cyan-300">Letzte Übertragung</span>
             </div>
             <p class="text-sm text-white font-mono">{{ lastTransmission }}</p>
+            <div v-if="lastEvaluation" class="flex items-center gap-2">
+              <v-chip size="x-small" :color="getScoreColor(lastEvaluation.score)" variant="flat">
+                Score: {{ lastEvaluation.score }}%
+              </v-chip>
+              <v-chip size="x-small" color="grey" variant="outlined">
+                {{ lastEvaluation.recommendation }}
+              </v-chip>
+            </div>
           </v-card-text>
         </v-card>
-      </section>
 
-      <!-- Settings -->
-      <section class="mb-6">
+        <!-- Settings -->
         <v-card class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-4">
             <h3 class="text-lg font-semibold">Settings</h3>
@@ -461,7 +544,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
-// import useRadioTTS from '~/composables/radioTtsNew' // Falls verfügbar
 
 // Core State
 const engine = useCommunicationsEngine()
@@ -483,9 +565,12 @@ const {
 } = engine
 
 // UI State
+const currentScreen = ref<'login' | 'flightselect' | 'monitor'>('login')
 const loading = ref(false)
+const error = ref('')
 const pilotInput = ref('')
 const lastTransmission = ref('')
+const lastEvaluation = ref<any>(null)
 const radioMode = ref<'atc' | 'intercom'>('atc')
 const isRecording = ref(false)
 const micPermission = ref(false)
@@ -497,14 +582,14 @@ const debugMode = ref(false)
 
 // Frequencies
 const frequencies = ref({
-  active: '121.700',
+  active: '121.900',
   standby: '118.100'
 })
 
 // VATSIM Integration
 const vatsimId = ref('1857215')
+const flightPlans = ref<any[]>([])
 const selectedPlan = ref<any>(null)
-const dataFeed = ref<any>(null)
 
 // Audio
 const mediaRecorder = ref<MediaRecorder | null>(null)
@@ -526,6 +611,70 @@ const normalizeExpectedText = (text: string): string => {
   return normalizeATCText(text, { ...vars.value, ...flags.value })
 }
 
+const getScoreColor = (score: number): string => {
+  if (score >= 90) return 'green'
+  if (score >= 75) return 'cyan'
+  if (score >= 50) return 'orange'
+  return 'red'
+}
+
+// VATSIM Integration
+const loadFlightPlans = async () => {
+  if (!vatsimId.value) return
+
+  loading.value = true
+  error.value = ''
+
+  try {
+    const response = await $fetch(`/api/vatsim/flightplans?cid=${vatsimId.value}`)
+
+    if (Array.isArray(response) && response.length > 0) {
+      flightPlans.value = response.slice(0, 10)
+      currentScreen.value = 'flightselect'
+    } else {
+      error.value = 'Keine Flugpläne für diese VATSIM ID gefunden'
+    }
+  } catch (err) {
+    console.error('Error loading flight plans:', err)
+    error.value = 'Fehler beim Laden der Flugpläne. Bitte VATSIM ID prüfen.'
+  } finally {
+    loading.value = false
+  }
+}
+
+const startMonitoring = (flightPlan: any) => {
+  selectedPlan.value = flightPlan
+  initializeFlight(flightPlan)
+  currentScreen.value = 'monitor'
+
+  // Set appropriate frequency based on departure airport
+  if (flightPlan.dep === 'EDDF') {
+    frequencies.value.active = '121.900' // Frankfurt Delivery
+    frequencies.value.standby = '121.700' // Frankfurt Ground
+  }
+}
+
+const startDemoFlight = () => {
+  const demoFlight = {
+    callsign: 'DLH39A',
+    aircraft: 'A320/L',
+    dep: 'EDDF',
+    arr: 'EDDM',
+    altitude: '36000',
+    assignedsquawk: '1234'
+  }
+  startMonitoring(demoFlight)
+}
+
+const backToSetup = () => {
+  currentScreen.value = 'login'
+  selectedPlan.value = null
+  lastTransmission.value = ''
+  lastEvaluation.value = null
+  resetCommunications()
+}
+
+// Audio/PTT Functions
 const requestMicAccess = async () => {
   try {
     await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -609,16 +758,16 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
 
     if (result.success) {
       lastTransmission.value = result.transcription
+      lastEvaluation.value = result.evaluation
 
       if (isIntercom) {
         // Handle intercom (for checklists, etc.)
         const transcription = result.transcription.toLowerCase()
         if (transcription.includes('checklist') || transcription.includes('check list')) {
-          // Show checklist modal or respond accordingly
-          setTimeout(() => speakWithRadioEffects('Checklist functionality not yet implemented'), 1000)
+          setTimeout(() => speakWithRadioEffects('Checklist functionality available in advanced mode'), 1000)
         }
       } else {
-        // Handle ATC communication
+        // Handle ATC communication through Decision Tree
         await processPilotAndLLM(result.transcription)
       }
     }
@@ -629,7 +778,7 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
 }
 
 const processPilotAndLLM = async (transcript: string) => {
-  // Process pilot transmission (logs it, handles basic routing)
+  // Process pilot transmission (logs it, handles basic routing like radio checks/emergencies)
   const quickResponse = processPilotTransmission(transcript)
 
   if (quickResponse) {
@@ -699,15 +848,9 @@ const performRadioCheck = async () => {
   lastTransmission.value = message
 
   try {
-    // Log pilot transmission
-    processPilotTransmission(message)
-
-    // ATC response
-    setTimeout(async () => {
-      const response = `${flightContext.value.callsign}, read you five by five`
-      await speakWithRadioEffects(response)
-      radioCheckLoading.value = false
-    }, 2000)
+    // Process as pilot transmission
+    await processPilotAndLLM(message)
+    radioCheckLoading.value = false
   } catch (err) {
     console.error('Radio check failed:', err)
     radioCheckLoading.value = false
@@ -729,6 +872,7 @@ const swapFrequencies = () => {
 const resetCommunications = () => {
   log.value.splice(0)
   lastTransmission.value = ''
+  lastEvaluation.value = null
 }
 
 const clearCommunicationLog = () => {
@@ -766,45 +910,9 @@ const playPTTBeep = (start: boolean) => {
   }
 }
 
-// VATSIM Integration
-const initializeFromApis = async () => {
-  loading.value = true
-  try {
-    const response = await $fetch(`/api/vatsim/flightplans?cid=${vatsimId.value}`)
-
-    if (Array.isArray(response) && response.length > 0) {
-      const latest = response[0]
-      selectedPlan.value = latest
-      initializeFlight(latest)
-
-      // Update frequencies based on departure airport
-      if (latest.dep === 'EDDF') {
-        frequencies.value.active = '121.900' // Frankfurt Delivery
-        frequencies.value.standby = '121.700' // Frankfurt Ground
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load VATSIM data:', err)
-  } finally {
-    loading.value = false
-  }
-}
-
 // Lifecycle
 onMounted(async () => {
   await requestMicAccess()
-
-  // Initialize with demo data if no VATSIM
-  if (!selectedPlan.value) {
-    initializeFlight({
-      callsign: 'DLH39A',
-      aircraft: 'A320/L',
-      dep: 'EDDF',
-      arr: 'EDDM',
-      altitude: '36000',
-      assignedsquawk: '1234'
-    })
-  }
 })
 
 // Watch for frequency changes from engine
