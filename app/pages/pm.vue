@@ -356,7 +356,7 @@
         <v-card class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-3">
             <h3 class="text-lg font-semibold">Quick Actions</h3>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <v-btn
                   color="orange"
                   variant="flat"
@@ -366,15 +366,6 @@
                   density="comfortable"
               >
                 Radio Check
-              </v-btn>
-              <v-btn
-                  color="cyan"
-                  variant="outlined"
-                  @click="resetCommunications"
-                  prepend-icon="mdi-refresh"
-                  density="comfortable"
-              >
-                Reset Log
               </v-btn>
             </div>
           </v-card-text>
@@ -403,25 +394,64 @@
           </v-card-text>
         </v-card>
 
-        <!-- Next States Debug (only in debug mode) -->
-        <v-card v-if="debugMode && nextCandidates.length > 0" class="bg-white/5 border border-white/10">
-          <v-card-text class="space-y-3">
+        <!-- Debug Information -->
+        <v-card v-if="debugMode" class="bg-white/5 border border-white/10">
+          <v-card-text class="space-y-4">
             <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold">Debug: Next States</h3>
-              <v-chip size="small" color="grey" variant="outlined">LLM Targets</v-chip>
+              <h3 class="text-lg font-semibold">Debug: Flow Insights</h3>
+              <v-chip size="small" color="grey" variant="outlined">LLM</v-chip>
             </div>
-            <div class="flex flex-wrap gap-2">
-              <v-chip
-                  v-for="nid in nextCandidates"
-                  :key="nid"
-                  size="small"
-                  color="primary"
-                  variant="outlined"
-                  @click="forceMove(nid)"
-                  class="cursor-pointer"
-              >
-                {{ nid }}
-              </v-chip>
+
+            <div class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+              <p class="text-xs uppercase tracking-[0.3em] text-white/40">Aktueller Knoten</p>
+              <p class="font-mono text-sm text-white">{{ debugState?.id || '—' }}</p>
+              <p class="text-[11px] text-white/50">
+                {{ debugState ? `${debugState.role} • ${debugState.phase}` : 'N/A' }}
+                <span v-if="debugState?.frequencyName" class="ml-1 text-white/40">({{ debugState.frequencyName }})</span>
+              </p>
+              <p v-if="debugState?.sayPlain" class="text-xs text-white/70">
+                Auto: <span class="font-mono text-white">{{ debugState.sayPlain }}</span>
+              </p>
+              <p v-if="debugState?.sayNormalized" class="text-[11px] text-white/40">
+                Funk: {{ debugState.sayNormalized }}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Nächste Entscheidungen</p>
+              <div v-if="debugNextStates.length" class="space-y-2">
+                <div
+                    v-for="state in debugNextStates"
+                    :key="state.id"
+                    class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3"
+                >
+                  <div class="flex items-start justify-between gap-2">
+                    <div>
+                      <p class="font-mono text-sm text-white">{{ state.id }}</p>
+                      <p class="text-[11px] text-white/50">
+                        {{ state.role || '—' }} • {{ state.phase || '—' }}
+                        <span v-if="state.frequencyName" class="ml-1 text-white/40">({{ state.frequencyName }})</span>
+                      </p>
+                    </div>
+                    <v-chip
+                        size="x-small"
+                        color="cyan"
+                        variant="outlined"
+                        class="cursor-pointer"
+                        @click="forceMove(state.id)"
+                    >
+                      Jump
+                    </v-chip>
+                  </div>
+                  <p v-if="state.sayPlain" class="text-xs text-white/70">
+                    ATC: <span class="font-mono text-white">{{ state.sayPlain }}</span>
+                  </p>
+                  <p v-if="state.sayNormalized" class="text-[11px] text-white/40">
+                    Funk: {{ state.sayNormalized }}
+                  </p>
+                </div>
+              </div>
+              <p v-else class="text-xs text-white/50">Keine weiteren Entscheidungen verfügbar.</p>
             </div>
           </v-card-text>
         </v-card>
@@ -431,16 +461,7 @@
           <v-card-text class="space-y-3">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-semibold">Communication Log</h3>
-              <div class="flex gap-2">
-                <v-btn
-                    variant="text"
-                    color="cyan"
-                    density="comfortable"
-                    @click="clearCommunicationLog"
-                    icon="mdi-delete-sweep"
-                />
-                <v-chip size="small" color="cyan" variant="outlined">{{ log.length }}</v-chip>
-              </div>
+              <v-chip size="small" color="cyan" variant="outlined">{{ log.length }}</v-chip>
             </div>
 
             <div class="space-y-2 max-h-64 overflow-y-auto">
@@ -509,12 +530,19 @@
                 />
               </div>
 
-              <div class="flex justify-between">
+              <div class="grid gap-3 sm:grid-cols-3">
                 <v-switch
                     v-model="radioEffectsEnabled"
                     color="cyan"
                     inset
                     label="Radio-Effekte"
+                    hide-details
+                />
+                <v-switch
+                    v-model="readbackEnabled"
+                    color="cyan"
+                    inset
+                    label="Readback Stimme"
                     hide-details
                 />
                 <v-switch
@@ -553,7 +581,9 @@ const {
   buildLLMContext,
   applyLLMDecision,
   moveTo: forceMove,
-  normalizeATCText
+  normalizeATCText,
+  renderATCMessage,
+  getStateDetails
 } = engine
 
 // UI State
@@ -569,6 +599,7 @@ const swapAnimation = ref(false)
 const signalStrength = ref(4)
 const radioCheckLoading = ref(false)
 const radioEffectsEnabled = ref(true)
+const readbackEnabled = ref(false)
 const debugMode = ref(false)
 
 // Frequencies
@@ -596,10 +627,291 @@ const radioQuality = computed(() => {
   return { color: 'error', text: 'WEAK' }
 })
 
+type PreparedSpeech = {
+  template: string
+  plain: string
+  normalized: string
+}
+
+type SpeechOptions = {
+  voice?: string
+  tag?: string
+  updateLastTransmission?: boolean
+  lastTransmissionLabel?: string
+  delayMs?: number
+  useNormalizedForTTS?: boolean
+}
+
+const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
+
+let audioContext: AudioContext | null = null
+let speechQueue: Promise<void> = Promise.resolve()
+
+const enqueueSpeech = (task: () => Promise<void>) => {
+  speechQueue = speechQueue
+    .then(() => task())
+    .catch(err => {
+      console.error('Speech queue error:', err)
+    })
+  return speechQueue
+}
+
+const prepareSpeech = (tpl: string): PreparedSpeech => {
+  const plain = renderATCMessage(tpl)
+  const normalized = normalizeATCText(tpl, { ...vars.value, ...flags.value })
+  return { template: tpl, plain, normalized }
+}
+
+const debugState = computed(() => {
+  if (!currentState.value) return null
+  const sayTpl = currentState.value.say_tpl
+  return {
+    id: currentState.value.id,
+    phase: currentState.value.phase,
+    role: currentState.value.role,
+    frequencyName: currentState.value.frequencyName,
+    sayPlain: sayTpl ? renderATCMessage(sayTpl) : '',
+    sayNormalized: sayTpl ? normalizeATCText(sayTpl, { ...vars.value, ...flags.value }) : ''
+  }
+})
+
+const debugNextStates = computed(() => {
+  return nextCandidates.value.map(id => {
+    const state = getStateDetails(id)
+    if (!state) {
+      return { id, role: '', phase: '', frequencyName: undefined, sayPlain: '', sayNormalized: '' }
+    }
+    const sayPlain = state.say_tpl ? renderATCMessage(state.say_tpl) : ''
+    const sayNormalized = state.say_tpl ? normalizeATCText(state.say_tpl, { ...vars.value, ...flags.value }) : ''
+    return {
+      id,
+      role: state.role,
+      phase: state.phase,
+      frequencyName: state.frequencyName,
+      sayPlain,
+      sayNormalized
+    }
+  })
+})
+
 // Methods
 const normalizeExpectedText = (text: string): string => {
   if (!flightContext.value) return text
   return normalizeATCText(text, { ...vars.value, ...flags.value })
+}
+
+const ensureAudioContext = async (): Promise<AudioContext | null> => {
+  if (typeof window === 'undefined') return null
+
+  if (!audioContext) {
+    const Ctx = window.AudioContext || (window as any).webkitAudioContext
+    if (!Ctx) return null
+    audioContext = new Ctx()
+  }
+
+  if (audioContext.state === 'suspended') {
+    try {
+      await audioContext.resume()
+    } catch (err) {
+      console.warn('AudioContext resume failed', err)
+    }
+  }
+
+  return audioContext
+}
+
+const playAudioWithEffects = async (base64: string) => {
+  if (typeof window === 'undefined') return
+
+  if (!radioEffectsEnabled.value) {
+    await new Promise<void>((resolve) => {
+      const audio = new Audio(`data:audio/wav;base64,${base64}`)
+      audio.onended = () => resolve()
+      audio.onerror = () => resolve()
+      audio.play().catch(() => resolve())
+    })
+    return
+  }
+
+  try {
+    const ctx = await ensureAudioContext()
+    if (!ctx) throw new Error('AudioContext unavailable')
+
+    const binary = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+    const arrayBuffer = binary.buffer.slice(binary.byteOffset, binary.byteOffset + binary.byteLength)
+    const buffer = await ctx.decodeAudioData(arrayBuffer)
+
+    await new Promise<void>((resolve) => {
+      const source = ctx.createBufferSource()
+      source.buffer = buffer
+
+      const highpass = ctx.createBiquadFilter()
+      highpass.type = 'highpass'
+      highpass.frequency.value = 320
+
+      const lowpass = ctx.createBiquadFilter()
+      lowpass.type = 'lowpass'
+      lowpass.frequency.value = 3100
+
+      const compressor = ctx.createDynamicsCompressor()
+      compressor.threshold.value = -28
+      compressor.knee.value = 30
+      compressor.ratio.value = 12
+      compressor.attack.value = 0.003
+      compressor.release.value = 0.25
+
+      const gainNode = ctx.createGain()
+      gainNode.gain.value = 0.9
+
+      source.connect(highpass)
+      highpass.connect(lowpass)
+      lowpass.connect(compressor)
+      compressor.connect(gainNode)
+      gainNode.connect(ctx.destination)
+
+      let noiseSource: AudioBufferSourceNode | null = null
+
+      if (buffer.duration > 0) {
+        const length = Math.ceil(buffer.duration * ctx.sampleRate)
+        const noiseBuffer = ctx.createBuffer(1, length, ctx.sampleRate)
+        const channel = noiseBuffer.getChannelData(0)
+        const strength = Math.max(1, Math.min(5, signalStrength.value))
+        const intensity = (6 - strength) / 6
+        const amplitude = 0.015 + intensity * 0.045
+        for (let i = 0; i < channel.length; i++) {
+          channel[i] = (Math.random() * 2 - 1) * amplitude
+        }
+        noiseSource = ctx.createBufferSource()
+        noiseSource.buffer = noiseBuffer
+        const bandPass = ctx.createBiquadFilter()
+        bandPass.type = 'bandpass'
+        bandPass.frequency.value = 1800
+        bandPass.Q.value = 1.2
+        const noiseGain = ctx.createGain()
+        noiseGain.gain.value = amplitude * 0.6
+        noiseSource.connect(bandPass)
+        bandPass.connect(noiseGain)
+        noiseGain.connect(ctx.destination)
+        noiseSource.start(0)
+      }
+
+      source.onended = () => {
+        if (noiseSource) {
+          try {
+            noiseSource.stop()
+          } catch (err) {
+            // ignore
+          }
+        }
+        resolve()
+      }
+
+      source.start(0)
+    })
+  } catch (err) {
+    console.error('Failed to apply radio effect', err)
+    await new Promise<void>((resolve) => {
+      const audio = new Audio(`data:audio/wav;base64,${base64}`)
+      audio.onended = () => resolve()
+      audio.onerror = () => resolve()
+      audio.play().catch(() => resolve())
+    })
+  }
+}
+
+const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = {}) => {
+  try {
+    const response = await $fetch('/api/atc/say', {
+      method: 'POST',
+      body: {
+        text: options.useNormalizedForTTS === false ? prepared.plain : prepared.normalized,
+        level: signalStrength.value,
+        voice: options.voice || 'alloy',
+        speed: 0.95,
+        moduleId: 'pilot-monitoring',
+        lessonId: currentState.value?.id || 'general',
+        tag: options.tag || 'controller-reply'
+      }
+    })
+
+    if (response.success && response.audio) {
+      if (options.updateLastTransmission !== false) {
+        lastTransmission.value = options.lastTransmissionLabel || `ATC: ${prepared.plain}`
+      }
+      await playAudioWithEffects(response.audio.base64)
+    }
+  } catch (err) {
+    console.error('TTS failed:', err)
+  }
+}
+
+const speakWithRadioEffects = (tpl: string, options: SpeechOptions = {}) => {
+  const prepared = prepareSpeech(tpl)
+  const delay = options.delayMs ?? 0
+  enqueueSpeech(async () => {
+    if (delay > 0) {
+      await wait(delay)
+    }
+    await speakPrepared(prepared, options)
+  })
+}
+
+const scheduleControllerSpeech = (tpl: string) => {
+  const plain = renderATCMessage(tpl)
+  speakWithRadioEffects(tpl, {
+    delayMs: 800 + Math.random() * 2000,
+    tag: 'controller-reply',
+    updateLastTransmission: true,
+    useNormalizedForTTS: true,
+    lastTransmissionLabel: `ATC: ${plain}`
+  })
+}
+
+const speakPilotReadback = (text: string) => {
+  speakWithRadioEffects(text, {
+    delayMs: 400,
+    voice: 'verse',
+    tag: 'pilot-readback',
+    updateLastTransmission: false,
+    useNormalizedForTTS: true
+  })
+}
+
+const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' = 'text') => {
+  const transcript = message.trim()
+  if (!transcript) return
+
+  const prefix = source === 'ptt' ? 'Pilot (PTT)' : 'Pilot'
+  lastTransmission.value = `${prefix}: ${transcript}`
+
+  const quickResponse = processPilotTransmission(transcript)
+
+  if (readbackEnabled.value) {
+    speakPilotReadback(transcript)
+  }
+
+  if (quickResponse) {
+    scheduleControllerSpeech(quickResponse)
+    return
+  }
+
+  const ctx = buildLLMContext(transcript)
+
+  try {
+    const decision = await $fetch('/api/llm/decide', {
+      method: 'POST',
+      body: ctx
+    })
+
+    applyLLMDecision(decision)
+
+    if (decision.controller_say_tpl && !decision.radio_check) {
+      scheduleControllerSpeech(decision.controller_say_tpl)
+    }
+  } catch (e) {
+    console.error('LLM decision failed', e)
+    lastTransmission.value = `${prefix}: ${transcript} (LLM failed)`
+  }
 }
 
 // VATSIM Integration
@@ -654,7 +966,6 @@ const backToSetup = () => {
   currentScreen.value = 'login'
   selectedPlan.value = null
   lastTransmission.value = ''
-  resetCommunications()
 }
 
 // Audio/PTT Functions
@@ -724,17 +1035,15 @@ const stopRecording = () => {
 
 const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
   try {
-    // Convert blob to base64
     const arrayBuffer = await audioBlob.arrayBuffer()
     const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
 
     if (isIntercom) {
-      // Handle intercom separately - simple transcription only
       const result = await $fetch('/api/atc/ptt', {
         method: 'POST',
         body: {
           audio: base64Audio,
-          context: { // Minimal context for intercom
+          context: {
             state_id: currentState.value?.id || 'INTERCOM',
             state: {},
             candidates: [],
@@ -743,7 +1052,8 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
           },
           moduleId: 'pilot-monitoring-intercom',
           lessonId: 'intercom',
-          format: 'webm'
+          format: 'webm',
+          autoDecide: false
         }
       })
 
@@ -751,36 +1061,31 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
         lastTransmission.value = `INTERCOM: ${result.transcription}`
         const transcription = result.transcription.toLowerCase()
         if (transcription.includes('checklist') || transcription.includes('check list')) {
-          setTimeout(() => speakWithRadioEffects('Checklist functionality available in advanced mode'), 1000)
+          speakWithRadioEffects('Checklist functionality available in advanced mode', {
+            delayMs: 600,
+            updateLastTransmission: false,
+            tag: 'system-info',
+            useNormalizedForTTS: true
+          })
         }
       }
     } else {
-      // Handle ATC communication - full PTT + Decision in one call
-      const ctx = buildLLMContext('') // Build context first
+      const ctx = buildLLMContext('')
 
       const result = await $fetch('/api/atc/ptt', {
         method: 'POST',
         body: {
           audio: base64Audio,
-          context: ctx, // Full LLM context
+          context: ctx,
           moduleId: 'pilot-monitoring',
           lessonId: currentState.value?.id || 'general',
-          format: 'webm'
+          format: 'webm',
+          autoDecide: false
         }
       })
 
       if (result.success) {
-        lastTransmission.value = result.transcription
-
-        // Apply the decision directly from PTT response
-        applyLLMDecision(result.decision)
-
-        // If ATC should respond, speak it
-        if (result.decision.controller_say_tpl && !result.decision.radio_check) {
-          setTimeout(async () => {
-            await speakWithRadioEffects(result.decision.controller_say_tpl!)
-          }, 1000 + Math.random() * 2000)
-        }
+        await handlePilotTransmission(result.transcription, 'ptt')
       }
     }
   } catch (err) {
@@ -789,94 +1094,12 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
   }
 }
 
-const processPilotAndLLM = async (transcript: string) => {
-  // Process pilot transmission (logs it, handles basic routing like radio checks/emergencies)
-  const quickResponse = processPilotTransmission(transcript)
-
-  if (quickResponse) {
-    // Radio check or emergency was handled directly
-    return
-  }
-
-  // Build context for LLM
-  const ctx = buildLLMContext(transcript)
-
-  try {
-    const decision = await decideNextStateLLM(ctx)
-    applyLLMDecision(decision)
-
-    // If ATC should respond, speak it
-    if (decision.controller_say_tpl && !decision.radio_check) {
-      setTimeout(async () => {
-        await speakWithRadioEffects(decision.controller_say_tpl!)
-      }, 1000 + Math.random() * 2000)
-    }
-  } catch (e) {
-    console.error('LLM decision failed', e)
-    lastTransmission.value += ' (LLM failed - logged only)'
-  }
-}
-
 const sendPilotText = async () => {
   const text = pilotInput.value.trim()
   if (!text) return
 
   pilotInput.value = ''
-  lastTransmission.value = text
-
-  // Process text input directly through decision engine
-  const quickResponse = processPilotTransmission(text)
-
-  if (quickResponse) {
-    // Radio check or emergency was handled directly
-    return
-  }
-
-  // Build context and get LLM decision
-  const ctx = buildLLMContext(text)
-
-  try {
-    const decision = await $fetch('/api/llm/decide', {
-      method: 'POST',
-      body: ctx
-    })
-
-    applyLLMDecision(decision)
-
-    // If ATC should respond, speak it
-    if (decision.controller_say_tpl && !decision.radio_check) {
-      setTimeout(async () => {
-        await speakWithRadioEffects(decision.controller_say_tpl!)
-      }, 1000 + Math.random() * 2000)
-    }
-  } catch (e) {
-    console.error('LLM decision failed', e)
-    lastTransmission.value += ' (LLM failed - logged only)'
-  }
-}
-
-const speakWithRadioEffects = async (text: string) => {
-  try {
-    const response = await $fetch('/api/atc/say', {
-      method: 'POST',
-      body: {
-        text,
-        level: signalStrength.value,
-        voice: 'alloy',
-        speed: 0.95,
-        moduleId: 'pilot-monitoring',
-        lessonId: currentState.value?.id || 'general'
-      }
-    })
-
-    if (response.success && response.audio) {
-      // Play the audio
-      const audio = new Audio(`data:audio/wav;base64,${response.audio.base64}`)
-      audio.play().catch(console.error)
-    }
-  } catch (err) {
-    console.error('TTS failed:', err)
-  }
+  await handlePilotTransmission(text, 'text')
 }
 
 const performRadioCheck = async () => {
@@ -885,14 +1108,12 @@ const performRadioCheck = async () => {
   radioCheckLoading.value = true
 
   const message = `${frequencies.value.active}, ${flightContext.value.callsign}, radio check`
-  lastTransmission.value = message
 
   try {
-    // Process as pilot transmission
-    await processPilotAndLLM(message)
-    radioCheckLoading.value = false
+    await handlePilotTransmission(message, 'text')
   } catch (err) {
     console.error('Radio check failed:', err)
+  } finally {
     radioCheckLoading.value = false
   }
 }
@@ -907,16 +1128,6 @@ const swapFrequencies = () => {
   setTimeout(() => {
     swapAnimation.value = false
   }, 500)
-}
-
-const resetCommunications = () => {
-  log.value.splice(0)
-  lastTransmission.value = ''
-  lastEvaluation.value = null
-}
-
-const clearCommunicationLog = () => {
-  log.value.splice(0)
 }
 
 const formatTime = (date: Date): string => {
