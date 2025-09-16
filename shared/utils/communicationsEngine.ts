@@ -1,6 +1,6 @@
 // composables/communicationsEngine.ts
 import { ref, computed, readonly } from 'vue'
-import atcDecisionTree from "./atcDecisionTree";
+import atcDecisionTree from "../data/atcDecisionTree";
 
 // --- DecisionTree-Types (aus ~/data/atcDecisionTree.json abgeleitet) ---
 type Role = 'pilot' | 'atc' | 'system'
