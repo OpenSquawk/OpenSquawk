@@ -6,6 +6,8 @@ import {join} from "node:path";
 import {randomUUID} from "node:crypto";
 import {normalize, TTS_MODEL, normalizeATC} from "../../utils/normalize";
 import {request} from "node:http";
+import { TransmissionLog } from "../../models/TransmissionLog";
+import { getUserFromEvent } from "../../utils/auth";
 
 // dotenv config
 import {config} from "dotenv";
@@ -131,6 +133,29 @@ export default defineEventHandler(async (event) => {
         };
 
         // await writeFile(fileJson, JSON.stringify(meta, null, 2), "utf-8");
+
+        try {
+            const user = await getUserFromEvent(event)
+            await TransmissionLog.create({
+                user: user?._id,
+                role: "atc",
+                channel: "say",
+                direction: "outgoing",
+                text: raw,
+                normalized,
+                metadata: {
+                    level,
+                    voice,
+                    speed,
+                    moduleId: body?.moduleId || null,
+                    lessonId: body?.lessonId || null,
+                    tag: body?.tag || null,
+                    radioQuality: radioQuality.description,
+                }
+            })
+        } catch (logError) {
+            console.warn("Transmission logging failed", logError)
+        }
 
         return {
             success: true,
