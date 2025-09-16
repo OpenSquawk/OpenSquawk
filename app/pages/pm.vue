@@ -460,8 +460,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import useCommunicationsEngine from '~/composables/communicationsEngine'
-import { decideNextStateLLM } from '~/utils/openaiDecision'
+import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
 // import useRadioTTS from '~/composables/radioTtsNew' // Falls verfügbar
 
 // Core State
