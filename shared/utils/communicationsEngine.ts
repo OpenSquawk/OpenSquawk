@@ -477,7 +477,12 @@ export default function useCommunicationsEngine() {
     }
 
     function exposeCtx() {
-        return { variables: variables.value, flags: flags.value }
+        return {
+            ...variables.value,
+            ...flags.value,
+            variables: variables.value,
+            flags: flags.value,
+        }
     }
 
     function exposeCtxFlat() {
@@ -559,6 +564,7 @@ export default function useCommunicationsEngine() {
         nextCandidates,
         activeFrequency,
         communicationLog: readonly(communicationLog),
+        clearCommunicationLog: () => { communicationLog.value = [] },
 
         // pm_alt.vue Integration
         flightContext: readonly(flightContext),

@@ -460,8 +460,20 @@
         <v-card class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-3">
             <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold">Communication Log</h3>
-              <v-chip size="small" color="cyan" variant="outlined">{{ log.length }}</v-chip>
+              <div class="flex items-center gap-2">
+                <h3 class="text-lg font-semibold">Communication Log</h3>
+                <v-chip size="small" color="cyan" variant="outlined">{{ log.length }}</v-chip>
+              </div>
+              <v-btn
+                  size="small"
+                  variant="text"
+                  color="cyan"
+                  class="text-xs uppercase tracking-[0.2em]"
+                  :disabled="log.length === 0"
+                  @click="clearLog"
+              >
+                Leeren
+              </v-btn>
             </div>
 
             <div class="space-y-2 max-h-64 overflow-y-auto">
@@ -563,15 +575,22 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
+import { useAuthStore } from '~/stores/auth'
+import { useApi } from '~/composables/useApi'
 
 // Core State
 const engine = useCommunicationsEngine()
+const auth = useAuthStore()
+const api = useApi()
+const router = useRouter()
 const {
   currentState,
   nextCandidates,
   activeFrequency,
   communicationLog: log,
+  clearCommunicationLog,
   variables: vars,
   flags,
   flightContext,
@@ -585,6 +604,11 @@ const {
   renderATCMessage,
   getStateDetails
 } = engine
+
+const clearLog = () => {
+  clearCommunicationLog()
+  lastTransmission.value = ''
+}
 
 // UI State
 const currentScreen = ref<'login' | 'flightselect' | 'monitor'>('login')
@@ -607,6 +631,32 @@ const frequencies = ref({
   active: '121.900',
   standby: '118.100'
 })
+
+onMounted(async () => {
+  if (!auth.accessToken) {
+    const refreshed = await auth.tryRefresh()
+    if (!refreshed) {
+      router.push('/login')
+      return
+    }
+  }
+
+  if (!auth.user) {
+    await auth.fetchUser().catch((err) => {
+      console.error('Session initialisation failed', err)
+      router.push('/login')
+    })
+  }
+})
+
+watch(
+  () => auth.accessToken,
+  (token) => {
+    if (!token) {
+      router.push('/login')
+    }
+  }
+)
 
 // VATSIM Integration
 const vatsimId = ref('1857215')
@@ -821,17 +871,14 @@ const playAudioWithEffects = async (base64: string) => {
 
 const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = {}) => {
   try {
-    const response = await $fetch('/api/atc/say', {
-      method: 'POST',
-      body: {
-        text: options.useNormalizedForTTS === false ? prepared.plain : prepared.normalized,
-        level: signalStrength.value,
-        voice: options.voice || 'alloy',
-        speed: 0.95,
-        moduleId: 'pilot-monitoring',
-        lessonId: currentState.value?.id || 'general',
-        tag: options.tag || 'controller-reply'
-      }
+    const response = await api.post('/api/atc/say', {
+      text: options.useNormalizedForTTS === false ? prepared.plain : prepared.normalized,
+      level: signalStrength.value,
+      voice: options.voice || 'alloy',
+      speed: 0.95,
+      moduleId: 'pilot-monitoring',
+      lessonId: currentState.value?.id || 'general',
+      tag: options.tag || 'controller-reply'
     })
 
     if (response.success && response.audio) {
@@ -898,10 +945,7 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   const ctx = buildLLMContext(transcript)
 
   try {
-    const decision = await $fetch('/api/llm/decide', {
-      method: 'POST',
-      body: ctx
-    })
+    const decision = await api.post('/api/llm/decide', ctx)
 
     applyLLMDecision(decision)
 
@@ -922,7 +966,9 @@ const loadFlightPlans = async () => {
   error.value = ''
 
   try {
-    const response = await $fetch(`/api/vatsim/flightplans?cid=${vatsimId.value}`)
+    const response = await api.get('/api/vatsim/flightplans', {
+      query: { cid: vatsimId.value }
+    })
 
     if (Array.isArray(response) && response.length > 0) {
       flightPlans.value = response.slice(0, 10)
@@ -1039,22 +1085,19 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
     const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
 
     if (isIntercom) {
-      const result = await $fetch('/api/atc/ptt', {
-        method: 'POST',
-        body: {
-          audio: base64Audio,
-          context: {
-            state_id: currentState.value?.id || 'INTERCOM',
-            state: {},
-            candidates: [],
-            variables: { callsign: vars.value.callsign },
-            flags: {}
-          },
-          moduleId: 'pilot-monitoring-intercom',
-          lessonId: 'intercom',
-          format: 'webm',
-          autoDecide: false
-        }
+      const result = await api.post('/api/atc/ptt', {
+        audio: base64Audio,
+        context: {
+          state_id: currentState.value?.id || 'INTERCOM',
+          state: {},
+          candidates: [],
+          variables: { callsign: vars.value.callsign },
+          flags: {}
+        },
+        moduleId: 'pilot-monitoring-intercom',
+        lessonId: 'intercom',
+        format: 'webm',
+        autoDecide: false
       })
 
       if (result.success) {
@@ -1072,16 +1115,13 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
     } else {
       const ctx = buildLLMContext('')
 
-      const result = await $fetch('/api/atc/ptt', {
-        method: 'POST',
-        body: {
-          audio: base64Audio,
-          context: ctx,
-          moduleId: 'pilot-monitoring',
-          lessonId: currentState.value?.id || 'general',
-          format: 'webm',
-          autoDecide: false
-        }
+      const result = await api.post('/api/atc/ptt', {
+        audio: base64Audio,
+        context: ctx,
+        moduleId: 'pilot-monitoring',
+        lessonId: currentState.value?.id || 'general',
+        format: 'webm',
+        autoDecide: false
       })
 
       if (result.success) {

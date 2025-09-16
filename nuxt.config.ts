@@ -16,7 +16,15 @@ export default defineNuxtConfig({
         openaiKey: process.env.OPENAI_API_KEY,
         llmModel: process.env.LLM_MODEL || 'gpt-5-nano',
         ttsModel: process.env.TTS_MODEL || 'tts-1',
-        public: {}
+        jwtSecret: process.env.JWT_SECRET,
+        jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+        mongoose: {
+            uri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/opensquawk',
+            options: {},
+        },
+        public: {
+            apiDocumentationUrl: '/api-docs',
+        },
     },
     vuetify: {
         vuetifyOptions: {
