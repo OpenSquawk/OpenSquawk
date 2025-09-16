@@ -174,6 +174,19 @@ export function normalizeATCText(text: string, context: Record<string, any>): st
         return `squawk ${n}`
     })
 
+    // Callsigns (basic NATO spelling)
+    normalized = normalized.replace(/\b([A-Z]{2,3}\d{1,4}[A-Z]?)\b/g, (match: string) => {
+        const prefix = match.match(/^[A-Z]+/)?.[0] ?? ''
+        const digits = match.slice(prefix.length).match(/\d+/)?.[0] ?? ''
+        const suffix = match.slice(prefix.length + digits.length)
+
+        const prefixWords = prefix.split('').map(ch => NATO_PHONETIC[ch] || ch).join(' ')
+        const digitWords = digits.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
+        const suffixWords = suffix.split('').map(ch => NATO_PHONETIC[ch] || ch).join(' ')
+
+        return [prefixWords, digitWords, suffixWords].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
+    })
+
     return normalized
 }
 
@@ -458,18 +471,23 @@ export default function useCommunicationsEngine() {
     }
 
     function speak(speaker: Role, tpl: string, stateId: string, options: { radioCheck?: boolean, offSchema?: boolean } = {}) {
-        const msg = renderTpl(tpl, exposeCtx())
+        const context = exposeCtxFlat()
+        const msg = renderTpl(tpl, context)
         const entry: EngineLog = {
             timestamp: new Date(),
             frequency: activeFrequency.value,
             speaker,
             message: msg,
-            normalized: normalizeATCText(msg, exposeCtxFlat()),
+            normalized: normalizeATCText(tpl, context),
             state: stateId,
             radioCheck: options.radioCheck,
             offSchema: options.offSchema
         }
         communicationLog.value.push(entry)
+    }
+
+    function renderMessage(tpl: string): string {
+        return renderTpl(tpl, exposeCtxFlat())
     }
 
     function exposeCtx() {
@@ -568,6 +586,8 @@ export default function useCommunicationsEngine() {
         resumePriorFlow,
 
         // Utilities
-        normalizeATCText
+        normalizeATCText,
+        renderMessage,
+        getStateById: (id: string) => states.value[id]
     }
 }

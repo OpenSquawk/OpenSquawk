@@ -20,12 +20,13 @@ interface PTTRequest {
     moduleId: string;
     lessonId: string;
     format?: 'wav' | 'mp3' | 'ogg' | 'webm';
+    skipDecision?: boolean;
 }
 
 interface PTTResponse {
     success: boolean;
     transcription: string;
-    decision: {
+    decision?: {
         next_state: string;
         controller_say_tpl?: string;
         off_schema?: boolean;
@@ -99,13 +100,16 @@ export default defineEventHandler(async (event) => {
             });
         }
 
-        // 4. Direkt LLM Decision aufrufen mit transkribiertem Text
-        const decisionInput = {
-            ...body.context,
-            pilot_utterance: transcribedText
-        };
+        let decision;
+        if (!body.skipDecision) {
+            // 4. Direkt LLM Decision aufrufen mit transkribiertem Text
+            const decisionInput = {
+                ...body.context,
+                pilot_utterance: transcribedText
+            };
 
-        const decision = await routeDecision(decisionInput);
+            decision = await routeDecision(decisionInput);
+        }
 
         // 5. Cleanup
         await rm(tmpAudioInput).catch(() => {});
@@ -115,9 +119,12 @@ export default defineEventHandler(async (event) => {
 
         const result: PTTResponse = {
             success: true,
-            transcription: transcribedText,
-            decision
+            transcription: transcribedText
         };
+
+        if (decision) {
+            result.decision = decision;
+        }
 
         return result;
 
