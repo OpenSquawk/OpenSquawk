@@ -12,37 +12,37 @@
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
         <h2 class="text-xl font-semibold">Angaben gemäß § 5 TMG</h2>
         <div class="space-y-2 text-white/70">
-          <p>OpenSquawk UG (haftungsbeschränkt)</p>
-          <p>Musterstraße 12</p>
-          <p>10115 Berlin</p>
+          <p>Faktor Mensch MEDIA UG (haftungsbeschränkt)</p>
+          <p>Wilhelm-Holzamer-Straße 8</p>
+          <p>55129 Mainz</p>
         </div>
       </section>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
         <h2 class="text-xl font-semibold">Vertreten durch</h2>
-        <p class="text-white/70">Geschäftsführer: Leonie Wagner</p>
+        <p class="text-white/70">Geschäftsführer: Dominik Ziegenhagel, Emanuel Leube</p>
       </section>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
         <h2 class="text-xl font-semibold">Kontakt</h2>
         <div class="space-y-2 text-white/70">
-          <p>E-Mail: hallo@opensquawk.dev</p>
-          <p>Telefon: +49 (0)30 1234 5678</p>
+          <p>Telefon: +49 251 981 157 912 0</p>
+          <p>E-Mail: info@faktorxmensch.com</p>
         </div>
       </section>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
         <h2 class="text-xl font-semibold">Registereintrag</h2>
         <div class="space-y-2 text-white/70">
-          <p>Amtsgericht Berlin Charlottenburg</p>
-          <p>HRB 245678 B</p>
-          <p>USt-IdNr.: DE345678912</p>
+          <p>Registergericht: Amtsgericht Mainz</p>
+          <p>Handelsregisternummer: HRB 53322</p>
+          <p>USt-IdNr.: DE358028053</p>
         </div>
       </section>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
         <h2 class="text-xl font-semibold">Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV</h2>
-        <p class="text-white/70">Leonie Wagner, Anschrift wie oben.</p>
+        <p class="text-white/70">Dominik Ziegenhagel, Emanuel Leube – Anschrift wie oben.</p>
       </section>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
