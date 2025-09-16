@@ -262,17 +262,95 @@ POST /api/route/taxi
     <!-- CTA -->
     <section id="cta" class="py-16 md:py-24 bg-gradient-to-tr from-cyan-500/20 via-blue-500/10 to-transparent border-y border-white/10">
       <div class="container-outer">
-        <div class="card md:flex md:items-center md:justify-between" data-aos="zoom-in">
-          <div>
-            <h3 class="text-2xl md:text-3xl font-semibold">Jetzt OpenSquawk ausprobieren</h3>
-            <p class="mt-2 text-white/80">Starte kostenlos. Upgrade jederzeit. Keine Bindung.</p>
+        <div class="card grid gap-8 md:grid-cols-2" data-aos="zoom-in">
+          <div class="space-y-4">
+            <div>
+              <h3 class="text-2xl md:text-3xl font-semibold">Frühzugang & Warteliste</h3>
+              <p class="mt-2 text-white/80">
+                Trag dich ein und sichere dir deinen Platz. Aktuell warten
+                <span class="font-semibold text-cyan-300">{{ waitlistCountDisplay }}</span>
+                Pilot:innen auf den nächsten Invite-Drop.
+              </p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-3 max-h-60 overflow-y-auto">
+              <div v-if="waitlistLoading" class="text-sm text-white/60">Lade Warteliste…</div>
+              <template v-else>
+                <div v-if="waitlistMembers.length === 0" class="text-sm text-white/60">
+                  Sei die erste Person auf der Liste und erhalte einen Invite, sobald wir die nächste Welle freischalten.
+                </div>
+                <div
+                    v-for="member in waitlistMembers"
+                    :key="`${member.email}-${member.joinedAt}`"
+                    class="flex items-start justify-between gap-3 border-b border-white/5 pb-3 last:border-none last:pb-0"
+                >
+                  <div>
+                    <p class="text-sm font-medium text-white">{{ member.name }}</p>
+                    <p class="text-xs text-white/40">{{ member.email }}</p>
+                  </div>
+                  <div class="text-right text-xs text-white/60">
+                    <div>{{ formatWaitlistDate(member.joinedAt) }}</div>
+                    <div class="text-[11px] text-cyan-300/80">wartet seit {{ formatWaitlistDuration(member.joinedAt) }}</div>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <p class="text-xs text-white/60">Wir senden Einladungen in Batches, priorisieren aktive Wartelistenplätze und verschicken Einladungscodes per E-Mail.</p>
           </div>
-          <form class="mt-4 md:mt-0 flex w-full md:w-auto gap-2" @submit.prevent="submitEmail">
-            <input v-model="email" aria-label="E‑Mail" type="email" required placeholder="dein@email" class="w-full md:w-72 px-4 py-3 rounded-xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400" />
-            <button class="btn btn-primary">Einladung anfordern</button>
+          <form class="space-y-4" @submit.prevent="submitWaitlist">
+            <div class="grid gap-3">
+              <input
+                  v-model.trim="waitlistForm.name"
+                  aria-label="Name"
+                  type="text"
+                  placeholder="Vor- und Nachname (optional)"
+                  class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
+              />
+              <input
+                  v-model.trim="waitlistForm.email"
+                  aria-label="E-Mail"
+                  type="email"
+                  required
+                  placeholder="dein@email"
+                  class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
+              />
+              <textarea
+                  v-model.trim="waitlistForm.notes"
+                  rows="3"
+                  placeholder="Was möchtest du mit OpenSquawk lernen? (optional)"
+                  class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
+              />
+            </div>
+            <div class="space-y-2 text-xs text-white/60">
+              <label class="flex items-start gap-3">
+                <input type="checkbox" v-model="waitlistForm.consentTerms" class="mt-1" required />
+                <span>
+                  Ich akzeptiere die <NuxtLink to="/agb" class="text-cyan-300 underline">AGB</NuxtLink> von OpenSquawk.
+                </span>
+              </label>
+              <label class="flex items-start gap-3">
+                <input type="checkbox" v-model="waitlistForm.consentPrivacy" class="mt-1" required />
+                <span>
+                  Ich habe die <NuxtLink to="/datenschutz" class="text-cyan-300 underline">Datenschutzerklärung</NuxtLink> gelesen und willige in die Speicherung meiner Angaben zur Kontaktaufnahme ein.
+                </span>
+              </label>
+            </div>
+            <button
+                type="submit"
+                class="btn btn-primary w-full"
+                :disabled="!waitlistFormValid || waitlistSubmitting"
+            >
+              <span v-if="waitlistSubmitting" class="flex items-center gap-2">
+                <v-progress-circular indeterminate size="16" width="2" color="white" />
+                Sende Daten…
+              </span>
+              <span v-else>Auf Warteliste setzen</span>
+            </button>
+            <p v-if="waitlistSuccess" class="text-sm text-green-300">
+              Danke! Wir haben dich auf der Warteliste eingetragen und melden uns, sobald Plätze frei werden.
+            </p>
+            <p v-else-if="waitlistError" class="text-sm text-red-300">{{ waitlistError }}</p>
           </form>
         </div>
-        <p v-if="thanks" class="mt-3 text-sm text-green-300" data-aos="fade-in">Danke! Wir melden uns in Kürze mit deinem Zugang.</p>
       </div>
     </section>
 
@@ -331,9 +409,10 @@ POST /api/route/taxi
           <div>
             <h4 class="font-semibold mb-3">Rechtliches</h4>
             <ul class="space-y-2 text-white/70 text-sm">
-              <li><NuxtLink to="#" class="hover:text-cyan-300">Impressum</NuxtLink></li>
-              <li><NuxtLink to="#" class="hover:text-cyan-300">Datenschutz</NuxtLink></li>
-              <li><NuxtLink to="#" class="hover:text-cyan-300">Nutzungshinweise</NuxtLink></li>
+              <li><NuxtLink to="/impressum" class="hover:text-cyan-300">Impressum</NuxtLink></li>
+              <li><NuxtLink to="/datenschutz" class="hover:text-cyan-300">Datenschutz</NuxtLink></li>
+              <li><NuxtLink to="/agb" class="hover:text-cyan-300">AGB</NuxtLink></li>
+              <li><NuxtLink to="/api-docs" class="hover:text-cyan-300">API-Dokumentation</NuxtLink></li>
             </ul>
           </div>
         </div>
@@ -344,18 +423,92 @@ POST /api/route/taxi
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useHead } from '#imports'
+import { useApi } from '~/composables/useApi'
+
+const api = useApi()
 
 const yearly = ref(true)
-const email = ref('')
-const thanks = ref(false)
 const year = new Date().getFullYear()
 
-function submitEmail(){
-  // TODO: replace with real endpoint
-  console.log('request access:', email.value)
-  thanks.value = true
+const waitlistForm = reactive({
+  name: '',
+  email: '',
+  notes: '',
+  consentPrivacy: false,
+  consentTerms: false,
+})
+
+const waitlistSubmitting = ref(false)
+const waitlistSuccess = ref(false)
+const waitlistError = ref('')
+const waitlistStats = ref<{ count: number; members: Array<{ name: string; email: string; joinedAt: string }> }>({
+  count: 0,
+  members: [],
+})
+const waitlistLoading = ref(false)
+
+const waitlistCountDisplay = computed(() => new Intl.NumberFormat('de-DE').format(waitlistStats.value?.count || 0))
+const waitlistMembers = computed(() => waitlistStats.value?.members || [])
+const waitlistFormValid = computed(() =>
+  Boolean(waitlistForm.email && waitlistForm.consentPrivacy && waitlistForm.consentTerms)
+)
+
+async function loadWaitlistStats() {
+  try {
+    waitlistLoading.value = true
+    const data = await api.get('/api/service/waitlist', { auth: false })
+    waitlistStats.value = data as any
+  } catch (err) {
+    console.warn('Waitlist stats unavailable', err)
+  } finally {
+    waitlistLoading.value = false
+  }
+}
+
+async function submitWaitlist() {
+  if (!waitlistFormValid.value || waitlistSubmitting.value) return
+
+  waitlistSubmitting.value = true
+  waitlistError.value = ''
+  waitlistSuccess.value = false
+
+  try {
+    await api.post('/api/service/waitlist', { ...waitlistForm }, { auth: false })
+    waitlistSuccess.value = true
+    await loadWaitlistStats()
+    waitlistForm.name = ''
+    waitlistForm.email = ''
+    waitlistForm.notes = ''
+    waitlistForm.consentPrivacy = false
+    waitlistForm.consentTerms = false
+  } catch (err: any) {
+    const message = err?.data?.statusMessage || err?.message || 'Anmeldung fehlgeschlagen'
+    waitlistError.value = message
+  } finally {
+    waitlistSubmitting.value = false
+  }
+}
+
+const formatWaitlistDate = (iso: string) => {
+  if (!iso) return 'unbekannt'
+  return new Date(iso).toLocaleDateString('de-DE', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+const formatWaitlistDuration = (iso: string) => {
+  if (!iso) return 'heute'
+  const diff = Date.now() - new Date(iso).getTime()
+  const days = Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)))
+  if (days < 7) return `${days} Tag${days === 1 ? '' : 'e'}`
+  const weeks = Math.round(days / 7)
+  if (weeks < 8) return `${weeks} Woche${weeks === 1 ? '' : 'n'}`
+  const months = Math.round(days / 30)
+  return `${months} Monat${months === 1 ? '' : 'e'}`
 }
 
 useHead({
@@ -376,6 +529,7 @@ useHead({
 
 // AOS: falls du kein Nuxt‑AOS Modul nutzt, hier Fallback
 onMounted(async () => {
+  loadWaitlistStats()
   // @ts-ignore – optionaler Fallback
   if (!('AOS' in window)) {
     const [{ default: AOS }] = await Promise.all([
