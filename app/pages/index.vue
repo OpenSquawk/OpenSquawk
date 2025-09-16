@@ -48,7 +48,7 @@
         <div class="hidden mt-10 md:mt-16" data-aos="zoom-in" data-aos-delay="100">
           <div class="card relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/5 to-transparent"></div>
-            <img src="/img/simulator.jpg" alt="Cockpit" class="rounded-xl w-full object-cover" />
+<!--            <img src="/img/simulator.jpg" alt="Cockpit" class="rounded-xl w-full object-cover" />-->
             <div class="absolute bottom-3 right-3 text-xs text-white/70 bg-black/40 px-2 py-1 rounded">Symbolbild</div>
           </div>
         </div>

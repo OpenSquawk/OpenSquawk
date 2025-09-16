@@ -432,8 +432,6 @@
 
 <script setup lang="ts">
 import {ref, computed, watch} from 'vue'
-import useRadioTTS from "../composables/radioTtsNew";
-import learnModules, {Lesson, ModuleDef} from "../composables/learnModules";
 
 /** AUDIO **/
 const tts = useRadioTTS()

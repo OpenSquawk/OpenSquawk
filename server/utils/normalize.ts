@@ -5,7 +5,7 @@ import fs from "node:fs";
 
 dotenv.config();
 
-export const openaiOld = new OpenAI({
+export const normalize = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY!,
     project: process.env.OPENAI_PROJECT, // optional
 });
@@ -251,7 +251,7 @@ export function normalizeATC(
 // TTS Wrapper (mp3)
 export async function speakATC(text: string, filePath = "atc.mp3") {
     const input = normalizeATC(text);
-    const resp = await (openaiOld as any).audio.speech.create({
+    const resp = await (normalize as any).audio.speech.create({
         model: TTS_MODEL,
         voice: "alloy",
         input,

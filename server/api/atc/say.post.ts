@@ -4,7 +4,7 @@ import {writeFile, mkdir} from "node:fs/promises";
 import {existsSync} from "node:fs";
 import {join} from "node:path";
 import {randomUUID} from "node:crypto";
-import {openaiOld, TTS_MODEL, normalizeATC} from "../../utils/openaiOld";
+import {normalize, TTS_MODEL, normalizeATC} from "../../utils/normalize";
 import {request} from "node:http";
 
 // dotenv config
@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
             audioBuffer = await piperTTS(normalized, voice);
         } else {
             // --- OpenAI Fallback ---
-            const tts = await openaiOld.audio.speech.create({
+            const tts = await normalize.audio.speech.create({
                 model: TTS_MODEL,
                 voice,
                 format: "wav",
@@ -110,7 +110,7 @@ export default defineEventHandler(async (event) => {
             audioBuffer = Buffer.from(await tts.arrayBuffer());
         }
 
-        await ensureDir(baseDir);
+        // await ensureDir(baseDir);
         // await writeFile(fileWav, audioBuffer);
 
         const meta = {
@@ -130,7 +130,7 @@ export default defineEventHandler(async (event) => {
             format: "audio/wav"
         };
 
-        await writeFile(fileJson, JSON.stringify(meta, null, 2), "utf-8");
+        // await writeFile(fileJson, JSON.stringify(meta, null, 2), "utf-8");
 
         return {
             success: true,
