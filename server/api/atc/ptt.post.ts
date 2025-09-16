@@ -7,6 +7,8 @@ import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { openai, routeDecision } from "../../utils/openai";
 import { createReadStream } from "node:fs";
+import { TransmissionLog } from "../../models/TransmissionLog";
+import { getUserFromEvent } from "../../utils/auth";
 
 interface PTTRequest {
     audio: string; // Base64 encoded audio
@@ -118,6 +120,25 @@ export default defineEventHandler(async (event) => {
         await rm(tmpAudioInput).catch(() => {});
         if (audioFileForWhisper !== tmpAudioInput) {
             await rm(tmpAudioWav).catch(() => {});
+        }
+
+        try {
+            const user = await getUserFromEvent(event)
+            await TransmissionLog.create({
+                user: user?._id,
+                role: "pilot",
+                channel: "ptt",
+                direction: "incoming",
+                text: transcribedText,
+                metadata: {
+                    moduleId: body.moduleId,
+                    lessonId: body.lessonId,
+                    decision,
+                    autoDecide: shouldAutoDecide,
+                },
+            })
+        } catch (logError) {
+            console.warn("Transmission logging failed", logError)
         }
 
         const result: PTTResponse = {
