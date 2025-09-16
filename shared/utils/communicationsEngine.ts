@@ -472,6 +472,10 @@ export default function useCommunicationsEngine() {
         communicationLog.value.push(entry)
     }
 
+    function renderATCMessage(tpl: string) {
+        return renderTpl(tpl, exposeCtx())
+    }
+
     function exposeCtx() {
         return { variables: variables.value, flags: flags.value }
     }
@@ -488,6 +492,12 @@ export default function useCommunicationsEngine() {
         if (/CENTER|CTR/i.test(to)) return 'CTR'
         if (/DEL|DELIVERY/i.test(to)) return 'DEL'
         return flags.value.current_unit
+    }
+
+    function getStateDetails(stateId: string) {
+        const s = states.value[stateId]
+        if (!s) return null
+        return { ...s, id: stateId }
     }
 
     function genStand() {
@@ -568,6 +578,8 @@ export default function useCommunicationsEngine() {
         resumePriorFlow,
 
         // Utilities
-        normalizeATCText
+        normalizeATCText,
+        renderATCMessage,
+        getStateDetails
     }
 }
