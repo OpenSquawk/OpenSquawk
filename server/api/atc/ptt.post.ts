@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
-import { openai, LLM_MODEL, normalizeATC } from "../../utils/openai";
+import { openaiOld, LLM_MODEL, normalizeATC } from "../../utils/openaiOld";
 import { createReadStream } from "node:fs"; // ← Diesen Import hinzufügen!
 
 interface PTTRequest {
@@ -141,7 +141,7 @@ MISTAKES: [list mistakes or "None"]
 ASSESSMENT: [excellent/good/needs_improvement/unacceptable]`;
 
     try {
-        const completion = await openai.chat.completions.create({
+        const completion = await openaiOld.chat.completions.create({
             model: LLM_MODEL,
             messages: [{ role: "user", content: prompt }],
         });
@@ -237,7 +237,7 @@ export default defineEventHandler(async (event) => {
         const audioFileForWhisper = body.format === 'wav' ? tmpAudioInput : tmpAudioWav;
 
         // 3. OpenAI Whisper für Transkription
-        const transcription = await openai.audio.transcriptions.create({
+        const transcription = await openaiOld.audio.transcriptions.create({
             file: createReadStream(audioFileForWhisper), // ReadStream
             model: "whisper-1",
             language: "en", // ATC ist standardmäßig auf Englisch

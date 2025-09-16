@@ -4,7 +4,7 @@ import {writeFile, mkdir} from "node:fs/promises";
 import {existsSync} from "node:fs";
 import {join} from "node:path";
 import {randomUUID} from "node:crypto";
-import {openai, TTS_MODEL, normalizeATC} from "../../utils/openai";
+import {openaiOld, TTS_MODEL, normalizeATC} from "../../utils/openaiOld";
 import {request} from "node:http";
 
 // dotenv config
@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
             audioBuffer = await piperTTS(normalized, voice);
         } else {
             // --- OpenAI Fallback ---
-            const tts = await openai.audio.speech.create({
+            const tts = await openaiOld.audio.speech.create({
                 model: TTS_MODEL,
                 voice,
                 format: "wav",

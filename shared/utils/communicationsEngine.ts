@@ -1,5 +1,6 @@
 // composables/communicationsEngine.ts
 import { ref, computed, readonly } from 'vue'
+import atcDecisionTree from "./atcDecisionTree";
 
 // --- DecisionTree-Types (aus ~/data/atcDecisionTree.json abgeleitet) ---
 type Role = 'pilot' | 'atc' | 'system'
@@ -64,8 +65,7 @@ interface DecisionTree {
     states: Record<string, DTState>
 }
 
-// --- JSON laden (Vite unterstützt JSON-Import) ---
-import decisionTreeJson from '~/data/atcDecisionTree.json'
+// --- ATC Decition Tree laden ---
 
 // ----------------- Public API / Kontext -----------------
 export interface FlightContext {
@@ -206,7 +206,7 @@ function renderTpl(tpl: string, ctx: Record<string, any>): string {
 // ----------------- Engine -----------------
 export default function useCommunicationsEngine() {
     // Decision Tree in-Memory
-    const tree = ref<DecisionTree>(decisionTreeJson as DecisionTree)
+    const tree = ref<DecisionTree>(atcDecisionTree as DecisionTree)
     const states = computed<Record<string, DTState>>(() => tree.value.states)
 
     // Laufzeitkontext

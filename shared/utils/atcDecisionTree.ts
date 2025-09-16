@@ -1,4 +1,4 @@
-{
+const atcDecisionTree = {
   "schema_version": "1.0",
   "name": "icao_atc_decision_tree",
   "description": "Machine-readable ICAO/FAA-style ATC flow for IFR, suited for LLM+Whisper+TTS loop.",
@@ -532,3 +532,6 @@
     }
   }
 }
+
+
+export default atcDecisionTree;
