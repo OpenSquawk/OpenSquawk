@@ -1,527 +1,468 @@
 // composables/communicationsEngine.ts
-import {ref, computed} from 'vue'
+import { ref, computed, readonly } from 'vue'
 
-export interface CommunicationStep {
-    id: string
-    phase: string
-    frequency: string
-    frequencyName: string
-    action: string
-    trigger: 'pilot' | 'atc' | 'automatic' | 'callback'
-    pilot?: string
-    atc?: string
-    pilotResponse?: string
-    atcResponse?: string
-    variables?: Record<string, any>
-    nextStep?: string
-    conditions?: Array<{
-        type: 'contains' | 'equals' | 'timeout'
-        value: string | number
-        nextStep: string
-    }>
-    callback?: () => void
-    audioEffects?: {
-        static?: number // 0-100
-        distortion?: number // 0-100
-        volume?: number // 0-100
-    }
+// --- DecisionTree-Types (aus ~/data/atcDecisionTree.json abgeleitet) ---
+type Role = 'pilot' | 'atc' | 'system'
+type Phase =
+    | 'Preflight' | 'Clearance' | 'PushStart' | 'TaxiOut' | 'Departure'
+    | 'Climb' | 'Enroute' | 'Descent' | 'Approach' | 'Landing'
+    | 'TaxiIn' | 'Postflight' | 'Interrupt' | 'LostComms' | 'Missed'
+
+interface DTNext { to: string; when?: string }
+interface DTHandoff { to: string; freq: string }
+interface DTActionSet { set?: string; to?: any; if?: string }
+
+interface DTState {
+    id?: string // im JSON sind Keys die IDs — hier zur Bequemlichkeit.
+    role: Role
+    phase: Phase
+    // Texte
+    say_tpl?: string
+    utterance_tpl?: string
+    else_say_tpl?: string
+    // Routing
+    next?: DTNext[]
+    ok_next?: DTNext[]
+    bad_next?: DTNext[]
+    timer_next?: { after_s: number; to: string }[]
+    handoff?: DTHandoff
+    condition?: string
+    guard?: string
+    trigger?: string
+    auto?: 'check_readback' | 'monitor' | 'end' | 'pop_stack_or_route_by_intent'
+    readback_required?: string[]
+    actions?: (DTActionSet | string)[]
 }
 
+interface DecisionTree {
+    schema_version: string
+    name: string
+    description: string
+    start_state: string
+    end_states: string[]
+    variables: Record<string, any>
+    flags: {
+        in_air: boolean
+        emergency_active: boolean
+        current_unit: string
+        stack: string[]
+    }
+    policies: {
+        timeouts: {
+            pilot_readback_timeout_s: number
+            controller_ack_timeout_s: number
+            no_reply_retry_after_s: number
+            no_reply_max_retries: number
+            lost_comms_detect_after_s: number
+        }
+        no_reply_sequence: { after_s: number; controller_say_tpl: string }[]
+        interrupts_allowed_when: Record<string, string>
+    }
+    hooks: Record<string, boolean | string>
+    roles: Role[]
+    phases: Phase[]
+    states: Record<string, DTState>
+}
+
+// --- JSON laden (Vite unterstützt JSON-Import) ---
+import decisionTreeJson from '~/data/atcDecisionTree.json'
+
+// ----------------- Public API / Kontext -----------------
 export interface FlightContext {
     callsign: string
     aircraft: string
-    departure: string
-    arrival: string
-    gate: string
+    dep: string
+    dest: string
+    stand: string
     runway: string
     squawk: string
-    atis: string
+    atis_code: string
     sid: string
-    flightLevel: string
-    groundFreq: string
-    towerFreq: string
-    departureFreq: string
-    approachFreq: string
-    taxiRoute: string[]
-    phase: string
+    transition: string
+    flight_level: string // z.B. "FL360"
+    ground_freq: string
+    tower_freq: string
+    departure_freq: string
+    approach_freq: string
+    handoff_freq: string
+    qnh_hpa: number | string
+    taxi_route: string
+    remarks?: string
+    time_now?: string
+    // intern
     lastTransmission?: string
     awaitingResponse?: boolean
 }
 
-// ICAO Phonetic and Number Normalization
-const NATO_PHONETIC: Record<string, string> = {
-    'A': 'Alpha', 'B': 'Bravo', 'C': 'Charlie', 'D': 'Delta', 'E': 'Echo', 'F': 'Foxtrot',
-    'G': 'Golf', 'H': 'Hotel', 'I': 'India', 'J': 'Juliett', 'K': 'Kilo', 'L': 'Lima',
-    'M': 'Mike', 'N': 'November', 'O': 'Oscar', 'P': 'Papa', 'Q': 'Quebec', 'R': 'Romeo',
-    'S': 'Sierra', 'T': 'Tango', 'U': 'Uniform', 'V': 'Victor', 'W': 'Whiskey',
-    'X': 'X-ray', 'Y': 'Yankee', 'Z': 'Zulu'
+export interface EngineLog {
+    timestamp: Date
+    frequency?: string
+    speaker: Role
+    message: string
+    normalized: string
+    state: string
 }
 
+// ----------------- NATO/ICAO Normalizer -----------------
+const NATO_PHONETIC: Record<string, string> = {
+    A: 'Alpha', B: 'Bravo', C: 'Charlie', D: 'Delta', E: 'Echo', F: 'Foxtrot',
+    G: 'Golf', H: 'Hotel', I: 'India', J: 'Juliett', K: 'Kilo', L: 'Lima',
+    M: 'Mike', N: 'November', O: 'Oscar', P: 'Papa', Q: 'Quebec', R: 'Romeo',
+    S: 'Sierra', T: 'Tango', U: 'Uniform', V: 'Victor', W: 'Whiskey',
+    X: 'X-ray', Y: 'Yankee', Z: 'Zulu'
+}
 const ICAO_NUMBERS: Record<string, string> = {
     '0': 'zero', '1': 'wun', '2': 'too', '3': 'tree', '4': 'fower',
     '5': 'fife', '6': 'six', '7': 'seven', '8': 'eight', '9': 'niner'
 }
 
-// FLIGHT_PHASES
-export const FLIGHT_PHASES = ['clearance', 'ground', 'tower', 'departure', 'approach', 'landing'] as const
-type FlightPhase = typeof FLIGHT_PHASES[number]
-
-// Comprehensive Communication Steps for Complete Flight
-export const COMMUNICATION_STEPS: CommunicationStep[] = [
-    // Phase 1: Clearance Delivery
-    {
-        id: 'clearance_request',
-        phase: 'clearance',
-        frequency: '121.700',
-        frequencyName: 'Clearance Delivery',
-        action: 'Request IFR Clearance',
-        trigger: 'pilot',
-        pilot: '${airport} Delivery, good day, ${callsign} at stand ${gate}, with information ${atis}, requesting IFR clearance to ${arrival}',
-        atc: '${callsign}, ${airport} Delivery, good day, cleared to ${arrival}, ${sid} departure, runway ${runway}, squawk ${squawk}, departure frequency ${departureFreq}',
-        pilotResponse: 'Cleared to ${arrival}, ${sid} departure, runway ${runway}, squawk ${squawk}, departure ${departureFreq}, ${callsign}',
-        atcResponse: '${callsign}, readback correct, report ready for startup',
-        nextStep: 'startup_request',
-        audioEffects: {static: 15, distortion: 5, volume: 85}
-    },
-
-    // Phase 2: Startup
-    {
-        id: 'startup_request',
-        phase: 'clearance',
-        frequency: '121.700',
-        frequencyName: 'Clearance Delivery',
-        action: 'Ready for Startup',
-        trigger: 'pilot',
-        pilot: '${callsign} ready for startup',
-        atc: '${callsign}, startup approved, for pushback contact Ground on ${groundFreq}',
-        pilotResponse: 'Startup approved, Ground ${groundFreq}, ${callsign}',
-        nextStep: 'pushback_request',
-        audioEffects: {static: 12, distortion: 3, volume: 88}
-    },
-
-    // Phase 3: Ground - Pushback
-    {
-        id: 'pushback_request',
-        phase: 'ground',
-        frequency: '121.900',
-        frequencyName: 'Ground Control',
-        action: 'Request Pushback',
-        trigger: 'pilot',
-        pilot: '${airport} Ground, good day, ${callsign} at stand ${gate}, requesting pushback',
-        atc: '${callsign}, ${airport} Ground, good day, pushback approved, facing ${direction}',
-        pilotResponse: 'Pushback approved, facing ${direction}, ${callsign}',
-        atcResponse: '${callsign}, pushback complete, start engines when ready',
-        nextStep: 'taxi_request',
-        callback: () => console.log('Pushback phase completed'),
-        audioEffects: {static: 18, distortion: 7, volume: 82}
-    },
-
-    // Phase 4: Ground - Taxi
-    {
-        id: 'taxi_request',
-        phase: 'ground',
-        frequency: '121.900',
-        frequencyName: 'Ground Control',
-        action: 'Request Taxi',
-        trigger: 'pilot',
-        pilot: '${callsign} request taxi',
-        atc: '${callsign}, taxi to runway ${runway} via ${taxiRoute}, hold short of runway ${runway}',
-        pilotResponse: 'Taxi to runway ${runway} via ${taxiRoute}, hold short of runway ${runway}, ${callsign}',
-        nextStep: 'tower_handoff',
-        conditions: [
-            {type: 'contains', value: 'give way', nextStep: 'give_way'}
-        ],
-        audioEffects: {static: 20, distortion: 8, volume: 80}
-    },
-
-    // Ground - Give Way (Optional)
-    {
-        id: 'give_way',
-        phase: 'ground',
-        frequency: '121.900',
-        frequencyName: 'Ground Control',
-        action: 'Traffic Instruction',
-        trigger: 'atc',
-        atc: '${callsign}, give way to the ${trafficType} from your ${direction}',
-        pilotResponse: 'Give way to ${trafficType} from ${direction}, ${callsign}',
-        nextStep: 'taxi_continue',
-        audioEffects: {static: 22, distortion: 10, volume: 78}
-    },
-
-    {
-        id: 'taxi_continue',
-        phase: 'ground',
-        frequency: '121.900',
-        frequencyName: 'Ground Control',
-        action: 'Continue Taxi',
-        trigger: 'atc',
-        atc: '${callsign}, continue taxi',
-        pilotResponse: 'Continue taxi, ${callsign}',
-        nextStep: 'tower_handoff',
-        audioEffects: {static: 18, distortion: 6, volume: 85}
-    },
-
-    // Phase 5: Tower Handoff
-    {
-        id: 'tower_handoff',
-        phase: 'ground',
-        frequency: '121.900',
-        frequencyName: 'Ground Control',
-        action: 'Tower Handoff',
-        trigger: 'atc',
-        atc: '${callsign}, at holding point contact Tower on ${towerFreq}',
-        pilotResponse: 'Contact Tower ${towerFreq}, ${callsign}',
-        nextStep: 'tower_checkin',
-        callback: () => console.log('Switching to Tower frequency'),
-        audioEffects: {static: 15, distortion: 5, volume: 88}
-    },
-
-    // Phase 6: Tower - Check In
-    {
-        id: 'tower_checkin',
-        phase: 'tower',
-        frequency: '119.100',
-        frequencyName: 'Tower',
-        action: 'Tower Check-in',
-        trigger: 'pilot',
-        pilot: '${airport} Tower, good day, ${callsign} at holding point runway ${runway}, ready for departure',
-        atc: '${callsign}, ${airport} Tower, good day, line up and wait runway ${runway}',
-        pilotResponse: 'Line up and wait runway ${runway}, ${callsign}',
-        nextStep: 'takeoff_clearance',
-        audioEffects: {static: 10, distortion: 3, volume: 90}
-    },
-
-    // Phase 7: Tower - Takeoff
-    {
-        id: 'takeoff_clearance',
-        phase: 'tower',
-        frequency: '119.100',
-        frequencyName: 'Tower',
-        action: 'Takeoff Clearance',
-        trigger: 'atc',
-        atc: '${callsign}, wind ${wind}, runway ${runway}, cleared for takeoff',
-        pilotResponse: 'Cleared for takeoff runway ${runway}, ${callsign}',
-        nextStep: 'departure_handoff',
-        conditions: [
-            {type: 'timeout', value: 30000, nextStep: 'departure_handoff'}
-        ],
-        audioEffects: {static: 8, distortion: 2, volume: 92}
-    },
-
-    // Phase 8: Departure Handoff
-    {
-        id: 'departure_handoff',
-        phase: 'tower',
-        frequency: '119.100',
-        frequencyName: 'Tower',
-        action: 'Departure Handoff',
-        trigger: 'atc',
-        atc: '${callsign}, contact ${airport} Departure ${departureFreq}',
-        pilotResponse: 'Contact ${airport} Departure ${departureFreq}, ${callsign}',
-        nextStep: 'departure_checkin',
-        callback: () => console.log('Switching to Departure frequency'),
-        audioEffects: {static: 12, distortion: 4, volume: 88}
-    },
-
-    // Phase 9: Departure Control
-    {
-        id: 'departure_checkin',
-        phase: 'departure',
-        frequency: '123.800',
-        frequencyName: 'Departure Control',
-        action: 'Departure Check-in',
-        trigger: 'pilot',
-        pilot: '${airport} Departure, good day, ${callsign}, passing ${altitude} for ${flightLevel}, ${sid}',
-        atc: '${callsign}, ${airport} Departure, radar contact, climb flight level ${flightLevel}',
-        pilotResponse: 'Climb flight level ${flightLevel}, ${callsign}',
-        nextStep: 'enroute_handoff',
-        audioEffects: {static: 15, distortion: 6, volume: 85}
-    },
-
-    // Phase 10: Enroute
-    {
-        id: 'enroute_handoff',
-        phase: 'departure',
-        frequency: '123.800',
-        frequencyName: 'Departure Control',
-        action: 'Enroute Handoff',
-        trigger: 'atc',
-        atc: '${callsign}, contact ${centerName} ${centerFreq}',
-        pilotResponse: 'Contact ${centerName} ${centerFreq}, ${callsign}',
-        nextStep: 'flight_complete',
-        callback: () => console.log('Flight handed off to enroute control'),
-        audioEffects: {static: 20, distortion: 8, volume: 82}
+function normalizeAltitude(altitude: number): string {
+    if (altitude >= 1000) {
+        const thousands = Math.floor(altitude / 1000).toString().split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
+        const remainder = altitude % 1000
+        return remainder > 0 ? `${thousands} thousand ${remainder}` : `${thousands} thousand`
     }
-]
+    return altitude.toString()
+}
 
-// Text Normalization for Proper ATC Pronunciation
-export function normalizeATCText(text: string, context: FlightContext): string {
-    let normalized = text
+export function normalizeATCText(text: string, context: Record<string, any>): string {
+    let normalized = renderTpl(text, context)
 
-    // Replace variables with context values
-    Object.keys(context).forEach(key => {
-        const value = (context as any)[key]
-        if (value) {
-            normalized = normalized.replace(new RegExp(`\\$\\{${key}\\}`, 'g'), value)
-        }
+    // runway 25L → two five left
+    normalized = normalized.replace(/runway\s+(\d{1,2})([LRC]?)/gi, (_, num: string, suffix: string) => {
+        const n = num.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
+        const s = suffix === 'L' ? ' left' : suffix === 'R' ? ' right' : suffix === 'C' ? ' center' : ''
+        return `runway ${n}${s}`
     })
 
-    // Normalize runway callouts (e.g., "25L" -> "two five left")
-    normalized = normalized.replace(/runway\s+(\d{1,2})([LRC]?)/gi, (match, num, suffix) => {
-        const normalizedNum = num.split('').map((digit: string) => ICAO_NUMBERS[digit] || digit).join(' ')
-        const normalizedSuffix = suffix === 'L' ? ' left' : suffix === 'R' ? ' right' : suffix === 'C' ? ' center' : ''
-        return `runway ${normalizedNum}${normalizedSuffix}`
+    // FL350 → flight level three five zero
+    normalized = normalized.replace(/FL(\d{3})/gi, (_, lvl: string) => {
+        const n = lvl.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
+        return `flight level ${n}`
     })
 
-    // Normalize flight levels (e.g., "FL350" -> "flight level three five zero")
-    normalized = normalized.replace(/FL(\d{3})/gi, (match, level) => {
-        const normalizedLevel = level.split('').map((digit: string) => ICAO_NUMBERS[digit] || digit).join(' ')
-        return `flight level ${normalizedLevel}`
+    // 5000 ft → five thousand
+    normalized = normalized.replace(/\b(\d{1,5})\s*(?:feet?|ft)\b/gi, (_, alt: string) => normalizeAltitude(parseInt(alt)))
+
+    // 121.9 → wun too wun decimal niner
+    normalized = normalized.replace(/(\d{3})\.(\d{1,3})/g, (_, a: string, b: string) => {
+        const A = a.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
+        const B = b.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
+        return `${A} decimal ${B}`
     })
 
-    // Normalize altitudes (e.g., "5000" -> "five thousand")
-    normalized = normalized.replace(/\b(\d{1,5})\s*(?:feet?|ft)\b/gi, (match, alt) => {
-        return normalizeAltitude(parseInt(alt))
+    // squawk 4567 → fower fife six seven
+    normalized = normalized.replace(/squawk\s+(\d{4})/gi, (_, code: string) => {
+        const n = code.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
+        return `squawk ${n}`
     })
 
-    // Normalize frequencies (e.g., "121.9" -> "wun too wun decimal niner")
-    normalized = normalized.replace(/(\d{3})\.(\d{1,3})/g, (match, before, after) => {
-        const normalizedBefore = before.split('').map((digit: string) => ICAO_NUMBERS[digit] || digit).join(' ')
-        const normalizedAfter = after.split('').map((digit: string) => ICAO_NUMBERS[digit] || digit).join(' ')
-        return `${normalizedBefore} decimal ${normalizedAfter}`
+    // heading 270 → heading two seven zero
+    normalized = normalized.replace(/heading\s+(\d{3})/gi, (_, hdg: string) => {
+        const n = hdg.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
+        return `heading ${n}`
     })
 
-    // Normalize squawk codes (e.g., "4567" -> "fower fife six seven")
-    normalized = normalized.replace(/squawk\s+(\d{4})/gi, (match, code) => {
-        const normalizedCode = code.split('').map((digit: string) => ICAO_NUMBERS[digit] || digit).join(' ')
-        return `squawk ${normalizedCode}`
-    })
-
-    // Normalize headings (e.g., "270" -> "heading two seven zero")
-    normalized = normalized.replace(/heading\s+(\d{3})/gi, (match, heading) => {
-        const normalizedHeading = heading.split('').map((digit: string) => ICAO_NUMBERS[digit] || digit).join(' ')
-        return `heading ${normalizedHeading}`
-    })
-
-    // Normalize taxi instructions (e.g., "via A, B, C" -> "via Alpha, Bravo, Charlie")
-    normalized = normalized.replace(/via\s+([A-Z](?:\d+)?(?:\s*,\s*[A-Z](?:\d+)?)*)/gi, (match, route) => {
-        const normalizedRoute = route.split(/\s*,\s*/).map((segment: string) => {
-            return segment.replace(/([A-Z])(\d+)?/g, (segMatch, letter, number) => {
-                const normalizedLetter = NATO_PHONETIC[letter] || letter
-                const normalizedNumber = number ? number.split('').map((digit: string) => ICAO_NUMBERS[digit] || digit).join(' ') : ''
-                return normalizedLetter + (normalizedNumber ? ' ' + normalizedNumber : '')
+    // via A, B5 → via Alpha, Bravo five
+    normalized = normalized.replace(/via\s+([A-Z](?:\d+)?(?:\s*,\s*[A-Z](?:\d+)?)*)/gi, (_, route: string) => {
+        const parts = route.split(/\s*,\s*/).map(seg =>
+            seg.replace(/([A-Z])(\d+)?/g, (_m, L: string, N?: string) => {
+                const letter = NATO_PHONETIC[L] || L
+                const number = N ? N.split('').map(d => ICAO_NUMBERS[d] || d).join(' ') : ''
+                return number ? `${letter} ${number}` : letter
             })
-        }).join(', ')
-        return `via ${normalizedRoute}`
+        )
+        return `via ${parts.join(', ')}`
     })
 
-    // Normalize single taxiway references (e.g., "A5" -> "Alpha five")
-    normalized = normalized.replace(/\b([A-Z])(\d+)\b/g, (match, letter, number) => {
-        const normalizedLetter = NATO_PHONETIC[letter] || letter
-        const normalizedNumber = number.split('').map((digit: string) => ICAO_NUMBERS[digit] || digit).join(' ')
-        return `${normalizedLetter} ${normalizedNumber}`
+    // A5 → Alpha five
+    normalized = normalized.replace(/\b([A-Z])(\d+)\b/g, (_m, L: string, N: string) => {
+        const letter = NATO_PHONETIC[L] || L
+        const number = N.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
+        return `${letter} ${number}`
     })
 
-    // Normalize wind callouts (e.g., "280/15" -> "two eight zero at wun fife")
-    normalized = normalized.replace(/(\d{3})\/(\d{1,2})/g, (match, direction, speed) => {
-        const normalizedDirection = direction.split('').map((digit: string) => ICAO_NUMBERS[digit] || digit).join(' ')
-        const normalizedSpeed = speed.split('').map((digit: string) => ICAO_NUMBERS[digit] || digit).join(' ')
-        return `${normalizedDirection} at ${normalizedSpeed}`
+    // 280/15 → two eight zero at wun fife
+    normalized = normalized.replace(/(\d{3})\/(\d{1,2})/g, (_m, d: string, s: string) => {
+        const D = d.split('').map(x => ICAO_NUMBERS[x] || x).join(' ')
+        const S = s.split('').map(x => ICAO_NUMBERS[x] || x).join(' ')
+        return `${D} at ${S}`
     })
 
     return normalized
 }
 
-function normalizeAltitude(altitude: number): string {
-    if (altitude >= 1000) {
-        const thousands = Math.floor(altitude / 1000)
-        const remainder = altitude % 1000
-        let result = `${ICAO_NUMBERS[thousands.toString()]} thousand`
-        if (remainder > 0) {
-            result += ` ${remainder}`
-        }
-        return result
-    }
-    return altitude.toString()
+// ----------------- Template-Renderer -----------------
+function renderTpl(tpl: string, ctx: Record<string, any>): string {
+    return tpl.replace(/\{([\w.]+)\}/g, (_m, key) => {
+        // Variablen können z.B. variables.callsign oder flags.in_air sein
+        const parts = key.split('.')
+        let cur: any = ctx
+        for (const p of parts) cur = cur?.[p]
+        return (cur ?? '').toString()
+    })
 }
 
-// Communication Engine Composable
+// ----------------- Engine -----------------
 export default function useCommunicationsEngine() {
-    const currentStep = ref<CommunicationStep | null>(null)
-    const flightContext = ref<FlightContext>({
-        callsign: '',
-        aircraft: '',
-        departure: '',
-        arrival: '',
-        gate: '',
-        runway: '',
-        squawk: '',
-        atis: '',
-        sid: '',
-        flightLevel: '',
-        groundFreq: '121.900',
-        towerFreq: '119.100',
-        departureFreq: '123.800',
-        approachFreq: '119.300',
-        taxiRoute: [],
-        phase: 'clearance'
+    // Decision Tree in-Memory
+    const tree = ref<DecisionTree>(decisionTreeJson as DecisionTree)
+    const states = computed<Record<string, DTState>>(() => tree.value.states)
+
+    // Laufzeitkontext
+    const variables = ref<Record<string, any>>({ ...tree.value.variables })
+    const flags = ref({ ...tree.value.flags })
+    const currentStateId = ref<string>(tree.value.start_state)
+
+    const communicationLog = ref<EngineLog[]>([])
+
+    const currentState = computed<DTState>(() => {
+        const s = states.value[currentStateId.value]
+        return { ...s, id: currentStateId.value }
     })
 
-    const communicationLog = ref<Array<{
-        timestamp: Date
-        frequency: string
-        speaker: 'pilot' | 'atc'
-        message: string
-        normalized: string
-        step: string
-    }>>([])
+    const nextCandidates = computed<string[]>(() => {
+        const s = currentState.value
+        const nxt = [
+            ...(s.next ?? []),
+            ...(s.ok_next ?? []),
+            ...(s.bad_next ?? []),
+            ...(s.timer_next?.map(t => ({ to: t.to })) ?? [])
+        ].map(x => x.to)
+        // uniq
+        return Array.from(new Set(nxt))
+    })
 
-    const initializeFlight = (flightPlan: any) => {
-        flightContext.value = {
-            callsign: flightPlan.callsign,
-            aircraft: flightPlan.aircraft?.split('/')[0] || 'Unknown',
-            departure: flightPlan.dep,
-            arrival: flightPlan.arr,
-            gate: generateGate(flightPlan.dep),
-            runway: generateRunway(flightPlan.dep),
-            squawk: flightPlan.assignedsquawk || generateSquawk(),
-            atis: generateATIS(),
-            sid: generateSID(flightPlan.route),
-            flightLevel: `FL${Math.floor(parseInt(flightPlan.altitude) / 100).toString().padStart(3, '0')}`,
-            groundFreq: '121.900',
-            towerFreq: '119.100',
-            departureFreq: '123.800',
-            approachFreq: '119.300',
-            taxiRoute: generateTaxiRoute(),
-            phase: 'clearance'
+    // Frequenz aus Variablen (Controller-Einheit) ableiten
+    const activeFrequency = computed<string | undefined>(() => {
+        switch (flags.value.current_unit) {
+            case 'DEL': return renderTpl('{variables.delivery_freq}', { variables: variables.value })
+            case 'GROUND': return renderTpl('{variables.ground_freq}', { variables: variables.value })
+            case 'TOWER': return renderTpl('{variables.tower_freq}', { variables: variables.value })
+            case 'DEP': return renderTpl('{variables.departure_freq}', { variables: variables.value })
+            case 'APP': return renderTpl('{variables.approach_freq}', { variables: variables.value })
+            case 'CTR': return renderTpl('{variables.handoff_freq}', { variables: variables.value })
+            default: return undefined
         }
+    })
 
-        currentStep.value = COMMUNICATION_STEPS[0]
+    // ---------- öffentliche API ----------
+    function initializeFlight(fpl: any) {
+        variables.value = {
+            ...variables.value,
+            callsign: fpl.callsign,
+            acf_type: fpl.aircraft?.split('/')[0] || 'A320',
+            dep: fpl.dep || fpl.departure || 'EDDF',
+            dest: fpl.arr || fpl.arrival || 'EDDM',
+            stand: genStand(),
+            runway: genRunway(),
+            squawk: fpl.assignedsquawk || genSquawk(),
+            atis_code: genATIS(),
+            sid: genSID(fpl.route || ''),
+            transition: 'DCT',
+            cruise_flight_level: fpl.altitude ? `FL${String(Math.floor(parseInt(fpl.altitude) / 100)).padStart(3, '0')}` : 'FL360',
+            initial_altitude_ft: 5000,
+            climb_altitude_ft: 7000,
+            star: 'RNAV X',
+            approach_type: 'ILS Z',
+            taxi_route: 'A, V',
+            delivery_freq: '121.900',
+            ground_freq: '121.700',
+            tower_freq: '118.700',
+            departure_freq: '125.350',
+            approach_freq: '120.800',
+            handoff_freq: '121.800',
+            qnh_hpa: 1015,
+            remarks: 'standard',
+            time_now: new Date().toISOString()
+        }
+        flags.value = { ...flags.value, in_air: false, emergency_active: false, current_unit: 'DEL', stack: [] }
+        currentStateId.value = tree.value.start_state
+        communicationLog.value = []
     }
 
-    const processUserTransmission = (transcription: string): string | null => {
-        if (!currentStep.value) return null
+    // Pilot-Input verarbeiten → LLM bekommt State + Candidates
+    function buildLLMContext(pilotTranscript: string) {
+        const s = currentState.value
+        return {
+            state_id: s.id,
+            state: s,
+            candidates: nextCandidates.value.map(id => ({ id, state: states.value[id] })),
+            variables: variables.value,
+            flags: flags.value,
+            pilot_utterance: pilotTranscript
+        }
+    }
 
-        const normalized = normalizeATCText(transcription, flightContext.value)
+    // LLM-Entscheidung anwenden
+    function applyLLMDecision(decision: { next_state: string; updates?: Record<string, any>; flags?: Record<string, any>; controller_say_tpl?: string }) {
+        // Variablen/Flags updaten
+        if (decision.updates) Object.assign(variables.value, decision.updates)
+        if (decision.flags) Object.assign(flags.value, decision.flags)
+        // ggf. ATC sagt etwas sofort (z.B. Reminders)
+        if (decision.controller_say_tpl) {
+            speak('atc', decision.controller_say_tpl, currentStateId.value)
+        }
+        moveTo(decision.next_state)
+    }
 
-        // Log user transmission
+    // Direkter Pilotenspruch → einfache Router-Heuristik (Interrupts/Readbacks). Für echte Logik nutzt ihr LLM:
+    function processPilotTransmission(transcript: string) {
+        // Interrupt-Shortcuts (nur in der Luft)
+        const t = transcript.toLowerCase()
+        if (flags.value.in_air && /^(mayday|pan\s*pan)/.test(t)) {
+            const intId = t.startsWith('mayday') ? 'INT_MAYDAY' : 'INT_PANPAN'
+            moveTo(intId)
+            speak('pilot', transcript, intId)
+            return
+        }
+
+        // Standard: Loggen & LLM-Context anbieten
+        speak('pilot', transcript, currentStateId.value)
+    }
+
+    // Zum State springen und Auto-Aktionen ausführen
+    function moveTo(stateId: string) {
+        if (!states.value[stateId]) return
+        // Stack-Mechanik (vereinfacht): Interrupts pushen aktuellen State
+        if (stateId.startsWith('INT_')) flags.value.stack.push(currentStateId.value)
+
+        currentStateId.value = stateId
+        const s = currentState.value
+
+        // Actions ausführen (nur SET/IF minimal)
+        for (const act of s.actions ?? []) {
+            if (typeof act === 'string') continue
+            if (act.if && !safeEvalBoolean(act.if)) continue
+            if (act.set) setByPath({ variables: variables.value, flags: flags.value }, act.set, act.to)
+        }
+
+        // Handoff → Frequenz/Unit setzen
+        if (s.handoff?.to) {
+            flags.value.current_unit = unitFromHandoff(s.handoff.to)
+            if (s.handoff.freq) {
+                // Frequenz ins variables-Objekt aufnehmen, falls dynamisch
+                variables.value.handoff_freq = renderTpl(s.handoff.freq, { ...exposeCtx() })
+            }
+        }
+
+        // Auto-Say (ATC/System)
+        if (s.say_tpl) speak(s.role, s.say_tpl, s.id!)
+
+        // Auto-Ende / Monitor / Check-Readback werden vom LLM/Client gesteuert.
+    }
+
+    // Letzten Flow wieder aufnehmen (z.B. nach Interrupt)
+    function resumePriorFlow() {
+        const prev = flags.value.stack.pop()
+        if (prev) moveTo(prev)
+    }
+
+    // Hilfsfunktionen
+    function speak(speaker: Role, tpl: string, stateId: string) {
+        const msg = renderTpl(tpl, exposeCtx())
         communicationLog.value.push({
             timestamp: new Date(),
-            frequency: currentStep.value.frequency,
-            speaker: 'pilot',
-            message: transcription,
-            normalized,
-            step: currentStep.value.id
+            frequency: activeFrequency.value,
+            speaker,
+            message: msg,
+            normalized: normalizeATCText(msg, exposeCtxFlat()),
+            state: stateId
         })
-
-        // Generate ATC response
-        const response = generateATCResponse(currentStep.value, transcription)
-
-        if (response) {
-            const normalizedResponse = normalizeATCText(response, flightContext.value)
-
-            // Log ATC response
-            communicationLog.value.push({
-                timestamp: new Date(),
-                frequency: currentStep.value.frequency,
-                speaker: 'atc',
-                message: response,
-                normalized: normalizedResponse,
-                step: currentStep.value.id
-            })
-
-            // Move to next step if applicable
-            if (currentStep.value.nextStep) {
-                moveToStep(currentStep.value.nextStep)
-            }
-
-            // Execute callback if present
-            if (currentStep.value.callback) {
-                currentStep.value.callback()
-            }
-
-            return normalizedResponse
-        }
-
-        return null
     }
 
-    const generateATCResponse = (step: CommunicationStep, pilotMessage: string): string | null => {
-        // Check if this step expects a pilot transmission
-        if (step.trigger !== 'pilot' && !step.atc) return null
-
-        // Return appropriate ATC response based on step
-        if (step.atcResponse) {
-            return step.atcResponse
-        } else if (step.atc) {
-            return step.atc
-        }
-
-        return null
+    function exposeCtx() {
+        return { variables: variables.value, flags: flags.value }
     }
-
-    const moveToStep = (stepId: string) => {
-        const nextStep = COMMUNICATION_STEPS.find(s => s.id === stepId)
-        if (nextStep) {
-            currentStep.value = nextStep
-            flightContext.value.phase = nextStep.phase
-
-            // Auto-trigger ATC communications
-            if (nextStep.trigger === 'atc' && nextStep.atc) {
-                setTimeout(() => {
-                    const normalizedMessage = normalizeATCText(nextStep.atc!, flightContext.value)
-
-                    communicationLog.value.push({
-                        timestamp: new Date(),
-                        frequency: nextStep.frequency,
-                        speaker: 'atc',
-                        message: nextStep.atc!,
-                        normalized: normalizedMessage,
-                        step: nextStep.id
-                    })
-                }, 1500)
-            }
+    function exposeCtxFlat() {
+        // Für den Normalizer wollen wir einfache Platzhalter-Namen
+        return {
+            ...variables.value,
+            ...flags.value
         }
     }
 
-    // Utility functions for flight data generation
-    const generateGate = (airport: string): string => {
-        const gates = ['A12', 'B15', 'C23', 'D8', 'E41', 'F18', 'G7', 'H33']
-        return gates[Math.floor(Math.random() * gates.length)]
+    function unitFromHandoff(to: string) {
+        if (/GROUND/i.test(to)) return 'GROUND'
+        if (/TOWER/i.test(to)) return 'TOWER'
+        if (/DEPART/i.test(to)) return 'DEP'
+        if (/APPROACH/i.test(to)) return 'APP'
+        if (/CENTER|CTR/i.test(to)) return 'CTR'
+        if (/DEL|DELIVERY/i.test(to)) return 'DEL'
+        return flags.value.current_unit
     }
 
-    const generateRunway = (airport: string): string => {
-        const runways = ['25L', '25R', '07L', '07R', '18', '36', '09', '27']
-        return runways[Math.floor(Math.random() * runways.length)]
+    function genStand() {
+        const arr = ['A12','B15','C23','D8','E41','F18','G7','H33']
+        return arr[Math.floor(Math.random() * arr.length)]
     }
-
-    const generateSquawk = (): string => {
-        return Math.floor(Math.random() * 8000 + 1000).toString()
+    function genRunway() {
+        const arr = ['25L','25R','07L','07R','18','36','09','27']
+        return arr[Math.floor(Math.random() * arr.length)]
     }
-
-    const generateATIS = (): string => {
+    function genSquawk() {
+        return String(Math.floor(Math.random() * 8000 + 1000)).padStart(4, '0')
+    }
+    function genATIS() {
         const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         return letters[Math.floor(Math.random() * letters.length)]
     }
-
-    const generateSID = (route: string): string => {
+    function genSID(_route: string) {
         const sids = ['SULUS5S', 'TOBAK2E', 'MARUN7F', 'CINDY1A', 'HELEN4B']
         return sids[Math.floor(Math.random() * sids.length)]
     }
 
-    const generateTaxiRoute = (): string[] => {
-        const taxiways = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo']
-        const count = Math.floor(Math.random() * 3) + 1
-        return taxiways.slice(0, count)
+    // einfache bool-Guards (nur Variablen/Flags, keine eval unsicherer Ausdrücke)
+    function safeEvalBoolean(expr?: string): boolean {
+        if (!expr) return true
+        // sehr einfache Auswertung: flags.in_air === true
+        const m = expr.match(/^(variables|flags)\.([A-Za-z0-9_]+)\s*===\s*(true|false|'[^']*'|"[^"]*"|\d+)$/)
+        if (!m) return false
+        const bag = m[1] === 'variables' ? variables.value : flags.value as any
+        const key = m[2]
+        const rhsRaw = m[3]
+        let rhs: any = rhsRaw
+        if (rhsRaw === 'true') rhs = true
+        else if (rhsRaw === 'false') rhs = false
+        else if (/^\d+$/.test(rhsRaw)) rhs = Number(rhsRaw)
+        else rhs = rhsRaw.replace(/^['"]|['"]$/g, '')
+        return bag?.[key] === rhs
+    }
+
+    function setByPath(root: Record<string, any>, path: string, val: any) {
+        const parts = path.split('.')
+        let cur = root
+        for (let i = 0; i < parts.length - 1; i++) {
+            const p = parts[i]
+            if (!(p in cur)) cur[p] = {}
+            cur = cur[p]
+        }
+        cur[parts[parts.length - 1]] = val
     }
 
     return {
-        currentStep: readonly(currentStep),
-        flightContext: readonly(flightContext),
+        // state/vars/flags
+        currentState: computed(() => currentState.value),
+        currentStateId: readonly(currentStateId),
+        variables: readonly(variables),
+        flags: readonly(flags),
+        nextCandidates,
+        activeFrequency,
         communicationLog: readonly(communicationLog),
+
+        // lifecycle
         initializeFlight,
-        processUserTransmission,
-        moveToStep,
+
+        // Pilot in → baut Kontext für LLM
+        processPilotTransmission,
+        buildLLMContext,
+        applyLLMDecision,
+
+        // Flow-Steuerung
+        moveTo,
+        resumePriorFlow,
+
+        // utils
         normalizeATCText
     }
 }
