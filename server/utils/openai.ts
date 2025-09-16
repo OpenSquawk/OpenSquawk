@@ -33,34 +33,54 @@ export interface LLMDecision {
     radio_check?: boolean
 }
 
+// Extrahiere verwendete Variablen aus Templates
+function extractTemplateVariables(text?: string): string[] {
+    if (!text) return []
+    const matches = text.match(/\{([^}]+)\}/g) || []
+    return matches.map(match => match.slice(1, -1)) // Remove { }
+}
+
 // Optimierte aber ausreichende Eingabe für gute Entscheidungen
 function optimizeInputForLLM(input: LLMDecisionInput) {
-    // Nur relevante Candidate-Daten (reduziert aber nicht zu stark)
-    const candidates = input.candidates.map(c => ({
-        id: c.id,
-        role: c.state.role,
-        phase: c.state.phase,
-        say_tpl: c.state.say_tpl ? c.state.say_tpl.substring(0, 100) : undefined // Gekürzt auf 100 Zeichen
-    }))
+    // Sammle alle verfügbaren Variablen aus dem Decision Tree
+    const availableVariables = [
+        'callsign', 'dest', 'dep', 'runway', 'squawk', 'sid', 'transition',
+        'initial_altitude_ft', 'climb_altitude_ft', 'cruise_flight_level',
+        'taxi_route', 'stand', 'gate', 'atis_code', 'qnh_hpa',
+        'ground_freq', 'tower_freq', 'departure_freq', 'approach_freq', 'handoff_freq',
+        'star', 'approach_type', 'remarks', 'acf_type'
+    ]
 
-    // Wichtige Variablen für Context
-    const essentials = {
-        callsign: input.variables.callsign,
-        dep: input.variables.dep,
-        dest: input.variables.dest,
-        runway: input.variables.runway,
-        squawk: input.variables.squawk,
-        current_unit: input.flags.current_unit,
-        in_air: input.flags.in_air
-    }
+    // Relevante Candidate-Daten mit Template-Variablen
+    const candidates = input.candidates.map(c => {
+        const templateVars = extractTemplateVariables(c.state.say_tpl)
+        return {
+            id: c.id,
+            role: c.state.role,
+            phase: c.state.phase,
+            template_vars: templateVars // Welche Variablen dieser State verwendet
+        }
+    })
+
+    // Sammle alle Template-Variablen aus den Candidates
+    const candidateVars = new Set<string>()
+    candidates.forEach(c => c.template_vars?.forEach(v => candidateVars.add(v)))
 
     return {
         state_id: input.state_id,
         current_phase: input.state.phase,
         current_role: input.state.role,
         candidates: candidates,
-        context: essentials,
-        pilot_utterance: input.pilot_utterance
+        available_variables: availableVariables, // Alle verfügbaren Variablen
+        candidate_variables: Array.from(candidateVars), // Variablen die Candidates verwenden
+        pilot_utterance: input.pilot_utterance,
+        // Nur aktueller Context ohne Werte (für Token-Sparen)
+        context: {
+            callsign: input.variables.callsign,
+            current_unit: input.flags.current_unit,
+            in_air: input.flags.in_air,
+            phase: input.state.phase
+        }
     }
 }
 
@@ -97,21 +117,27 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         return { next_state: input.candidates[0].id }
     }
 
-    // Kompakter aber informativer Prompt - nur ATC responses wenn nötig
+    // Kompakter aber informativer Prompt - mit Variable-Info für intelligente Responses
     const system = [
         'You are an ATC state router. Return strict JSON.',
         'Keys: next_state, controller_say_tpl (optional), off_schema (optional).',
         '',
         'ROUTING: Pick next_state from candidates[].id when pilot matches expected flow.',
         'ATC RESPONSES: Only include controller_say_tpl if:',
-        '- Next state role is "atc" OR has say_tpl',
+        '- Next state role is "atc" OR has template_vars',
         '- OR off_schema=true (pilot needs response but no candidate fits)',
         '- OR pilot needs acknowledgment/correction',
+        '',
+        'TEMPLATE VARIABLES: When generating controller_say_tpl, you can use these variables:',
+        `Available: {${optimizedInput.available_variables.join('}, {')}}`,
+        `Common in candidates: {${optimizedInput.candidate_variables.join('}, {')}}`,
+        'Always include {callsign} in ATC responses. Use variables like {runway}, {squawk}, {dest} as needed.',
         '',
         'PILOT STATES: If next state role is "pilot", NO controller_say_tpl needed.',
         'DEFAULT: Use "GEN_NO_REPLY" if unclear.',
         '',
-        'Use proper ATC phraseology when controller_say_tpl is included.'
+        'Examples: "{callsign}, taxi to runway {runway} via {taxi_route}"',
+        '"{callsign}, cleared to {dest} via {sid} departure, squawk {squawk}"'
     ].join(' ')
 
     // Update optimized input to indicate which candidates need ATC responses
@@ -142,7 +168,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
     } catch (e) {
         console.error('LLM JSON parse error, using smart fallback:', e)
 
-        // Smart keyword-based fallback - nur ATC response wenn nötig
+        // Smart keyword-based fallback - mit Template-Variablen
         const callsign = input.variables.callsign || ''
 
         // Pilot braucht Clearance → ATC muss antworten
@@ -150,7 +176,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             return {
                 next_state: 'CD_ISSUE_CLR',
                 off_schema: true,
-                controller_say_tpl: `${callsign}, standby for clearance.`
+                controller_say_tpl: `{callsign}, cleared to {dest} via {sid} departure, runway {runway}, climb {initial_altitude_ft} feet, squawk {squawk}.`
             }
         }
 
@@ -159,7 +185,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             return {
                 next_state: 'GRD_TAXI_INSTR',
                 off_schema: true,
-                controller_say_tpl: `${callsign}, standby for taxi instructions.`
+                controller_say_tpl: `{callsign}, taxi to runway {runway} via {taxi_route}, hold short runway {runway}.`
             }
         }
 
@@ -168,7 +194,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             return {
                 next_state: 'TWR_TAKEOFF_CLR',
                 off_schema: true,
-                controller_say_tpl: `${callsign}, standby for takeoff clearance.`
+                controller_say_tpl: `{callsign}, wind {remarks}, runway {runway} cleared for take-off.`
             }
         }
 
@@ -181,11 +207,11 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             }
         }
 
-        // Generic fallback - nur response wenn unklar was pilot will
+        // Generic fallback - mit Template
         return {
             next_state: 'GEN_NO_REPLY',
             off_schema: true,
-            controller_say_tpl: `${callsign}, say again your last transmission.`
+            controller_say_tpl: `{callsign}, say again your last transmission.`
         }
     }
 }
