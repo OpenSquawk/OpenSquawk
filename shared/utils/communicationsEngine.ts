@@ -14,14 +14,12 @@ interface DTHandoff { to: string; freq: string }
 interface DTActionSet { set?: string; to?: any; if?: string }
 
 interface DTState {
-    id?: string // im JSON sind Keys die IDs — hier zur Bequemlichkeit.
+    id?: string
     role: Role
     phase: Phase
-    // Texte
     say_tpl?: string
     utterance_tpl?: string
     else_say_tpl?: string
-    // Routing
     next?: DTNext[]
     ok_next?: DTNext[]
     bad_next?: DTNext[]
@@ -33,6 +31,8 @@ interface DTState {
     auto?: 'check_readback' | 'monitor' | 'end' | 'pop_stack_or_route_by_intent'
     readback_required?: string[]
     actions?: (DTActionSet | string)[]
+    frequency?: string // Für einfachere Freq-Zugriffe
+    frequencyName?: string // Name der Frequenz (DEL, GND, TWR, etc.)
 }
 
 interface DecisionTree {
@@ -47,6 +47,8 @@ interface DecisionTree {
         emergency_active: boolean
         current_unit: string
         stack: string[]
+        off_schema_count: number // Zähler für Off-Schema Antworten
+        radio_checks_done: number // Zähler für Radio Checks
     }
     policies: {
         timeouts: {
@@ -65,9 +67,33 @@ interface DecisionTree {
     states: Record<string, DTState>
 }
 
-// --- ATC Decition Tree laden ---
+// Flight Phases und Communication Steps für bessere Integration
+export const FLIGHT_PHASES = [
+    { id: 'clearance', name: 'Clearance Delivery', frequency: '121.900', action: 'Request IFR clearance' },
+    { id: 'ground', name: 'Ground Control', frequency: '121.700', action: 'Request pushback and taxi' },
+    { id: 'tower', name: 'Tower', frequency: '118.700', action: 'Request takeoff clearance' },
+    { id: 'departure', name: 'Departure', frequency: '125.350', action: 'Initial contact after takeoff' },
+    { id: 'enroute', name: 'Center', frequency: '121.800', action: 'Cruise flight monitoring' },
+    { id: 'approach', name: 'Approach', frequency: '120.800', action: 'Approach clearance' },
+    { id: 'landing', name: 'Tower (Landing)', frequency: '118.700', action: 'Landing clearance' },
+    { id: 'taxiin', name: 'Ground (Taxi In)', frequency: '121.700', action: 'Taxi to gate' }
+]
 
-// ----------------- Public API / Kontext -----------------
+export const COMMUNICATION_STEPS = [
+    {
+        id: 'cd_request',
+        phase: 'clearance',
+        trigger: 'pilot',
+        frequency: '121.900',
+        frequencyName: 'Clearance Delivery',
+        pilot: '{callsign} information {atis_code}, IFR to {dest}, stand {stand}, request clearance.',
+        atc: '{callsign}, cleared to {dest} via {sid} departure, runway {runway}, climb {initial_altitude_ft} feet, squawk {squawk}.',
+        pilotResponse: '{callsign} cleared {dest} via {sid}, runway {runway}, climb {initial_altitude_ft}, squawk {squawk}.'
+    }
+    // Weitere Steps können hier definiert werden
+]
+
+// --- ATC Decision Tree laden ---
 export interface FlightContext {
     callsign: string
     aircraft: string
@@ -79,7 +105,7 @@ export interface FlightContext {
     atis_code: string
     sid: string
     transition: string
-    flight_level: string // z.B. "FL360"
+    flight_level: string
     ground_freq: string
     tower_freq: string
     departure_freq: string
@@ -89,7 +115,7 @@ export interface FlightContext {
     taxi_route: string
     remarks?: string
     time_now?: string
-    // intern
+    phase: string
     lastTransmission?: string
     awaitingResponse?: boolean
 }
@@ -101,9 +127,11 @@ export interface EngineLog {
     message: string
     normalized: string
     state: string
+    radioCheck?: boolean
+    offSchema?: boolean
 }
 
-// ----------------- NATO/ICAO Normalizer -----------------
+// NATO/ICAO Normalizer (gekürzt für bessere Performance)
 const NATO_PHONETIC: Record<string, string> = {
     A: 'Alpha', B: 'Bravo', C: 'Charlie', D: 'Delta', E: 'Echo', F: 'Foxtrot',
     G: 'Golf', H: 'Hotel', I: 'India', J: 'Juliett', K: 'Kilo', L: 'Lima',
@@ -111,91 +139,46 @@ const NATO_PHONETIC: Record<string, string> = {
     S: 'Sierra', T: 'Tango', U: 'Uniform', V: 'Victor', W: 'Whiskey',
     X: 'X-ray', Y: 'Yankee', Z: 'Zulu'
 }
+
 const ICAO_NUMBERS: Record<string, string> = {
     '0': 'zero', '1': 'wun', '2': 'too', '3': 'tree', '4': 'fower',
     '5': 'fife', '6': 'six', '7': 'seven', '8': 'eight', '9': 'niner'
 }
 
-function normalizeAltitude(altitude: number): string {
-    if (altitude >= 1000) {
-        const thousands = Math.floor(altitude / 1000).toString().split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
-        const remainder = altitude % 1000
-        return remainder > 0 ? `${thousands} thousand ${remainder}` : `${thousands} thousand`
-    }
-    return altitude.toString()
-}
-
 export function normalizeATCText(text: string, context: Record<string, any>): string {
     let normalized = renderTpl(text, context)
 
-    // runway 25L → two five left
+    // Runway normalization
     normalized = normalized.replace(/runway\s+(\d{1,2})([LRC]?)/gi, (_, num: string, suffix: string) => {
         const n = num.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
         const s = suffix === 'L' ? ' left' : suffix === 'R' ? ' right' : suffix === 'C' ? ' center' : ''
         return `runway ${n}${s}`
     })
 
-    // FL350 → flight level three five zero
+    // Flight Level
     normalized = normalized.replace(/FL(\d{3})/gi, (_, lvl: string) => {
         const n = lvl.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
         return `flight level ${n}`
     })
 
-    // 5000 ft → five thousand
-    normalized = normalized.replace(/\b(\d{1,5})\s*(?:feet?|ft)\b/gi, (_, alt: string) => normalizeAltitude(parseInt(alt)))
-
-    // 121.9 → wun too wun decimal niner
+    // Frequency normalization
     normalized = normalized.replace(/(\d{3})\.(\d{1,3})/g, (_, a: string, b: string) => {
         const A = a.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
         const B = b.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
         return `${A} decimal ${B}`
     })
 
-    // squawk 4567 → fower fife six seven
+    // Squawk codes
     normalized = normalized.replace(/squawk\s+(\d{4})/gi, (_, code: string) => {
         const n = code.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
         return `squawk ${n}`
     })
 
-    // heading 270 → heading two seven zero
-    normalized = normalized.replace(/heading\s+(\d{3})/gi, (_, hdg: string) => {
-        const n = hdg.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
-        return `heading ${n}`
-    })
-
-    // via A, B5 → via Alpha, Bravo five
-    normalized = normalized.replace(/via\s+([A-Z](?:\d+)?(?:\s*,\s*[A-Z](?:\d+)?)*)/gi, (_, route: string) => {
-        const parts = route.split(/\s*,\s*/).map(seg =>
-            seg.replace(/([A-Z])(\d+)?/g, (_m, L: string, N?: string) => {
-                const letter = NATO_PHONETIC[L] || L
-                const number = N ? N.split('').map(d => ICAO_NUMBERS[d] || d).join(' ') : ''
-                return number ? `${letter} ${number}` : letter
-            })
-        )
-        return `via ${parts.join(', ')}`
-    })
-
-    // A5 → Alpha five
-    normalized = normalized.replace(/\b([A-Z])(\d+)\b/g, (_m, L: string, N: string) => {
-        const letter = NATO_PHONETIC[L] || L
-        const number = N.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
-        return `${letter} ${number}`
-    })
-
-    // 280/15 → two eight zero at wun fife
-    normalized = normalized.replace(/(\d{3})\/(\d{1,2})/g, (_m, d: string, s: string) => {
-        const D = d.split('').map(x => ICAO_NUMBERS[x] || x).join(' ')
-        const S = s.split('').map(x => ICAO_NUMBERS[x] || x).join(' ')
-        return `${D} at ${S}`
-    })
-
     return normalized
 }
 
-// ----------------- Template-Renderer -----------------
 function renderTpl(tpl: string, ctx: Record<string, any>): string {
     return tpl.replace(/\{([\w.]+)\}/g, (_m, key) => {
-        // Variablen können z.B. variables.callsign oder flags.in_air sein
         const parts = key.split('.')
         let cur: any = ctx
         for (const p of parts) cur = cur?.[p]
@@ -203,21 +186,48 @@ function renderTpl(tpl: string, ctx: Record<string, any>): string {
     })
 }
 
-// ----------------- Engine -----------------
 export default function useCommunicationsEngine() {
-    // Decision Tree in-Memory
-    const tree = ref<DecisionTree>(atcDecisionTree as DecisionTree)
+    const tree = ref<DecisionTree>({
+        ...atcDecisionTree as DecisionTree,
+        flags: {
+            ...atcDecisionTree.flags,
+            off_schema_count: 0,
+            radio_checks_done: 0
+        }
+    })
+
     const states = computed<Record<string, DTState>>(() => tree.value.states)
 
-    // Laufzeitkontext
     const variables = ref<Record<string, any>>({ ...tree.value.variables })
     const flags = ref({ ...tree.value.flags })
     const currentStateId = ref<string>(tree.value.start_state)
-
     const communicationLog = ref<EngineLog[]>([])
 
+    // Flight Context für bessere Integration mit pm_alt.vue Stil
+    const flightContext = ref<FlightContext>({
+        callsign: '',
+        aircraft: 'A320',
+        dep: 'EDDF',
+        dest: 'EDDM',
+        stand: 'A12',
+        runway: '25R',
+        squawk: '1234',
+        atis_code: 'K',
+        sid: 'ANEKI7S',
+        transition: 'ANEKI',
+        flight_level: 'FL360',
+        ground_freq: '121.700',
+        tower_freq: '118.700',
+        departure_freq: '125.350',
+        approach_freq: '120.800',
+        handoff_freq: '121.800',
+        qnh_hpa: 1015,
+        taxi_route: 'A, V',
+        phase: 'clearance'
+    })
+
     const currentState = computed<DTState>(() => {
-        const s = states.value[currentStateId.value]
+        const s = states.value[currentStateId.value] || states.value[tree.value.start_state]
         return { ...s, id: currentStateId.value }
     })
 
@@ -229,28 +239,41 @@ export default function useCommunicationsEngine() {
             ...(s.bad_next ?? []),
             ...(s.timer_next?.map(t => ({ to: t.to })) ?? [])
         ].map(x => x.to)
-        // uniq
         return Array.from(new Set(nxt))
     })
 
-    // Frequenz aus Variablen (Controller-Einheit) ableiten
     const activeFrequency = computed<string | undefined>(() => {
         switch (flags.value.current_unit) {
-            case 'DEL': return renderTpl('{variables.delivery_freq}', { variables: variables.value })
-            case 'GROUND': return renderTpl('{variables.ground_freq}', { variables: variables.value })
-            case 'TOWER': return renderTpl('{variables.tower_freq}', { variables: variables.value })
-            case 'DEP': return renderTpl('{variables.departure_freq}', { variables: variables.value })
-            case 'APP': return renderTpl('{variables.approach_freq}', { variables: variables.value })
-            case 'CTR': return renderTpl('{variables.handoff_freq}', { variables: variables.value })
+            case 'DEL': return variables.value.delivery_freq
+            case 'GROUND': return variables.value.ground_freq
+            case 'TOWER': return variables.value.tower_freq
+            case 'DEP': return variables.value.departure_freq
+            case 'APP': return variables.value.approach_freq
+            case 'CTR': return variables.value.handoff_freq
             default: return undefined
         }
     })
 
-    // ---------- öffentliche API ----------
+    // Current Step für pm_alt.vue Integration
+    const currentStep = computed(() => {
+        const phase = flightContext.value.phase
+        const step = COMMUNICATION_STEPS.find(s => s.phase === phase)
+        if (step) {
+            return {
+                ...step,
+                pilot: renderTpl(step.pilot, { ...variables.value, ...flags.value }),
+                atc: step.atc ? renderTpl(step.atc, { ...variables.value, ...flags.value }) : undefined,
+                pilotResponse: step.pilotResponse ? renderTpl(step.pilotResponse, { ...variables.value, ...flags.value }) : undefined
+            }
+        }
+        return null
+    })
+
     function initializeFlight(fpl: any) {
+        // Variablen setzen
         variables.value = {
             ...variables.value,
-            callsign: fpl.callsign,
+            callsign: fpl.callsign || fpl.callsign,
             acf_type: fpl.aircraft?.split('/')[0] || 'A320',
             dep: fpl.dep || fpl.departure || 'EDDF',
             dest: fpl.arr || fpl.arrival || 'EDDM',
@@ -263,8 +286,6 @@ export default function useCommunicationsEngine() {
             cruise_flight_level: fpl.altitude ? `FL${String(Math.floor(parseInt(fpl.altitude) / 100)).padStart(3, '0')}` : 'FL360',
             initial_altitude_ft: 5000,
             climb_altitude_ft: 7000,
-            star: 'RNAV X',
-            approach_type: 'ILS Z',
             taxi_route: 'A, V',
             delivery_freq: '121.900',
             ground_freq: '121.700',
@@ -276,12 +297,27 @@ export default function useCommunicationsEngine() {
             remarks: 'standard',
             time_now: new Date().toISOString()
         }
-        flags.value = { ...flags.value, in_air: false, emergency_active: false, current_unit: 'DEL', stack: [] }
+
+        // Flight Context aktualisieren
+        Object.assign(flightContext.value, {
+            ...variables.value,
+            phase: 'clearance'
+        })
+
+        flags.value = {
+            ...flags.value,
+            in_air: false,
+            emergency_active: false,
+            current_unit: 'DEL',
+            stack: [],
+            off_schema_count: 0,
+            radio_checks_done: 0
+        }
+
         currentStateId.value = tree.value.start_state
         communicationLog.value = []
     }
 
-    // Pilot-Input verarbeiten → LLM bekommt State + Candidates
     function buildLLMContext(pilotTranscript: string) {
         const s = currentState.value
         return {
@@ -294,92 +330,154 @@ export default function useCommunicationsEngine() {
         }
     }
 
-    // LLM-Entscheidung anwenden
-    function applyLLMDecision(decision: { next_state: string; updates?: Record<string, any>; flags?: Record<string, any>; controller_say_tpl?: string }) {
-        // Variablen/Flags updaten
+    function applyLLMDecision(decision: any) {
+        // Updates anwenden
         if (decision.updates) Object.assign(variables.value, decision.updates)
         if (decision.flags) Object.assign(flags.value, decision.flags)
-        // ggf. ATC sagt etwas sofort (z.B. Reminders)
-        if (decision.controller_say_tpl) {
-            speak('atc', decision.controller_say_tpl, currentStateId.value)
+
+        // Off-Schema und Radio Check Tracking
+        if (decision.off_schema) {
+            flags.value.off_schema_count++
+            console.log(`[Engine] Off-schema response #${flags.value.off_schema_count}`)
         }
-        moveTo(decision.next_state)
+        if (decision.radio_check) {
+            flags.value.radio_checks_done++
+            console.log(`[Engine] Radio check #${flags.value.radio_checks_done}`)
+        }
+
+        // Controller Response
+        if (decision.controller_say_tpl) {
+            speak('atc', decision.controller_say_tpl, currentStateId.value, {
+                radioCheck: decision.radio_check,
+                offSchema: decision.off_schema
+            })
+        }
+
+        // State Transition (nur wenn nicht Radio Check)
+        if (!decision.radio_check) {
+            moveTo(decision.next_state)
+        }
     }
 
-    // Direkter Pilotenspruch → einfache Router-Heuristik (Interrupts/Readbacks). Für echte Logik nutzt ihr LLM:
-    function processPilotTransmission(transcript: string) {
-        // Interrupt-Shortcuts (nur in der Luft)
+    function processPilotTransmission(transcript: string): string | null {
+        // Log pilot input
+        speak('pilot', transcript, currentStateId.value)
+
+        // Radio Check Detection (fallback falls LLM es nicht erkennt)
         const t = transcript.toLowerCase()
+        if (t.includes('radio check') || (t.includes('read') && t.includes('check'))) {
+            const callsign = variables.value.callsign || ''
+            const response = `${callsign}, read you five by five.`
+            flags.value.radio_checks_done++
+
+            setTimeout(() => {
+                speak('atc', response, currentStateId.value, { radioCheck: true })
+            }, 500)
+
+            return response
+        }
+
+        // Emergency Interrupts
         if (flags.value.in_air && /^(mayday|pan\s*pan)/.test(t)) {
             const intId = t.startsWith('mayday') ? 'INT_MAYDAY' : 'INT_PANPAN'
             moveTo(intId)
-            speak('pilot', transcript, intId)
+            return null
+        }
+
+        return null // LLM soll entscheiden
+    }
+
+    function processUserTransmission(transcript: string): string | null {
+        return processPilotTransmission(transcript)
+    }
+
+    function moveTo(stateId: string) {
+        if (!states.value[stateId]) {
+            console.warn(`[Engine] Unknown state: ${stateId}`)
             return
         }
 
-        // Standard: Loggen & LLM-Context anbieten
-        speak('pilot', transcript, currentStateId.value)
-    }
-
-    // Zum State springen und Auto-Aktionen ausführen
-    function moveTo(stateId: string) {
-        if (!states.value[stateId]) return
-        // Stack-Mechanik (vereinfacht): Interrupts pushen aktuellen State
-        if (stateId.startsWith('INT_')) flags.value.stack.push(currentStateId.value)
+        if (stateId.startsWith('INT_')) {
+            flags.value.stack.push(currentStateId.value)
+        }
 
         currentStateId.value = stateId
         const s = currentState.value
 
-        // Actions ausführen (nur SET/IF minimal)
+        // Actions ausführen
         for (const act of s.actions ?? []) {
             if (typeof act === 'string') continue
             if (act.if && !safeEvalBoolean(act.if)) continue
             if (act.set) setByPath({ variables: variables.value, flags: flags.value }, act.set, act.to)
         }
 
-        // Handoff → Frequenz/Unit setzen
+        // Handoff
         if (s.handoff?.to) {
             flags.value.current_unit = unitFromHandoff(s.handoff.to)
             if (s.handoff.freq) {
-                // Frequenz ins variables-Objekt aufnehmen, falls dynamisch
-                variables.value.handoff_freq = renderTpl(s.handoff.freq, { ...exposeCtx() })
+                variables.value.handoff_freq = renderTpl(s.handoff.freq, exposeCtx())
             }
         }
 
-        // Auto-Say (ATC/System)
-        if (s.say_tpl) speak(s.role, s.say_tpl, s.id!)
+        // Auto-Say
+        if (s.say_tpl) {
+            speak(s.role, s.say_tpl, s.id!)
+        }
 
-        // Auto-Ende / Monitor / Check-Readback werden vom LLM/Client gesteuert.
+        // Phase Update für Flight Context
+        updateFlightPhase(s.phase)
     }
 
-    // Letzten Flow wieder aufnehmen (z.B. nach Interrupt)
+    function updateFlightPhase(phase: Phase) {
+        const phaseMap: Record<Phase, string> = {
+            'Clearance': 'clearance',
+            'PushStart': 'ground',
+            'TaxiOut': 'ground',
+            'Departure': 'tower',
+            'Climb': 'departure',
+            'Enroute': 'enroute',
+            'Descent': 'enroute',
+            'Approach': 'approach',
+            'Landing': 'landing',
+            'TaxiIn': 'taxiin',
+            'Preflight': 'clearance',
+            'Postflight': 'taxiin',
+            'Interrupt': flightContext.value.phase,
+            'LostComms': flightContext.value.phase,
+            'Missed': 'approach'
+        }
+
+        if (phaseMap[phase]) {
+            flightContext.value.phase = phaseMap[phase]
+        }
+    }
+
     function resumePriorFlow() {
         const prev = flags.value.stack.pop()
         if (prev) moveTo(prev)
     }
 
-    // Hilfsfunktionen
-    function speak(speaker: Role, tpl: string, stateId: string) {
+    function speak(speaker: Role, tpl: string, stateId: string, options: { radioCheck?: boolean, offSchema?: boolean } = {}) {
         const msg = renderTpl(tpl, exposeCtx())
-        communicationLog.value.push({
+        const entry: EngineLog = {
             timestamp: new Date(),
             frequency: activeFrequency.value,
             speaker,
             message: msg,
             normalized: normalizeATCText(msg, exposeCtxFlat()),
-            state: stateId
-        })
+            state: stateId,
+            radioCheck: options.radioCheck,
+            offSchema: options.offSchema
+        }
+        communicationLog.value.push(entry)
     }
 
     function exposeCtx() {
         return { variables: variables.value, flags: flags.value }
     }
+
     function exposeCtxFlat() {
-        // Für den Normalizer wollen wir einfache Platzhalter-Namen
-        return {
-            ...variables.value,
-            ...flags.value
-        }
+        return { ...variables.value, ...flags.value }
     }
 
     function unitFromHandoff(to: string) {
@@ -396,26 +494,28 @@ export default function useCommunicationsEngine() {
         const arr = ['A12','B15','C23','D8','E41','F18','G7','H33']
         return arr[Math.floor(Math.random() * arr.length)]
     }
+
     function genRunway() {
         const arr = ['25L','25R','07L','07R','18','36','09','27']
         return arr[Math.floor(Math.random() * arr.length)]
     }
+
     function genSquawk() {
         return String(Math.floor(Math.random() * 8000 + 1000)).padStart(4, '0')
     }
+
     function genATIS() {
         const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         return letters[Math.floor(Math.random() * letters.length)]
     }
+
     function genSID(_route: string) {
         const sids = ['SULUS5S', 'TOBAK2E', 'MARUN7F', 'CINDY1A', 'HELEN4B']
         return sids[Math.floor(Math.random() * sids.length)]
     }
 
-    // einfache bool-Guards (nur Variablen/Flags, keine eval unsicherer Ausdrücke)
     function safeEvalBoolean(expr?: string): boolean {
         if (!expr) return true
-        // sehr einfache Auswertung: flags.in_air === true
         const m = expr.match(/^(variables|flags)\.([A-Za-z0-9_]+)\s*===\s*(true|false|'[^']*'|"[^"]*"|\d+)$/)
         if (!m) return false
         const bag = m[1] === 'variables' ? variables.value : flags.value as any
@@ -441,7 +541,7 @@ export default function useCommunicationsEngine() {
     }
 
     return {
-        // state/vars/flags
+        // State
         currentState: computed(() => currentState.value),
         currentStateId: readonly(currentStateId),
         variables: readonly(variables),
@@ -450,19 +550,24 @@ export default function useCommunicationsEngine() {
         activeFrequency,
         communicationLog: readonly(communicationLog),
 
-        // lifecycle
+        // pm_alt.vue Integration
+        flightContext: readonly(flightContext),
+        currentStep,
+
+        // Lifecycle
         initializeFlight,
 
-        // Pilot in → baut Kontext für LLM
+        // Communication
         processPilotTransmission,
+        processUserTransmission,
         buildLLMContext,
         applyLLMDecision,
 
-        // Flow-Steuerung
+        // Flow Control
         moveTo,
         resumePriorFlow,
 
-        // utils
+        // Utilities
         normalizeATCText
     }
 }
