@@ -10,10 +10,7 @@
         <div class="hidden md:flex gap-6 text-sm">
           <NuxtLink to="#features" class="hover:text-cyan-300">Vision</NuxtLink>
           <NuxtLink to="#roadmap" class="hover:text-cyan-300">Roadmap</NuxtLink>
-          <NuxtLink to="#news" class="hover:text-cyan-300">News</NuxtLink>
-          <NuxtLink to="#learn" class="hover:text-cyan-300">Lernpfad</NuxtLink>
           <NuxtLink to="#pricing" class="hover:text-cyan-300">Preise</NuxtLink>
-          <NuxtLink to="#opensource" class="hover:text-cyan-300">Open‑Source</NuxtLink>
           <NuxtLink to="#contributing" class="hover:text-cyan-300">Mitmachen</NuxtLink>
           <NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink>
         </div>

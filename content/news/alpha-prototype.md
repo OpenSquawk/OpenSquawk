@@ -1,6 +1,6 @@
 ---
 title: "Alpha-Prototyp bereit für frühe Tests"
-date: "2025-01-20"
+date: "2025-09-15"
 summary: "Unser erster OpenSquawk Alpha-Build läuft lokal für MSFS und zeigt, wohin die Reise Richtung community-getriebener AI-ATC geht."
 ---
 
