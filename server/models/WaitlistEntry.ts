@@ -9,6 +9,8 @@ export interface WaitlistEntryDocument extends mongoose.Document {
   consentTerms: boolean
   joinedAt: Date
   activatedAt?: Date
+  wantsProductUpdates?: boolean
+  updatesOptedInAt?: Date
 }
 
 const waitlistSchema = new mongoose.Schema<WaitlistEntryDocument>({
@@ -20,6 +22,8 @@ const waitlistSchema = new mongoose.Schema<WaitlistEntryDocument>({
   consentTerms: { type: Boolean, default: false },
   joinedAt: { type: Date, default: () => new Date() },
   activatedAt: { type: Date },
+  wantsProductUpdates: { type: Boolean, default: false },
+  updatesOptedInAt: { type: Date },
 })
 
 export const WaitlistEntry =

@@ -21,7 +21,9 @@
         <h2 class="text-xl font-semibold">2. Verarbeitete Daten</h2>
         <ul class="list-disc space-y-2 pl-6 text-white/70">
           <li><strong>Warteliste:</strong> Name (optional), E-Mail-Adresse, freiwillige Hinweise, Zeitpunkt des Eintrags, Einwilligungen.</li>
+          <li><strong>Feature-Benachrichtigungen:</strong> E-Mail-Adresse, optionaler Name, Opt-in-Zeitpunkt, Zustimmung für Produkt-Updates.</li>
           <li><strong>Nutzerkonto:</strong> Name, E-Mail-Adresse, Passwort-Hash, Einladungsstatus, Erstellungs- und Login-Zeitpunkte, Einladungscode-Historie.</li>
+          <li><strong>Roadmap-Vorschläge:</strong> Titel, Beschreibung, optional angegebene Kontaktadresse, Einwilligungen und Zeitstempel.</li>
           <li><strong>Kommunikationsdaten:</strong> Sämtliche eingegebenen oder per Push-to-Talk übermittelten Funksprüche (Transkripte, normalisierte Texte, Metaangaben wie Modul, Lesson-ID, Stärke, Entscheidungskontext).</li>
           <li><strong>Technische Protokolle:</strong> Geräteinformationen (Browser, OS), Zeitstempel, Request-IDs, Fehlerlogs.</li>
         </ul>
@@ -33,7 +35,7 @@
         <ul class="space-y-3 text-white/70">
           <li><strong>Bereitstellung des Dienstes (Art. 6 Abs. 1 lit. b DSGVO):</strong> Verwaltung von Warteliste, Accounts und Sessions, Ausgabe von Einladungscodes, Abrechnung zukünftiger Tarife.</li>
           <li><strong>Produktverbesserung & Sicherheit (Art. 6 Abs. 1 lit. f DSGVO):</strong> Analyse und Logging sämtlicher Funksprüche, Fehlerüberwachung, Missbrauchsprävention.</li>
-          <li><strong>Kommunikation (Art. 6 Abs. 1 lit. a DSGVO):</strong> Versand von Wartelisten-Updates, Einladungen und produktspezifischen Informationen nach ausdrücklicher Einwilligung.</li>
+          <li><strong>Kommunikation & Community-Feedback (Art. 6 Abs. 1 lit. a DSGVO):</strong> Versand von Wartelisten-Updates und Produkt-News nach ausdrücklicher Einwilligung sowie Auswertung eingereichter Roadmap-Vorschläge inkl. optionaler Kontaktaufnahme.</li>
         </ul>
       </section>
 
@@ -41,6 +43,8 @@
         <h2 class="text-xl font-semibold">4. Speicherdauer</h2>
         <ul class="space-y-2 text-white/70">
           <li>Wartelisteneinträge: bis zum Widerruf oder maximal 24 Monate nach letzter Aktivität.</li>
+          <li>Feature-Benachrichtigungen: bis zur Abmeldung (Opt-out) oder Widerruf der Einwilligung.</li>
+          <li>Roadmap-Vorschläge: bis zur Umsetzung oder spätestens 18 Monate nach Einreichung.</li>
           <li>Accountdaten: solange das Nutzerkonto besteht, anschließend entsprechend gesetzlicher Aufbewahrungspflichten.</li>
           <li>Kommunikationslogs: mindestens 12 Monate zur Qualitätsverbesserung; bei Supportfällen oder Missbrauchsvorwürfen bis zur abschließenden Klärung.</li>
         </ul>
@@ -50,6 +54,9 @@
         <h2 class="text-xl font-semibold">5. Weitergabe & Auftragsverarbeitung</h2>
         <p class="text-white/70">
           Wir hosten OpenSquawk auf europäischen Cloud-Plattformen (derzeit Hetzner Cloud, Deutschland). Kommunikationsdaten werden in unserer MongoDB-Datenbank gespeichert. Externe KI-Dienstleister (z. B. OpenAI) erhalten ausschließlich pseudonymisierte Texte zur Verarbeitung von TTS/LLM-Funktionen. Es gelten entsprechende Auftragsverarbeitungsverträge. Eine Übermittlung in Drittstaaten erfolgt nur unter Nutzung von EU-Standardvertragsklauseln.
+        </p>
+        <p class="text-xs text-white/60">
+          Hinweis: Formularübermittlungen (Warteliste, Feature-Benachrichtigungen, Roadmap-Vorschläge) lösen eine interne Benachrichtigungs-E-Mail an opensquawk@faktorxmensch.com aus, versendet über den konfigurierten SMTP- oder Transaktionsmail-Anbieter. Enthalten sind ausschließlich die von dir eingegebenen Angaben zur zügigen Bearbeitung.
         </p>
       </section>
 
@@ -75,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-const lastUpdated = new Date('2025-01-15').toLocaleDateString('de-DE')
+const lastUpdated = new Date('2025-02-20').toLocaleDateString('de-DE')
 </script>
 
 <style scoped>
