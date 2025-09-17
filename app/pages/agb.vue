@@ -87,7 +87,7 @@ const sections = [
   {
     title: '8. Gewährleistung & Haftung',
     paragraphs: [
-      'OpenSquawk stellt einen Beta-Dienst bereit. Wir übernehmen keine Gewähr für unterbrechungsfreie Verfügbarkeit oder absolute Richtigkeit der generierten Inhalte. Haftung besteht nur bei Vorsatz, grober Fahrlässigkeit sowie bei Verletzung von Leben, Körper oder Gesundheit.',
+      'OpenSquawk stellt einen Alpha-Dienst bereit. Wir übernehmen keine Gewähr für unterbrechungsfreie Verfügbarkeit oder absolute Richtigkeit der generierten Inhalte. Haftung besteht nur bei Vorsatz, grober Fahrlässigkeit sowie bei Verletzung von Leben, Körper oder Gesundheit.',
     ],
   },
   {

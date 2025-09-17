@@ -7,7 +7,7 @@
             <v-icon icon="mdi-arrow-left" size="18" /> Zurück zur Landingpage
           </NuxtLink>
           <div class="space-y-4">
-            <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">OpenSquawk Access</p>
+            <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">OpenSquawk Alpha Access</p>
             <h1 class="text-3xl md:text-4xl font-semibold">Melde dich an oder sichere dir deinen Invite</h1>
             <p class="text-white/70">
               Registrierungen sind nur mit Einladungscode möglich. Codes werden nach Eintrag auf die Warteliste vergeben oder von bestehenden Mitgliedern nach zwei Wochen Nutzungsdauer ausgestellt.

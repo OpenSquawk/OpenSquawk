@@ -6,6 +6,14 @@
       </NuxtLink>
 
       <article v-if="post" class="card space-y-6">
+        <NuxtImg
+            v-if="bannerSrc"
+            :src="bannerSrc"
+            :alt="`${post.title} – Beitragsbild`"
+            class="news-banner"
+            sizes="sm:100vw md:900px lg:1100px"
+            loading="lazy"
+        />
         <header class="space-y-2">
           <span class="chip text-[10px] uppercase tracking-[0.3em]">{{ formatNewsDate(post.publishedAt) }}</span>
           <h1 class="text-3xl md:text-4xl font-semibold">{{ post.title }}</h1>
@@ -31,6 +39,7 @@ import { getNewsBySlug } from '~~/shared/utils/news'
 const route = useRoute()
 const slug = computed(() => String(route.params.slug ?? ''))
 const post = computed(() => getNewsBySlug(slug.value))
+const bannerSrc = computed(() => (post.value ? `/img/news/${post.value.bannerFile}` : ''))
 
 useHead(() => {
   if (!post.value) {
@@ -63,6 +72,7 @@ const formatNewsDate = (iso: string) => new Date(iso).toLocaleDateString('de-DE'
 .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-medium transition; }
 .btn-primary { @apply bg-cyan-500 text-white hover:bg-cyan-400 shadow-[0_0_40px_rgba(34,211,238,.25)]; }
 .chip { @apply inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 text-white px-3 py-1 text-xs; }
+.news-banner { @apply w-full rounded-xl object-cover; max-height: 420px; }
 .news-body :deep(h2) { @apply text-2xl md:text-3xl font-semibold mt-6 mb-3 text-white; }
 .news-body :deep(h3) { @apply text-xl font-semibold mt-5 mb-2 text-white; }
 .news-body :deep(p) { @apply text-white/80 leading-relaxed mb-4; }
