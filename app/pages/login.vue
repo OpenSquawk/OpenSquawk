@@ -68,6 +68,11 @@
                     class="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400"
                 />
               </div>
+              <div class="text-right">
+                <NuxtLink to="/forgot-password" class="text-xs text-cyan-300 underline hover:text-cyan-200">
+                  Passwort vergessen?
+                </NuxtLink>
+              </div>
             </div>
 
             <button type="submit" class="btn btn-primary w-full" :disabled="loginLoading">
