@@ -6,7 +6,7 @@
         <div>
           <p class="text-xs uppercase tracking-[0.35em] text-cyan-400/80">OpenSquawk</p>
           <h1 class="text-2xl font-semibold">Pilot Monitoring</h1>
-          <p class="mt-1 text-sm text-white/70">Decision Tree • Enhanced LLM • VATSIM</p>
+          <p class="mt-1 text-sm text-white/70">Alpha Build • Decision Tree • VATSIM</p>
         </div>
         <div class="text-right">
           <v-chip size="small" :color="currentState?.phase === 'Interrupt' ? 'red' : 'cyan'" variant="flat" class="mb-1">

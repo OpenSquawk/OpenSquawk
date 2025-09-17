@@ -10,6 +10,7 @@ export default defineNuxtConfig({
       '@pinia/nuxt',
       'nuxt-mongoose',
       'nuxt-module-hotjar',
+      '@nuxt/image',
     ],
     aos: {once: true, duration: 600, easing: 'ease-out'},
     app: {head: {link: [{rel: 'icon', type: 'image/jpeg', href: '/img/logo.jpeg'}]}},
