@@ -2,14 +2,26 @@ const ADMIN_EMAIL_FALLBACK = 'opensquawk@faktorxmensch.com'
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails'
 
-async function sendViaResend(subject: string, text: string) {
+interface MailOptions {
+  to: string
+  subject: string
+  text: string
+  from?: string
+}
+
+interface MailPayload extends MailOptions {
+  from: string
+}
+
+function resolveFrom(from?: string) {
+  return from || process.env.NOTIFY_EMAIL_FROM || 'OpenSquawk <no-reply@opensquawk.dev>'
+}
+
+async function sendViaResend(payload: MailPayload) {
   const apiKey = process.env.NOTIFY_RESEND_API_KEY
   if (!apiKey) {
     return false
   }
-
-  const to = process.env.NOTIFY_EMAIL_TO || ADMIN_EMAIL_FALLBACK
-  const from = process.env.NOTIFY_EMAIL_FROM || 'OpenSquawk <no-reply@opensquawk.dev>'
 
   try {
     const response = await fetch(RESEND_ENDPOINT, {
@@ -18,28 +30,23 @@ async function sendViaResend(subject: string, text: string) {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        from,
-        to,
-        subject,
-        text,
-      }),
+      body: JSON.stringify(payload),
     })
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => '')
-      console.error('Failed to send notification via Resend API', response.status, errorText)
+      console.error('Failed to send email via Resend API', response.status, errorText)
       return false
     }
 
     return true
   } catch (error) {
-    console.error('Error while sending notification via Resend API', error)
+    console.error('Error while sending email via Resend API', error)
     return false
   }
 }
 
-async function sendViaSmtp(subject: string, text: string) {
+async function sendViaSmtp(payload: MailPayload) {
   const host = process.env.NOTIFY_SMTP_HOST
   if (!host) {
     return false
@@ -64,13 +71,10 @@ async function sendViaSmtp(subject: string, text: string) {
     return false
   }
 
-  const to = process.env.NOTIFY_EMAIL_TO || ADMIN_EMAIL_FALLBACK
-  const from = process.env.NOTIFY_EMAIL_FROM || 'OpenSquawk <no-reply@opensquawk.dev>'
-
   try {
     const transporter = nodemailer.createTransport({
       host,
-      port: Number.isNaN(port) ? secure ? 465 : 587 : port,
+      port: Number.isNaN(port) ? (secure ? 465 : 587) : port,
       secure,
       auth: {
         user,
@@ -78,26 +82,51 @@ async function sendViaSmtp(subject: string, text: string) {
       },
     })
 
-    await transporter.sendMail({ from, to, subject, text })
+    await transporter.sendMail({
+      from: payload.from,
+      to: payload.to,
+      subject: payload.subject,
+      text: payload.text,
+    })
     return true
   } catch (error) {
-    console.error('Failed to send notification via SMTP', error)
+    console.error('Failed to send email via SMTP', error)
     return false
   }
 }
 
-export async function sendAdminNotification(subject: string, text: string) {
-  const sentViaResend = await sendViaResend(subject, text)
+async function sendMailInternal(options: MailOptions) {
+  const payload: MailPayload = {
+    ...options,
+    from: resolveFrom(options.from),
+  }
+
+  const sentViaResend = await sendViaResend(payload)
   if (sentViaResend) {
     return true
   }
 
-  const sentViaSmtp = await sendViaSmtp(subject, text)
+  const sentViaSmtp = await sendViaSmtp(payload)
   if (sentViaSmtp) {
     return true
   }
 
-  const to = process.env.NOTIFY_EMAIL_TO || ADMIN_EMAIL_FALLBACK
-  console.info(`[notify:fallback] ${subject}\nEmpfänger: ${to}\n${text}`)
   return false
+}
+
+export async function sendMail(options: MailOptions) {
+  const success = await sendMailInternal(options)
+  if (!success) {
+    console.info(`[mail:fallback] ${options.subject}\nEmpfänger: ${options.to}\n${options.text}`)
+  }
+  return success
+}
+
+export async function sendAdminNotification(subject: string, text: string) {
+  const to = process.env.NOTIFY_EMAIL_TO || ADMIN_EMAIL_FALLBACK
+  const success = await sendMailInternal({ to, subject, text })
+  if (!success) {
+    console.info(`[notify:fallback] ${subject}\nEmpfänger: ${to}\n${text}`)
+  }
+  return success
 }
