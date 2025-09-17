@@ -1,6 +1,23 @@
 const ADMIN_EMAIL_FALLBACK = 'info@opensquawk.de'
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails'
+const ADMIN_NOTIFICATION_SUBJECT_PREFIX = process.env.NOTIFY_SUBJECT_PREFIX || '[OpenSquawk Web]'
+
+type NotificationPrimitive = string | number | boolean | Date | null | undefined
+type NotificationValue =
+  | NotificationPrimitive
+  | NotificationPrimitive[]
+  | Record<string, NotificationPrimitive>
+
+type NotificationData = Record<string, NotificationValue> | Array<[string, NotificationValue]>
+
+export interface AdminNotificationOptions {
+  event: string
+  summary?: string
+  data?: NotificationData
+  to?: string
+  from?: string
+}
 
 interface MailOptions {
   to: string
@@ -122,11 +139,116 @@ export async function sendMail(options: MailOptions) {
   return success
 }
 
-export async function sendAdminNotification(subject: string, text: string) {
-  const to = process.env.NOTIFY_EMAIL_TO || ADMIN_EMAIL_FALLBACK
-  const success = await sendMailInternal({ to, subject, text })
+function resolveNotificationSubject(event: string) {
+  const trimmedEvent = event.trim()
+  if (!trimmedEvent) {
+    return ADMIN_NOTIFICATION_SUBJECT_PREFIX
+  }
+
+  if (trimmedEvent.toLowerCase().startsWith(ADMIN_NOTIFICATION_SUBJECT_PREFIX.toLowerCase())) {
+    return trimmedEvent
+  }
+
+  return `${ADMIN_NOTIFICATION_SUBJECT_PREFIX} ${trimmedEvent}`
+}
+
+function toNotificationEntries(data?: NotificationData): Array<[string, NotificationValue]> {
+  if (!data) {
+    return []
+  }
+
+  if (Array.isArray(data)) {
+    return data
+  }
+
+  return Object.entries(data)
+}
+
+function formatNotificationValue(value: NotificationValue): string {
+  if (value === null || value === undefined) {
+    return '—'
+  }
+
+  if (Array.isArray(value)) {
+    const formatted = value
+      .map((entry) => formatNotificationValue(entry))
+      .filter((entry) => entry && entry !== '—')
+    return formatted.length ? formatted.join(', ') : '—'
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString()
+  }
+
+  if (typeof value === 'object') {
+    return JSON.stringify(value, null, 2)
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'Ja' : 'Nein'
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed ? trimmed : '—'
+  }
+
+  return String(value)
+}
+
+function formatDataEntries(entries: Array<[string, NotificationValue]>) {
+  return entries.map(([label, rawValue]) => {
+    const formattedValue = formatNotificationValue(rawValue)
+    if (formattedValue.includes('\n')) {
+      const indented = formattedValue
+        .split('\n')
+        .map((line) => `  ${line}`)
+        .join('\n')
+      return `• ${label}:\n${indented}`
+    }
+
+    return `• ${label}: ${formattedValue}`
+  })
+}
+
+function buildAdminNotificationText(options: AdminNotificationOptions) {
+  const lines: string[] = []
+  const summary = options.summary?.trim()
+  if (summary) {
+    lines.push(summary)
+  } else {
+    lines.push(`Neue Aktivität auf der Website: ${options.event}`)
+  }
+
+  const dataEntries = formatDataEntries([
+    ['Ereignis', options.event],
+    ...toNotificationEntries(options.data),
+  ])
+
+  if (dataEntries.length) {
+    lines.push('')
+    lines.push('Details:')
+    lines.push(...dataEntries)
+  }
+
+  return lines.join('\n')
+}
+
+export async function sendAdminNotification(options: AdminNotificationOptions) {
+  const to = options.to || process.env.NOTIFY_EMAIL_TO || ADMIN_EMAIL_FALLBACK
+  const subject = resolveNotificationSubject(options.event)
+  const text = buildAdminNotificationText(options)
+
+  const success = await sendMailInternal({
+    to,
+    subject,
+    text,
+    from: options.from,
+  })
+
   if (!success) {
     console.info(`[notify:fallback] ${subject}\nEmpfänger: ${to}\n${text}`)
   }
+
   return success
 }
