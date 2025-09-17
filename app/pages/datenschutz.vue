@@ -56,7 +56,7 @@
           Wir hosten OpenSquawk auf europäischen Cloud-Plattformen (derzeit Hetzner Cloud, Deutschland). Kommunikationsdaten werden in unserer MongoDB-Datenbank gespeichert. Externe KI-Dienstleister (z. B. OpenAI) erhalten ausschließlich pseudonymisierte Texte zur Verarbeitung von TTS/LLM-Funktionen. Es gelten entsprechende Auftragsverarbeitungsverträge. Eine Übermittlung in Drittstaaten erfolgt nur unter Nutzung von EU-Standardvertragsklauseln.
         </p>
         <p class="text-xs text-white/60">
-          Hinweis: Formularübermittlungen (Warteliste, Feature-Benachrichtigungen, Roadmap-Vorschläge) lösen eine interne Benachrichtigungs-E-Mail an opensquawk@faktorxmensch.com aus, versendet über den konfigurierten SMTP- oder Transaktionsmail-Anbieter. Enthalten sind ausschließlich die von dir eingegebenen Angaben zur zügigen Bearbeitung.
+          Hinweis: Formularübermittlungen (Warteliste, Feature-Benachrichtigungen, Roadmap-Vorschläge) lösen eine interne Benachrichtigungs-E-Mail an info@opensquawk.de aus, versendet über den konfigurierten SMTP- oder Transaktionsmail-Anbieter. Enthalten sind ausschließlich die von dir eingegebenen Angaben zur zügigen Bearbeitung.
         </p>
       </section>
 

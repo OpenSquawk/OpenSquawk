@@ -53,7 +53,7 @@
           </p>
           <p class="mt-2 text-sm text-white/70">
             Wir suchen Mitentwickler:innen (Node/Nuxt, ATC SMEs, Tester, Infra/Kosten). Meld dich via
-            <a class="text-cyan-300 underline" href="mailto:opensquawk@faktorxmensch.com">opensquawk@faktorxmensch.com</a>.
+            <a class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
           </p>
           <div class="flex flex-col sm:flex-row gap-3 mt-6">
             <NuxtLink to="#cta" class="btn btn-primary text-base">Frühzugang sichern</NuxtLink>
@@ -535,7 +535,7 @@ POST /api/route/taxi
               <li class="flex gap-3"><v-icon icon="mdi-test-tube" class="text-cyan-300 mt-[2px]"/><span>Tester:innen für Alpha-Builds & Simulator-Integration.</span></li>
               <li class="flex gap-3"><v-icon icon="mdi-cash-multiple" class="text-cyan-300 mt-[2px]"/><span>Infra- & Kosten-Benchmarking, damit Hosting bezahlbar bleibt.</span></li>
             </ul>
-            <p class="mt-5 text-sm text-white/70">Schreib uns an <a href="mailto:opensquawk@faktorxmensch.com" class="text-cyan-300 underline">opensquawk@faktorxmensch.com</a> oder kommentiere direkt im Issue.</p>
+            <p class="mt-5 text-sm text-white/70">Schreib uns an <a href="mailto:info@opensquawk.de" class="text-cyan-300 underline">info@opensquawk.de</a> oder kommentiere direkt im Issue.</p>
             <div class="mt-6 flex gap-3">
               <NuxtLink to="#roadmap" class="btn btn-primary">Roadmap mitgestalten</NuxtLink>
               <NuxtLink to="/news" class="btn btn-ghost">Neuigkeiten</NuxtLink>
@@ -714,7 +714,7 @@ POST /api/route/taxi
               <li><NuxtLink to="#opensource" class="hover:text-cyan-300">Open‑Source</NuxtLink></li>
               <li><NuxtLink to="#news" class="hover:text-cyan-300">News</NuxtLink></li>
               <li><NuxtLink to="#contributing" class="hover:text-cyan-300">Mitmachen</NuxtLink></li>
-              <li><a href="mailto:opensquawk@faktorxmensch.com" class="hover:text-cyan-300">opensquawk@faktorxmensch.com</a></li>
+              <li><a href="mailto:info@opensquawk.de" class="hover:text-cyan-300">info@opensquawk.de</a></li>
             </ul>
           </div>
           <div>

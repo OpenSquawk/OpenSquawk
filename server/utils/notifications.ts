@@ -1,4 +1,4 @@
-const ADMIN_EMAIL_FALLBACK = 'opensquawk@faktorxmensch.com'
+const ADMIN_EMAIL_FALLBACK = 'info@opensquawk.de'
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails'
 

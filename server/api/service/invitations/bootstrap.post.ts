@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { createError, readBody } from 'h3'
 import { InvitationCode } from '../../../models/InvitationCode'
 
-const CREATION_DEADLINE = new Date(process.env.BOOTSTRAP_INVITE_DEADLINE ?? '2024-07-01T00:00:00Z')
+const CREATION_DEADLINE = new Date(process.env.BOOTSTRAP_INVITE_DEADLINE ?? '2025-10-01T00:00:00Z')
 
 export default defineEventHandler(async (event) => {
   const now = new Date()

@@ -22,7 +22,7 @@ Wir haben den Alpha-Prototyp von OpenSquawk intern stabilisiert und geben ihn je
 
 - Teste den Alpha-Build und melde Findings als Issues – am besten mit Logs oder kurzen Screenshots.
 - Schau in die Issues labeled `help-wanted`, dort liegen konkrete Aufgaben für Node/Nuxt Devs, ATC SMEs, Tester:innen und Infra-/Kosten-Benchmarking.
-- Teile eigene Feature-Ideen direkt in der Roadmap oder schreib uns via [opensquawk@faktorxmensch.com](mailto:opensquawk@faktorxmensch.com).
+- Teile eigene Feature-Ideen direkt in der Roadmap oder schreib uns via [info@opensquawk.de](mailto:info@opensquawk.de).
 
 ## Nächste Schritte
 
