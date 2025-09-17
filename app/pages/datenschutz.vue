@@ -13,7 +13,20 @@
       <section class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
         <h2 class="text-xl font-semibold">1. Verantwortlicher</h2>
         <p class="text-white/70">
-          Verantwortlich für die Datenverarbeitung im Sinne der Datenschutz-Grundverordnung (DSGVO) ist die OpenSquawk UG (haftungsbeschränkt), Musterstraße 12, 10115 Berlin, Deutschland. Kontakt: datenschutz@opensquawk.dev.
+          Verantwortlich für die Datenverarbeitung im Sinne der Datenschutz-Grundverordnung (DSGVO) ist die
+
+          Faktor Mensch MEDIA UG (haftungsbeschränkt),
+
+          Wilhelm-Holzamer-Straße 8
+
+          55129 Mainz,
+          Vertreten durch,
+
+          Geschäftsführer: Dominik Ziegenhagel, Emanuel Leube,
+
+          Telefon: +49 251 981 157 912 0
+
+          E-Mail: info@opensquawk.de
         </p>
       </section>
 
@@ -74,7 +87,7 @@
       <section class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
         <h2 class="text-xl font-semibold">7. Kontakt für Datenschutzanfragen</h2>
         <p class="text-white/70">
-          Bitte richten Sie Auskunfts- oder Löschersuchen an datenschutz@opensquawk.dev. Zur eindeutigen Zuordnung benötigen wir die bei OpenSquawk registrierte E-Mail-Adresse sowie ggf. weitere Identifikationsmerkmale (z. B. VATSIM-ID).
+          Bitte richten Sie Auskunfts- oder Löschersuchen an info@opensquawk.de. Zur eindeutigen Zuordnung benötigen wir die bei OpenSquawk registrierte E-Mail-Adresse sowie ggf. weitere Identifikationsmerkmale (z. B. VATSIM-ID).
         </p>
       </section>
     </div>
@@ -82,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-const lastUpdated = new Date('2025-02-20').toLocaleDateString('de-DE')
+const lastUpdated = new Date('2025-09-17').toLocaleDateString('de-DE')
 </script>
 
 <style scoped>

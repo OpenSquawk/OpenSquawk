@@ -7,7 +7,7 @@
         </NuxtLink>
         <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Developer</p>
         <h1 class="text-3xl font-semibold">OpenSquawk API – Dokumentation</h1>
-        <p class="text-white/70">Alle Endpunkte sind JSON-basiert und laufen über HTTPS. Standard-Response enthält <code class="bg-white/10 px-1">success</code> oder ein Fehlerobjekt mit <code class="bg-white/10 px-1">statusMessage</code>.</p>
+        <p class="text-white/70">Alpha Build – Endpunkte können sich ändern. Alle Routen sind JSON-basiert und laufen über HTTPS. Standard-Response enthält <code class="bg-white/10 px-1">success</code> oder ein Fehlerobjekt mit <code class="bg-white/10 px-1">statusMessage</code>.</p>
       </header>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">

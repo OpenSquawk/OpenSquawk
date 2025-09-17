@@ -11,7 +11,7 @@
             Content-getriebene Updates zu Alpha-Builds, Simulator-Support und Community-Entscheidungen.
           </p>
         </div>
-        <NuxtLink to="#feed" class="btn btn-primary w-fit">Zum aktuellen Feed</NuxtLink>
+        <NuxtLink to="/#contributing" class="btn btn-primary w-fit">Zum aktuellen Feed</NuxtLink>
       </div>
     </header>
 

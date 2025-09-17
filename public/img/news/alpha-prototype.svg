@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="720" viewBox="0 0 1600 720" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#041026" />
+      <stop offset="50%" stop-color="#0a223f" />
+      <stop offset="100%" stop-color="#134b5f" />
+    </linearGradient>
+    <radialGradient id="glow" cx="75%" cy="25%" r="70%">
+      <stop offset="0%" stop-color="#2dd4bf" stop-opacity="0.85" />
+      <stop offset="55%" stop-color="#22d3ee" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#0b1020" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glow2" cx="20%" cy="80%" r="65%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.75" />
+      <stop offset="60%" stop-color="#0ea5e9" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#0a0f1c" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="grid" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0" />
+    </linearGradient>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" />
+    </filter>
+  </defs>
+  <rect width="1600" height="720" fill="url(#bg)" />
+  <circle cx="1150" cy="180" r="520" fill="url(#glow)" />
+  <circle cx="360" cy="620" r="460" fill="url(#glow2)" />
+  <g stroke="url(#grid)" stroke-width="1" fill="none" opacity="0.5">
+    <path d="M-200 640 L1800 120" />
+    <path d="M-120 700 L1760 180" />
+    <path d="M-60 760 L1700 240" />
+    <path d="M40 760 L1620 320" />
+  </g>
+  <g opacity="0.45" filter="url(#soft)">
+    <circle cx="230" cy="210" r="90" fill="#38bdf8" />
+    <circle cx="290" cy="210" r="60" fill="#22d3ee" />
+    <circle cx="350" cy="210" r="30" fill="#0ea5e9" />
+  </g>
+  <g transform="translate(180 500) rotate(-6)" opacity="0.3">
+    <rect x="0" y="0" width="460" height="110" rx="28" ry="28" fill="#0f172a" stroke="#1f2937" stroke-width="2" />
+    <text x="230" y="68" font-family="'Space Grotesk', 'Segoe UI', sans-serif" font-size="48" fill="#e0f2fe" text-anchor="middle">Alpha Prototype</text>
+  </g>
+  <g opacity="0.65">
+    <text x="150" y="180" font-family="'Space Grotesk', 'Segoe UI', sans-serif" font-size="120" fill="#e0f2fe" letter-spacing="8">OPEN</text>
+    <text x="150" y="300" font-family="'Space Grotesk', 'Segoe UI', sans-serif" font-size="140" fill="#22d3ee" letter-spacing="10">SQUAWK</text>
+  </g>
+  <g transform="translate(980 470)" opacity="0.55">
+    <circle cx="0" cy="0" r="8" fill="#22d3ee" />
+    <circle cx="60" cy="-40" r="6" fill="#38bdf8" />
+    <circle cx="120" cy="-10" r="5" fill="#0ea5e9" />
+    <circle cx="180" cy="-60" r="4" fill="#38bdf8" />
+    <circle cx="240" cy="-20" r="6" fill="#22d3ee" />
+    <polyline points="0,0 60,-40 120,-10 180,-60 240,-20" fill="none" stroke="#bae6fd" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>

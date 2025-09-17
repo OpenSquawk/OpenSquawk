@@ -48,7 +48,7 @@
       <div class="container">
         <div class="panel hero-panel" :style="worldTiltStyle" @mousemove="tilt">
           <div class="hero-left">
-            <div class="eyebrow">TRAINING</div>
+            <div class="eyebrow">ALPHA BUILD · TRAINING</div>
             <h1 class="h1">ATC Lernwelt</h1>
             <p class="muted">Geführte Pfade · Missionen · XP · Abzeichen. Lokal gespeichert.</p>
             <div class="actions">

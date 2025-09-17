@@ -12,10 +12,12 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@nuxt/image": "1.11.0",
     "@nuxtjs/tailwindcss": "6.14.0",
     "@pinia/nuxt": "0.11.2",
     "dotenv": "^17.2.2",
     "fluent-ffmpeg": "^2.1.3",
+    "nodemailer": "^6.9.13",
     "nuxt": "^4.1.1",
     "nuxt-aos": "1.2.5",
     "nuxt-module-hotjar": "1.3.4",
