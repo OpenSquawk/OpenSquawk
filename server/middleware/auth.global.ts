@@ -3,7 +3,7 @@ import { requireUserSession } from '../utils/auth'
 
 export default defineEventHandler(async (event) => {
   const url = getRequestURL(event)
-  if (!url.pathname.startsWith('/api')) {
+  if (!url.pathname.startsWith('/api/')) {
     return
   }
   if (url.pathname.startsWith('/api/service/')) {
