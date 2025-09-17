@@ -1,7 +1,5 @@
 const ADMIN_EMAIL_FALLBACK = 'info@opensquawk.de'
 
-const RESEND_ENDPOINT = 'https://api.resend.com/emails'
-
 interface MailOptions {
   to: string
   subject: string
@@ -13,72 +11,58 @@ interface MailPayload extends MailOptions {
   from: string
 }
 
+interface SmtpConfig {
+  host: string
+  port: number
+  secure: boolean
+  user: string
+  pass: string
+}
+
 function resolveFrom(from?: string) {
   return from || process.env.NOTIFY_EMAIL_FROM || 'OpenSquawk <no-reply@opensquawk.dev>'
 }
 
-async function sendViaResend(payload: MailPayload) {
-  const apiKey = process.env.NOTIFY_RESEND_API_KEY
-  if (!apiKey) {
-    return false
+function resolveSmtpConfig(): SmtpConfig | null {
+  const host = process.env.NOTIFY_SMTP_HOST?.trim()
+  const user = process.env.NOTIFY_SMTP_USER?.trim()
+  const pass = process.env.NOTIFY_SMTP_PASS?.trim()
+
+  if (!host || !user || !pass) {
+    console.warn('SMTP notification is not fully configured. Please set NOTIFY_SMTP_HOST, NOTIFY_SMTP_USER and NOTIFY_SMTP_PASS.')
+    return null
   }
 
-  try {
-    const response = await fetch(RESEND_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    })
+  const secure = (process.env.NOTIFY_SMTP_SECURE || '').toLowerCase() === 'true'
+  const parsedPort = Number.parseInt(process.env.NOTIFY_SMTP_PORT || '', 10)
+  const port = Number.isNaN(parsedPort) ? (secure ? 465 : 587) : parsedPort
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '')
-      console.error('Failed to send email via Resend API', response.status, errorText)
-      return false
-    }
-
-    return true
-  } catch (error) {
-    console.error('Error while sending email via Resend API', error)
-    return false
-  }
+  return { host, user, pass, secure, port }
 }
 
 async function sendViaSmtp(payload: MailPayload) {
-  const host = process.env.NOTIFY_SMTP_HOST
-  if (!host) {
+  const config = resolveSmtpConfig()
+  if (!config) {
     return false
   }
-
-  const user = process.env.NOTIFY_SMTP_USER
-  const pass = process.env.NOTIFY_SMTP_PASS
-  if (!user || !pass) {
-    console.warn('SMTP notification is configured without credentials – skipping send.')
-    return false
-  }
-
-  const port = Number.parseInt(process.env.NOTIFY_SMTP_PORT || '', 10)
-  const secure = process.env.NOTIFY_SMTP_SECURE === 'true'
 
   let nodemailer: any = null
   try {
     const module = await import('nodemailer')
     nodemailer = module.default ?? module
   } catch (error) {
-    console.warn('nodemailer is not available. Skipping SMTP notification.', error)
+    console.error('nodemailer is not available. Install the dependency to send SMTP emails.', error)
     return false
   }
 
   try {
     const transporter = nodemailer.createTransport({
-      host,
-      port: Number.isNaN(port) ? (secure ? 465 : 587) : port,
-      secure,
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
       auth: {
-        user,
-        pass,
+        user: config.user,
+        pass: config.pass,
       },
     })
 
@@ -95,27 +79,13 @@ async function sendViaSmtp(payload: MailPayload) {
   }
 }
 
-async function sendMailInternal(options: MailOptions) {
+export async function sendMail(options: MailOptions) {
   const payload: MailPayload = {
     ...options,
     from: resolveFrom(options.from),
   }
 
-  const sentViaResend = await sendViaResend(payload)
-  if (sentViaResend) {
-    return true
-  }
-
-  const sentViaSmtp = await sendViaSmtp(payload)
-  if (sentViaSmtp) {
-    return true
-  }
-
-  return false
-}
-
-export async function sendMail(options: MailOptions) {
-  const success = await sendMailInternal(options)
+  const success = await sendViaSmtp(payload)
   if (!success) {
     console.info(`[mail:fallback] ${options.subject}\nEmpfänger: ${options.to}\n${options.text}`)
   }
@@ -124,7 +94,7 @@ export async function sendMail(options: MailOptions) {
 
 export async function sendAdminNotification(subject: string, text: string) {
   const to = process.env.NOTIFY_EMAIL_TO || ADMIN_EMAIL_FALLBACK
-  const success = await sendMailInternal({ to, subject, text })
+  const success = await sendMail({ to, subject, text })
   if (!success) {
     console.info(`[notify:fallback] ${subject}\nEmpfänger: ${to}\n${text}`)
   }
