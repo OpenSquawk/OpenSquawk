@@ -95,6 +95,7 @@ const publicEndpoints = [
   { method: 'POST', path: '/api/service/auth/refresh', description: 'Access-Token anhand des Refresh-Cookies erneuern.' },
   { method: 'GET', path: '/api/service/invitations/{code}', description: 'Einladungscode prüfen (gültig, abgelaufen, verwendet).' },
   { method: 'POST', path: '/api/service/invitations/bootstrap', description: 'Bootstrap-Einladungscode generieren (aktiv bis 01.07.2024, optionales Label).' },
+  { method: 'POST', path: '/api/service/invitations/manual', description: 'Manuellen Einladungscode mit Passwortschutz erstellen (intern).' },
 ]
 
 const protectedEndpoints = [

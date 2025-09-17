@@ -9,7 +9,7 @@ export interface InvitationCodeDocument extends mongoose.Document {
   expiresAt?: Date
   usedBy?: mongoose.Types.ObjectId
   usedAt?: Date
-  channel: 'user' | 'bootstrap'
+  channel: 'user' | 'bootstrap' | 'manual'
   label?: string
 }
 
@@ -20,7 +20,7 @@ const invitationSchema = new mongoose.Schema<InvitationCodeDocument>({
   expiresAt: { type: Date },
   usedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   usedAt: { type: Date },
-  channel: { type: String, enum: ['user', 'bootstrap'], default: 'user' },
+  channel: { type: String, enum: ['user', 'bootstrap', 'manual'], default: 'user' },
   label: { type: String, trim: true },
 })
 

@@ -20,6 +20,7 @@ export default defineNuxtConfig({
         ttsModel: process.env.TTS_MODEL || 'tts-1',
         jwtSecret: process.env.JWT_SECRET,
         jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+        manualInvitePassword: process.env.MANUAL_INVITE_PASSWORD,
         mongoose: {
             uri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/opensquawk',
             options: {},
