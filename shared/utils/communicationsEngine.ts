@@ -294,6 +294,10 @@ export default function useCommunicationsEngine() {
             approach_freq: '120.800',
             handoff_freq: '121.800',
             qnh_hpa: 1015,
+            push_delay_min: 0,
+            surface_wind: '220/05',
+            speed_restriction: '210 knots',
+            emergency_heading: '180',
             remarks: 'standard',
             time_now: new Date().toISOString()
         }
