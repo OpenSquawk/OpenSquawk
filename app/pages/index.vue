@@ -406,12 +406,7 @@
             </div>
           </div>
           <div class="card" data-aos="fade-left">
-            <ClientOnly>
-              <video id="video" class="w-full rounded-xl" autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1518306724291-1f5c9b4d2452?q=80&w=1600&auto=format&fit=crop">
-                <source src="https://cdn.coverr.co/videos/coverr-airplane-taking-off-8255/1080p.mp4" type="video/mp4" />
-              </video>
-            </ClientOnly>
-            <p class="mt-3 text-xs text-white/60">Kurzclip: Symbolisch für den Lernpfad</p>
+            <nuxt-img src="/img/landing/runway.jpeg" alt="Runway" class="rounded-lg w-full object-cover" />
           </div>
         </div>
       </div>
