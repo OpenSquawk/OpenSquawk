@@ -56,16 +56,23 @@ export default defineEventHandler(async (event) => {
       })
 
       if (!previouslyWantedUpdates && updateResult.created) {
-        const lines = [
-          `E-Mail: ${email}`,
-          name ? `Name: ${name}` : null,
-          notes ? `Notizen: ${notes}` : null,
-          `Quelle: ${source}`,
-        ].filter(Boolean)
-        await sendAdminNotification(
-          '[OpenSquawk] Neue Updates-Liste (via Warteliste)',
-          `${lines.join('\n')}\nOpt-In: Produkt-Updates`,
-        )
+        const dataEntries = [
+          ['E-Mail', email],
+        ]
+        if (name) {
+          dataEntries.push(['Name', name])
+        }
+        if (notes) {
+          dataEntries.push(['Notizen', notes])
+        }
+        dataEntries.push(['Quelle', source])
+        dataEntries.push(['Opt-In', 'Produkt-Updates'])
+
+        await sendAdminNotification({
+          event: 'Neue Updates-Liste (via Warteliste)',
+          summary: `Produkt-Updates Opt-in (Warteliste): ${email}`,
+          data: dataEntries,
+        })
       }
     }
 
@@ -98,14 +105,23 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const lines = [
-    `E-Mail: ${email}`,
-    name ? `Name: ${name}` : null,
-    notes ? `Notizen: ${notes}` : null,
-    `Quelle: ${source}`,
-    wantsProductUpdates ? 'Opt-In: Produkt-Updates' : 'Opt-In: nur Warteliste',
-  ].filter(Boolean)
-  await sendAdminNotification('[OpenSquawk] Neue Wartelisten-Anmeldung', lines.join('\n'))
+  const dataEntries = [
+    ['E-Mail', email],
+  ]
+  if (name) {
+    dataEntries.push(['Name', name])
+  }
+  if (notes) {
+    dataEntries.push(['Notizen', notes])
+  }
+  dataEntries.push(['Quelle', source])
+  dataEntries.push(['Opt-In', wantsProductUpdates ? 'Produkt-Updates' : 'Nur Warteliste'])
+
+  await sendAdminNotification({
+    event: 'Neue Wartelisten-Anmeldung',
+    summary: `Neue Wartelisten-Anmeldung: ${email}`,
+    data: dataEntries,
+  })
 
   return {
     success: true,

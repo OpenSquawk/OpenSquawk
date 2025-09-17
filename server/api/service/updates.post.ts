@@ -37,12 +37,16 @@ export default defineEventHandler(async (event) => {
   })
 
   if (result.created) {
-    const lines = [
-      `E-Mail: ${email}`,
-      name ? `Name: ${name}` : null,
-      `Quelle: ${source}`,
-    ].filter(Boolean)
-    await sendAdminNotification('[OpenSquawk] Neue Updates-Liste', lines.join('\n'))
+    const dataEntries = [
+      ['E-Mail', email],
+      ['Name', name || null],
+      ['Quelle', source],
+    ]
+    await sendAdminNotification({
+      event: 'Neue Updates-Liste',
+      summary: `Neue Updates-Anmeldung: ${email}`,
+      data: dataEntries,
+    })
   }
 
   return {
