@@ -27,7 +27,7 @@
         <h2 class="text-xl font-semibold">Kontakt</h2>
         <div class="space-y-2 text-white/70">
           <p>Telefon: +49 251 981 157 912 0</p>
-          <p>E-Mail: opensquawk@faktorxmensch.com</p>
+          <p>E-Mail: info@opensquawk.de</p>
         </div>
       </section>
 

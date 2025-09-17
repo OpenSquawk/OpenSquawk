@@ -1,4 +1,4 @@
-const ADMIN_EMAIL_FALLBACK = 'opensquawk@faktorxmensch.com'
+const ADMIN_EMAIL_FALLBACK = 'info@opensquawk.de'
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails'
 
@@ -9,7 +9,7 @@ async function sendViaResend(subject: string, text: string) {
   }
 
   const to = process.env.NOTIFY_EMAIL_TO || ADMIN_EMAIL_FALLBACK
-  const from = process.env.NOTIFY_EMAIL_FROM || 'OpenSquawk <no-reply@opensquawk.dev>'
+  const from = process.env.NOTIFY_EMAIL_FROM || 'OpenSquawk <info@opensquawk.de>'
 
   try {
     const response = await fetch(RESEND_ENDPOINT, {
@@ -65,7 +65,7 @@ async function sendViaSmtp(subject: string, text: string) {
   }
 
   const to = process.env.NOTIFY_EMAIL_TO || ADMIN_EMAIL_FALLBACK
-  const from = process.env.NOTIFY_EMAIL_FROM || 'OpenSquawk <no-reply@opensquawk.dev>'
+  const from = process.env.NOTIFY_EMAIL_FROM || 'OpenSquawk <info@opensquawk.de>'
 
   try {
     const transporter = nodemailer.createTransport({
