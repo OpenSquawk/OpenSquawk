@@ -18,6 +18,7 @@ interface AuthUser {
   name?: string
   role: string
   createdAt: string
+  balanceCents: number
 }
 
 interface AuthState {

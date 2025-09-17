@@ -10,6 +10,7 @@ export default defineEventHandler(async (event) => {
     createdAt: user.createdAt,
     lastLoginAt: user.lastLoginAt,
     invitationCodesIssued: user.invitationCodesIssued,
+    balanceCents: user.balanceCents,
   }
 })
 

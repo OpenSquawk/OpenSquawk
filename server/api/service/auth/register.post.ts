@@ -72,6 +72,7 @@ export default defineEventHandler(async (event) => {
       name: user.name,
       role: user.role,
       createdAt: user.createdAt,
+      balanceCents: user.balanceCents,
     },
   }
 })

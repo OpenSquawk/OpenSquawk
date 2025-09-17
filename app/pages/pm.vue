@@ -7,6 +7,14 @@
           <p class="text-xs uppercase tracking-[0.35em] text-cyan-400/80">OpenSquawk</p>
           <h1 class="text-2xl font-semibold">Pilot Monitoring</h1>
           <p class="mt-1 text-sm text-white/70">Decision Tree • Enhanced LLM • VATSIM</p>
+          <div class="mt-4">
+            <NuxtLink
+              to="/account"
+              class="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-xs font-medium text-cyan-200 transition hover:border-cyan-300 hover:bg-cyan-400/20"
+            >
+              <v-icon icon="mdi-account-circle" size="16" /> Account &amp; Billing
+            </NuxtLink>
+          </div>
         </div>
         <div class="text-right">
           <v-chip size="small" :color="currentState?.phase === 'Interrupt' ? 'red' : 'cyan'" variant="flat" class="mb-1">

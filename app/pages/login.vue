@@ -67,6 +67,9 @@
                     autocomplete="current-password"
                     class="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400"
                 />
+                <div class="mt-2 text-right">
+                  <NuxtLink to="/reset-password" class="text-xs text-cyan-300 underline">Passwort vergessen?</NuxtLink>
+                </div>
               </div>
             </div>
 
