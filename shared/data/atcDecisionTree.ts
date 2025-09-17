@@ -11,15 +11,15 @@ const atcDecisionTree = {
     "dest": "EDDM",
     "stand": "A12",
     "runway": "25R",
-    "sid": "ANEKI 7S",
+    "sid": "ANEKI7S",
     "transition": "ANEKI",
     "squawk": "1234",
     "initial_altitude_ft": 5000,
     "climb_altitude_ft": 7000,
     "cruise_flight_level": "FL360",
-    "star": "RNAV X",
+    "star": "ANEXA3A",
     "approach_type": "ILS Z",
-    "taxi_route": "V A",
+    "taxi_route": "A, V",
     "missed_approach": "as published",
     "delivery_freq": "121.900",
     "ground_freq": "121.700",
@@ -31,7 +31,16 @@ const atcDecisionTree = {
     "gate": "B24",
     "trans_level": "FL070",
     "qnh_hpa": 1015,
-    "remarks": "standard",
+    "remarks": "280 degrees at 12 knots",
+    "runway_available": true,
+    "runway_occupied": false,
+    "push_available": true,
+    "pilot_able": true,
+    "pilot_requests_amendment": false,
+    "instruction": "heading 220",
+    "alt_instruction": "maintain 4000 feet",
+    "problem": "engine vibrations",
+    "intent": "return to departure",
     "time_now": "ISO8601"
   },
   "flags": {
@@ -96,7 +105,7 @@ const atcDecisionTree = {
       "readback_required": ["dest","sid","runway","initial_altitude_ft","squawk"],
       "next": [
         {"to": "CD_VERIFY_READBACK"},
-        {"to": "CD_AMEND_CLR", "when": "pilot_requests_amendment === true"}
+        {"to": "CD_AMEND_CLR", "when": "variables.pilot_requests_amendment === true"}
       ]
     },
     "CD_VERIFY_READBACK": {
@@ -139,8 +148,8 @@ const atcDecisionTree = {
       "phase": "PushStart",
       "utterance_tpl": "{callsign} stand {stand}, ready for push and start.",
       "next": [
-        {"to": "GRD_PUSH_APPROVE", "when": "push_available === true"},
-        {"to": "GRD_PUSH_WAIT", "when": "push_available === false"}
+        {"to": "GRD_PUSH_APPROVE", "when": "variables.push_available === true"},
+        {"to": "GRD_PUSH_WAIT", "when": "variables.push_available === false"}
       ]
     },
     "GRD_PUSH_WAIT": {
@@ -189,8 +198,8 @@ const atcDecisionTree = {
       "phase": "Departure",
       "utterance_tpl": "{callsign} holding short {runway}, ready for departure.",
       "next": [
-        {"to": "TWR_LINEUP", "when": "runway_occupied === true"},
-        {"to": "TWR_TAKEOFF_CLR", "when": "runway_occupied === false"}
+        {"to": "TWR_LINEUP", "when": "variables.runway_occupied === true"},
+        {"to": "TWR_TAKEOFF_CLR", "when": "variables.runway_occupied === false"}
       ]
     },
     "TWR_LINEUP": {
@@ -233,8 +242,8 @@ const atcDecisionTree = {
       "phase": "Climb",
       "say_tpl": "{callsign}, climb {climb_altitude_ft} feet, proceed direct {transition} if able.",
       "next": [
-        {"to": "DEP_CLIMB_READBACK", "when": "pilot_able === true"},
-        {"to": "DEP_UNABLE_DIR", "when": "pilot_able === false"}
+        {"to": "DEP_CLIMB_READBACK", "when": "variables.pilot_able === true"},
+        {"to": "DEP_UNABLE_DIR", "when": "variables.pilot_able === false"}
       ]
     },
     "DEP_UNABLE_DIR": {
@@ -322,12 +331,12 @@ const atcDecisionTree = {
     "TWR_LAND_CLEARABLE": {
       "role": "atc",
       "phase": "Landing",
-      "condition": "runway_available === true",
+      "condition": "variables.runway_available === true",
       "say_tpl": "{callsign}, wind {remarks}, runway {runway} cleared to land.",
       "else_say_tpl": "{callsign}, continue approach, expect late landing clearance.",
       "next": [
-        {"to": "TWR_LAND_READBACK", "when": "runway_available === true"},
-        {"to": "TWR_CONTINUE_APPROACH", "when": "runway_available === false"}
+        {"to": "TWR_LAND_READBACK", "when": "variables.runway_available === true"},
+        {"to": "TWR_CONTINUE_APPROACH", "when": "variables.runway_available === false"}
       ]
     },
     "TWR_CONTINUE_APPROACH": {

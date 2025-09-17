@@ -93,6 +93,23 @@ export const COMMUNICATION_STEPS = [
     // Weitere Steps können hier definiert werden
 ]
 
+const NOMINAL_FLOW_SEQUENCE: string[] = [
+    'CD_CHECK_ATIS',
+    'CD_VERIFY_READBACK',
+    'GRD_READY_FOR_PUSH',
+    'GRD_TAXI_REQUEST',
+    'GRD_TAXI_READBACK',
+    'TWR_LINEUP_REQ',
+    'TWR_TAKEOFF_READBACK',
+    'DEP_CONTACT',
+    'DEP_CLIMB_READBACK',
+    'DES_READBACK',
+    'APP_ESTABLISHED',
+    'TWR_LAND_READBACK',
+    'GRD_TAXI_IN_REQ',
+    'GRD_TAXI_IN_READBACK'
+]
+
 // --- ATC Decision Tree laden ---
 export interface FlightContext {
     callsign: string
@@ -129,6 +146,30 @@ export interface EngineLog {
     state: string
     radioCheck?: boolean
     offSchema?: boolean
+}
+
+interface DecisionOutcome {
+    state: DTState | null
+    spoken?: string | null
+    radioCheck?: boolean
+    offSchema?: boolean
+}
+
+interface MoveResult {
+    state: DTState | null
+    spoken?: string | null
+}
+
+interface TransmissionSnapshot {
+    stateId: string | null
+    message: string
+    normalized: string
+    timestamp: Date
+}
+
+interface SimulationFlowStep {
+    stateId: string
+    nextStateId?: string
 }
 
 // NATO/ICAO Normalizer (gekürzt für bessere Performance)
@@ -202,6 +243,19 @@ export default function useCommunicationsEngine() {
     const flags = ref({ ...tree.value.flags })
     const currentStateId = ref<string>(tree.value.start_state)
     const communicationLog = ref<EngineLog[]>([])
+    const lastPilotTransmission = ref<TransmissionSnapshot>({
+        stateId: null,
+        message: '',
+        normalized: '',
+        timestamp: new Date(0)
+    })
+    const lastAtcTransmission = ref<TransmissionSnapshot>({
+        stateId: null,
+        message: '',
+        normalized: '',
+        timestamp: new Date(0)
+    })
+    const pendingReadback = ref<{ stateId: string; required: string[] } | null>(null)
 
     // Flight Context für bessere Integration mit pm_alt.vue Stil
     const flightContext = ref<FlightContext>({
@@ -270,37 +324,67 @@ export default function useCommunicationsEngine() {
     })
 
     function initializeFlight(fpl: any) {
-        // Variablen setzen
+        const baseVars = tree.value.variables || {}
+        const nowIso = new Date().toISOString()
+
         variables.value = {
-            ...variables.value,
-            callsign: fpl.callsign || fpl.callsign,
-            acf_type: fpl.aircraft?.split('/')[0] || 'A320',
-            dep: fpl.dep || fpl.departure || 'EDDF',
-            dest: fpl.arr || fpl.arrival || 'EDDM',
+            ...baseVars,
+            callsign: fpl?.callsign || baseVars.callsign || 'DLH39A',
+            acf_type: fpl?.aircraft?.split('/')[0] || baseVars.acf_type || 'A320',
+            dep: fpl?.dep || fpl?.departure || baseVars.dep || 'EDDF',
+            dest: fpl?.arr || fpl?.arrival || baseVars.dest || 'EDDM',
             stand: genStand(),
             runway: genRunway(),
-            squawk: fpl.assignedsquawk || genSquawk(),
+            squawk: fpl?.assignedsquawk || genSquawk(),
             atis_code: genATIS(),
-            sid: genSID(fpl.route || ''),
-            transition: 'DCT',
-            cruise_flight_level: fpl.altitude ? `FL${String(Math.floor(parseInt(fpl.altitude) / 100)).padStart(3, '0')}` : 'FL360',
-            initial_altitude_ft: 5000,
-            climb_altitude_ft: 7000,
-            taxi_route: 'A, V',
-            delivery_freq: '121.900',
-            ground_freq: '121.700',
-            tower_freq: '118.700',
-            departure_freq: '125.350',
-            approach_freq: '120.800',
-            handoff_freq: '121.800',
-            qnh_hpa: 1015,
-            remarks: 'standard',
-            time_now: new Date().toISOString()
+            sid: genSID(fpl?.route || '') || baseVars.sid,
+            transition: baseVars.transition || 'ANEKI',
+            cruise_flight_level: fpl?.altitude
+                ? `FL${String(Math.floor(parseInt(fpl.altitude) / 100)).padStart(3, '0')}`
+                : baseVars.cruise_flight_level || 'FL360',
+            initial_altitude_ft: baseVars.initial_altitude_ft || 5000,
+            climb_altitude_ft: baseVars.climb_altitude_ft || 7000,
+            taxi_route: baseVars.taxi_route || 'A, V',
+            delivery_freq: baseVars.delivery_freq || '121.900',
+            ground_freq: baseVars.ground_freq || '121.700',
+            tower_freq: baseVars.tower_freq || '118.700',
+            departure_freq: baseVars.departure_freq || '125.350',
+            approach_freq: baseVars.approach_freq || '120.800',
+            handoff_freq: baseVars.handoff_freq || '121.800',
+            qnh_hpa: baseVars.qnh_hpa || 1015,
+            remarks: baseVars.remarks || '280 degrees at 12 knots',
+            runway_available: baseVars.runway_available ?? true,
+            runway_occupied: baseVars.runway_occupied ?? false,
+            push_available: baseVars.push_available ?? true,
+            pilot_able: baseVars.pilot_able ?? true,
+            pilot_requests_amendment: false,
+            problem: baseVars.problem || 'engine vibrations',
+            intent: baseVars.intent || 'return to departure',
+            alt_instruction: baseVars.alt_instruction || 'maintain 4000 feet',
+            instruction: baseVars.instruction || 'heading 220',
+            time_now: nowIso
         }
 
-        // Flight Context aktualisieren
         Object.assign(flightContext.value, {
-            ...variables.value,
+            callsign: variables.value.callsign,
+            aircraft: variables.value.acf_type,
+            dep: variables.value.dep,
+            dest: variables.value.dest,
+            stand: variables.value.stand,
+            runway: variables.value.runway,
+            squawk: variables.value.squawk,
+            atis_code: variables.value.atis_code,
+            sid: variables.value.sid,
+            transition: variables.value.transition,
+            flight_level: variables.value.cruise_flight_level,
+            ground_freq: variables.value.ground_freq,
+            tower_freq: variables.value.tower_freq,
+            departure_freq: variables.value.departure_freq,
+            approach_freq: variables.value.approach_freq,
+            handoff_freq: variables.value.handoff_freq,
+            qnh_hpa: variables.value.qnh_hpa,
+            taxi_route: variables.value.taxi_route,
+            remarks: variables.value.remarks,
             phase: 'clearance'
         })
 
@@ -314,8 +398,22 @@ export default function useCommunicationsEngine() {
             radio_checks_done: 0
         }
 
-        currentStateId.value = tree.value.start_state
         communicationLog.value = []
+        lastPilotTransmission.value = {
+            stateId: null,
+            message: '',
+            normalized: '',
+            timestamp: new Date(0)
+        }
+        lastAtcTransmission.value = {
+            stateId: null,
+            message: '',
+            normalized: '',
+            timestamp: new Date(0)
+        }
+        pendingReadback.value = null
+
+        moveTo(tree.value.start_state, { allowRadioChecks: false })
     }
 
     function buildLLMContext(pilotTranscript: string) {
@@ -330,12 +428,10 @@ export default function useCommunicationsEngine() {
         }
     }
 
-    function applyLLMDecision(decision: any) {
-        // Updates anwenden
+    function applyLLMDecision(decision: any): DecisionOutcome {
         if (decision.updates) Object.assign(variables.value, decision.updates)
         if (decision.flags) Object.assign(flags.value, decision.flags)
 
-        // Off-Schema und Radio Check Tracking
         if (decision.off_schema) {
             flags.value.off_schema_count++
             console.log(`[Engine] Off-schema response #${flags.value.off_schema_count}`)
@@ -345,17 +441,33 @@ export default function useCommunicationsEngine() {
             console.log(`[Engine] Radio check #${flags.value.radio_checks_done}`)
         }
 
-        // Controller Response
-        if (decision.controller_say_tpl) {
-            speak('atc', decision.controller_say_tpl, currentStateId.value, {
-                radioCheck: decision.radio_check,
+        if (decision.radio_check) {
+            const fallback = decision.controller_say_tpl || `${variables.value.callsign}, read you five by five.`
+            const spoken = speak('atc', fallback, currentStateId.value, {
+                radioCheck: true,
                 offSchema: decision.off_schema
             })
+            return {
+                state: currentState.value,
+                spoken,
+                radioCheck: true,
+                offSchema: decision.off_schema
+            }
         }
 
-        // State Transition (nur wenn nicht Radio Check)
-        if (!decision.radio_check) {
-            moveTo(decision.next_state)
+        const moveResult = moveTo(decision.next_state, {
+            speechMeta: {
+                overrideSay: decision.controller_say_tpl,
+                radioCheck: decision.radio_check,
+                offSchema: decision.off_schema
+            }
+        })
+
+        return {
+            state: moveResult.state,
+            spoken: moveResult.spoken,
+            radioCheck: !!decision.radio_check,
+            offSchema: !!decision.off_schema
         }
     }
 
@@ -391,41 +503,184 @@ export default function useCommunicationsEngine() {
         return processPilotTransmission(transcript)
     }
 
-    function moveTo(stateId: string) {
-        if (!states.value[stateId]) {
-            console.warn(`[Engine] Unknown state: ${stateId}`)
-            return
+    function resolveTransition(list?: DTNext[]): string | undefined {
+        if (!list) return undefined
+        for (const option of list) {
+            if (!option?.to) continue
+            if (!option.when || safeEvalBoolean(option.when)) {
+                return option.to
+            }
+        }
+        return undefined
+    }
+
+    function toNato(value: string): string {
+        return value
+            .toUpperCase()
+            .split('')
+            .map(ch => NATO_PHONETIC[ch] || ICAO_NUMBERS[ch] || ch)
+            .join(' ')
+    }
+
+    function evaluatePendingReadback(): boolean {
+        const pending = pendingReadback.value
+        if (!pending || pending.required.length === 0) return true
+
+        const pilotRaw = lastPilotTransmission.value.message.toUpperCase()
+        if (!pilotRaw) return false
+
+        const context = exposeCtxFlat()
+
+        return pending.required.every(key => {
+            const rawVal = context[key]
+            if (rawVal === undefined || rawVal === null) return false
+            const upper = String(rawVal).toUpperCase()
+            const variants = new Set<string>([
+                upper,
+                upper.replace(/\s+/g, ''),
+                upper.replace(/[^A-Z0-9]/g, '')
+            ])
+
+            if (/[A-Z]/.test(upper)) {
+                variants.add(toNato(upper))
+            }
+            if (/^\d+$/.test(upper)) {
+                variants.add(upper.split('').join(' '))
+            }
+            if (key.includes('runway')) {
+                const normalized = normalizeATCText(`runway {${key}}`, exposeCtx()).toUpperCase()
+                variants.add(normalized)
+                variants.add(normalized.replace('RUNWAY ', ''))
+            }
+            if (key.includes('squawk')) {
+                variants.add(upper.split('').join(' '))
+            }
+            if (key.endsWith('_ft')) {
+                variants.add(`${upper} FT`)
+                variants.add(`${upper} FEET`)
+            }
+
+            return Array.from(variants).some(variant => variant && pilotRaw.includes(variant))
+        })
+    }
+
+    function computeAutoNextState(state: DTState): string | undefined {
+        if (state.auto === 'end') {
+            return undefined
         }
 
-        if (stateId.startsWith('INT_')) {
-            flags.value.stack.push(currentStateId.value)
+        if (state.auto === 'check_readback') {
+            const ok = evaluatePendingReadback()
+            pendingReadback.value = null
+            if (ok) {
+                return resolveTransition(state.ok_next) ?? resolveTransition(state.next)
+            }
+            return resolveTransition(state.bad_next) ?? resolveTransition(state.next)
         }
 
-        currentStateId.value = stateId
-        const s = currentState.value
-
-        // Actions ausführen
-        for (const act of s.actions ?? []) {
-            if (typeof act === 'string') continue
-            if (act.if && !safeEvalBoolean(act.if)) continue
-            if (act.set) setByPath({ variables: variables.value, flags: flags.value }, act.set, act.to)
+        if (state.auto === 'monitor') {
+            return resolveTransition(state.next)
         }
 
-        // Handoff
-        if (s.handoff?.to) {
-            flags.value.current_unit = unitFromHandoff(s.handoff.to)
-            if (s.handoff.freq) {
-                variables.value.handoff_freq = renderTpl(s.handoff.freq, exposeCtx())
+        if (state.auto === 'pop_stack_or_route_by_intent') {
+            const prior = flags.value.stack.pop()
+            if (prior) return prior
+            return resolveTransition(state.next) ?? resolveTransition(state.ok_next) ?? resolveTransition(state.bad_next)
+        }
+
+        if (state.role === 'system') {
+            return resolveTransition(state.next) ?? resolveTransition(state.ok_next) ?? resolveTransition(state.bad_next)
+        }
+
+        if (state.role === 'atc') {
+            return resolveTransition(state.next) ?? resolveTransition(state.ok_next) ?? resolveTransition(state.bad_next)
+        }
+
+        if (state.role === 'pilot') {
+            if (!state.utterance_tpl || state.auto) {
+                return resolveTransition(state.next) ?? resolveTransition(state.ok_next) ?? resolveTransition(state.bad_next)
             }
         }
 
-        // Auto-Say
-        if (s.say_tpl) {
-            speak(s.role, s.say_tpl, s.id!)
+        return undefined
+    }
+
+    function moveTo(stateId: string, options: { speechMeta?: { overrideSay?: string; radioCheck?: boolean; offSchema?: boolean }; allowRadioChecks?: boolean } = {}): MoveResult {
+        const visited = new Set<string>()
+        let nextId: string | undefined = stateId
+        let firstSpoken: string | null = null
+        let speechMeta = options.speechMeta
+
+        while (nextId) {
+            const targetState = states.value[nextId]
+            if (!targetState) {
+                console.warn(`[Engine] Unknown state: ${nextId}`)
+                break
+            }
+
+            if (visited.has(nextId)) {
+                console.warn('[Engine] Auto-transition loop detected at', nextId)
+                break
+            }
+            visited.add(nextId)
+
+            if (nextId.startsWith('INT_') && !options.allowRadioChecks) {
+                flags.value.stack.push(currentStateId.value)
+            }
+
+            currentStateId.value = nextId
+            const state = currentState.value
+
+            for (const act of state.actions ?? []) {
+                if (typeof act === 'string') continue
+                if (act.if && !safeEvalBoolean(act.if)) continue
+                if (act.set) setByPath({ variables: variables.value, flags: flags.value }, act.set, act.to)
+            }
+
+            if (state.handoff?.to) {
+                flags.value.current_unit = unitFromHandoff(state.handoff.to)
+                if (state.handoff.freq) {
+                    const rendered = renderTpl(state.handoff.freq, exposeCtx())
+                    variables.value.handoff_freq = rendered
+                    flightContext.value.handoff_freq = rendered
+                }
+            }
+
+            let say = state.say_tpl
+            if (state.condition && !safeEvalBoolean(state.condition)) {
+                say = state.else_say_tpl || say
+            }
+            if (speechMeta?.overrideSay) {
+                say = speechMeta.overrideSay
+            }
+
+            if (say && state.role !== 'pilot') {
+                const spoken = speak(state.role, say, state.id!, {
+                    radioCheck: speechMeta?.radioCheck,
+                    offSchema: speechMeta?.offSchema
+                })
+                if (!firstSpoken && spoken) {
+                    firstSpoken = spoken
+                }
+            }
+
+            updateFlightPhase(state.phase)
+
+            speechMeta = undefined
+
+            const autoNext = computeAutoNextState(state)
+            if (autoNext) {
+                nextId = autoNext
+                continue
+            }
+
+            break
         }
 
-        // Phase Update für Flight Context
-        updateFlightPhase(s.phase)
+        return {
+            state: currentState.value,
+            spoken: firstSpoken
+        }
     }
 
     function updateFlightPhase(phase: Phase) {
@@ -441,7 +696,7 @@ export default function useCommunicationsEngine() {
             'Landing': 'landing',
             'TaxiIn': 'taxiin',
             'Preflight': 'clearance',
-            'Postflight': 'taxiin',
+            'Postflight': 'postflight',
             'Interrupt': flightContext.value.phase,
             'LostComms': flightContext.value.phase,
             'Missed': 'approach'
@@ -457,19 +712,37 @@ export default function useCommunicationsEngine() {
         if (prev) moveTo(prev)
     }
 
-    function speak(speaker: Role, tpl: string, stateId: string, options: { radioCheck?: boolean, offSchema?: boolean } = {}) {
+    function speak(speaker: Role, tpl: string, stateId: string, options: { radioCheck?: boolean; offSchema?: boolean } = {}): string {
         const msg = renderTpl(tpl, exposeCtx())
+        const normalized = normalizeATCText(msg, exposeCtxFlat())
+        const timestamp = new Date()
+
         const entry: EngineLog = {
-            timestamp: new Date(),
+            timestamp,
             frequency: activeFrequency.value,
             speaker,
             message: msg,
-            normalized: normalizeATCText(msg, exposeCtxFlat()),
+            normalized,
             state: stateId,
             radioCheck: options.radioCheck,
             offSchema: options.offSchema
         }
         communicationLog.value.push(entry)
+
+        const snapshot: TransmissionSnapshot = { stateId, message: msg, normalized, timestamp }
+        if (speaker === 'pilot') {
+            lastPilotTransmission.value = snapshot
+        } else if (speaker === 'atc') {
+            lastAtcTransmission.value = snapshot
+            const state = states.value[stateId]
+            if (state?.readback_required?.length) {
+                pendingReadback.value = { stateId, required: [...state.readback_required] }
+            } else if (pendingReadback.value?.stateId === stateId) {
+                pendingReadback.value = null
+            }
+        }
+
+        return msg
     }
 
     function renderATCMessage(tpl: string) {
@@ -503,6 +776,19 @@ export default function useCommunicationsEngine() {
         const s = states.value[stateId]
         if (!s) return null
         return { ...s, id: stateId }
+    }
+
+    function buildNominalFlow(): SimulationFlowStep[] {
+        return NOMINAL_FLOW_SEQUENCE
+            .map((stateId) => {
+                const state = states.value[stateId]
+                if (!state) return null
+                const nextId = resolveTransition(state.next)
+                    ?? resolveTransition(state.ok_next)
+                    ?? resolveTransition(state.bad_next)
+                return { stateId, nextStateId: nextId }
+            })
+            .filter((step): step is SimulationFlowStep => step !== null)
     }
 
     function genStand() {
@@ -565,6 +851,8 @@ export default function useCommunicationsEngine() {
         activeFrequency,
         communicationLog: readonly(communicationLog),
         clearCommunicationLog: () => { communicationLog.value = [] },
+        lastAtcTransmission: readonly(lastAtcTransmission),
+        lastPilotTransmission: readonly(lastPilotTransmission),
 
         // pm_alt.vue Integration
         flightContext: readonly(flightContext),
@@ -582,6 +870,7 @@ export default function useCommunicationsEngine() {
         // Flow Control
         moveTo,
         resumePriorFlow,
+        buildNominalFlow,
 
         // Utilities
         normalizeATCText,

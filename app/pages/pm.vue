@@ -364,10 +364,56 @@
                   :loading="radioCheckLoading"
                   prepend-icon="mdi-radio"
                   density="comfortable"
+                  :disabled="isSimulating"
               >
                 Radio Check
               </v-btn>
+              <v-btn
+                  color="cyan"
+                  variant="flat"
+                  @click="runSimulation"
+                  :loading="isSimulating"
+                  :disabled="isSimulating"
+                  prepend-icon="mdi-airplane-takeoff"
+                  density="comfortable"
+              >
+                Demo-Flug Simulation
+              </v-btn>
+              <v-btn
+                  v-if="isSimulating"
+                  color="red"
+                  variant="outlined"
+                  @click="stopSimulation"
+                  prepend-icon="mdi-stop-circle"
+                  density="comfortable"
+              >
+                Simulation stoppen
+              </v-btn>
             </div>
+            <div v-if="isSimulating || simulationStepIndex > 0" class="space-y-2">
+              <div class="flex items-center justify-between text-xs text-white/50">
+                <span>Simulation Fortschritt</span>
+                <span class="font-mono text-white/70">{{ Math.min(simulationStepIndex, simulationSteps.length) }} / {{ simulationSteps.length }}</span>
+              </div>
+              <v-progress-linear
+                  :model-value="simulationProgress"
+                  color="cyan"
+                  height="6"
+                  rounded
+                  striped
+              />
+            </div>
+            <v-alert
+                v-if="simulationError"
+                type="warning"
+                density="comfortable"
+                variant="tonal"
+                class="bg-amber-500/10 text-amber-100"
+                border="start"
+                border-color="amber"
+            >
+              {{ simulationError }}
+            </v-alert>
           </v-card-text>
         </v-card>
 
@@ -387,6 +433,7 @@
                 @keyup.enter="sendPilotText"
                 append-inner-icon="mdi-send"
                 @click:append-inner="sendPilotText"
+                :disabled="isSimulating"
             />
             <p class="text-xs text-white/50">
               Für Notfälle wenn PTT nicht funktioniert oder für Tests
@@ -452,6 +499,66 @@
                 </div>
               </div>
               <p v-else class="text-xs text-white/50">Keine weiteren Entscheidungen verfügbar.</p>
+            </div>
+
+            <div v-if="simulationLog.length" class="space-y-3 border-t border-white/10 pt-3">
+              <div class="flex items-center justify-between">
+                <p class="text-xs uppercase tracking-[0.3em] text-white/40">Simulation Trace</p>
+                <div class="flex items-center gap-2">
+                  <v-chip size="x-small" color="cyan" variant="outlined">{{ simulationLog.length }}</v-chip>
+                  <v-btn size="x-small" variant="text" color="cyan" @click="clearSimulationTrace">Clear</v-btn>
+                </div>
+              </div>
+              <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                <div
+                    v-for="entry in simulationLog"
+                    :key="`${entry.timestamp}-${entry.stepId}`"
+                    class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3"
+                >
+                  <div class="flex items-center justify-between text-[11px] text-white/50">
+                    <span class="font-semibold text-white/70">{{ entry.title }}</span>
+                    <span class="font-mono">{{ entry.stateBefore }} → {{ entry.stateAfter || '…' }}</span>
+                  </div>
+                  <p class="text-[11px] text-white/40">{{ entry.description }}</p>
+                  <div class="space-y-1">
+                    <p class="text-xs text-white">
+                      <span class="text-white/50 uppercase tracking-[0.2em] mr-2">Pilot</span>
+                      <span class="font-mono">{{ entry.pilot }}</span>
+                    </p>
+                    <p class="text-[11px] text-white/40">{{ entry.pilotNormalized }}</p>
+                  </div>
+                  <div class="grid grid-cols-1 gap-1 text-[11px] text-white/50 sm:grid-cols-2">
+                    <div>
+                      <p class="font-semibold text-white/60 uppercase tracking-[0.2em]">LLM Request</p>
+                      <p>State: {{ entry.llmRequest.state_id }} ({{ entry.llmRequest.phase }})</p>
+                      <p>Candidates: {{ entry.llmRequest.candidates.join(', ') }}</p>
+                    </div>
+                    <div>
+                      <p class="font-semibold text-white/60 uppercase tracking-[0.2em]">Decision</p>
+                      <p>Next: {{ entry.llmResponse.next_state }}</p>
+                      <p v-if="entry.llmResponse.controller_say_tpl">Say: {{ entry.llmResponse.controller_say_tpl }}</p>
+                    </div>
+                  </div>
+                  <div v-if="entry.controllerAuto" class="space-y-1 text-[11px] text-cyan-200">
+                    <div>
+                      <span class="uppercase tracking-[0.2em] mr-2">ATC Auto</span>
+                      <span class="font-mono">{{ entry.controllerAuto }}</span>
+                    </div>
+                    <p v-if="entry.controllerNormalized" class="text-white/60 font-mono">{{ entry.controllerNormalized }}</p>
+                  </div>
+                  <div v-if="entry.warnings?.length" class="flex flex-wrap gap-1">
+                    <v-chip
+                        v-for="warn in entry.warnings"
+                        :key="warn"
+                        size="x-small"
+                        color="amber"
+                        variant="tonal"
+                    >
+                      {{ warn }}
+                    </v-chip>
+                  </div>
+                </div>
+              </div>
             </div>
           </v-card-text>
         </v-card>
@@ -574,7 +681,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
 import { useAuthStore } from '~/stores/auth'
@@ -602,7 +709,8 @@ const {
   moveTo: forceMove,
   normalizeATCText,
   renderATCMessage,
-  getStateDetails
+  getStateDetails,
+  buildNominalFlow
 } = engine
 
 const clearLog = () => {
@@ -625,6 +733,41 @@ const radioCheckLoading = ref(false)
 const radioEffectsEnabled = ref(true)
 const readbackEnabled = ref(false)
 const debugMode = ref(false)
+
+type SimulationTrace = {
+  stepId: string
+  title: string
+  description?: string
+  stateBefore: string
+  pilot: string
+  pilotNormalized: string
+  llmRequest: {
+    state_id: string
+    role: string
+    phase: string
+    candidates: string[]
+  }
+  llmResponse: any
+  stateAfter?: string
+  phaseAfter?: string
+  controllerAuto?: string
+  controllerNormalized?: string
+  warnings?: string[]
+  timestamp: string
+}
+
+const simulationActive = ref(false)
+const isSimulating = ref(false)
+const simulationStepIndex = ref(0)
+const simulationLog = ref<SimulationTrace[]>([])
+const simulationError = ref('')
+const lastSimulationEntry = ref<SimulationTrace | null>(null)
+const simulationProgress = computed(() => {
+  const total = simulationSteps.value.length
+  if (total === 0) return 0
+  const step = Math.min(simulationStepIndex.value, total)
+  return Math.round((step / total) * 100)
+})
 
 // Frequencies
 const frequencies = ref({
@@ -744,10 +887,238 @@ const debugNextStates = computed(() => {
   })
 })
 
+type SimulationPlanEntry = {
+  stateId: string
+  nextStateId?: string
+  stateBefore: string
+  title: string
+  description: string
+  pilotTpl: string
+  phase: string
+  frequencyName: string
+}
+
+const SIMULATION_LABELS: Record<string, { title: string; description: string }> = {
+  CD_CHECK_ATIS: {
+    title: 'Clearance Request',
+    description: 'Initial contact with Clearance Delivery to obtain IFR clearance.'
+  },
+  CD_VERIFY_READBACK: {
+    title: 'Clearance Readback',
+    description: 'Read back the received IFR clearance before start-up.'
+  },
+  GRD_READY_FOR_PUSH: {
+    title: 'Pushback Request',
+    description: 'Call Ground once ready for pushback and engine start.'
+  },
+  GRD_TAXI_REQUEST: {
+    title: 'Taxi Request',
+    description: 'Request taxi clearance after pushback is complete.'
+  },
+  GRD_TAXI_READBACK: {
+    title: 'Taxi Readback',
+    description: 'Acknowledge taxi routing and hold short instructions.'
+  },
+  TWR_LINEUP_REQ: {
+    title: 'Ready for Departure',
+    description: 'Advise Tower that you are ready for departure at the holding point.'
+  },
+  TWR_TAKEOFF_READBACK: {
+    title: 'Takeoff Clearance Readback',
+    description: 'Read back the takeoff clearance.'
+  },
+  DEP_CONTACT: {
+    title: 'Departure Check-in',
+    description: 'Initial call to Departure after handoff from Tower.'
+  },
+  DEP_CLIMB_READBACK: {
+    title: 'Climb Readback',
+    description: 'Acknowledge climb and direct routing instructions.'
+  },
+  DES_READBACK: {
+    title: 'Descent Clearance Readback',
+    description: 'Read back the STAR and descent clearance from Center.'
+  },
+  APP_ESTABLISHED: {
+    title: 'Established on Approach',
+    description: 'Report established on the localizer to Approach.'
+  },
+  TWR_LAND_READBACK: {
+    title: 'Landing Clearance Readback',
+    description: 'Read back landing clearance from Tower.'
+  },
+  GRD_TAXI_IN_REQ: {
+    title: 'Runway Vacated',
+    description: 'Report runway vacated and request taxi in.'
+  },
+  GRD_TAXI_IN_READBACK: {
+    title: 'Taxi-In Readback',
+    description: 'Acknowledge taxi-in instructions back to stand.'
+  }
+}
+
+const FREQUENCY_BY_PHASE: Record<string, string> = {
+  Clearance: 'Clearance Delivery',
+  PushStart: 'Ground',
+  TaxiOut: 'Ground',
+  Departure: 'Tower',
+  Climb: 'Departure',
+  Enroute: 'Center',
+  Descent: 'Center',
+  Approach: 'Approach',
+  Landing: 'Tower',
+  TaxiIn: 'Ground',
+  Postflight: 'Operations',
+  Interrupt: 'Supervisor',
+  LostComms: 'Emergency',
+  Missed: 'Tower'
+}
+
+const simulationSteps = computed<SimulationPlanEntry[]>(() => {
+  const plan = buildNominalFlow()
+  return plan
+    .map(step => {
+      const state = getStateDetails(step.stateId)
+      if (!state || !state.utterance_tpl) return null
+      const meta = SIMULATION_LABELS[step.stateId] || {
+        title: step.stateId,
+        description: `${state.phase} • ${state.role}`
+      }
+      return {
+        stateId: step.stateId,
+        nextStateId: step.nextStateId,
+        stateBefore: step.stateId,
+        title: meta.title,
+        description: meta.description,
+        pilotTpl: state.utterance_tpl,
+        phase: state.phase,
+        frequencyName: FREQUENCY_BY_PHASE[state.phase] || state.phase
+      }
+    })
+    .filter((entry): entry is SimulationPlanEntry => entry !== null)
+})
+
 // Methods
 const normalizeExpectedText = (text: string): string => {
   if (!flightContext.value) return text
   return normalizeATCText(text, { ...vars.value, ...flags.value })
+}
+
+const formatPilotTransmission = (tpl: string) => {
+  if (!tpl) return ''
+  const rendered = renderATCMessage(tpl)
+  return rendered.replace(/\s+/g, ' ').replace(/\s+([,.])/g, '$1').trim()
+}
+
+const normalizePilotTransmission = (text: string) => {
+  return normalizeATCText(text, { ...vars.value, ...flags.value })
+}
+
+const runSimulatedDecision = async (ctx: ReturnType<typeof buildLLMContext>, transcript: string) => {
+  const index = simulationStepIndex.value
+  const steps = simulationSteps.value
+  const step = steps[index]
+  const warnings: string[] = []
+
+  if (!step) {
+    warnings.push('No simulation step configured; falling back to current state.')
+  } else if (step.stateBefore && step.stateBefore !== ctx.state_id) {
+    warnings.push(`Expected state ${step.stateBefore} but received ${ctx.state_id}`)
+  }
+
+  const entry: SimulationTrace = {
+    stepId: step?.stateId || `manual_${simulationStepIndex.value + 1}`,
+    title: step?.title || 'Manual Decision',
+    description: step?.description,
+    stateBefore: ctx.state_id,
+    pilot: transcript,
+    pilotNormalized: normalizePilotTransmission(transcript),
+    llmRequest: {
+      state_id: ctx.state_id,
+      role: ctx.state.role,
+      phase: ctx.state.phase,
+      candidates: ctx.candidates.map(c => c.id)
+    },
+    llmResponse: {},
+    timestamp: new Date().toISOString()
+  }
+
+  if (warnings.length) {
+    entry.warnings = warnings
+  }
+
+  simulationLog.value.push(entry)
+  lastSimulationEntry.value = entry
+
+  let nextStateId = ctx.state_id
+  if (step?.nextStateId) {
+    nextStateId = step.nextStateId
+  } else if (ctx.candidates.length > 0) {
+    nextStateId = ctx.candidates[0].id
+  }
+
+  const decision: any = { next_state: nextStateId }
+  const nextState = getStateDetails(nextStateId)
+  if (nextState?.role === 'atc' && nextState.say_tpl) {
+    decision.controller_say_tpl = nextState.say_tpl
+  }
+
+  simulationStepIndex.value = Math.min(index + 1, steps.length)
+  entry.llmResponse = decision
+  return decision
+}
+
+const stopSimulation = () => {
+  simulationActive.value = false
+  isSimulating.value = false
+}
+
+const clearSimulationTrace = () => {
+  simulationLog.value = []
+  simulationStepIndex.value = 0
+  simulationError.value = ''
+}
+
+const runSimulation = async () => {
+  if (isSimulating.value) return
+  simulationError.value = ''
+
+  try {
+    if (currentScreen.value !== 'monitor') {
+      startDemoFlight()
+    } else if (selectedPlan.value) {
+      startMonitoring(selectedPlan.value)
+    } else {
+      startDemoFlight()
+    }
+
+    clearLog()
+    simulationLog.value = []
+    simulationStepIndex.value = 0
+    simulationActive.value = true
+    isSimulating.value = true
+
+    for (const step of simulationSteps.value) {
+      if (!simulationActive.value) break
+      const pilotText = formatPilotTransmission(step.pilotTpl)
+      if (!pilotText) continue
+      await wait(300)
+      await handlePilotTransmission(pilotText, 'text')
+      await nextTick()
+      await wait(150)
+    }
+
+    await nextTick()
+    if (currentState.value?.id !== 'FLOW_COMPLETE') {
+      simulationError.value = `Simulation ended at ${currentState.value?.id || 'unknown state'}`
+    }
+  } catch (err: any) {
+    simulationError.value = err?.message || 'Simulation failed'
+    console.error('Simulation failed:', err)
+  } finally {
+    stopSimulation()
+    lastSimulationEntry.value = null
+  }
 }
 
 const ensureAudioContext = async (): Promise<AudioContext | null> => {
@@ -945,15 +1316,44 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   const ctx = buildLLMContext(transcript)
 
   try {
-    const decision = await api.post('/api/llm/decide', ctx)
+    const decision = simulationActive.value
+      ? await runSimulatedDecision(ctx, transcript)
+      : await api.post('/api/llm/decide', ctx)
 
-    applyLLMDecision(decision)
+    const outcome = applyLLMDecision(decision)
 
-    if (decision.controller_say_tpl && !decision.radio_check) {
-      scheduleControllerSpeech(decision.controller_say_tpl)
+    if (simulationActive.value && lastSimulationEntry.value) {
+      await nextTick()
+      lastSimulationEntry.value.stateAfter = outcome.state?.id || currentState.value?.id || '—'
+      lastSimulationEntry.value.phaseAfter = outcome.state?.phase || currentState.value?.phase
+      if (outcome.spoken) {
+        lastSimulationEntry.value.controllerAuto = outcome.spoken
+        lastSimulationEntry.value.controllerNormalized = normalizePilotTransmission(outcome.spoken)
+      } else if (outcome.state?.say_tpl) {
+        const controllerText = renderATCMessage(outcome.state.say_tpl)
+        lastSimulationEntry.value.controllerAuto = controllerText
+        lastSimulationEntry.value.controllerNormalized = normalizePilotTransmission(controllerText)
+      }
+      lastSimulationEntry.value = null
+    }
+
+    const controllerTemplate = decision.controller_say_tpl || (outcome.state?.role === 'atc' ? outcome.state.say_tpl : undefined)
+    if (controllerTemplate && !decision.radio_check) {
+      scheduleControllerSpeech(controllerTemplate)
     }
   } catch (e) {
     console.error('LLM decision failed', e)
+    if (simulationActive.value) {
+      simulationError.value = e instanceof Error ? e.message : 'Simulation decision failed'
+      stopSimulation()
+    }
+    if (lastSimulationEntry.value) {
+      lastSimulationEntry.value.warnings = [
+        ...(lastSimulationEntry.value.warnings || []),
+        'Decision processing failed'
+      ]
+      lastSimulationEntry.value = null
+    }
     lastTransmission.value = `${prefix}: ${transcript} (LLM failed)`
   }
 }
@@ -1026,6 +1426,7 @@ const requestMicAccess = async () => {
 }
 
 const startRecording = async (isIntercom = false) => {
+  if (isSimulating.value) return
   if (!micPermission.value) {
     await requestMicAccess()
     return
@@ -1135,6 +1536,7 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
 }
 
 const sendPilotText = async () => {
+  if (isSimulating.value) return
   const text = pilotInput.value.trim()
   if (!text) return
 
@@ -1143,6 +1545,7 @@ const sendPilotText = async () => {
 }
 
 const performRadioCheck = async () => {
+  if (isSimulating.value) return
   if (!flightContext.value.callsign) return
 
   radioCheckLoading.value = true
