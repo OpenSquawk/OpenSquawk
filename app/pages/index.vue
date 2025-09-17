@@ -372,45 +372,16 @@ POST /api/route/taxi
     <section id="cta" class="py-16 md:py-24 bg-gradient-to-tr from-cyan-500/20 via-blue-500/10 to-transparent border-y border-white/10">
       <div class="container-outer">
         <div class="card grid gap-8 md:grid-cols-2" data-aos="zoom-in">
-          <div class="space-y-4">
+          <div class="space-y-4 max-w-lg">
             <div>
-              <h3 class="text-2xl md:text-3xl font-semibold">Frühzugang & Warteliste</h3>
-              <p class="mt-2 text-white/80">
+              <h3 class="text-2xl my-2 md:text-3xl font-semibold">Frühzugang & Warteliste</h3>
+              <p class="mt-4 md:mt-8 text-white/80">
                 Trag dich ein und sichere dir deinen Platz. Aktuell warten
                 <span class="font-semibold text-cyan-300">{{ waitlistCountDisplay }}</span>
                 Pilot:innen auf den nächsten Invite-Drop.
               </p>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-4">
-              <div v-if="waitlistLoading" class="text-sm text-white/60">Lade Warteliste…</div>
-              <template v-else>
-                <div class="grid gap-3 sm:grid-cols-3">
-                  <div class="glass rounded-xl p-3">
-                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">Neu (7 Tage)</div>
-                    <div class="mt-1 text-lg font-semibold text-white">+{{ formatNumber(waitlistRecent7) }}</div>
-                    <div class="text-xs text-white/50">aktive Lernplätze</div>
-                  </div>
-                  <div class="glass rounded-xl p-3">
-                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">Neu (30 Tage)</div>
-                    <div class="mt-1 text-lg font-semibold text-white">+{{ formatNumber(waitlistRecent30) }}</div>
-                    <div class="text-xs text-white/50">Langfristiger Zufluss</div>
-                  </div>
-                  <div class="glass rounded-xl p-3">
-                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">Sichtbarer Puffer</div>
-                    <div class="mt-1 text-lg font-semibold text-white">+{{ formatNumber(waitlistSyntheticBoost) }}</div>
-                    <div class="text-xs text-white/50">Reserve für nächste Drops</div>
-                  </div>
-                </div>
-                <div class="text-xs text-white/60">
-                  Letzte Anmeldung:
-                  <span class="font-medium text-white">{{ waitlistLastJoinedFormatted }}</span>
-                  <span v-if="waitlistStats?.lastJoinedAt" class="text-white/40">
-                    ({{ formatRelativeFromNow(waitlistStats?.lastJoinedAt) }})
-                  </span>
-                </div>
-              </template>
-            </div>
-            <p class="text-xs text-white/60">
+            <p class="text-white/60">
               Wir senden Einladungen in Batches, priorisieren aktive Wartelistenplätze und verschicken Einladungscodes per E-Mail.
             </p>
           </div>
