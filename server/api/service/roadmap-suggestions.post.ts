@@ -44,14 +44,18 @@ export default defineEventHandler(async (event) => {
     consentPrivacy: true,
   })
 
-  const lines = [
-    `Titel: ${title}`,
-    `Beschreibung: ${details}`,
-    `Kontakt: ${email || '—'}`,
-    allowContact ? 'Kontaktaufnahme erwünscht' : 'Keine Kontaktaufnahme erwünscht',
+  const dataEntries = [
+    ['Titel', title],
+    ['Beschreibung', details],
+    ['E-Mail', email || null],
+    ['Kontaktaufnahme erlaubt', allowContact],
   ]
 
-  await sendAdminNotification('[OpenSquawk] Neuer Roadmap-Vorschlag', lines.join('\n'))
+  await sendAdminNotification({
+    event: 'Neuer Roadmap-Vorschlag',
+    summary: `Neuer Roadmap-Vorschlag: ${title}`,
+    data: dataEntries,
+  })
 
   return {
     success: true,
