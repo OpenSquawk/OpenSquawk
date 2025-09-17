@@ -86,8 +86,10 @@
 const publicEndpoints = [
   { method: 'POST', path: '/api/service/waitlist', description: 'Person auf die Warteliste setzen. Erfordert Zustimmung zu AGB & Datenschutz.' },
   { method: 'GET', path: '/api/service/waitlist', description: 'Aggregierte Wartelistenstatistiken mit Gesamtanzahl, Wachstum und sichtbarem Puffer abrufen.' },
+  { method: 'POST', path: '/api/service/updates', description: 'E-Mail für Produkt-Updates und neue Features eintragen (Einwilligung erforderlich).' },
   { method: 'GET', path: '/api/service/roadmap', description: 'Roadmap-Items inklusive Community-Durchschnitt, Gesamtstimmen und letzter Aktivität auslesen.' },
   { method: 'POST', path: '/api/service/roadmap', description: 'Wichtigkeit (1–5) für einzelne Roadmap-Punkte voten; speichert jeden Vote mit Zeitstempel.' },
+  { method: 'POST', path: '/api/service/roadmap-suggestions', description: 'Neuen Roadmap-Vorschlag mit optionaler Kontaktadresse einreichen.' },
   { method: 'POST', path: '/api/service/auth/login', description: 'Login mit E-Mail & Passwort. Gibt JWT zurück und setzt Refresh-Cookie.' },
   { method: 'POST', path: '/api/service/auth/register', description: 'Registrierung mit Einladungscode und Einwilligungen.' },
   { method: 'POST', path: '/api/service/auth/refresh', description: 'Access-Token anhand des Refresh-Cookies erneuern.' },
