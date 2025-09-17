@@ -1,4 +1,20 @@
 // nuxt.config.ts
+import {createRequire} from 'node:module';
+
+const require = createRequire(import.meta.url);
+const HOTJAR_MODULE_NAME = 'nuxt-module-hotjar';
+const HOTJAR_ID = 6522897;
+const HOTJAR_VERSION = 6;
+
+const hasHotjarModule = (() => {
+    try {
+        require.resolve(HOTJAR_MODULE_NAME);
+        return true;
+    } catch {
+        return false;
+    }
+})();
+
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
     devtools: {enabled: true},
@@ -9,6 +25,7 @@ export default defineNuxtConfig({
       'nuxt-aos',
       '@pinia/nuxt',
       'nuxt-mongoose',
+      ...(hasHotjarModule ? [HOTJAR_MODULE_NAME] : []),
     ],
     aos: {once: true, duration: 600, easing: 'ease-out'},
     app: {head: {link: [{rel: 'icon', type: 'image/jpeg', href: '/img/logo.jpeg'}]}},
@@ -54,4 +71,12 @@ export default defineNuxtConfig({
     css: [
         '~/assets/css/global.css', '~/assets/css/opensquawk-glass.css'
     ],
-})
+    ...(hasHotjarModule
+        ? {
+              hotjar: {
+                  id: HOTJAR_ID,
+                  sv: HOTJAR_VERSION,
+              },
+          }
+        : {}),
+});
