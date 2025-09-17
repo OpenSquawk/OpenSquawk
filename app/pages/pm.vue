@@ -367,6 +367,16 @@
               >
                 Radio Check
               </v-btn>
+              <v-btn
+                  color="cyan"
+                  variant="outlined"
+                  @click="runFullSimulation"
+                  :loading="simulationRunning"
+                  prepend-icon="mdi-progress-check"
+                  density="comfortable"
+              >
+                Voller Flug (Simulation)
+              </v-btn>
             </div>
           </v-card-text>
         </v-card>
@@ -391,6 +401,67 @@
             <p class="text-xs text-white/50">
               Für Notfälle wenn PTT nicht funktioniert oder für Tests
             </p>
+          </v-card-text>
+        </v-card>
+
+        <!-- Simulation Trace -->
+        <v-card
+            v-if="simulationRunning || simulationTrace.length"
+            class="bg-white/5 border border-white/10"
+        >
+          <v-card-text class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <h3 class="text-lg font-semibold">Simulation Trace</h3>
+                <v-chip size="small" color="cyan" variant="outlined">
+                  {{ completedPilotSteps }} / {{ simulationStepCount }}
+                </v-chip>
+              </div>
+              <v-chip size="small" :color="simulationRunning ? 'orange' : 'grey'" variant="tonal">
+                {{ simulationRunning ? 'Läuft' : 'Bereit' }}
+              </v-chip>
+            </div>
+
+            <v-alert
+                v-if="simulationError"
+                type="warning"
+                variant="tonal"
+                density="compact"
+                class="bg-amber-500/10 text-amber-200"
+            >
+              {{ simulationError }}
+            </v-alert>
+
+            <div
+                v-if="simulationRunning && simulationTrace.length === 0"
+                class="text-sm text-white/60"
+            >
+              Simulation initialisiert...
+            </div>
+
+            <div
+                v-else
+                class="space-y-2 max-h-64 overflow-y-auto pr-1"
+            >
+              <div
+                  v-for="(entry, idx) in simulationTrace"
+                  :key="idx"
+                  class="rounded-2xl border border-white/10 bg-black/40 p-3 space-y-2"
+              >
+                <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/40">
+                  <span>{{ entry.label }}</span>
+                  <span class="text-white/60">{{ entry.id }}</span>
+                </div>
+                <div v-if="entry.kind === 'pilot' || entry.kind === 'atc'" class="space-y-1">
+                  <p class="text-sm font-mono text-white">{{ entry.payload?.text }}</p>
+                  <p class="text-[11px] text-white/50 font-mono">{{ entry.payload?.normalized }}</p>
+                </div>
+                <pre
+                    v-else-if="entry.payload"
+                    class="text-[11px] text-white/60 font-mono whitespace-pre-wrap"
+                >{{ formatTracePayload(entry.payload) }}</pre>
+              </div>
+            </div>
           </v-card-text>
         </v-card>
 
@@ -574,7 +645,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
 import { useAuthStore } from '~/stores/auth'
@@ -625,6 +696,10 @@ const radioCheckLoading = ref(false)
 const radioEffectsEnabled = ref(true)
 const readbackEnabled = ref(false)
 const debugMode = ref(false)
+
+const simulationRunning = ref(false)
+const simulationTrace = ref<SimulationTraceEntry[]>([])
+const simulationError = ref('')
 
 // Frequencies
 const frequencies = ref({
@@ -677,6 +752,8 @@ const radioQuality = computed(() => {
   return { color: 'error', text: 'WEAK' }
 })
 
+const completedPilotSteps = computed(() => simulationTrace.value.filter(entry => entry.kind === 'pilot').length)
+
 type PreparedSpeech = {
   template: string
   plain: string
@@ -691,6 +768,117 @@ type SpeechOptions = {
   delayMs?: number
   useNormalizedForTTS?: boolean
 }
+
+type SimulationDecisionTemplate = {
+  next: string
+  controllerSayState?: string
+  controllerSayTpl?: string
+  updates?: Record<string, any>
+  note?: string
+}
+
+type SimulationTraceEntry = {
+  kind: 'info' | 'pilot' | 'atc' | 'llm-input' | 'llm-output'
+  id: string
+  label: string
+  payload?: any
+}
+
+const simulationPilotSteps = [
+  'CD_CHECK_ATIS',
+  'CD_VERIFY_READBACK',
+  'GRD_READY_FOR_PUSH',
+  'GRD_TAXI_REQUEST',
+  'GRD_TAXI_READBACK',
+  'TWR_LINEUP_REQ',
+  'TWR_TAKEOFF_READBACK',
+  'DEP_IDENT',
+  'DEP_CLIMB_READBACK',
+  'DES_READBACK',
+  'APP_ESTABLISHED',
+  'TWR_LAND_READBACK',
+  'GRD_TAXI_IN_REQ',
+  'GRD_TAXI_IN_READBACK'
+] as const
+
+type SimulationPilotState = typeof simulationPilotSteps[number]
+
+const simulationDecisions: Record<SimulationPilotState, SimulationDecisionTemplate> = {
+  CD_CHECK_ATIS: {
+    next: 'CD_ISSUE_CLR',
+    controllerSayState: 'CD_ISSUE_CLR',
+    updates: {
+      push_available: true,
+      runway_occupied: false,
+      pilot_able: true,
+      runway_available: true,
+      push_delay_min: 0,
+      surface_wind: '220/05',
+      speed_restriction: '210 knots',
+      emergency_heading: '180'
+    }
+  },
+  CD_VERIFY_READBACK: {
+    next: 'CD_READBACK_CHECK'
+  },
+  GRD_READY_FOR_PUSH: {
+    next: 'GRD_PUSH_APPROVE',
+    controllerSayState: 'GRD_PUSH_APPROVE'
+  },
+  GRD_TAXI_REQUEST: {
+    next: 'GRD_TAXI_INSTR',
+    controllerSayState: 'GRD_TAXI_INSTR'
+  },
+  GRD_TAXI_READBACK: {
+    next: 'TWR_CONTACT',
+    controllerSayState: 'TWR_CONTACT'
+  },
+  TWR_LINEUP_REQ: {
+    next: 'TWR_TAKEOFF_CLR',
+    controllerSayState: 'TWR_TAKEOFF_CLR'
+  },
+  TWR_TAKEOFF_READBACK: {
+    next: 'DEP_CONTACT',
+    controllerSayState: 'DEP_CONTACT'
+  },
+  DEP_IDENT: {
+    next: 'DEP_CLIMB_INSTR',
+    controllerSayState: 'DEP_CLIMB_INSTR'
+  },
+  DEP_CLIMB_READBACK: {
+    next: 'ENR_HANDOFF',
+    controllerSayState: 'ENR_HANDOFF'
+  },
+  DES_READBACK: {
+    next: 'APP_HANDOFF',
+    controllerSayState: 'APP_HANDOFF',
+    updates: {
+      speed_restriction: '180 knots'
+    }
+  },
+  APP_ESTABLISHED: {
+    next: 'TWR_LAND_CONTACT',
+    controllerSayState: 'TWR_LAND_CONTACT',
+    updates: {
+      runway_available: true,
+      surface_wind: '210/06'
+    }
+  },
+  TWR_LAND_READBACK: {
+    next: 'TWR_VACATE',
+    controllerSayState: 'TWR_VACATE'
+  },
+  GRD_TAXI_IN_REQ: {
+    next: 'GRD_TAXI_INSTR_IN',
+    controllerSayState: 'GRD_TAXI_INSTR_IN'
+  },
+  GRD_TAXI_IN_READBACK: {
+    next: 'FLOW_COMPLETE'
+  }
+}
+
+const recordedAtcStates = new Set<string>()
+const simulationStepCount = simulationPilotSteps.length
 
 const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 
@@ -1198,6 +1386,209 @@ const playPTTBeep = (start: boolean) => {
     oscillator.stop(audioContext.currentTime + 0.1)
   } catch (err) {
     // Audio context may not be available
+  }
+}
+
+const cloneForTrace = <T>(value: T): T => {
+  try {
+    return JSON.parse(JSON.stringify(value))
+  } catch (_err) {
+    return value
+  }
+}
+
+const formatTracePayload = (payload: any): string => {
+  if (payload === null || payload === undefined) return ''
+  if (typeof payload === 'string') return payload
+  try {
+    return JSON.stringify(payload, null, 2)
+  } catch (err) {
+    return String(payload)
+  }
+}
+
+const recordCurrentAtcMessage = () => {
+  const state = currentState.value
+  if (!state?.id || recordedAtcStates.has(state.id) || !state.say_tpl) {
+    return
+  }
+
+  const plain = renderATCMessage(state.say_tpl)
+  const normalized = normalizeATCText(state.say_tpl, { ...vars.value, ...flags.value })
+
+  simulationTrace.value.push({
+    kind: 'atc',
+    id: state.id,
+    label: `ATC • ${state.phase}`,
+    payload: { text: plain, normalized }
+  })
+
+  lastTransmission.value = `ATC: ${plain}`
+  recordedAtcStates.add(state.id)
+}
+
+const pickNextStateId = (state: ReturnType<typeof getStateDetails> | null): string | null => {
+  if (!state) return null
+
+  const chains: Array<Array<{ to: string }>> = []
+  if (state.ok_next?.length) chains.push(state.ok_next.map(({ to }) => ({ to })))
+  if (state.next?.length) chains.push(state.next.map(({ to }) => ({ to })))
+  if (state.bad_next?.length) chains.push(state.bad_next.map(({ to }) => ({ to })))
+  if (state.timer_next?.length) chains.push(state.timer_next.map(({ to }) => ({ to })))
+
+  for (const list of chains) {
+    for (const entry of list) {
+      if (entry?.to) return entry.to
+    }
+  }
+
+  return null
+}
+
+const advanceAutomaticStates = async () => {
+  let guard = 0
+
+  while (guard++ < 50) {
+    const state = currentState.value
+    if (!state?.id) break
+    if (state.auto === 'end') break
+
+    const autoMode = Boolean(state.auto && state.auto !== 'end')
+    if (!autoMode && state.role === 'pilot') break
+
+    const nextId = pickNextStateId(state)
+    if (!nextId || nextId === state.id) break
+
+    forceMove(nextId)
+    await nextTick()
+    recordCurrentAtcMessage()
+  }
+}
+
+const runFullSimulation = async () => {
+  if (simulationRunning.value) return
+
+  simulationRunning.value = true
+  simulationTrace.value = []
+  simulationError.value = ''
+  recordedAtcStates.clear()
+  debugMode.value = true
+
+  try {
+    simulationTrace.value.push({
+      kind: 'info',
+      id: 'init',
+      label: 'Simulation Start',
+      payload: { timestamp: new Date().toISOString(), steps: simulationStepCount }
+    })
+
+    startDemoFlight()
+    await nextTick()
+    clearLog()
+    recordedAtcStates.clear()
+
+    if (currentState.value?.id !== 'CD_CHECK_ATIS') {
+      forceMove('CD_CHECK_ATIS')
+      await nextTick()
+    }
+
+    for (const stepId of simulationPilotSteps) {
+      const state = getStateDetails(stepId)
+      if (!state?.utterance_tpl) {
+        throw new Error(`Missing pilot utterance for ${stepId}`)
+      }
+
+      if (currentState.value?.id !== stepId) {
+        forceMove(stepId)
+        await nextTick()
+      }
+
+      await wait(120)
+
+      const pilotText = renderATCMessage(state.utterance_tpl)
+      const pilotNormalized = normalizeATCText(state.utterance_tpl, { ...vars.value, ...flags.value })
+
+      simulationTrace.value.push({
+        kind: 'pilot',
+        id: stepId,
+        label: `Pilot • ${state.phase}`,
+        payload: { text: pilotText, normalized: pilotNormalized }
+      })
+
+      lastTransmission.value = `Pilot: ${pilotText}`
+
+      const quickResponse = processPilotTransmission(pilotText)
+      if (quickResponse) {
+        simulationTrace.value.push({
+          kind: 'info',
+          id: `${stepId}-quick`,
+          label: 'Quick Response',
+          payload: { text: quickResponse }
+        })
+        await nextTick()
+      }
+
+      const ctx = buildLLMContext(pilotText)
+      simulationTrace.value.push({
+        kind: 'llm-input',
+        id: stepId,
+        label: 'LLM Request',
+        payload: cloneForTrace(ctx)
+      })
+
+      const template = simulationDecisions[stepId]
+      if (!template) {
+        throw new Error(`Missing simulation decision for ${stepId}`)
+      }
+
+      const decision: any = { next_state: template.next }
+      if (template.controllerSayTpl) {
+        decision.controller_say_tpl = template.controllerSayTpl
+      } else if (template.controllerSayState) {
+        const sayState = getStateDetails(template.controllerSayState)
+        if (sayState?.say_tpl) {
+          decision.controller_say_tpl = sayState.say_tpl
+        }
+      }
+      if (template.updates) {
+        decision.updates = template.updates
+      }
+
+      simulationTrace.value.push({
+        kind: 'llm-output',
+        id: stepId,
+        label: `LLM Response → ${decision.next_state}`,
+        payload: cloneForTrace(decision)
+      })
+
+      applyLLMDecision(decision)
+      await nextTick()
+      recordCurrentAtcMessage()
+      await advanceAutomaticStates()
+      await wait(200)
+    }
+
+    simulationTrace.value.push({
+      kind: 'info',
+      id: 'complete',
+      label: 'Simulation Complete',
+      payload: {
+        timestamp: new Date().toISOString(),
+        finalState: currentState.value?.id,
+        pilotSteps: completedPilotSteps.value
+      }
+    })
+  } catch (err: any) {
+    const message = err?.message || String(err)
+    simulationError.value = message
+    simulationTrace.value.push({
+      kind: 'info',
+      id: 'error',
+      label: 'Simulation aborted',
+      payload: { error: message }
+    })
+  } finally {
+    simulationRunning.value = false
   }
 }
 

@@ -31,6 +31,10 @@ const atcDecisionTree = {
     "gate": "B24",
     "trans_level": "FL070",
     "qnh_hpa": 1015,
+    "push_delay_min": 5,
+    "surface_wind": "220/05",
+    "speed_restriction": "210 knots",
+    "emergency_heading": "180",
     "remarks": "standard",
     "time_now": "ISO8601"
   },
@@ -146,7 +150,7 @@ const atcDecisionTree = {
     "GRD_PUSH_WAIT": {
       "role": "atc",
       "phase": "PushStart",
-      "say_tpl": "{callsign}, push and start approved in {remarks} minutes. Expect taxi via {taxi_route}.",
+      "say_tpl": "{callsign}, push and start approved in {push_delay_min} minutes. Expect taxi via {taxi_route}.",
       "timer_next": [{"after_s": 60, "to": "GRD_PUSH_APPROVE"}],
       "next": [{"to": "GRD_PUSH_APPROVE"}]
     },
@@ -202,7 +206,7 @@ const atcDecisionTree = {
     "TWR_TAKEOFF_CLR": {
       "role": "atc",
       "phase": "Departure",
-      "say_tpl": "{callsign}, wind {remarks}, runway {runway} cleared for take-off.",
+      "say_tpl": "{callsign}, wind {surface_wind}, runway {runway} cleared for take-off.",
       "readback_required": ["runway","cleared_takeoff"],
       "actions": [{"set": "flags.in_air", "to": true}],
       "next": [{"to": "TWR_TAKEOFF_READBACK"}]
@@ -295,7 +299,7 @@ const atcDecisionTree = {
     "APP_VECTORING": {
       "role": "atc",
       "phase": "Approach",
-      "say_tpl": "{callsign}, turn left heading 220, descend to {initial_altitude_ft} feet, reduce speed {remarks}.",
+      "say_tpl": "{callsign}, turn left heading 220, descend to {initial_altitude_ft} feet, reduce speed {speed_restriction}.",
       "next": [{"to": "APP_CLEARED_APP"}]
     },
     "APP_CLEARED_APP": {
@@ -323,7 +327,7 @@ const atcDecisionTree = {
       "role": "atc",
       "phase": "Landing",
       "condition": "runway_available === true",
-      "say_tpl": "{callsign}, wind {remarks}, runway {runway} cleared to land.",
+      "say_tpl": "{callsign}, wind {surface_wind}, runway {runway} cleared to land.",
       "else_say_tpl": "{callsign}, continue approach, expect late landing clearance.",
       "next": [
         {"to": "TWR_LAND_READBACK", "when": "runway_available === true"},
@@ -391,7 +395,7 @@ const atcDecisionTree = {
     "ATC_MAYDAY_VECTOR": {
       "role": "atc",
       "phase": "Interrupt",
-      "say_tpl": "{callsign}, roger MAYDAY, fly heading {remarks}, climb/descend {initial_altitude_ft}, cleared direct {dest} when able, QNH {qnh_hpa}.",
+      "say_tpl": "{callsign}, roger MAYDAY, fly heading {emergency_heading}, climb/descend {initial_altitude_ft}, cleared direct {dest} when able, QNH {qnh_hpa}.",
       "next": [{"to": "ATC_MAYDAY_COORD"}]
     },
     "ATC_MAYDAY_COORD": {
