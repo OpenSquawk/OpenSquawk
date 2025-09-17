@@ -21,20 +21,20 @@
       </section>
 
       <footer class="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
-        <p>Fragen zu diesen AGB beantworten wir unter legal@opensquawk.dev. Für Enterprise- oder Trainingsprogramme erstellen wir individuelle Verträge.</p>
+        <p>Fragen zu diesen AGB beantworten wir unter info@opensquawk.dev. Für Enterprise- oder Trainingsprogramme erstellen wir individuelle Verträge.</p>
       </footer>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-const lastUpdated = new Date('2025-01-15').toLocaleDateString('de-DE')
+const lastUpdated = new Date('2025-09-17').toLocaleDateString('de-DE')
 
 const sections = [
   {
     title: '1. Geltungsbereich',
     paragraphs: [
-      'Diese AGB regeln die Nutzung der Plattform OpenSquawk (“Dienst”), betrieben von der OpenSquawk UG (haftungsbeschränkt). Abweichende Bedingungen des Nutzers werden nicht anerkannt, es sei denn, wir stimmen ihrer Geltung ausdrücklich schriftlich zu.',
+      'Diese AGB regeln die Nutzung der Plattform OpenSquawk (“Dienst”), betrieben von der Faktor Mensch MEDIA UG (haftungsbeschränkt). Abweichende Bedingungen des Nutzers werden nicht anerkannt, es sei denn, wir stimmen ihrer Geltung ausdrücklich schriftlich zu.',
     ],
   },
   {
