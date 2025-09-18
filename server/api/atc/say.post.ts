@@ -8,7 +8,7 @@ import {normalize, TTS_MODEL, normalizeATC} from "../../utils/normalize";
 import { getServerRuntimeConfig } from "../../utils/runtimeConfig";
 import {request} from "node:http";
 import { TransmissionLog } from "../../models/TransmissionLog";
-import { getUserFromEvent } from "../../utils/auth";
+import { requireUserSession } from "../../utils/auth";
 
 
 function outDir() {
@@ -125,6 +125,8 @@ export default defineEventHandler(async (event) => {
         format?: AudioFmt | "smallest";
     }>(event);
 
+    const user = await requireUserSession(event);
+
     const raw = (body?.text || "").trim();
     if (!raw) throw createError({ statusCode: 400, statusMessage: "text required" });
 
@@ -212,9 +214,8 @@ export default defineEventHandler(async (event) => {
         // await writeFile(fileJson, JSON.stringify(meta, null, 2), "utf-8");
 
         try {
-            const user = await getUserFromEvent(event)
             await TransmissionLog.create({
-                user: user?._id,
+                user: user._id,
                 role: "atc",
                 channel: "say",
                 direction: "outgoing",

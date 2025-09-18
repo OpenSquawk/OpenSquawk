@@ -413,8 +413,12 @@
 
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useApi } from '~/composables/useApi'
+import { createDefaultLearnConfig } from '~~/shared/learn/config'
+import type { LearnConfig, LearnProgress, LearnState } from '~~/shared/learn/config'
+
+definePageMeta({ middleware: 'require-auth' })
 
 type BlankWidth = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
@@ -1806,81 +1810,142 @@ const sayCache = new Map<string, string>()
 const pendingSayRequests = new Map<string, Promise<string>>()
 const audioReveal = ref(true)
 
-const audioContentHidden = computed(() => cfg.value.audioChallenge && !audioReveal.value)
-
 const toast = ref({ show: false, text: '' })
 const showSettings = ref(false)
 const api = useApi()
 
 const isClient = typeof window !== 'undefined'
-
-function readStorage<T>(key: string, fallback: T): T {
-  if (!isClient) return fallback
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return fallback
-    const parsed = JSON.parse(raw) as T
-    return parsed ?? fallback
-  } catch {
-    return fallback
-  }
-}
-
-function readNumber(key: string, fallback: number): number {
-  if (!isClient) return fallback
-  const raw = localStorage.getItem(key)
-  if (!raw) return fallback
-  const value = Number(raw)
-  return Number.isFinite(value) ? value : fallback
-}
-
-type LearnConfig = {
-  tts: boolean
-  radioLevel: number
-  voice: string
-  audioChallenge: boolean
-}
-
-const defaultCfg: LearnConfig = { tts: false, radioLevel: 4, voice: '', audioChallenge: false }
+const defaultCfg = createDefaultLearnConfig()
 const cfg = ref<LearnConfig>({ ...defaultCfg })
 audioReveal.value = !cfg.value.audioChallenge
 
-if (isClient) {
-  const storedCfg = readStorage<{ tts?: boolean; audioChallenge?: boolean }>('os_cfg', {})
-  const storedLevel = readStorage<{ v?: number }>('os_cfg_level', {})
-  const storedVoice = readStorage<{ v?: string }>('os_cfg_voice', {})
-  cfg.value = {
-    tts: storedCfg.tts ?? defaultCfg.tts,
-    radioLevel: storedLevel.v ?? defaultCfg.radioLevel,
-    voice: storedVoice.v ?? defaultCfg.voice,
-    audioChallenge: storedCfg.audioChallenge ?? defaultCfg.audioChallenge
-  }
-}
-
-audioReveal.value = !cfg.value.audioChallenge
-
-const xp = ref(readNumber('os_xp', 0))
+const xp = ref(0)
+const progress = ref<LearnProgress>({})
 const level = computed(() => 1 + Math.floor(xp.value / 300))
 const seasonPct = computed(() => Math.min(100, Math.round((xp.value % 1000) / 10)))
 
-type Prog = Record<string, Record<string, { best: number; done: boolean }>>
-const progress = ref<Prog>(readStorage<Prog>('os_progress', {} as Prog))
+const audioContentHidden = computed(() => cfg.value.audioChallenge && !audioReveal.value)
 
-if (isClient) {
-  watch(progress, value => localStorage.setItem('os_progress', JSON.stringify(value)), { deep: true })
-  watch(xp, value => localStorage.setItem('os_xp', String(value)))
+type LearnStateResponse = LearnState
 
-  const persistGeneralCfg = () => {
-    localStorage.setItem('os_cfg', JSON.stringify({ tts: cfg.value.tts, audioChallenge: cfg.value.audioChallenge }))
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+const dirtyState = reactive({ xp: false, progress: false, config: false })
+const savingState = ref(false)
+const pendingSave = ref(false)
+
+async function loadLearnState() {
+  if (!isClient) return
+
+  try {
+    const response = await api.get<LearnStateResponse>('/api/learn/state')
+    if (response) {
+      xp.value = Number.isFinite(response.xp) ? Math.max(0, Math.round(response.xp)) : 0
+      progress.value = (response.progress ?? {}) as LearnProgress
+      cfg.value = { ...defaultCfg, ...(response.config || {}) }
+    } else {
+      xp.value = 0
+      progress.value = {} as LearnProgress
+      cfg.value = { ...defaultCfg }
+    }
+    dirtyState.xp = false
+    dirtyState.progress = false
+    dirtyState.config = false
+  } catch (err) {
+    console.error('Failed to load learn state', err)
+    xp.value = 0
+    progress.value = {} as LearnProgress
+    cfg.value = { ...defaultCfg }
+  } finally {
+    audioReveal.value = !cfg.value.audioChallenge
   }
-
-  watch(() => cfg.value.tts, persistGeneralCfg)
-  watch(() => cfg.value.audioChallenge, persistGeneralCfg)
-  watch(() => cfg.value.radioLevel, value => localStorage.setItem('os_cfg_level', JSON.stringify({ v: value })))
-  watch(() => cfg.value.voice, value => localStorage.setItem('os_cfg_voice', JSON.stringify({ v: value })))
 }
 
-watch(() => cfg.value.audioChallenge, () => resetAudioReveal())
+function schedulePersist(immediate = false) {
+  if (!isClient) return
+  if (persistTimer) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  if (immediate) {
+    void persistLearnState(true)
+    return
+  }
+  persistTimer = setTimeout(() => {
+    persistTimer = null
+    void persistLearnState()
+  }, 800)
+}
+
+async function persistLearnState(force = false) {
+  if (!isClient) return
+  if (!force && !dirtyState.xp && !dirtyState.progress && !dirtyState.config) {
+    return
+  }
+  if (savingState.value) {
+    pendingSave.value = true
+    return
+  }
+  savingState.value = true
+  pendingSave.value = false
+
+  const payload = {
+    xp: Math.max(0, Math.round(xp.value)),
+    progress: JSON.parse(JSON.stringify(progress.value)),
+    config: { ...cfg.value },
+  }
+
+  try {
+    await api.put('/api/learn/state', payload)
+    dirtyState.xp = false
+    dirtyState.progress = false
+    dirtyState.config = false
+  } catch (err) {
+    console.error('Failed to persist learn state', err)
+  } finally {
+    savingState.value = false
+    if (pendingSave.value) {
+      pendingSave.value = false
+      void persistLearnState()
+    }
+  }
+}
+
+if (isClient) {
+  await loadLearnState()
+}
+
+const markConfigDirty = () => {
+  dirtyState.config = true
+  schedulePersist()
+}
+
+if (isClient) {
+  watch(progress, () => {
+    dirtyState.progress = true
+    schedulePersist()
+  }, { deep: true })
+  watch(xp, () => {
+    dirtyState.xp = true
+    schedulePersist()
+  })
+  watch(() => cfg.value.tts, markConfigDirty)
+  watch(() => cfg.value.audioChallenge, () => {
+    markConfigDirty()
+    resetAudioReveal()
+  })
+  watch(() => cfg.value.radioLevel, markConfigDirty)
+  watch(() => cfg.value.voice, markConfigDirty)
+}
+
+onBeforeUnmount(() => {
+  if (persistTimer) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  if (dirtyState.xp || dirtyState.progress || dirtyState.config) {
+    void persistLearnState(true)
+  }
+})
 
 const fieldMap = computed<Record<string, LessonField>>(() => {
   const map: Record<string, LessonField> = {}
@@ -2138,8 +2203,14 @@ function toastNow(text: string) {
 
 function resetAll() {
   if (!isClient) return
-  localStorage.clear()
-  location.reload()
+  progress.value = {} as LearnProgress
+  xp.value = 0
+  cfg.value = { ...defaultCfg }
+  audioReveal.value = !cfg.value.audioChallenge
+  dirtyState.progress = true
+  dirtyState.xp = true
+  dirtyState.config = true
+  schedulePersist(true)
 }
 
 const worldTiltStyle = ref<any>({})
@@ -2164,7 +2235,7 @@ async function requestSayAudio(cacheKey: string, payload: Record<string, unknown
   }
 
   const request = (async () => {
-    const response: any = await api.post('/api/atc/say', payload, { auth: false })
+    const response: any = await api.post('/api/atc/say', payload)
     const audioData = response?.audio
     if (!audioData?.base64) {
       throw new Error('Missing audio data')
