@@ -15,17 +15,16 @@
           <NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink>
         </div>
         <div class="flex items-center gap-2">
-          <NuxtLink to="/news" class="btn btn-ghost text-sm">News</NuxtLink>
+          <NuxtLink to="#cta" class="btn btn-primary text-sm">Warteliste</NuxtLink>
           <NuxtLink
               to="https://github.com/FaktorxMensch/OpenSquawk"
               external
               target="_blank"
               rel="noopener"
               class="btn btn-ghost text-sm"
-          >
+          ><v-icon icon="mdi-github" />
             GitHub
           </NuxtLink>
-          <NuxtLink to="#cta" class="btn btn-primary text-sm">Frühzugang</NuxtLink>
         </div>
       </nav>
     </header>
@@ -57,15 +56,12 @@
               <span><strong>Simulator-Support</strong>: MSFS zuerst, X-Plane als nächstes – mit Blick auf VATSIM-kompatible Trainings.</span>
             </li>
           </ul>
-          <p class="mt-4 text-sm text-cyan-200/80">
-            Alpha-Prototyp verfügbar – läuft lokal und setzt leichte Programmierkenntnisse voraus.
-          </p>
           <p class="mt-2 text-sm text-white/70">
             Wir suchen Mitentwickler:innen (Node/Nuxt, ATC SMEs, Tester, Infra/Kosten). Meld dich via
             <a class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
           </p>
           <div class="flex flex-col sm:flex-row gap-3 mt-6">
-            <NuxtLink to="#cta" class="btn btn-primary text-base">Frühzugang sichern</NuxtLink>
+            <NuxtLink to="#cta" class="btn btn-primary text-base">Warteliste beitreten</NuxtLink>
             <NuxtLink to="/news" class="btn btn-ghost text-base">News lesen</NuxtLink>
           </div>
           <div class="mt-8 max-w-xl" data-aos="fade-up" data-aos-delay="120">
