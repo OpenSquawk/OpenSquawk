@@ -37,6 +37,8 @@ const TYPE_LABELS: Record<string, string> = {
 
 const TYPE_ORDER = ['ATIS', 'DEL', 'CLD', 'GND', 'TWR', 'DEP', 'APP', 'CTR', 'ACC', 'FSS']
 
+const ATIS_FREQUENCY_PLACEHOLDER = '---'
+
 function toTypeLabel(rawType: string | undefined, fallback?: string): { type: string; label: string } {
   const type = (rawType || 'UNK').toUpperCase()
   const label = TYPE_LABELS[type] || fallback || type
@@ -133,8 +135,8 @@ export default defineEventHandler(async (event): Promise<FrequencyResponse> => {
     for (const atis of atisEntries) {
       const callsign = String(atis?.callsign || '')
       if (!callsign.toUpperCase().startsWith(prefix)) continue
-      const frequency = normalizeFrequency(atis?.frequency)
-      if (!frequency) continue
+      const normalizedFrequency = normalizeFrequency(atis?.frequency)
+      const frequency = normalizedFrequency || ATIS_FREQUENCY_PLACEHOLDER
       const { type, label } = toTypeLabel('ATIS', atis?.name)
       addFrequencyEntry(frequencyMap, {
         type,

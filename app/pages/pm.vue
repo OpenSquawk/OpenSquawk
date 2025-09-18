@@ -1693,6 +1693,8 @@ const sendPilotText = async () => {
   await handlePilotTransmission(text, 'text')
 }
 
+const FREQUENCY_PLACEHOLDER = '---'
+
 const frequencyTypeMap: Record<string, keyof FrequencyVariableUpdate> = {
   ATIS: 'atis_freq',
   DEL: 'delivery_freq',
@@ -1802,8 +1804,10 @@ const fetchAirportFrequencies = async (icao: string | undefined) => {
 }
 
 const setActiveFrequencyFromList = (entry: AirportFrequencyEntry) => {
-  if (!entry?.frequency) return
-  if (frequencies.value.active !== entry.frequency) {
+  if (!entry) return
+  const isPlaceholder = !entry.frequency || entry.frequency === FREQUENCY_PLACEHOLDER
+
+  if (!isPlaceholder && frequencies.value.active !== entry.frequency) {
     frequencies.value.standby = frequencies.value.active
     frequencies.value.active = entry.frequency
   }
@@ -1812,8 +1816,12 @@ const setActiveFrequencyFromList = (entry: AirportFrequencyEntry) => {
 }
 
 const setStandbyFrequencyFromList = (entry: AirportFrequencyEntry) => {
-  if (!entry?.frequency) return
-  frequencies.value.standby = entry.frequency
+  if (!entry) return
+  const isPlaceholder = !entry.frequency || entry.frequency === FREQUENCY_PLACEHOLDER
+
+  if (!isPlaceholder) {
+    frequencies.value.standby = entry.frequency
+  }
 
   updateEngineFrequencyFromEntry(entry)
 }
@@ -1849,7 +1857,11 @@ const buildAtisAnnouncement = (entry: AirportFrequencyEntry, fallback?: string):
     parts.push(fallback)
   }
 
-  parts.push(`Frequency ${entry.frequency}`)
+  if (!entry.frequency || entry.frequency === FREQUENCY_PLACEHOLDER) {
+    parts.push('Frequency unavailable')
+  } else {
+    parts.push(`Frequency ${entry.frequency}`)
+  }
 
   return parts
     .map(segment => segment.trim())
