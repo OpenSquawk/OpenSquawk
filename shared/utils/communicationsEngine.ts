@@ -129,6 +129,32 @@ export interface EngineLog {
     state: string
     radioCheck?: boolean
     offSchema?: boolean
+    readback?: {
+        stateId: string
+        required: string[]
+        missing: string[]
+        correct: boolean
+    }
+}
+
+interface PendingReadback {
+    stateId: string
+    required: string[]
+    expected: Record<string, string>
+    anchorIndex?: number
+    lastEntryIndex?: number
+    lastResult?: {
+        missing: string[]
+        correct: boolean
+    }
+}
+
+interface ReadbackResult {
+    stateId: string
+    entryIndex: number
+    required: string[]
+    missing: string[]
+    correct: boolean
 }
 
 // NATO/ICAO Normalizer (gekürzt für bessere Performance)
@@ -143,6 +169,22 @@ const NATO_PHONETIC: Record<string, string> = {
 const ICAO_NUMBERS: Record<string, string> = {
     '0': 'zero', '1': 'wun', '2': 'too', '3': 'tree', '4': 'fower',
     '5': 'fife', '6': 'six', '7': 'seven', '8': 'eight', '9': 'niner'
+}
+
+const ENGLISH_DIGITS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'] as const
+const TEENS = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'] as const
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'] as const
+const ICAO_WORD_REPLACEMENTS: Record<string, string> = {
+    one: 'wun',
+    two: 'too',
+    three: 'tree',
+    four: 'fower',
+    five: 'fife',
+    six: 'six',
+    seven: 'seven',
+    eight: 'eight',
+    nine: 'niner',
+    zero: 'zero'
 }
 
 export function normalizeATCText(text: string, context: Record<string, any>): string {
@@ -202,6 +244,8 @@ export default function useCommunicationsEngine() {
     const flags = ref({ ...tree.value.flags })
     const currentStateId = ref<string>(tree.value.start_state)
     const communicationLog = ref<EngineLog[]>([])
+    const pendingReadback = ref<PendingReadback | null>(null)
+    const lastReadbackResult = ref<ReadbackResult | null>(null)
 
     // Flight Context für bessere Integration mit pm_alt.vue Stil
     const flightContext = ref<FlightContext>({
@@ -430,6 +474,16 @@ export default function useCommunicationsEngine() {
 
         // Phase Update für Flight Context
         updateFlightPhase(s.phase)
+
+        if (s.auto) {
+            handleAutoState(s)
+        }
+    }
+
+    function handleAutoState(state: DTState) {
+        if (state.auto === 'check_readback') {
+            runReadbackAuto(state)
+        }
     }
 
     function updateFlightPhase(phase: Phase) {
@@ -474,10 +528,103 @@ export default function useCommunicationsEngine() {
             offSchema: options.offSchema
         }
         communicationLog.value.push(entry)
+
+        if (speaker === 'atc') {
+            const state = states.value[stateId]
+            const required = state?.readback_required
+            if (required?.length) {
+                preparePendingReadback(stateId, required)
+            }
+        } else if (speaker === 'pilot') {
+            handlePilotReadbackEvaluation(entry, stateId)
+        }
     }
 
     function renderATCMessage(tpl: string) {
         return renderTpl(tpl, exposeCtx())
+    }
+
+    function handlePilotReadbackEvaluation(entry: EngineLog, pilotStateId: string) {
+        const pending = pendingReadback.value
+        if (!pending || !pending.required.length) return
+
+        refreshPendingReadback()
+
+        const entryIndex = communicationLog.value.length - 1
+        if (pending.anchorIndex !== undefined && entryIndex <= pending.anchorIndex) return
+        if (pending.lastEntryIndex === entryIndex) return
+
+        const evaluation = evaluateReadbackEntry(pending, entry)
+
+        entry.readback = {
+            stateId: pending.stateId,
+            required: [...pending.required],
+            missing: evaluation.missing,
+            correct: evaluation.correct
+        }
+
+        const requiresFollowUpCheck = pilotStateLeadsToReadbackCheck(pilotStateId)
+
+        if (requiresFollowUpCheck || !evaluation.correct) {
+            pendingReadback.value = {
+                ...pending,
+                lastEntryIndex: entryIndex,
+                lastResult: evaluation
+            }
+        } else {
+            pendingReadback.value = null
+        }
+
+        lastReadbackResult.value = {
+            stateId: pending.stateId,
+            entryIndex,
+            required: [...pending.required],
+            missing: evaluation.missing,
+            correct: evaluation.correct
+        }
+    }
+
+    function pilotStateLeadsToReadbackCheck(stateId: string) {
+        const state = states.value[stateId]
+        if (!state || state.role !== 'pilot') return false
+
+        const chains = [
+            ...(state.ok_next ?? []),
+            ...(state.next ?? []),
+            ...(state.bad_next ?? []),
+            ...((state.timer_next ?? []).map(({ to }) => ({ to })))
+        ]
+
+        return chains.some(({ to }) => {
+            if (!to) return false
+            const target = states.value[to]
+            return target?.auto === 'check_readback'
+        })
+    }
+
+    function resolveExpectedReadbackValue(key: string, ctx: Record<string, any>): string | undefined {
+        const direct = (ctx as any)?.[key]
+        if (direct !== undefined && direct !== null && String(direct).trim()) {
+            return String(direct)
+        }
+
+        switch (key) {
+            case 'hold_short': {
+                const holdShort = (ctx as any)?.hold_short
+                if (holdShort !== undefined && holdShort !== null && String(holdShort).trim()) {
+                    return String(holdShort)
+                }
+                const runway = (ctx as any)?.runway
+                if (runway !== undefined && runway !== null && String(runway).trim()) {
+                    return String(runway)
+                }
+                return undefined
+            }
+            case 'cleared_takeoff':
+                return 'cleared for takeoff'
+            default:
+                return undefined
+        }
     }
 
     function exposeCtx() {
@@ -507,6 +654,389 @@ export default function useCommunicationsEngine() {
         const s = states.value[stateId]
         if (!s) return null
         return { ...s, id: stateId }
+    }
+
+    function runReadbackAuto(state: DTState) {
+        refreshPendingReadback()
+        const pending = pendingReadback.value
+        const pilotEntry = getLastPilotEntry()
+
+        let evaluation: { correct: boolean; missing: string[] } | null = null
+        let required: string[] = []
+        let sourceStateId: string | null = null
+
+        const pilotEntryIndex = pilotEntry ? communicationLog.value.lastIndexOf(pilotEntry) : -1
+        const entryAfterAnchor = !pending || pending.anchorIndex === undefined || pilotEntryIndex > pending.anchorIndex
+
+        if (pilotEntry?.readback && (!pending || pilotEntry.readback.stateId === pending.stateId) && entryAfterAnchor) {
+            evaluation = {
+                correct: pilotEntry.readback.correct,
+                missing: pilotEntry.readback.missing
+            }
+            required = [...(pilotEntry.readback.required || [])]
+            sourceStateId = pilotEntry.readback.stateId
+        } else if (pending && pilotEntry && entryAfterAnchor) {
+            const result = evaluateReadbackEntry(pending, pilotEntry)
+            evaluation = result
+            required = [...pending.required]
+            sourceStateId = pending.stateId
+            pilotEntry.readback = {
+                stateId: pending.stateId,
+                required: [...pending.required],
+                missing: result.missing,
+                correct: result.correct
+            }
+            lastReadbackResult.value = {
+                stateId: pending.stateId,
+                entryIndex: pilotEntryIndex >= 0 ? pilotEntryIndex : communicationLog.value.length - 1,
+                required: [...pending.required],
+                missing: result.missing,
+                correct: result.correct
+            }
+        } else if (!pending && lastReadbackResult.value) {
+            evaluation = {
+                correct: lastReadbackResult.value.correct,
+                missing: lastReadbackResult.value.missing
+            }
+            required = [...lastReadbackResult.value.required]
+            sourceStateId = lastReadbackResult.value.stateId
+            if (pilotEntry && (!pilotEntry.readback || pilotEntry.readback.stateId !== sourceStateId)) {
+                pilotEntry.readback = {
+                    stateId: sourceStateId,
+                    required: [...required],
+                    missing: [...lastReadbackResult.value.missing],
+                    correct: lastReadbackResult.value.correct
+                }
+            }
+        }
+
+        if (!evaluation) {
+            const fallback = state.bad_next?.find(n => n.to)?.to
+                || state.next?.find(n => n.to)?.to
+                || state.ok_next?.find(n => n.to)?.to
+            if (fallback && fallback !== state.id) {
+                moveTo(fallback)
+            }
+            return
+        }
+
+        if (pending && sourceStateId === pending.stateId && evaluation.correct) {
+            pendingReadback.value = null
+        }
+
+        if (!required.length && pending) {
+            required = [...pending.required]
+        }
+
+        if (pilotEntry) {
+            pilotEntry.readback = {
+                stateId: sourceStateId || pilotEntry.readback?.stateId || pending?.stateId || '',
+                required: [...required],
+                missing: evaluation.missing,
+                correct: evaluation.correct
+            }
+        }
+
+        if (evaluation.correct) {
+            const okTarget = state.ok_next?.find(n => n.to)?.to
+            if (okTarget && okTarget !== state.id) {
+                moveTo(okTarget)
+                return
+            }
+        } else {
+            const badTarget = state.bad_next?.find(n => n.to)?.to
+                || state.next?.find(n => n.to)?.to
+            if (badTarget && badTarget !== state.id) {
+                moveTo(badTarget)
+                return
+            }
+        }
+
+        const defaultTarget = state.ok_next?.[0]?.to || state.next?.[0]?.to || state.bad_next?.[0]?.to
+        if (defaultTarget && defaultTarget !== state.id) {
+            moveTo(defaultTarget)
+        }
+    }
+
+    function preparePendingReadback(stateId: string, required: string[]) {
+        const ctx = exposeCtxFlat()
+        const expected: Record<string, string> = {}
+
+        for (const key of required) {
+            const val = resolveExpectedReadbackValue(key, ctx)
+            if (val !== undefined && val !== null && String(val).trim()) {
+                expected[key] = String(val)
+            }
+        }
+
+        pendingReadback.value = {
+            stateId,
+            required: [...required],
+            expected,
+            anchorIndex: communicationLog.value.length - 1
+        }
+        lastReadbackResult.value = null
+    }
+
+    function refreshPendingReadback() {
+        if (!pendingReadback.value) return
+        const ctx = exposeCtxFlat()
+        const expected: Record<string, string> = {}
+
+        for (const key of pendingReadback.value.required) {
+            const val = resolveExpectedReadbackValue(key, ctx)
+            if (val !== undefined && val !== null && String(val).trim()) {
+                expected[key] = String(val)
+            }
+        }
+
+        pendingReadback.value = {
+            ...pendingReadback.value,
+            expected
+        }
+    }
+
+    function getLastPilotEntry() {
+        for (let i = communicationLog.value.length - 1; i >= 0; i--) {
+            const entry = communicationLog.value[i]
+            if (entry.speaker === 'pilot') {
+                return entry
+            }
+        }
+        return undefined
+    }
+
+    function evaluateReadbackEntry(pending: PendingReadback, entry: EngineLog) {
+        const plain = entry.message.toLowerCase()
+        const normalized = entry.normalized.toLowerCase()
+        const sanitizedPlain = plain.replace(/[^a-z0-9]/g, '')
+        const sanitizedNormalized = normalized.replace(/[^a-z0-9]/g, '')
+        const missing: string[] = []
+
+        for (const key of pending.required) {
+            const expected = pending.expected[key]
+            if (!expected) continue
+
+            const patterns = buildReadbackPatterns(key, expected, exposeCtxFlat())
+            if (!patterns.length) continue
+
+            let matched = false
+            for (const pattern of patterns) {
+                const lower = pattern.toLowerCase()
+                if (!lower) continue
+                if (plain.includes(lower) || normalized.includes(lower)) {
+                    matched = true
+                    break
+                }
+                const sanitizedPattern = lower.replace(/[^a-z0-9]/g, '')
+                if (sanitizedPattern && (sanitizedPlain.includes(sanitizedPattern) || sanitizedNormalized.includes(sanitizedPattern))) {
+                    matched = true
+                    break
+                }
+            }
+
+            if (!matched) {
+                missing.push(key)
+            }
+        }
+
+        return {
+            correct: missing.length === 0,
+            missing
+        }
+    }
+
+    function buildReadbackPatterns(key: string, rawValue: string, ctx: Record<string, any>): string[] {
+        const patterns = new Set<string>()
+        const value = (rawValue ?? '').toString().trim()
+        if (!value) return []
+
+        const lower = value.toLowerCase()
+        patterns.add(lower)
+        patterns.add(lower.replace(/\s+/g, ' '))
+
+        const normalizedValue = normalizeATCText(value, ctx).toLowerCase()
+        if (normalizedValue && normalizedValue !== lower) {
+            patterns.add(normalizedValue)
+        }
+
+        switch (key) {
+            case 'dest':
+            case 'dep':
+            case 'callsign':
+            case 'transition':
+                patterns.add(lower.replace(/[^a-z0-9]/g, ''))
+                break
+            case 'sid': {
+                const sanitized = lower.replace(/[^a-z0-9]/g, '')
+                if (sanitized) patterns.add(sanitized)
+                lower.split(/\s+/).filter(Boolean).forEach(part => patterns.add(part))
+                break
+            }
+            case 'runway': {
+                patterns.add(`runway ${lower}`)
+                const normalizedRunway = normalizeATCText(`runway ${value}`, ctx).toLowerCase()
+                if (normalizedRunway) patterns.add(normalizedRunway)
+                const sanitizedRunway = lower.replace(/[^a-z0-9]/g, '')
+                if (sanitizedRunway) patterns.add(sanitizedRunway)
+                const runwayEnglish = digitsToEnglishSequence(value)
+                if (runwayEnglish) patterns.add(`runway ${runwayEnglish}`)
+                const runwayIcao = digitsToICAOSequence(value)
+                if (runwayIcao) patterns.add(`runway ${runwayIcao}`)
+                break
+            }
+            case 'initial_altitude_ft':
+            case 'climb_altitude_ft':
+            case 'initial_altitude':
+            case 'climb_altitude': {
+                patterns.add(`${lower} feet`)
+                patterns.add(`climb ${lower}`)
+                patterns.add(`climb to ${lower}`)
+                patterns.add(`climb maintain ${lower}`)
+
+                const digits = lower.replace(/[^0-9]/g, '')
+                if (digits) {
+                    patterns.add(digits)
+                    patterns.add(digits.split('').join(' '))
+                }
+
+                const englishNumber = numberToEnglish(Number(digits || value))
+                if (englishNumber) {
+                    patterns.add(englishNumber)
+                    patterns.add(`${englishNumber} feet`)
+                    patterns.add(`climb ${englishNumber}`)
+                    patterns.add(`climb to ${englishNumber}`)
+                    patterns.add(`climb maintain ${englishNumber}`)
+                }
+
+                const icaoNumber = numberToICAOWords(Number(digits || value))
+                if (icaoNumber && icaoNumber !== englishNumber) {
+                    patterns.add(icaoNumber)
+                    patterns.add(`${icaoNumber} feet`)
+                    patterns.add(`climb ${icaoNumber}`)
+                    patterns.add(`climb to ${icaoNumber}`)
+                    patterns.add(`climb maintain ${icaoNumber}`)
+                }
+
+                const englishDigits = digitsToEnglishSequence(digits)
+                if (englishDigits) {
+                    patterns.add(englishDigits)
+                    patterns.add(`climb ${englishDigits}`)
+                }
+
+                const icaoDigits = digitsToICAOSequence(digits)
+                if (icaoDigits) {
+                    patterns.add(icaoDigits)
+                    patterns.add(`climb ${icaoDigits}`)
+                }
+                break
+            }
+            case 'squawk': {
+                patterns.add(`squawk ${lower}`)
+                const digits = lower.replace(/[^0-9]/g, '')
+                if (digits) {
+                    patterns.add(digits)
+                    patterns.add(digits.split('').join(' '))
+                    patterns.add(`squawk ${digits}`)
+                    const englishDigits = digitsToEnglishSequence(digits)
+                    if (englishDigits) {
+                        patterns.add(englishDigits)
+                        patterns.add(`squawk ${englishDigits}`)
+                    }
+                    const icaoDigits = digitsToICAOSequence(digits)
+                    if (icaoDigits) {
+                        patterns.add(icaoDigits)
+                        patterns.add(`squawk ${icaoDigits}`)
+                    }
+                }
+                const normalizedSquawk = normalizeATCText(`squawk ${value}`, ctx).toLowerCase()
+                if (normalizedSquawk) patterns.add(normalizedSquawk)
+                break
+            }
+            case 'taxi_route': {
+                value.split(/[,\s]+/).map(part => part.trim().toLowerCase()).filter(Boolean).forEach(part => patterns.add(part))
+                break
+            }
+            case 'hold_short': {
+                patterns.add(`hold short ${lower}`)
+                patterns.add(`hold short of ${lower}`)
+                patterns.add(`holding short ${lower}`)
+                patterns.add(`holding short of ${lower}`)
+                const normalizedHold = normalizeATCText(`hold short ${value}`, ctx).toLowerCase()
+                if (normalizedHold) patterns.add(normalizedHold)
+                break
+            }
+            case 'gate': {
+                patterns.add(`gate ${lower}`)
+                break
+            }
+            case 'cleared_takeoff': {
+                patterns.add('cleared for takeoff')
+                patterns.add('cleared for take-off')
+                patterns.add('cleared for take off')
+                patterns.add('cleared takeoff')
+                patterns.add('cleared for departure')
+                break
+            }
+            default:
+                break
+        }
+
+        return Array.from(patterns).map(p => p.trim()).filter(Boolean)
+    }
+
+    function digitsToEnglishSequence(value: string): string {
+        const digits = (value ?? '').toString().replace(/[^0-9]/g, '')
+        if (!digits) return ''
+        return digits.split('').map(d => ENGLISH_DIGITS[Number(d)] ?? '').filter(Boolean).join(' ')
+    }
+
+    function digitsToICAOSequence(value: string): string {
+        const digits = (value ?? '').toString().replace(/[^0-9]/g, '')
+        if (!digits) return ''
+        return digits.split('').map(d => ICAO_NUMBERS[d] || '').filter(Boolean).join(' ')
+    }
+
+    function numberToEnglish(num: number): string {
+        if (!Number.isFinite(num) || num <= 0) return ''
+        if (num >= 100000) return ''
+
+        const parts: string[] = []
+        const thousands = Math.floor(num / 1000)
+        let remainder = num % 1000
+
+        if (thousands > 0) {
+            parts.push(`${numberToEnglish(thousands)} thousand`)
+        }
+
+        if (remainder >= 100) {
+            const hundreds = Math.floor(remainder / 100)
+            parts.push(`${ENGLISH_DIGITS[hundreds]} hundred`)
+            remainder %= 100
+        }
+
+        if (remainder >= 20) {
+            const tens = Math.floor(remainder / 10)
+            const ones = remainder % 10
+            parts.push(`${TENS[tens]}${ones ? ` ${ENGLISH_DIGITS[ones]}` : ''}`)
+        } else if (remainder >= 10) {
+            parts.push(TEENS[remainder - 10])
+        } else if (remainder > 0) {
+            parts.push(ENGLISH_DIGITS[remainder])
+        }
+
+        return parts.join(' ').replace(/\s+/g, ' ').trim()
+    }
+
+    function numberToICAOWords(num: number): string {
+        const english = numberToEnglish(num)
+        if (!english) return ''
+        return english
+            .split(/\s+/)
+            .map(word => ICAO_WORD_REPLACEMENTS[word as keyof typeof ICAO_WORD_REPLACEMENTS] || word)
+            .join(' ')
+            .replace(/\s+/g, ' ')
+            .trim()
     }
 
     function genStand() {

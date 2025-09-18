@@ -563,6 +563,14 @@
                     {{ entry.speaker.toUpperCase() }}
                     <v-chip v-if="entry.radioCheck" size="x-small" color="orange" variant="flat">RADIO CHECK</v-chip>
                     <v-chip v-if="entry.offSchema" size="x-small" color="red" variant="flat">OFF-SCHEMA</v-chip>
+                    <v-chip
+                        v-if="entry.readback"
+                        size="x-small"
+                        :color="entry.readback.correct ? 'green' : 'red'"
+                        variant="flat"
+                    >
+                      {{ entry.readback.correct ? 'READBACK OK' : 'READBACK FEHLER' }}
+                    </v-chip>
                   </span>
                   <span>{{ formatTime(entry.timestamp) }}</span>
                 </div>
@@ -571,6 +579,12 @@
                   <v-chip size="x-small" color="cyan" variant="outlined">{{ entry.frequency || 'N/A' }}</v-chip>
                   <span class="text-xs text-white/40">{{ entry.state }}</span>
                 </div>
+                <p
+                    v-if="entry.readback && !entry.readback.correct"
+                    class="text-[11px] text-red-300 mt-2"
+                >
+                  Fehlende Bestandteile: {{ describeReadbackMissing(entry.readback.missing) }}
+                </p>
               </div>
 
               <p v-if="log.length === 0" class="text-xs text-white/50 text-center py-4">
@@ -1533,6 +1547,25 @@ const formatTime = (date: Date): string => {
     minute: '2-digit',
     second: '2-digit'
   })
+}
+
+const READBACK_FIELD_LABELS: Record<string, string> = {
+  dest: 'Ziel',
+  sid: 'SID',
+  runway: 'Runway',
+  initial_altitude_ft: 'Steighöhe',
+  climb_altitude_ft: 'Steighöhe',
+  squawk: 'Squawk',
+  taxi_route: 'Taxiweg',
+  hold_short: 'Hold Short',
+  gate: 'Gate',
+  cleared_takeoff: 'Startfreigabe',
+  transition: 'Transition'
+}
+
+const describeReadbackMissing = (missing: string[]): string => {
+  if (!missing?.length) return ''
+  return missing.map((key) => READBACK_FIELD_LABELS[key] || key).join(', ')
 }
 
 const playPTTBeep = (start: boolean) => {
