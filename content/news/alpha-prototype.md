@@ -2,6 +2,7 @@
 title: "Alpha-Prototyp bereit für frühe Tests"
 date: "2025-09-15"
 summary: "Unser erster OpenSquawk Alpha-Build läuft lokal für MSFS und zeigt, wohin die Reise Richtung community-getriebener AI-ATC geht."
+bannerFile: "alpha-prototype.svg"
 ---
 
 Wir haben den Alpha-Prototyp von OpenSquawk intern stabilisiert und geben ihn jetzt an neugierige Mitentwickler:innen raus. Der Build kombiniert eine Nuxt-Oberfläche mit Node-Services für Speech-to-Text, Entscheidungslogik und TTS. Alles lässt sich lokal betreiben, solange du ein wenig Terminal-Erfahrung mitbringst.

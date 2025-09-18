@@ -3,7 +3,6 @@ title: "Runtime-Härtung & sichere Eingaben"
 date: "2025-09-18"
 summary: "Neue Konfigurationszentrale, sichere Audio-Uploads und strengere Passwörter machen OpenSquawk robuster."
 readingTime: "3 Min Lesezeit"
-banner: "runtime-hardening.svg"
 ---
 
 Wir haben uns heute quer durch Backend, Runtime-Config und Onboarding gearbeitet, um OpenSquawk widerstandsfähiger zu machen. Drei Baustellen standen im Fokus: reproduzierbare Konfiguration, saubere Audio-Eingaben für den Funk-Workflow und ein härterer Schutz der Benutzerkonten.
