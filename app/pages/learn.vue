@@ -159,7 +159,7 @@
             v-for="l in current.lessons"
             :key="l.id"
             class="lesson"
-            :class="{ active: activeLesson?.id===l.id, ok: bestScore(current.id,l.id)>=80 }"
+            :class="{ active: activeLesson && activeLesson.id===l.id, ok: bestScore(current.id,l.id)>=80 }"
             @click="selectLesson(l)"
         >
           <div class="lesson-top">
@@ -179,181 +179,123 @@
       </div>
 
       <div v-if="activeLesson" class="console">
+        <div v-if="scenario" class="scenario-bar">
+          <div class="scenario-item">
+            <span class="scenario-label">Callsign</span>
+            <div class="scenario-value">{{ scenario.callsign }}</div>
+            <div class="scenario-sub">{{ scenario.radioCall }}</div>
+          </div>
+          <div class="scenario-item">
+            <span class="scenario-label">Flugplatz</span>
+            <div class="scenario-value">{{ scenario.airport.icao }}</div>
+            <div class="scenario-sub">{{ scenario.airport.name }}</div>
+          </div>
+          <div class="scenario-item wide">
+            <span class="scenario-label">Frequenzen</span>
+            <div class="freq-chips">
+              <button
+                  v-for="freq in scenario.frequencies"
+                  :key="freq.type"
+                  type="button"
+                  class="freq-chip"
+                  :class="{ active: activeFrequency && activeFrequency.type === freq.type }"
+                  @click="setActiveFrequency(freq)"
+              >
+                {{ freq.label }} {{ freq.value }}
+              </button>
+            </div>
+            <div v-if="activeFrequency && scenario.frequencyWords[activeFrequency.type]" class="freq-hint muted small">
+              {{ scenario.frequencyWords[activeFrequency.type] }}
+            </div>
+          </div>
+        </div>
+
         <div class="col">
-          <div class="label">Zielphrase</div>
+          <div class="label">Briefing</div>
           <div class="panel">
             <div class="target-row">
-              <span>{{ activeLesson.target }}</span>
-              <div class="row">
-                <button class="btn soft" @click="speak(activeLesson.target)">
-                  <v-icon>mdi-volume-high</v-icon>
-                  Abspielen
+              <div class="target-main">
+                <div class="muted small">{{ activeLesson.desc }}</div>
+                <div class="target-text">{{ targetPhrase }}</div>
+              </div>
+              <div class="row wrap">
+                <button class="btn soft mini" type="button" :disabled="!targetPhrase" @click="say(targetPhrase)">
+                  <v-icon size="16">mdi-volume-high</v-icon>
+                  Say
                 </button>
-                <button class="btn ghost" @click="fillTarget">
-                  <v-icon>mdi-auto-fix</v-icon>
-                  Autotext
+                <button class="btn ghost mini" type="button" @click="rollScenario(true)">
+                  <v-icon size="16">mdi-dice-5</v-icon>
+                  Würfeln
                 </button>
               </div>
             </div>
           </div>
           <div class="hints">
-            <div v-for="h in activeLesson.hints" :key="h" class="hint">
+            <div v-for="hint in activeLesson.hints" :key="hint" class="hint">
               <v-icon size="16">mdi-lightbulb-on-outline</v-icon>
-              {{ h }}
+              {{ hint }}
+            </div>
+            <div v-for="info in lessonInfo" :key="info" class="hint secondary">
+              <v-icon size="16">mdi-information-outline</v-icon>
+              {{ info }}
             </div>
           </div>
         </div>
 
-
-        <div v-if="!textReadback" class="col">
+        <div class="col">
           <div class="label">Deine Readback</div>
-
-          <!-- PTT Toggle -->
-          <div class="ptt-toggle">
-            <button
-                class="btn soft"
-                :class="{ active: usePTT }"
-                @click="usePTT = !usePTT"
-            >
-              <v-icon>{{ usePTT ? 'mdi-microphone' : 'mdi-keyboard' }}</v-icon>
-              {{ usePTT ? 'PTT Mode' : 'Text Mode' }}
-            </button>
-          </div>
-
-          <!-- Text Input (wenn PTT aus) -->
-          <v-textarea
-              v-if="!usePTT"
-              v-model="userInput"
-              rows="4"
-              class="input"
-              placeholder="Tippen Sie Ihre Readback"
-          />
-
-          <!-- PTT Interface (wenn PTT an) -->
-          <div v-if="usePTT" class="ptt-interface">
-            <div class="ptt-status">
-              <div class="status-indicator"
-                   :class="{ recording: tts.isRecording.value, processing: tts.isLoading.value }">
-                <v-icon size="24">
-                  {{
-                    tts.isRecording.value ? 'mdi-record-rec' : tts.isLoading.value ? 'mdi-loading mdi-spin' : 'mdi-microphone'
-                  }}
-                </v-icon>
-              </div>
-              <div class="status-text">
-                {{
-                  tts.isRecording.value ? 'Aufnahme läuft...' :
-                      tts.isLoading.value ? 'Verarbeitung...' :
-                          'Bereit für Aufnahme'
-                }}
-              </div>
-            </div>
-
-            <!-- PTT Button -->
-            <button
-                class="btn-ptt"
-                :class="{ recording: tts.isRecording.value, disabled: tts.isLoading.value }"
-                @mousedown="startPTT"
-                @mouseup="stopPTT"
-                @touchstart="startPTT"
-                @touchend="stopPTT"
-                :disabled="tts.isLoading.value"
-            >
-              <v-icon size="32">mdi-radio-handheld</v-icon>
-              <span>{{ tts.isRecording.value ? 'Recording...' : 'Hold to Talk' }}</span>
-            </button>
-
-            <!-- Letztes Readback anzeigen -->
-            <div v-if="lastTranscription" class="transcription">
-              <div class="transcription-label">Ihr Readback:</div>
-              <div class="transcription-text">{{ lastTranscription }}</div>
+          <div class="panel readback-panel">
+            <div class="cloze">
+              <template v-for="(segment, idx) in activeLesson.readback" :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
+                <span v-if="segment.type === 'text'">
+                  {{ typeof segment.text === 'function' && scenario ? segment.text(scenario) : segment.text }}
+                </span>
+                <label
+                    v-else
+                    class="blank"
+                    :class="[blankSizeClass(segment.key, segment.width), blankStateClass(segment.key)]"
+                >
+                  <span class="sr-only">{{ fieldLabel(segment.key) }}</span>
+                  <input
+                      v-model="userAnswers[segment.key]"
+                      :aria-label="fieldLabel(segment.key)"
+                      :placeholder="fieldPlaceholder(segment.key)"
+                      :inputmode="fieldInputmode(segment.key)"
+                  />
+                  <v-icon v-if="fieldPass(segment.key)" size="16" class="blank-status ok">mdi-check</v-icon>
+                  <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert</v-icon>
+                  <small v-if="result" class="blank-feedback">
+                    Soll: {{ fieldExpectedValue(segment.key) }}
+                  </small>
+                </label>
+              </template>
             </div>
           </div>
-
-          <!-- Buttons -->
-          <div class="row">
-            <button
-                v-if="!usePTT"
-                class="btn primary"
-                :disabled="evaluating"
-                @click="evaluate"
-            >
-              <v-icon>mdi-check</v-icon>
+          <div class="row wrap controls">
+            <button class="btn primary" type="button" :disabled="evaluating" @click="evaluate">
+              <v-icon size="18">mdi-check</v-icon>
               Prüfen
             </button>
-
-            <button
-                v-if="usePTT && lastTranscription"
-                class="btn primary"
-                :disabled="tts.isLoading.value"
-                @click="evaluatePTT"
-            >
-              <v-icon>mdi-check</v-icon>
-              Bewerten
+            <button class="btn soft" type="button" @click="clearAnswers">
+              <v-icon size="18">mdi-eraser</v-icon>
+              Reset
             </button>
-
-            <button class="btn ghost" @click="clearInput">
-              <v-icon>mdi-eraser</v-icon>
-              Löschen
+            <button class="btn ghost" type="button" @click="fillSolution">
+              <v-icon size="18">mdi-auto-fix</v-icon>
+              Autotext
             </button>
           </div>
-
-          <!-- Ergebnis (für beide Modi) -->
           <div v-if="result" class="score">
             <div class="score-num">{{ result.score }}%</div>
             <div class="muted small">
-      <span v-if="!usePTT">
-        Keywords: {{ result.hits }}/{{ activeLesson.keywords.length }} · Ähnlichkeit: {{
-          Math.round(result.sim * 100)
-        }}%
-      </span>
-              <span v-else>
-        Genauigkeit: {{ Math.round(result.evaluation.accuracy * 100) }}% ·
-        Keywords: {{ result.evaluation.keywordMatch * 100 }}%
-      </span>
-            </div>
-
-            <!-- PTT-spezifisches Feedback -->
-            <div v-if="usePTT && result.evaluation" class="ptt-feedback">
-              <div class="feedback-text">{{ result.evaluation.feedback }}</div>
-              <div v-if="result.evaluation.mistakes" class="mistakes">
-                <strong>Verbesserungen:</strong>
-                <ul>
-                  <li v-for="mistake in result.evaluation.mistakes" :key="mistake">{{ mistake }}</li>
-                </ul>
-              </div>
-              <div v-if="result.playAgain" class="replay-notice">
-                <v-icon>mdi-repeat</v-icon>
-                Funkspruch wird wiederholt...
-              </div>
+              Felder korrekt: {{ result.hits }}/{{ activeLesson.fields.length }} · Ähnlichkeit: {{ Math.round(result.sim * 100) }}%
             </div>
           </div>
-
-          <!-- Fehler anzeigen -->
-          <div v-if="tts.error.value" class="error-message">
-            <v-icon>mdi-alert</v-icon>
-            {{ tts.error.value }}
-          </div>
-        </div>
-        <div v-else class="col">
-          <div class="label">Deine Readback</div>
-          <v-textarea v-model="userInput" rows="4" class="input" placeholder="Tippen (PTT später)"/>
-          <div class="row">
-            <button class="btn primary" :disabled="evaluating" @click="evaluate">
-              <v-icon>mdi-check</v-icon>
-              Prüfen
-            </button>
-            <button class="btn ghost" @click="userInput=''">
-              <v-icon>mdi-eraser</v-icon>
-              Löschen
-            </button>
-          </div>
-
-          <div v-if="result" class="score">
-            <div class="score-num">{{ result.score }}%</div>
-            <div class="muted small">
-              Keywords: {{ result.hits }}/{{ activeLesson.keywords.length }} · Ähnlichkeit:
-              {{ Math.round(result.sim * 100) }}%
+          <div v-if="result" class="field-checks">
+            <div v-for="field in result.fields" :key="field.key" class="field-check" :class="{ ok: field.pass }">
+              <div class="field-name">{{ field.label }}</div>
+              <div class="field-answer">{{ field.answer || '—' }}</div>
+              <div class="field-expected">Soll: {{ field.expected }}</div>
             </div>
           </div>
         </div>
@@ -403,7 +345,7 @@
           <div class="set-row">
             <span>Probe-TTS</span>
             <div class="row">
-              <button class="btn soft" @click="speak('Frankfurt Ground, Lufthansa one two three, request taxi.')">
+              <button class="btn soft" @click="say('Frankfurt Ground, Lufthansa one two three, request taxi.')">
                 <v-icon>mdi-volume-high</v-icon>
                 Probe
               </button>
@@ -431,130 +373,1413 @@
 
 
 <script setup lang="ts">
-import {ref, computed, watch} from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
-/** AUDIO **/
-const tts = useRadioTTS()
-const textReadback = ref(false)
+type BlankWidth = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
-// Server TTS verwenden
-function speak(text: string) {
-  if (cfg.value.tts) {
-    tts.speakBrowser(text)
-  } else {
-    tts.speakServer(text, {
-      level: cfg.value.radioLevel,
-      voice: cfg.value.voice || 'alloy',
-      moduleId: current.value?.id,
-      lessonId: activeLesson.value?.id
-    })
+type Frequency = {
+  type: string
+  label: string
+  value: string
+}
+
+type AirportData = {
+  icao: string
+  name: string
+  city: string
+  runways: string[]
+  stands: string[]
+  sids: string[]
+  transitions: string[]
+  approaches: string[]
+  taxi: string[]
+  freqs: {
+    atis: string
+    delivery: string
+    ground: string
+    tower: string
+    departure: string
+    approach: string
+  }
+  transLevel: string
+}
+
+type AirlineData = {
+  code: string
+  call: string
+}
+
+type Scenario = {
+  callsign: string
+  airlineCode: string
+  airlineCall: string
+  radioCall: string
+  callsignNato: string
+  flightNumber: string
+  flightNumberWords: string
+  airport: AirportData
+  destination: AirportData
+  runway: string
+  runwayWords: string
+  stand: string
+  taxiRoute: string
+  sid: string
+  transition: string
+  approach: string
+  altitudes: {
+    initial: number
+    climb: number
+    initialWords: string
+    climbWords: string
+  }
+  squawk: string
+  squawkWords: string
+  qnh: number
+  qnhWords: string
+  atisCode: string
+  atisText: string
+  atisSummary: {
+    runway: string
+    wind: string
+    visibility: string
+    temperature: string
+    dewpoint: string
+    qnh: string
+  }
+  wind: string
+  windWords: string
+  visibility: string
+  visibilityWords: string
+  temperature: number
+  temperatureWords: string
+  dewpoint: number
+  dewpointWords: string
+  metar: string
+  metarSegments: {
+    wind: string
+    visibility: string
+    temp: string
+    qnh: string
+  }
+  readability: number
+  readabilityWord: string
+  readabilityPhrase: string
+  frequencies: Frequency[]
+  frequencyWords: Record<string, string>
+  atisFreq: string
+  deliveryFreq: string
+  groundFreq: string
+  towerFreq: string
+  departureFreq: string
+  approachFreq: string
+  transLevel: string
+  remarks: string
+}
+
+type LessonField = {
+  key: string
+  label: string
+  expected: (scenario: Scenario) => string
+  alternatives?: (scenario: Scenario) => string[]
+  threshold?: number
+  placeholder?: string
+  width?: BlankWidth
+  inputmode?: 'text' | 'numeric'
+}
+
+type ReadbackSegment =
+  | { type: 'text'; text: string | ((scenario: Scenario) => string) }
+  | { type: 'field'; key: string; width?: BlankWidth }
+
+type Lesson = {
+  id: string
+  title: string
+  desc: string
+  keywords: string[]
+  hints: string[]
+  fields: LessonField[]
+  readback: ReadbackSegment[]
+  defaultFrequency?: string
+  phrase: (scenario: Scenario) => string
+  info: (scenario: Scenario) => string[]
+  generate: () => Scenario
+}
+
+type ModuleDef = {
+  id: string
+  title: string
+  subtitle: string
+  art: string
+  lessons: Lesson[]
+}
+
+type FieldState = {
+  key: string
+  label: string
+  expected: string
+  answer: string
+  similarity: number
+  pass: boolean
+}
+
+type ScoreResult = {
+  score: number
+  hits: number
+  sim: number
+  passed: boolean
+  fields: FieldState[]
+}
+
+const natoMap: Record<string, string> = {
+  A: 'Alpha',
+  B: 'Bravo',
+  C: 'Charlie',
+  D: 'Delta',
+  E: 'Echo',
+  F: 'Foxtrot',
+  G: 'Golf',
+  H: 'Hotel',
+  I: 'India',
+  J: 'Juliett',
+  K: 'Kilo',
+  L: 'Lima',
+  M: 'Mike',
+  N: 'November',
+  O: 'Oscar',
+  P: 'Papa',
+  Q: 'Quebec',
+  R: 'Romeo',
+  S: 'Sierra',
+  T: 'Tango',
+  U: 'Uniform',
+  V: 'Victor',
+  W: 'Whiskey',
+  X: 'X-ray',
+  Y: 'Yankee',
+  Z: 'Zulu'
+}
+
+const atcNumberWords: Record<string, string> = {
+  '0': 'zero',
+  '1': 'one',
+  '2': 'two',
+  '3': 'tree',
+  '4': 'fower',
+  '5': 'fife',
+  '6': 'six',
+  '7': 'seven',
+  '8': 'eight',
+  '9': 'niner'
+}
+
+const runwaySuffixWords: Record<string, string> = {
+  L: 'left',
+  R: 'right',
+  C: 'center'
+}
+
+const readabilityScale = [
+  { level: 1, word: 'one', description: 'Unreadable' },
+  { level: 2, word: 'two', description: 'Barely readable' },
+  { level: 3, word: 'three', description: 'Readable with difficulty' },
+  { level: 4, word: 'four', description: 'Readable' },
+  { level: 5, word: 'five', description: 'Perfectly readable' }
+]
+
+const airlines: AirlineData[] = [
+  { code: 'DLH', call: 'Lufthansa' },
+  { code: 'BAW', call: 'Speedbird' },
+  { code: 'AFR', call: 'Air France' },
+  { code: 'KLM', call: 'KLM' },
+  { code: 'SWR', call: 'Swiss' },
+  { code: 'EZY', call: 'Easyjet' }
+]
+
+const airportsData: AirportData[] = [
+  {
+    icao: 'EDDF',
+    name: 'Frankfurt/Main',
+    city: 'Frankfurt',
+    runways: ['25C', '25R', '07C', '07R', '18'],
+    stands: ['V155', 'A12', 'B24', 'G5', 'H43', 'L21'],
+    sids: ['ANEKI 7S', 'TOBAK 5Q', 'OBOKA 6N'],
+    transitions: ['ANEKI', 'TOBAK', 'OBOKA'],
+    approaches: ['ILS Z 25C', 'ILS Y 07C'],
+    taxi: ['N3 U4', 'V A', 'N7 K', 'S V12'],
+    freqs: {
+      atis: '126.350',
+      delivery: '121.900',
+      ground: '121.800',
+      tower: '118.700',
+      departure: '125.350',
+      approach: '120.800'
+    },
+    transLevel: 'FL070'
+  },
+  {
+    icao: 'EDDM',
+    name: 'München',
+    city: 'Munich',
+    runways: ['26R', '26L', '08R', '08L'],
+    stands: ['211', '214', '302', 'N16', 'H45'],
+    sids: ['OBAXA 3S', 'MERSI 6S', 'TULSI 5M'],
+    transitions: ['OBAXA', 'MERSI', 'TULSI'],
+    approaches: ['ILS Z 26R', 'ILS Y 08R'],
+    taxi: ['L4 N3', 'P3 W2', 'S1 D2'],
+    freqs: {
+      atis: '122.130',
+      delivery: '121.775',
+      ground: '121.800',
+      tower: '118.700',
+      departure: '129.050',
+      approach: '120.800'
+    },
+    transLevel: 'FL070'
+  },
+  {
+    icao: 'EHAM',
+    name: 'Amsterdam Schiphol',
+    city: 'Amsterdam',
+    runways: ['24', '36L', '18C', '09'],
+    stands: ['D14', 'E22', 'F8', 'H4'],
+    sids: ['SUGOL 2S', 'ANDIK 2S', 'ARNEM 2V'],
+    transitions: ['SUGOL', 'ANDIK', 'ARNEM'],
+    approaches: ['ILS Z 24', 'ILS Y 18C'],
+    taxi: ['A5 B2', 'K1 V3', 'W4 S8'],
+    freqs: {
+      atis: '136.050',
+      delivery: '121.800',
+      ground: '121.900',
+      tower: '119.220',
+      departure: '123.875',
+      approach: '121.200'
+    },
+    transLevel: 'FL060'
+  }
+]
+
+const atisLetters = 'ABCDEFGHJKLMNOPQRSTUVWXYZ'.split('')
+
+function gradientArt(colors: string[]): string {
+  const stops = colors
+    .map((color, idx) => `<stop offset="${Math.round((idx / Math.max(colors.length - 1, 1)) * 100)}%" stop-color="${color}"/>`)
+    .join('')
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">${stops}</linearGradient></defs><rect fill="url(#g)" width="400" height="240"/></svg>`
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+}
+
+function choice<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)]
+}
+
+function randInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+function randomFlightNumber(): string {
+  const length = Math.random() < 0.5 ? 3 : 4
+  let value = ''
+  for (let i = 0; i < length; i++) {
+    value += String(randInt(0, 9))
+  }
+  if (value.startsWith('0')) value = '1' + value.slice(1)
+  return value
+}
+
+function generateSquawk(): string {
+  let code = ''
+  for (let i = 0; i < 4; i++) {
+    code += String(randInt(0, 7))
+  }
+  return code
+}
+
+function digitsToWords(value: string): string {
+  return value
+    .split('')
+    .map(char => atcNumberWords[char] ?? char)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function lettersToNato(value: string): string {
+  return value
+    .toUpperCase()
+    .split('')
+    .map(char => natoMap[char] ?? char)
+    .join(' ')
+}
+
+function runwayToWords(runway: string): string {
+  const digits = runway.replace(/[^0-9]/g, '').padStart(2, '0')
+  const suffix = runway.replace(/[0-9]/g, '')
+  const base = digits
+    .split('')
+    .map(char => atcNumberWords[char] ?? char)
+    .join(' ')
+  const suffixWord = suffix ? runwaySuffixWords[suffix] ?? suffix.toLowerCase() : ''
+  return suffixWord ? `${base} ${suffixWord}` : base
+}
+
+function frequencyToSpeech(freq: string): string {
+  const [intPart, decimalPart] = freq.split('.')
+  const intWords = digitsToWords(intPart)
+  if (!decimalPart) return intWords
+  const trimmed = decimalPart.replace(/0+$/, '') || decimalPart
+  const decWords = trimmed
+    .split('')
+    .map(char => atcNumberWords[char] ?? char)
+    .join(' ')
+  return `${intWords} decimal ${decWords}`
+}
+
+function formatTemp(temp: number): string {
+  const prefix = temp < 0 ? 'M' : ''
+  return `${prefix}${Math.abs(temp).toString().padStart(2, '0')}`
+}
+
+function temperatureToWords(temp: number): string {
+  const prefix = temp < 0 ? 'minus' : 'plus'
+  return `${prefix} ${digitsToWords(Math.abs(temp).toString())}`
+}
+
+function qnhToWords(qnh: number): string {
+  return digitsToWords(qnh.toString())
+}
+
+function windToWords(direction: number, speed: number): string {
+  const dir = direction.toString().padStart(3, '0')
+  const spd = speed.toString().padStart(2, '0')
+  return `${dir
+    .split('')
+    .map(char => atcNumberWords[char] ?? char)
+    .join(' ')} degrees at ${spd
+    .split('')
+    .map(char => atcNumberWords[char] ?? char)
+    .join(' ')} knots`
+}
+
+function visibilityToWords(vis: string): string {
+  if (vis === '9999') return 'ten kilometres or more'
+  const numeric = Number(vis)
+  if (!Number.isNaN(numeric)) {
+    if (numeric >= 1000) {
+      const km = Math.round(numeric / 1000)
+      return `${digitsToWords(km.toString())} kilometres`
+    }
+    return `${digitsToWords(vis)} metres`
+  }
+  return vis
+}
+
+function altitudeToWords(value: number): string {
+  const thousands = Math.floor(value / 1000)
+  const remainder = value % 1000
+  let words = thousands ? `${digitsToWords(thousands.toString())} thousand` : ''
+  if (remainder) {
+    words = `${words} ${digitsToWords(remainder.toString())}`.trim()
+  }
+  return words.trim()
+}
+
+function createBaseScenario(): Scenario {
+  const airport = choice(airportsData)
+  const possibleDestinations = airportsData.filter(a => a.icao !== airport.icao)
+  const destination = choice(possibleDestinations)
+  const airline = choice(airlines)
+  const flightNumber = randomFlightNumber()
+  const callsign = `${airline.code}${flightNumber}`
+  const runway = choice(airport.runways)
+  const stand = choice(airport.stands)
+  const taxiRoute = choice(airport.taxi)
+  const sid = choice(airport.sids)
+  const transition = choice(airport.transitions)
+  const approach = choice(airport.approaches)
+  const altitude = choice([4000, 5000, 6000, 7000])
+  const climbAltitude = altitude + 2000
+  const squawk = generateSquawk()
+  const qnh = randInt(984, 1032)
+  const windDirection = randInt(0, 35) * 10
+  const windSpeed = randInt(3, 18)
+  const windDirectionStr = windDirection.toString().padStart(3, '0')
+  const windSpeedStr = windSpeed.toString().padStart(2, '0')
+  const visibility = choice(['9999', '9000', '8000', '6000'])
+  const cloud = choice(['SKC', 'FEW020', 'SCT025', 'BKN030'])
+  const temperature = randInt(-3, 28)
+  const dewpoint = Math.max(temperature - randInt(2, 6), -10)
+  const atisCode = choice(atisLetters)
+  const remarks = choice(['NOSIG', 'BECMG 4000', 'TEMPO -SHRA'])
+  const now = new Date()
+  const minute = Math.floor(now.getUTCMinutes() / 5) * 5
+  const timestamp = `${now.getUTCDate().toString().padStart(2, '0')}${now
+    .getUTCHours()
+    .toString()
+    .padStart(2, '0')}${minute.toString().padStart(2, '0')}Z`
+  const metarWindGroup = `${windDirectionStr}${windSpeedStr}KT`
+  const tempGroup = `${formatTemp(temperature)}/${formatTemp(dewpoint)}`
+  const metar = `${airport.icao} ${timestamp} ${metarWindGroup} ${visibility} ${cloud} ${tempGroup} Q${qnh
+    .toString()
+    .padStart(4, '0')} ${remarks}`
+
+  const frequencies: Frequency[] = [
+    { type: 'ATIS', label: 'ATIS', value: airport.freqs.atis },
+    { type: 'DEL', label: 'Delivery', value: airport.freqs.delivery },
+    { type: 'GND', label: 'Ground', value: airport.freqs.ground },
+    { type: 'TWR', label: 'Tower', value: airport.freqs.tower },
+    { type: 'DEP', label: 'Departure', value: airport.freqs.departure },
+    { type: 'APP', label: 'Approach', value: airport.freqs.approach }
+  ]
+
+  const frequencyWords: Record<string, string> = frequencies.reduce((acc, freq) => {
+    acc[freq.type] = frequencyToSpeech(freq.value)
+    return acc
+  }, {} as Record<string, string>)
+
+  const readability = choice(readabilityScale)
+
+  const atisText = `${airport.name} information ${atisCode}, time ${timestamp.slice(2, 4)}${timestamp.slice(4, 6)}, runway ${
+    runwayToWords(runway)
+  } in use, wind ${windToWords(windDirection, windSpeed)}, visibility ${visibilityToWords(visibility)}, temperature ${temperatureToWords(
+    temperature
+  )}, dew point ${temperatureToWords(dewpoint)}, QNH ${qnh}, transition level ${airport.transLevel.replace('FL', '')}.`
+
+  return {
+    callsign,
+    airlineCode: airline.code,
+    airlineCall: airline.call,
+    radioCall: `${airline.call} ${digitsToWords(flightNumber)}`,
+    callsignNato: lettersToNato(airline.code),
+    flightNumber,
+    flightNumberWords: digitsToWords(flightNumber),
+    airport,
+    destination,
+    runway,
+    runwayWords: runwayToWords(runway),
+    stand,
+    taxiRoute,
+    sid,
+    transition,
+    approach,
+    altitudes: {
+      initial: altitude,
+      climb: climbAltitude,
+      initialWords: altitudeToWords(altitude),
+      climbWords: altitudeToWords(climbAltitude)
+    },
+    squawk,
+    squawkWords: digitsToWords(squawk),
+    qnh,
+    qnhWords: qnhToWords(qnh),
+    atisCode,
+    atisText,
+    atisSummary: {
+      runway,
+      wind: `${windDirectionStr}/${windSpeedStr}`,
+      visibility,
+      temperature: `${temperature}°C`,
+      dewpoint: `${dewpoint}°C`,
+      qnh: `QNH ${qnh}`
+    },
+    wind: `${windDirectionStr}/${windSpeedStr}`,
+    windWords: windToWords(windDirection, windSpeed),
+    visibility,
+    visibilityWords: visibilityToWords(visibility),
+    temperature,
+    temperatureWords: temperatureToWords(temperature),
+    dewpoint,
+    dewpointWords: temperatureToWords(dewpoint),
+    metar,
+    metarSegments: {
+      wind: metarWindGroup,
+      visibility,
+      temp: tempGroup,
+      qnh: `Q${qnh.toString().padStart(4, '0')}`
+    },
+    readability: readability.level,
+    readabilityWord: readability.word,
+    readabilityPhrase: `Readability ${readability.word}`,
+    frequencies,
+    frequencyWords,
+    atisFreq: airport.freqs.atis,
+    deliveryFreq: airport.freqs.delivery,
+    groundFreq: airport.freqs.ground,
+    towerFreq: airport.freqs.tower,
+    departureFreq: airport.freqs.departure,
+    approachFreq: airport.freqs.approach,
+    transLevel: airport.transLevel,
+    remarks
   }
 }
 
-// PTT-Button hinzufügen (optional)
-const handlePTT = async () => {
-  if (tts.isRecording.value) {
-    const audioBlob = await tts.stopRecording()
-    if (audioBlob && activeLesson.value) {
-      const result = await tts.submitPTT(audioBlob, {
-        expectedText: activeLesson.value.target,
-        moduleId: current.value!.id,
-        lessonId: activeLesson.value.id
-      })
+function norm(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
-      // Bewertung anzeigen
-      console.log('PTT Score:', result.evaluation.score)
-      if (result.playAgain) {
-        speak(activeLesson.value.target) // Nochmal abspielen
+function lev(a: string, b: string): number {
+  const m = a.length
+  const n = b.length
+  if (m === 0) return n
+  if (n === 0) return m
+  const dp = new Array(n + 1).fill(0)
+  for (let j = 0; j <= n; j++) dp[j] = j
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0]
+    dp[0] = i
+    for (let j = 1; j <= n; j++) {
+      const temp = dp[j]
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + cost)
+      prev = temp
+    }
+  }
+  return dp[n]
+}
+
+function similarity(a: string, b: string): number {
+  if (!a && !b) return 1
+  const normA = norm(a)
+  const normB = norm(b)
+  if (!normA && !normB) return 1
+  const distance = lev(normA, normB)
+  const maxLen = Math.max(normA.length, normB.length, 1)
+  return 1 - distance / maxLen
+}
+
+const modules = ref<ModuleDef[]>([
+  {
+    id: 'normalize',
+    title: 'Normalize · Fundamentals',
+    subtitle: 'Alphabet, ATIS, METAR & Radio Check',
+    art: gradientArt(['#0ea5e9', '#22d3ee', '#0f172a']),
+    lessons: [
+      {
+        id: 'icao-alphabet',
+        title: 'ICAO Alphabet & Zahlen',
+        desc: 'Buchstaben und Ziffern sauber buchstabieren',
+        keywords: ['Alphabet', 'Numbers', 'Normalize'],
+        hints: [
+          'Buchstabiere jeden Buchstaben mit dem ICAO-Namen (z. B. Delta, Lima, Hotel).',
+          'Ziffern im Funk: tree, fower, fife, niner.'
+        ],
+        fields: [
+          {
+            key: 'letters',
+            label: 'Buchstaben',
+            expected: scenario => scenario.callsignNato,
+            placeholder: 'Delta Lima Hotel',
+            width: 'xl',
+            threshold: 0.9
+          },
+          {
+            key: 'digits',
+            label: 'Zahlen',
+            expected: scenario => scenario.flightNumberWords,
+            placeholder: 'one two three',
+            width: 'lg',
+            threshold: 0.88
+          }
+        ],
+        readback: [
+          { type: 'text', text: 'Rufezeichen: ' },
+          { type: 'field', key: 'letters', width: 'lg' },
+          { type: 'text', text: ' · ' },
+          { type: 'field', key: 'digits', width: 'md' }
+        ],
+        defaultFrequency: 'DEL',
+        phrase: scenario => `${scenario.callsignNato} ${scenario.flightNumberWords}`,
+        info: scenario => [
+          `Kennzeichen: ${scenario.callsign}`,
+          `Airline Call: ${scenario.radioCall}`,
+          `ICAO: ${scenario.callsignNato}`,
+          `Flightnummer gesprochen: ${scenario.flightNumberWords}`
+        ],
+        generate: createBaseScenario
+      },
+      {
+        id: 'atis',
+        title: 'ATIS verstehen',
+        desc: 'Kennung und Kerndaten aus der ATIS ziehen',
+        keywords: ['ATIS', 'Wetter'],
+        hints: [
+          'Schreibe nur den Buchstaben für die ATIS-Information.',
+          'Runway, Wind und QNH exakt übernehmen.'
+        ],
+        fields: [
+          {
+            key: 'atis-code',
+            label: 'ATIS',
+            expected: scenario => scenario.atisCode,
+            alternatives: scenario => [
+              scenario.atisCode,
+              scenario.atisCode.toLowerCase(),
+              `Information ${scenario.atisCode}`
+            ],
+            placeholder: 'Kilo',
+            width: 'xs',
+            threshold: 0.9
+          },
+          {
+            key: 'atis-runway',
+            label: 'Runway',
+            expected: scenario => scenario.runway,
+            alternatives: scenario => [scenario.runway.replace(/^0/, ''), scenario.runwayWords],
+            width: 'sm'
+          },
+          {
+            key: 'atis-wind',
+            label: 'Wind',
+            expected: scenario => scenario.wind,
+            alternatives: scenario => [
+              scenario.wind,
+              `${scenario.wind}KT`,
+              scenario.windWords
+            ],
+            width: 'md'
+          },
+          {
+            key: 'atis-qnh',
+            label: 'QNH',
+            expected: scenario => scenario.qnh.toString(),
+            alternatives: scenario => [`QNH ${scenario.qnh}`, scenario.qnhWords],
+            width: 'sm'
+          }
+        ],
+        readback: [
+          { type: 'text', text: 'Information ' },
+          { type: 'field', key: 'atis-code', width: 'xs' },
+          { type: 'text', text: ', runway ' },
+          { type: 'field', key: 'atis-runway', width: 'sm' },
+          { type: 'text', text: ', wind ' },
+          { type: 'field', key: 'atis-wind', width: 'md' },
+          { type: 'text', text: ', QNH ' },
+          { type: 'field', key: 'atis-qnh', width: 'sm' }
+        ],
+        defaultFrequency: 'ATIS',
+        phrase: scenario => scenario.atisText,
+        info: scenario => [
+          `Runway: ${scenario.runway}`,
+          `Wind: ${scenario.wind} (${scenario.windWords})`,
+          `Sicht: ${scenario.visibility} (${scenario.visibilityWords})`,
+          `QNH: ${scenario.qnh}`
+        ],
+        generate: createBaseScenario
+      },
+      {
+        id: 'metar',
+        title: 'METAR entschlüsseln',
+        desc: 'Rohe METAR-Werte extrahieren',
+        keywords: ['METAR', 'Weather'],
+        hints: [
+          'METAR blockweise lesen: Wind – Sicht – Wolken – Temperatur – QNH.',
+          'Der Temperaturblock hat die Form 18/10, Minuswerte beginnen mit M.'
+        ],
+        fields: [
+          {
+            key: 'metar-wind',
+            label: 'Wind',
+            expected: scenario => scenario.metarSegments.wind,
+            alternatives: scenario => [
+              scenario.metarSegments.wind,
+              `${scenario.wind.replace('/', '')}KT`,
+              scenario.wind
+            ],
+            width: 'md'
+          },
+          {
+            key: 'metar-vis',
+            label: 'Sicht',
+            expected: scenario => scenario.metarSegments.visibility,
+            alternatives: scenario => [scenario.visibility],
+            placeholder: '9999',
+            width: 'sm',
+            inputmode: 'numeric'
+          },
+          {
+            key: 'metar-temp',
+            label: 'Temp/Dew',
+            expected: scenario => scenario.metarSegments.temp,
+            alternatives: scenario => [
+              `${formatTemp(scenario.temperature)}/${formatTemp(scenario.dewpoint)}`
+            ],
+            width: 'md'
+          },
+          {
+            key: 'metar-qnh',
+            label: 'QNH',
+            expected: scenario => scenario.metarSegments.qnh,
+            alternatives: scenario => [`Q${scenario.qnh}`, scenario.qnh.toString()],
+            width: 'sm'
+          }
+        ],
+        readback: [
+          { type: 'text', text: 'Wind ' },
+          { type: 'field', key: 'metar-wind', width: 'md' },
+          { type: 'text', text: ', Sicht ' },
+          { type: 'field', key: 'metar-vis', width: 'sm' },
+          { type: 'text', text: ', Temperatur ' },
+          { type: 'field', key: 'metar-temp', width: 'md' },
+          { type: 'text', text: ', QNH ' },
+          { type: 'field', key: 'metar-qnh', width: 'sm' }
+        ],
+        defaultFrequency: 'ATIS',
+        phrase: scenario => scenario.metar,
+        info: scenario => [
+          `METAR: ${scenario.metar}`,
+          `Interpretation: Wind ${scenario.metarSegments.wind}, Sicht ${scenario.visibilityWords}, Temperatur ${scenario.temperature}°C, QNH ${scenario.qnh}`
+        ],
+        generate: createBaseScenario
+      },
+      {
+        id: 'radio-check',
+        title: 'Radio Check',
+        desc: 'Lesbarkeit melden',
+        keywords: ['Ground', 'Comms'],
+        hints: [
+          'Antwort besteht aus "Readability" plus Zahl.',
+          'Beende den Check immer mit deinem Callsign.'
+        ],
+        fields: [
+          {
+            key: 'rc-callsign',
+            label: 'Callsign',
+            expected: scenario => scenario.radioCall,
+            alternatives: scenario => [
+              scenario.radioCall,
+              `${scenario.airlineCall} ${scenario.flightNumber}`,
+              scenario.callsign
+            ],
+            placeholder: 'Lufthansa one two three',
+            width: 'lg'
+          },
+          {
+            key: 'rc-readability',
+            label: 'Lesbarkeit',
+            expected: scenario => scenario.readabilityWord,
+            alternatives: scenario => [scenario.readability.toString(), scenario.readabilityWord],
+            placeholder: 'five',
+            width: 'sm'
+          }
+        ],
+        readback: [
+          { type: 'text', text: 'This is ' },
+          { type: 'field', key: 'rc-callsign', width: 'lg' },
+          { type: 'text', text: ', readability ' },
+          { type: 'field', key: 'rc-readability', width: 'sm' }
+        ],
+        defaultFrequency: 'GND',
+        phrase: scenario => `${scenario.airport.name} Ground, ${scenario.radioCall}, radio check on ${scenario.groundFreq}.`,
+        info: scenario => [
+          `Frequenz: ${scenario.groundFreq} (${scenario.frequencyWords.GND})`,
+          `Erwartete Antwort: Readability ${scenario.readability} (${scenario.readabilityWord})`
+        ],
+        generate: createBaseScenario
       }
-    }
-  } else {
-    await tts.startRecording()
+    ]
+  },
+  {
+    id: 'arc',
+    title: 'ARC Decision Tree',
+    subtitle: 'Vom Clearance Call bis Departure',
+    art: gradientArt(['#f97316', '#fb923c', '#0f172a']),
+    lessons: [
+      {
+        id: 'clearance-contact',
+        title: 'Delivery: Erstkontakt',
+        desc: 'Clearance Delivery kontaktieren',
+        keywords: ['Delivery', 'Clearance'],
+        hints: [
+          'Reihenfolge: Einheit, Callsign, ATIS, Ziel, Stand, Request.',
+          'ATIS als einzelner Buchstabe sprechen.'
+        ],
+        fields: [
+          {
+            key: 'cd-atis',
+            label: 'ATIS',
+            expected: scenario => scenario.atisCode,
+            alternatives: scenario => [
+              scenario.atisCode,
+              scenario.atisCode.toLowerCase(),
+              `Information ${scenario.atisCode}`
+            ],
+            width: 'xs',
+            threshold: 0.9
+          },
+          {
+            key: 'cd-dest',
+            label: 'Destination',
+            expected: scenario => scenario.destination.city,
+            alternatives: scenario => [scenario.destination.icao, scenario.destination.name],
+            width: 'md'
+          },
+          {
+            key: 'cd-stand',
+            label: 'Stand',
+            expected: scenario => scenario.stand,
+            width: 'sm'
+          }
+        ],
+        readback: [
+          {
+            type: 'text',
+            text: scenario => `${scenario.airport.city} Delivery, ${scenario.radioCall}, information `
+          },
+          { type: 'field', key: 'cd-atis', width: 'xs' },
+          { type: 'text', text: ', IFR to ' },
+          { type: 'field', key: 'cd-dest', width: 'md' },
+          { type: 'text', text: ', stand ' },
+          { type: 'field', key: 'cd-stand', width: 'sm' },
+          { type: 'text', text: ', request clearance.' }
+        ],
+        defaultFrequency: 'DEL',
+        phrase: scenario => `${scenario.airport.city} Delivery, ${scenario.radioCall}, information ${scenario.atisCode}, IFR to ${scenario.destination.city}, stand ${scenario.stand}, request clearance.`,
+        info: scenario => [
+          `ATIS ${scenario.atisCode}`,
+          `Ziel: ${scenario.destination.city} (${scenario.destination.icao})`,
+          `Stand: ${scenario.stand}`
+        ],
+        generate: createBaseScenario
+      },
+      {
+        id: 'clearance-readback',
+        title: 'Clearance Readback',
+        desc: 'Freigabe komplett zurücklesen',
+        keywords: ['Delivery', 'Readback'],
+        hints: [
+          'Reihenfolge merken: Ziel – SID – Runway – Altitude – Squawk.',
+          'Zahlen bei Altitude und Squawk sauber ausschreiben.'
+        ],
+        fields: [
+          {
+            key: 'clr-dest',
+            label: 'Destination',
+            expected: scenario => scenario.destination.city,
+            alternatives: scenario => [scenario.destination.icao, scenario.destination.name],
+            width: 'md'
+          },
+          {
+            key: 'clr-sid',
+            label: 'SID',
+            expected: scenario => scenario.sid,
+            width: 'lg'
+          },
+          {
+            key: 'clr-runway',
+            label: 'Runway',
+            expected: scenario => scenario.runway,
+            alternatives: scenario => [scenario.runway.replace(/^0/, ''), scenario.runwayWords],
+            width: 'sm'
+          },
+          {
+            key: 'clr-alt',
+            label: 'Initial Altitude',
+            expected: scenario => scenario.altitudes.initialWords,
+            alternatives: scenario => [scenario.altitudes.initial.toString(), `${scenario.altitudes.initial} feet`],
+            width: 'md'
+          },
+          {
+            key: 'clr-squawk',
+            label: 'Squawk',
+            expected: scenario => scenario.squawkWords,
+            alternatives: scenario => [scenario.squawk, scenario.squawk.split('').join(' ')],
+            width: 'md'
+          }
+        ],
+        readback: [
+          { type: 'text', text: scenario => `${scenario.radioCall} cleared ` },
+          { type: 'field', key: 'clr-dest', width: 'md' },
+          { type: 'text', text: ' via ' },
+          { type: 'field', key: 'clr-sid', width: 'lg' },
+          { type: 'text', text: ', runway ' },
+          { type: 'field', key: 'clr-runway', width: 'sm' },
+          { type: 'text', text: ', climb ' },
+          { type: 'field', key: 'clr-alt', width: 'md' },
+          { type: 'text', text: ', squawk ' },
+          { type: 'field', key: 'clr-squawk', width: 'md' }
+        ],
+        defaultFrequency: 'DEL',
+        phrase: scenario => `${scenario.radioCall}, cleared to ${scenario.destination.city} via ${scenario.sid}, runway ${scenario.runway}, climb ${scenario.altitudes.initial} feet, squawk ${scenario.squawk}.`,
+        info: scenario => [
+          `SID: ${scenario.sid} (${scenario.transition})`,
+          `Initial Altitude: ${scenario.altitudes.initial} ft (${scenario.altitudes.initialWords})`,
+          `Squawk: ${scenario.squawk} (${scenario.squawkWords})`
+        ],
+        generate: createBaseScenario
+      },
+      {
+        id: 'pushback',
+        title: 'Push & Start Readback',
+        desc: 'Pushback-Freigabe bestätigen',
+        keywords: ['Ground', 'Pushback'],
+        hints: [
+          'Bahnrichtung und QNH übernehmen, Callsign ans Ende.',
+          'QNH darf als Zahl oder "QNH xxxx" stehen.'
+        ],
+        fields: [
+          {
+            key: 'push-runway',
+            label: 'Runway',
+            expected: scenario => scenario.runway,
+            alternatives: scenario => [scenario.runway.replace(/^0/, ''), scenario.runwayWords],
+            width: 'sm'
+          },
+          {
+            key: 'push-qnh',
+            label: 'QNH',
+            expected: scenario => scenario.qnh.toString(),
+            alternatives: scenario => [`QNH ${scenario.qnh}`, scenario.qnhWords],
+            width: 'sm'
+          },
+          {
+            key: 'push-callsign',
+            label: 'Callsign',
+            expected: scenario => scenario.radioCall,
+            alternatives: scenario => [
+              scenario.radioCall,
+              `${scenario.airlineCall} ${scenario.flightNumber}`,
+              scenario.callsign
+            ],
+            width: 'lg'
+          }
+        ],
+        readback: [
+          { type: 'text', text: 'Push and start approved, facing runway ' },
+          { type: 'field', key: 'push-runway', width: 'sm' },
+          { type: 'text', text: ', QNH ' },
+          { type: 'field', key: 'push-qnh', width: 'sm' },
+          { type: 'text', text: ', ' },
+          { type: 'field', key: 'push-callsign', width: 'lg' }
+        ],
+        defaultFrequency: 'GND',
+        phrase: scenario => `${scenario.radioCall}, push and start approved, facing runway ${scenario.runway}. QNH ${scenario.qnh}.`,
+        info: scenario => [
+          `Stand: ${scenario.stand}`,
+          `Ground: ${scenario.groundFreq} (${scenario.frequencyWords.GND})`
+        ],
+        generate: createBaseScenario
+      },
+      {
+        id: 'taxi',
+        title: 'Taxi Readback',
+        desc: 'Taxi-Freigabe mit Hold Short',
+        keywords: ['Ground', 'Taxi'],
+        hints: [
+          'Route wie gehört wiederholen, inklusive Hold Short.',
+          'Am Ende wieder Callsign.'
+        ],
+        fields: [
+          {
+            key: 'taxi-runway',
+            label: 'Runway',
+            expected: scenario => scenario.runway,
+            alternatives: scenario => [scenario.runway.replace(/^0/, ''), scenario.runwayWords],
+            width: 'sm'
+          },
+          {
+            key: 'taxi-route',
+            label: 'Route',
+            expected: scenario => scenario.taxiRoute,
+            alternatives: scenario => [scenario.taxiRoute, `via ${scenario.taxiRoute}`],
+            width: 'lg'
+          },
+          {
+            key: 'taxi-hold',
+            label: 'Hold Short',
+            expected: scenario => scenario.runway,
+            alternatives: scenario => [scenario.runway.replace(/^0/, ''), scenario.runwayWords],
+            width: 'sm'
+          },
+          {
+            key: 'taxi-callsign',
+            label: 'Callsign',
+            expected: scenario => scenario.radioCall,
+            alternatives: scenario => [
+              scenario.radioCall,
+              `${scenario.airlineCall} ${scenario.flightNumber}`,
+              scenario.callsign
+            ],
+            width: 'lg'
+          }
+        ],
+        readback: [
+          { type: 'text', text: 'Taxi to runway ' },
+          { type: 'field', key: 'taxi-runway', width: 'sm' },
+          { type: 'text', text: ' via ' },
+          { type: 'field', key: 'taxi-route', width: 'lg' },
+          { type: 'text', text: ', holding short runway ' },
+          { type: 'field', key: 'taxi-hold', width: 'sm' },
+          { type: 'text', text: ', ' },
+          { type: 'field', key: 'taxi-callsign', width: 'lg' }
+        ],
+        defaultFrequency: 'GND',
+        phrase: scenario => `${scenario.radioCall}, taxi to runway ${scenario.runway} via ${scenario.taxiRoute}, hold short runway ${scenario.runway}.`,
+        info: scenario => [
+          `Taxi-Route: ${scenario.taxiRoute}`,
+          `Hold Short: ${scenario.runway}`
+        ],
+        generate: createBaseScenario
+      },
+      {
+        id: 'takeoff',
+        title: 'Takeoff Clearance',
+        desc: 'Takeoff-Freigabe bestätigen',
+        keywords: ['Tower', 'Departure'],
+        hints: [
+          'Reihenfolge: Runway – cleared for takeoff – Callsign.',
+          'Windangabe kann entfallen, wenn nicht gefordert.'
+        ],
+        fields: [
+          {
+            key: 'tko-runway',
+            label: 'Runway',
+            expected: scenario => scenario.runway,
+            alternatives: scenario => [scenario.runway.replace(/^0/, ''), scenario.runwayWords],
+            width: 'sm'
+          },
+          {
+            key: 'tko-callsign',
+            label: 'Callsign',
+            expected: scenario => scenario.radioCall,
+            alternatives: scenario => [
+              scenario.radioCall,
+              `${scenario.airlineCall} ${scenario.flightNumber}`,
+              scenario.callsign
+            ],
+            width: 'lg'
+          }
+        ],
+        readback: [
+          { type: 'text', text: 'Runway ' },
+          { type: 'field', key: 'tko-runway', width: 'sm' },
+          { type: 'text', text: ', cleared for takeoff, ' },
+          { type: 'field', key: 'tko-callsign', width: 'lg' }
+        ],
+        defaultFrequency: 'TWR',
+        phrase: scenario => `${scenario.radioCall}, wind ${scenario.windWords}, runway ${scenario.runway}, cleared for takeoff.`,
+        info: scenario => [
+          `Tower: ${scenario.towerFreq} (${scenario.frequencyWords.TWR})`,
+          `Wind: ${scenario.wind} (${scenario.windWords})`
+        ],
+        generate: createBaseScenario
+      },
+      {
+        id: 'departure-handoff',
+        title: 'Departure Handoff',
+        desc: 'Auf Departure wechseln',
+        keywords: ['Departure', 'Handoff'],
+        hints: [
+          'Frequenz exakt wiederholen, optional als Zahl oder gesprochen.',
+          'Callsign am Ende anhängen.'
+        ],
+        fields: [
+          {
+            key: 'dep-freq',
+            label: 'Frequenz',
+            expected: scenario => scenario.departureFreq,
+            alternatives: scenario => [
+              scenario.departureFreq,
+              scenario.departureFreq.replace('.', ''),
+              scenario.frequencyWords.DEP
+            ],
+            width: 'md'
+          },
+          {
+            key: 'dep-callsign',
+            label: 'Callsign',
+            expected: scenario => scenario.radioCall,
+            alternatives: scenario => [
+              scenario.radioCall,
+              `${scenario.airlineCall} ${scenario.flightNumber}`,
+              scenario.callsign
+            ],
+            width: 'lg'
+          }
+        ],
+        readback: [
+          { type: 'text', text: 'Contact departure ' },
+          { type: 'field', key: 'dep-freq', width: 'md' },
+          { type: 'text', text: ', ' },
+          { type: 'field', key: 'dep-callsign', width: 'lg' }
+        ],
+        defaultFrequency: 'DEP',
+        phrase: scenario => `${scenario.radioCall}, contact departure ${scenario.departureFreq}.`,
+        info: scenario => [
+          `Departure: ${scenario.departureFreq} (${scenario.frequencyWords.DEP})`,
+          `Tower Handoff nach Start.`
+        ],
+        generate: createBaseScenario
+      }
+    ]
   }
-}
-
-// Zufällige Phrase für Lektion generieren
-const generateRandomPhrase = async () => {
-  if (current.value && activeLesson.value) {
-    const response = await tts.generatePhrase({
-      moduleId: current.value.id,
-      lessonId: activeLesson.value.id,
-      type: 'instruction'
-    })
-
-    // Generierte Phrase abspielen
-    if (response.phrases[0]) {
-      speak(response.phrases[0].original)
-    }
-  }
-}
-
-onMounted(() => {
-  // Browser benötigt Mikrofon-Berechtigung
-  navigator.mediaDevices.getUserMedia({audio: true})
-})
-
-function stopAudio() {
-  tts.stop()
-}
-
-
-/** STATE **/
+])
 const panel = ref<'hub' | 'module' | 'progress'>('hub')
 const current = ref<ModuleDef | null>(null)
 const activeLesson = ref<Lesson | null>(null)
-const userInput = ref('')
+const scenario = ref<Scenario | null>(null)
+const activeFrequency = ref<Frequency | null>(null)
+const userAnswers = reactive<Record<string, string>>({})
+const result = ref<ScoreResult | null>(null)
+const evaluating = ref(false)
 
-const toast = ref({show: false, text: ''})
+const toast = ref({ show: false, text: '' })
 const showSettings = ref(false)
-const cfg = ref({
-  tts: JSON.parse(localStorage.getItem('os_cfg') || '{"tts":true}').tts ?? true,
-  kwWeight: JSON.parse(localStorage.getItem('os_cfg_kw') || '{"v":0.6}').v ?? 0.6,
-  radioLevel: JSON.parse(localStorage.getItem('os_cfg_level') || '{"v":4}').v ?? 4,
-  voice: (JSON.parse(localStorage.getItem('os_cfg_voice') || '{"v":"alloy"}').v) ?? 'alloy'
-})
 
-const xp = ref(Number(localStorage.getItem('os_xp') || '0'))
+const isClient = typeof window !== 'undefined'
+
+function readStorage<T>(key: string, fallback: T): T {
+  if (!isClient) return fallback
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return fallback
+    const parsed = JSON.parse(raw) as T
+    return parsed ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
+function readNumber(key: string, fallback: number): number {
+  if (!isClient) return fallback
+  const raw = localStorage.getItem(key)
+  if (!raw) return fallback
+  const value = Number(raw)
+  return Number.isFinite(value) ? value : fallback
+}
+
+const defaultCfg = { tts: true, radioLevel: 4, voice: '' }
+const cfg = ref({ ...defaultCfg })
+
+if (isClient) {
+  const storedCfg = readStorage<{ tts?: boolean }>('os_cfg', {})
+  const storedLevel = readStorage<{ v?: number }>('os_cfg_level', {})
+  const storedVoice = readStorage<{ v?: string }>('os_cfg_voice', {})
+  cfg.value = {
+    tts: storedCfg.tts ?? defaultCfg.tts,
+    radioLevel: storedLevel.v ?? defaultCfg.radioLevel,
+    voice: storedVoice.v ?? defaultCfg.voice
+  }
+}
+
+const xp = ref(readNumber('os_xp', 0))
 const level = computed(() => 1 + Math.floor(xp.value / 300))
 const seasonPct = computed(() => Math.min(100, Math.round((xp.value % 1000) / 10)))
 
 type Prog = Record<string, Record<string, { best: number; done: boolean }>>
-const progress = ref<Prog>(JSON.parse(localStorage.getItem('os_progress') || '{}'))
+const progress = ref<Prog>(readStorage<Prog>('os_progress', {} as Prog))
 
-watch(progress, v => localStorage.setItem('os_progress', JSON.stringify(v)), {deep: true})
-watch(xp, v => localStorage.setItem('os_xp', String(v)))
-watch(() => cfg.value.tts, v => localStorage.setItem('os_cfg', JSON.stringify({tts: v})))
-watch(() => cfg.value.kwWeight, v => localStorage.setItem('os_cfg_kw', JSON.stringify({v})))
-watch(() => cfg.value.radioLevel, v => localStorage.setItem('os_cfg_level', JSON.stringify({v})))
-watch(() => cfg.value.voice, v => localStorage.setItem('os_cfg_voice', JSON.stringify({v})))
+if (isClient) {
+  watch(progress, value => localStorage.setItem('os_progress', JSON.stringify(value)), { deep: true })
+  watch(xp, value => localStorage.setItem('os_xp', String(value)))
+  watch(() => cfg.value.tts, value => localStorage.setItem('os_cfg', JSON.stringify({ tts: value })))
+  watch(() => cfg.value.radioLevel, value => localStorage.setItem('os_cfg_level', JSON.stringify({ v: value })))
+  watch(() => cfg.value.voice, value => localStorage.setItem('os_cfg_voice', JSON.stringify({ v: value })))
+}
 
-const modules = learnModules
+const fieldMap = computed<Record<string, LessonField>>(() => {
+  const map: Record<string, LessonField> = {}
+  if (activeLesson.value) {
+    for (const field of activeLesson.value.fields) {
+      map[field.key] = field
+    }
+  }
+  return map
+})
 
-/** HUB / FLOW **/
+const fieldStates = computed<Record<string, FieldState>>(() => {
+  const map: Record<string, FieldState> = {}
+  if (!activeLesson.value || !scenario.value) return map
+  for (const field of activeLesson.value.fields) {
+    const expected = field.expected(scenario.value).trim()
+    const answer = (userAnswers[field.key] ?? '').trim()
+    const alternatives = field.alternatives?.(scenario.value) ?? []
+    const options = [expected, ...alternatives].map(norm).filter(Boolean)
+    const normalizedAnswer = norm(answer)
+    const best = options.length ? Math.max(...options.map(option => similarity(normalizedAnswer, option))) : 0
+    const pass = answer ? best >= (field.threshold ?? 0.82) : false
+    map[field.key] = {
+      key: field.key,
+      label: field.label,
+      expected,
+      answer,
+      similarity: answer ? best : 0,
+      pass
+    }
+  }
+  return map
+})
+
+function blankSizeClass(key: string, override?: BlankWidth): string {
+  const field = fieldMap.value[key]
+  const size = (override || field?.width || 'md') as BlankWidth
+  return `size-${size}`
+}
+
+function blankStateClass(key: string): string {
+  const state = fieldStates.value[key]
+  if (!state) return ''
+  if (state.pass) return 'ok'
+  if (state.answer) return 'warn'
+  return ''
+}
+
+function fieldLabel(key: string): string {
+  return fieldMap.value[key]?.label ?? 'Feld'
+}
+
+function fieldPlaceholder(key: string): string {
+  return fieldMap.value[key]?.placeholder ?? '…'
+}
+
+function fieldInputmode(key: string): 'text' | 'numeric' {
+  return fieldMap.value[key]?.inputmode ?? 'text'
+}
+
+function fieldPass(key: string): boolean {
+  return Boolean(fieldStates.value[key]?.pass)
+}
+
+function fieldHasAnswer(key: string): boolean {
+  const state = fieldStates.value[key]
+  return Boolean(state && state.answer)
+}
+
+function fieldExpectedValue(key: string): string {
+  return fieldStates.value[key]?.expected ?? ''
+}
+
+const targetPhrase = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.phrase(scenario.value) : ''))
+const lessonInfo = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.info(scenario.value) : []))
+
+watch(activeLesson, lesson => {
+  if (lesson) {
+    rollScenario(true)
+  } else {
+    scenario.value = null
+  }
+})
+
+function rollScenario(clear = false) {
+  if (!activeLesson.value) return
+  const generated = activeLesson.value.generate()
+  scenario.value = generated
+  const defaultType = activeLesson.value.defaultFrequency
+  activeFrequency.value = generated.frequencies.find(freq => freq.type === (defaultType || 'DEL')) || generated.frequencies[0] || null
+  resetAnswers(true)
+  if (clear) {
+    result.value = null
+  }
+}
+
+function setActiveFrequency(freq: Frequency) {
+  activeFrequency.value = freq
+}
+
+function resetAnswers(clearResult = false) {
+  if (!activeLesson.value) return
+  const keys = activeLesson.value.fields.map(field => field.key)
+  Object.keys(userAnswers).forEach(key => {
+    if (!keys.includes(key)) {
+      delete userAnswers[key]
+    }
+  })
+  for (const key of keys) {
+    userAnswers[key] = ''
+  }
+  if (clearResult) {
+    result.value = null
+  }
+}
+
+function clearAnswers() {
+  resetAnswers(true)
+}
+
+function fillSolution() {
+  if (!activeLesson.value || !scenario.value) return
+  for (const field of activeLesson.value.fields) {
+    userAnswers[field.key] = field.expected(scenario.value)
+  }
+}
+
+function computeScore(): ScoreResult | null {
+  if (!activeLesson.value) return null
+  const details = activeLesson.value.fields
+    .map(field => fieldStates.value[field.key])
+    .filter(Boolean) as FieldState[]
+  if (!details.length) return null
+  const total = details.reduce((sum, item) => sum + item.similarity, 0)
+  const hits = details.filter(item => item.pass).length
+  const avg = total / details.length
+  return {
+    score: Math.round(avg * 100),
+    hits,
+    sim: avg,
+    passed: hits === details.length && hits > 0,
+    fields: details
+  }
+}
+
+function evaluate() {
+  if (!activeLesson.value || !current.value) return
+  evaluating.value = true
+  try {
+    const summary = computeScore()
+    if (!summary) return
+    result.value = summary
+
+    const modId = current.value.id
+    const lesId = activeLesson.value.id
+    if (!progress.value[modId]) progress.value[modId] = {}
+    const previous = progress.value[modId][lesId] || { best: 0, done: false }
+    const best = Math.max(previous.best || 0, summary.score)
+    const passed = summary.passed || summary.score >= 80
+    const wasDone = previous.done
+
+    progress.value[modId][lesId] = { best, done: passed }
+
+    let gained = 0
+    if (passed && !wasDone) gained += 40
+    if (summary.score >= 95 && summary.score > (previous.best || 0)) gained += 15
+    if (summary.score >= 80 && summary.score > (previous.best || 0)) gained += 10
+
+    if (gained) {
+      xp.value += gained
+      toastNow(`+${gained} XP · ${activeLesson.value.title}`)
+    }
+  } finally {
+    evaluating.value = false
+  }
+}
+
 function isModuleUnlocked(id: string) {
-  if (id === 'icao') return true
-  const order = modules.value.findIndex(m => m.id === id)
-  const prev = modules.value[order - 1]
-  return prev ? pct(prev.id) >= 80 : true
+  if (id === 'normalize') return true
+  const order = modules.value.findIndex(module => module.id === id)
+  const previous = modules.value[order - 1]
+  return previous ? pct(previous.id) >= 80 : true
 }
 
 function openModule(id: string) {
-  current.value = modules.value.find(m => m.id === id) || null
+  current.value = modules.value.find(module => module.id === id) || null
   activeLesson.value = null
   panel.value = 'module'
 }
 
 function quickContinue(id: string) {
   openModule(id)
-  const m = current.value!
-  const mp = progress.value[m.id] || {}
-  const next = m.lessons.find(l => !(mp[l.id]?.done))
-  activeLesson.value = next || m.lessons[0]
+  if (!current.value) return
+  const mod = current.value
+  const prog = progress.value[mod.id] || {}
+  const next = mod.lessons.find(lesson => !(prog[lesson.id]?.done)) || mod.lessons[0]
+  activeLesson.value = next
 }
 
-function selectLesson(l: Lesson) {
-  activeLesson.value = l
-  userInput.value = ''
+function selectLesson(lesson: Lesson) {
+  activeLesson.value = lesson
 }
 
 function bestScore(modId: string, lesId: string) {
@@ -562,272 +1787,89 @@ function bestScore(modId: string, lesId: string) {
 }
 
 function doneCount(modId: string) {
-  const m = modules.value.find(x => x.id === modId);
-  if (!m) return 0
-  const mp = progress.value[modId] || {}
-  return m.lessons.filter(l => mp[l.id]?.done).length
+  const module = modules.value.find(item => item.id === modId)
+  if (!module) return 0
+  const moduleProgress = progress.value[modId] || {}
+  return module.lessons.filter(lesson => moduleProgress[lesson.id]?.done).length
 }
 
 function pct(modId: string) {
-  const m = modules.value.find(x => x.id === modId);
-  if (!m) return 0
-  return Math.round(doneCount(modId) / m.lessons.length * 100)
+  const module = modules.value.find(item => item.id === modId)
+  if (!module) return 0
+  return Math.round((doneCount(modId) / module.lessons.length) * 100)
 }
 
 function avgScore(modId: string) {
-  const m = modules.value.find(x => x.id === modId);
-  if (!m) return 0
-  const mp = progress.value[modId] || {}
-  const arr = m.lessons.map(l => mp[l.id]?.best || 0)
-  const s = arr.reduce((a, b) => a + b, 0)
-  return Math.round(s / (arr.length || 1))
+  const module = modules.value.find(item => item.id === modId)
+  if (!module) return 0
+  const moduleProgress = progress.value[modId] || {}
+  const values = module.lessons.map(lesson => moduleProgress[lesson.id]?.best || 0)
+  const sum = values.reduce((acc, value) => acc + value, 0)
+  return Math.round(sum / (values.length || 1))
 }
 
-/** EVALUATION (leicht) **/
-const evaluating = ref(false)
-const result = ref<{ score: number, sim: number, hits: number } | null>(null)
-
-function norm(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
-}
-
-function lev(a: string, b: string) {
-  const m = a.length, n = b.length;
-  if (!m) return n;
-  if (!n) return m
-  const dp = new Array(n + 1).fill(0);
-  for (let j = 0; j <= n; j++) dp[j] = j
-  for (let i = 1; i <= m; i++) {
-    let p = dp[0];
-    dp[0] = i
-    for (let j = 1; j <= n; j++) {
-      const t = dp[j];
-      const c = a[i - 1] === b[j - 1] ? 0 : 1
-      dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, p + c);
-      p = t
-    }
-  }
-  return dp[n]
-}
-
-function sim(a: string, b: string) {
-  const A = norm(a), B = norm(b);
-  const d = lev(A, B);
-  const M = Math.max(A.length, B.length) || 1;
-  return 1 - d / M
-}
-
-function hits(text: string, kws: string[]) {
-  const T = norm(text);
-  return kws.reduce((s, k) => s + (T.includes(norm(k)) ? 1 : 0), 0)
-}
-
-function fillTarget() {
-  if (activeLesson.value) userInput.value = activeLesson.value.target
-}
-
-/** DAILIES **/
 const dailies = ref([
-  {id: 'd1', title: '3 Readbacks ≥80%', sub: 'Belohnung: +50 XP', reward: 50},
-  {id: 'd2', title: '1 Modul starten', sub: 'Belohnung: +20 XP', reward: 20},
-  {id: 'd3', title: 'Zielphrase abspielen', sub: 'Belohnung: +10 XP', reward: 10}
+  { id: 'd1', title: '3 Readbacks ≥80%', sub: 'Belohnung: +50 XP', reward: 50 },
+  { id: 'd2', title: '1 Modul starten', sub: 'Belohnung: +20 XP', reward: 20 },
+  { id: 'd3', title: 'Zielphrase abspielen', sub: 'Belohnung: +10 XP', reward: 10 }
 ])
 
-function startDaily(d: { id: string; reward: number; title: string }) {
-  xp.value += d.reward;
-  toastNow(`Daily: ${d.title} · +${d.reward} XP`);
-  dailies.value = dailies.value.filter(x => x.id !== d.id)
+function startDaily(daily: { id: string; reward: number; title: string }) {
+  xp.value += daily.reward
+  toastNow(`Daily: ${daily.title} · +${daily.reward} XP`)
+  dailies.value = dailies.value.filter(item => item.id !== daily.id)
 }
 
-/** UI helpers **/
-function toastNow(t: string) {
-  toast.value.text = t;
+function toastNow(text: string) {
+  toast.value.text = text
   toast.value.show = true
 }
 
 function resetAll() {
-  localStorage.clear();
+  if (!isClient) return
+  localStorage.clear()
   location.reload()
 }
 
-/** Hero Tilt **/
 const worldTiltStyle = ref<any>({})
 
-function tilt(e: MouseEvent) {
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  const dx = (e.clientX - (rect.left + rect.width / 2)) / rect.width
-  const dy = (e.clientY - (rect.top + rect.height / 2)) / rect.height
-  worldTiltStyle.value = {transform: `perspective(1200px) rotateX(${dy * -3}deg) rotateY(${dx * 3}deg)`}
+function tilt(event: MouseEvent) {
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const dx = (event.clientX - (rect.left + rect.width / 2)) / rect.width
+  const dy = (event.clientY - (rect.top + rect.height / 2)) / rect.height
+  worldTiltStyle.value = { transform: `perspective(1200px) rotateX(${dy * -3}deg) rotateY(${dx * 3}deg)` }
 }
 
-/** Quick demo beep via speak() **/
+function say(text: string) {
+  if (!text || !cfg.value.tts) return
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+  const synth = window.speechSynthesis
+  const utterance = new SpeechSynthesisUtterance(text)
+  const rate = 0.9 + (cfg.value.radioLevel - 3) * 0.12
+  utterance.rate = Math.min(1.5, Math.max(0.6, rate))
+  if (cfg.value.voice) {
+    const voiceName = cfg.value.voice.toLowerCase()
+    const voice = synth.getVoices().find(item => item.name.toLowerCase().includes(voiceName))
+    if (voice) utterance.voice = voice
+  }
+  synth.cancel()
+  synth.speak(utterance)
+}
+
+function stopAudio() {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+  }
+}
+
 function testBeep() {
-  speak('Test message. Radio check, one two three.')
+  say('Frankfurt Ground, Lufthansa one two three, request taxi.')
 }
 
-// Diese Ergänzungen in Ihr <script setup> von learn.vue hinzufügen:
-
-// PTT State hinzufügen
-const usePTT = ref(false)
-const lastTranscription = ref('')
-const pttResult = ref<any>(null)
-
-// PTT Funktionen
-async function startPTT() {
-  if (!activeLesson.value || tts.isLoading.value) return
-
-  try {
-    await tts.startRecording()
-  } catch (error) {
-    console.error('PTT start failed:', error)
-  }
-}
-
-async function stopPTT() {
-  if (!tts.isRecording.value) return
-
-  try {
-    const audioBlob = await tts.stopRecording()
-    if (audioBlob && activeLesson.value) {
-      // Transkription durchführen
-      const pttResponse = await tts.submitPTT(audioBlob, {
-        expectedText: activeLesson.value.target,
-        moduleId: current.value!.id,
-        lessonId: activeLesson.value.id,
-        format: 'webm'
-      })
-
-      lastTranscription.value = pttResponse.transcription
-      pttResult.value = pttResponse
-
-      // Automatisch bewerten falls gewünscht
-      if (pttResponse.success) {
-        await evaluatePTT()
-      }
-
-      // Funkspruch wiederholen falls empfohlen
-      if (pttResponse.playAgain && activeLesson.value) {
-        setTimeout(() => {
-          speak(activeLesson.value!.target)
-        }, 1000)
-      }
-    }
-  } catch (error) {
-    console.error('PTT processing failed:', error)
-  }
-}
-
-async function evaluatePTT() {
-  if (!pttResult.value || !activeLesson.value || !current.value) return
-
-  evaluating.value = true
-
-  try {
-    // PTT Ergebnis in normales Result-Format konvertieren
-    const pttEval = pttResult.value.evaluation
-
-    result.value = {
-      score: pttEval.score,
-      sim: pttEval.accuracy,
-      hits: Math.round(pttEval.keywordMatch * (activeLesson.value.keywords?.length || 0)),
-      evaluation: pttEval,
-      isPTT: true
-    }
-
-    // XP vergeben wie bei normalem Evaluate
-    const modId = current.value.id
-    const lesId = activeLesson.value.id
-    const score = pttEval.score
-
-    if (!progress.value[modId]) progress.value[modId] = {}
-    const prev = progress.value[modId][lesId]?.best || 0
-    const best = Math.max(prev, score)
-    const passedBefore = progress.value[modId][lesId]?.done || false
-    progress.value[modId][lesId] = {best, done: best >= 80}
-
-    let gained = 0
-    if (best >= 80 && !passedBefore) gained += 40
-    if (score >= 95) gained += 15
-    if (score >= 80) gained += 10
-
-    if (gained) {
-      xp.value += gained
-      toastNow(`+${gained} XP · ${activeLesson.value.title}`)
-    }
-
-  } catch (error) {
-    console.error('PTT evaluation failed:', error)
-  } finally {
-    evaluating.value = false
-  }
-}
-
-function clearInput() {
-  if (usePTT.value) {
-    lastTranscription.value = ''
-    pttResult.value = null
-  } else {
-    userInput.value = ''
-  }
-  result.value = null
-}
-
-// Bestehende evaluate() Funktion erweitern um PTT-Check
-async function evaluate() {
-  if (usePTT.value) {
-    return evaluatePTT()
-  }
-
-  // Ihr bestehender evaluate() Code bleibt unverändert...
-  if (!current.value || !activeLesson.value) return
-  evaluating.value = true
-  await new Promise(r => setTimeout(r, 160))
-  const s = sim(userInput.value, activeLesson.value.target)
-  const h = hits(userInput.value, activeLesson.value.keywords)
-  const kwScore = activeLesson.value.keywords.length ? (h / activeLesson.value.keywords.length) : 1
-  const score = Math.round(((kwScore * 0.6) + (s * 0.4)) * 100)
-  result.value = {score, sim: s, hits: h}
-  const modId = current.value.id, lesId = activeLesson.value.id
-  if (!progress.value[modId]) progress.value[modId] = {}
-  const prev = progress.value[modId][lesId]?.best || 0
-  const best = Math.max(prev, score)
-  const passedBefore = progress.value[modId][lesId]?.done || false
-  progress.value[modId][lesId] = {best, done: best >= 80}
-  let gained = 0
-  if (best >= 80 && !passedBefore) gained += 40
-  if (score >= 95) gained += 15
-  if (score >= 80 && userInput.value.length <= activeLesson.value.target.length + 8) gained += 10
-  if (gained) {
-    xp.value += gained;
-    toastNow(`+${gained} XP · ${activeLesson.value.title}`)
-  }
-  evaluating.value = false
-}
-
-// Optional: Keyboard Shortcuts für PTT
 onMounted(() => {
-  const handleKeyDown = (e: KeyboardEvent) => {
-    // Leertaste für PTT (wie bei echten Funkgeräten)
-    if (e.code === 'Space' && usePTT.value && !tts.isRecording.value) {
-      e.preventDefault()
-      startPTT()
-    }
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    window.speechSynthesis.getVoices()
   }
-
-  const handleKeyUp = (e: KeyboardEvent) => {
-    if (e.code === 'Space' && usePTT.value && tts.isRecording.value) {
-      e.preventDefault()
-      stopPTT()
-    }
-  }
-
-  document.addEventListener('keydown', handleKeyDown)
-  document.addEventListener('keyup', handleKeyUp)
-
-  onUnmounted(() => {
-    document.removeEventListener('keydown', handleKeyDown)
-    document.removeEventListener('keyup', handleKeyUp)
-  })
 })
 </script>
 
@@ -1319,157 +2361,227 @@ onMounted(() => {
 }
 
 
-/* PTT-spezifische Styles */
-.ptt-toggle {
-  margin-bottom: 12px;
-}
-
-.ptt-toggle .btn.active {
-  background: color-mix(in srgb, var(--accent) 20%, transparent);
-  border-color: var(--accent);
-}
-
-.ptt-interface {
+/* Scenario bar & cloze */
+.scenario-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 6%, transparent);
-  padding: 16px;
-  border-radius: 8px;
+  border-radius: 12px;
   margin-bottom: 12px;
 }
 
-.ptt-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.status-indicator {
-  width: 40px;
-  height: 40px;
-  border: 2px solid var(--border);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-}
-
-.status-indicator.recording {
-  border-color: #f44336;
-  background: color-mix(in srgb, #f44336 20%, transparent);
-  animation: pulse 1s infinite;
-}
-
-.status-indicator.processing {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 20%, transparent);
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
-
-.status-text {
-  font-size: 14px;
-  color: var(--t2);
-}
-
-.btn-ptt {
-  width: 100%;
-  padding: 20px;
-  border: 2px solid var(--border);
-  background: color-mix(in srgb, var(--text) 8%, transparent);
-  color: var(--text);
-  border-radius: 12px;
+.scenario-item {
+  min-width: 180px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  padding: 10px 12px;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
+  gap: 4px;
 }
 
-.btn-ptt:hover:not(.disabled) {
-  background: color-mix(in srgb, var(--text) 12%, transparent);
-  transform: translateY(-2px);
+.scenario-item.wide {
+  flex: 1 1 260px;
 }
 
-.btn-ptt.recording {
-  border-color: #f44336;
-  background: color-mix(in srgb, #f44336 15%, transparent);
-  animation: pulse 1s infinite;
-}
-
-.btn-ptt.disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.transcription {
-  margin-top: 16px;
-  padding: 12px;
-  background: color-mix(in srgb, var(--accent) 5%, transparent);
-  border: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent);
-  border-radius: 6px;
-}
-
-.transcription-label {
-  font-size: 12px;
+.scenario-label {
+  font-size: 11px;
+  letter-spacing: .08em;
   color: var(--t3);
+  text-transform: uppercase;
+}
+
+.scenario-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.scenario-sub {
+  color: var(--t3);
+  font-size: 13px;
+}
+
+.freq-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.freq-chip {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  padding: 6px 10px;
+  font-size: 12px;
+  letter-spacing: .02em;
+}
+
+.freq-chip.active {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.freq-hint {
+  margin-top: 4px;
+}
+
+.target-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.target-text {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.row.wrap {
+  flex-wrap: wrap;
+}
+
+.controls {
+  margin-top: 12px;
+}
+
+.readback-panel {
+  padding: 16px;
+}
+
+.cloze {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  line-height: 1.6;
+}
+
+.blank {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  min-width: 100px;
+  vertical-align: middle;
+  transition: border-color .2s ease, background .2s ease;
+}
+
+.blank input {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  min-width: 60px;
+  font-size: 14px;
+  outline: none;
+}
+
+.blank.size-xs { min-width: 70px; }
+.blank.size-sm { min-width: 100px; }
+.blank.size-md { min-width: 140px; }
+.blank.size-lg { min-width: 190px; }
+.blank.size-xl { min-width: 240px; }
+
+.blank.ok {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.blank.warn {
+  border-color: color-mix(in srgb, #f97316 40%, transparent);
+}
+
+.blank-status {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.blank-status.ok {
+  color: var(--accent);
+}
+
+.blank-status.warn {
+  color: #f97316;
+}
+
+.blank-feedback {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--t3);
+}
+
+.field-checks {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.field-check {
+  border: 1px dashed color-mix(in srgb, var(--text) 20%, transparent);
+  padding: 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+
+.field-check.ok {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.field-name {
+  font-size: 12px;
+  letter-spacing: .08em;
+  color: var(--t3);
+  text-transform: uppercase;
   margin-bottom: 4px;
 }
 
-.transcription-text {
-  font-weight: 500;
+.field-answer {
+  font-weight: 600;
 }
 
-.ptt-feedback {
-  margin-top: 12px;
-  padding: 12px;
-  background: color-mix(in srgb, var(--text) 4%, transparent);
-  border-radius: 6px;
+.field-expected {
+  font-size: 12px;
+  color: var(--t3);
 }
 
-.feedback-text {
-  margin-bottom: 8px;
-  font-style: italic;
+.hint.secondary {
+  opacity: 0.8;
 }
 
-.mistakes {
-  margin-top: 8px;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-.mistakes ul {
-  margin: 4px 0 0 16px;
+@media (max-width: 720px) {
+  .scenario-bar {
+    flex-direction: column;
+  }
+
+  .scenario-item {
+    width: 100%;
+  }
+
+  .target-text {
+    font-size: 16px;
+  }
 }
 
-.mistakes li {
-  margin: 2px 0;
-  font-size: 13px;
-}
-
-.replay-notice {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  color: var(--accent);
-  font-size: 13px;
-}
-
-.error-message {
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: color-mix(in srgb, #f44336 10%, transparent);
-  border: 1px solid color-mix(in srgb, #f44336 30%, transparent);
-  border-radius: 6px;
-  color: #ff6b6b;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
 </style>
