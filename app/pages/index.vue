@@ -17,7 +17,7 @@
         <div class="flex items-center gap-2">
           <NuxtLink to="/news" class="btn btn-ghost text-sm">News</NuxtLink>
           <NuxtLink
-              to="https://github.com/OpenSquawk/OpenSquawk"
+              to="https://github.com/FaktorxMensch/OpenSquawk"
               external
               target="_blank"
               rel="noopener"
@@ -446,7 +446,7 @@
               <li>✔ Community‑Support</li>
             </ul>
             <NuxtLink
-                to="https://github.com/OpenSquawk/OpenSquawk"
+                to="https://github.com/FaktorxMensch/OpenSquawk"
                 external
                 target="_blank"
                 rel="noopener"
