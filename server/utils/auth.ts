@@ -170,6 +170,18 @@ export async function getUserFromEvent(event: H3Event) {
   return user
 }
 
+export function hasAdminRole(user: UserDocument | null | undefined) {
+  return user ? user.role === 'admin' || user.role === 'dev' : false
+}
+
+export async function requireAdmin(event: H3Event) {
+  const user = await requireUserSession(event)
+  if (!hasAdminRole(user)) {
+    throw createError({ statusCode: 403, statusMessage: 'Administratorrechte erforderlich' })
+  }
+  return user
+}
+
 export async function issueAuthTokens(event: H3Event, user: UserDocument) {
   const accessToken = createAccessToken(user)
   const refreshToken = createRefreshToken(user)

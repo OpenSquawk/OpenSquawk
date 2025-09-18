@@ -1,10 +1,12 @@
 import mongoose from 'mongoose'
 
+export type UserRole = 'user' | 'admin' | 'dev'
+
 export interface UserDocument extends mongoose.Document {
   email: string
   passwordHash: string
   name?: string
-  role: 'user' | 'admin'
+  role: UserRole
   createdAt: Date
   lastLoginAt?: Date
   tokenVersion: number
@@ -17,7 +19,7 @@ const userSchema = new mongoose.Schema<UserDocument>({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   passwordHash: { type: String, required: true },
   name: { type: String, trim: true },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  role: { type: String, enum: ['user', 'admin', 'dev'], default: 'user' },
   createdAt: { type: Date, default: () => new Date() },
   lastLoginAt: { type: Date },
   tokenVersion: { type: Number, default: 0 },
