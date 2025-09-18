@@ -1,12 +1,43 @@
 // server/utils/openai.ts
 import OpenAI from 'openai'
+import { getServerRuntimeConfig } from './runtimeConfig'
 
-const MODEL = process.env.LLM_MODEL || 'gpt-5-nano'
-export const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY!})
+let openaiClient: OpenAI | null = null
+let cachedModel: string | null = null
+
+function ensureOpenAI(): OpenAI {
+    if (!openaiClient) {
+        const { openaiKey, openaiProject, llmModel } = getServerRuntimeConfig()
+        if (!openaiKey) {
+            throw new Error('OPENAI_API_KEY fehlt. Bitte den Schlüssel setzen, bevor KI-Funktionen genutzt werden.')
+        }
+        const clientOptions: ConstructorParameters<typeof OpenAI>[0] = { apiKey: openaiKey }
+        if (openaiProject) {
+            clientOptions.project = openaiProject
+        }
+        openaiClient = new OpenAI(clientOptions)
+        cachedModel = llmModel
+    }
+    return openaiClient
+}
+
+function getModel(): string {
+    if (!cachedModel) {
+        const { llmModel } = getServerRuntimeConfig()
+        cachedModel = llmModel
+    }
+    return cachedModel
+}
+
+export function getOpenAIClient(): OpenAI {
+    return ensureOpenAI()
+}
 
 export async function decide(system: string, user: string): Promise<string> {
-    const r = await openai.chat.completions.create({
-        model: MODEL,
+    const client = ensureOpenAI()
+    const model = getModel()
+    const r = await client.chat.completions.create({
+        model,
         messages: [
             {role: 'system', content: system},
             {role: 'user', content: user}
@@ -146,8 +177,10 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
     const user = JSON.stringify(optimizedInput)
 
     try {
-        const r = await openai.chat.completions.create({
-            model: MODEL,
+        const client = ensureOpenAI()
+        const model = getModel()
+        const r = await client.chat.completions.create({
+            model,
             response_format: { type: 'json_object' },
             messages: [
                 { role: 'system', content: system },

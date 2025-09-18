@@ -5,10 +5,12 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
-import { openai, routeDecision } from "../../utils/openai";
+import { getOpenAIClient, routeDecision } from "../../utils/openai";
 import { createReadStream } from "node:fs";
 import { TransmissionLog } from "../../models/TransmissionLog";
 import { getUserFromEvent } from "../../utils/auth";
+
+type AudioFormat = 'wav' | 'mp3' | 'ogg' | 'webm'
 
 interface PTTRequest {
     audio: string; // Base64 encoded audio
@@ -21,7 +23,7 @@ interface PTTRequest {
     };
     moduleId: string;
     lessonId: string;
-    format?: 'wav' | 'mp3' | 'ogg' | 'webm';
+    format?: AudioFormat;
     autoDecide?: boolean;
 }
 
@@ -42,6 +44,37 @@ async function sh(cmd: string, args: string[]) {
             err ? rej(new Error(stderr || String(err))) : res({ stdout, stderr })
         )
     );
+}
+
+const BASE64_AUDIO_REGEX = /^[A-Za-z0-9+/]+={0,2}$/;
+const MAX_AUDIO_BYTES = 2 * 1024 * 1024; // ~60 Sekunden 16kHz Mono
+const ALLOWED_AUDIO_FORMATS: AudioFormat[] = ['wav', 'mp3', 'ogg', 'webm'];
+const AUDIO_FORMAT_SET = new Set<AudioFormat>(ALLOWED_AUDIO_FORMATS);
+
+function resolveAudioFormat(format?: string | null): AudioFormat {
+    if (!format) {
+        return 'wav';
+    }
+    const normalized = format.trim().toLowerCase() as AudioFormat;
+    return AUDIO_FORMAT_SET.has(normalized) ? normalized : 'wav';
+}
+
+function decodeAudioPayload(encoded: string): Buffer {
+    const sanitized = encoded.replace(/\s+/g, '');
+    if (!sanitized) {
+        throw createError({ statusCode: 400, statusMessage: 'Audio payload is empty' });
+    }
+    if (!BASE64_AUDIO_REGEX.test(sanitized)) {
+        throw createError({ statusCode: 400, statusMessage: 'Audio payload is not valid base64' });
+    }
+    const buffer = Buffer.from(sanitized, 'base64');
+    if (!buffer.length) {
+        throw createError({ statusCode: 400, statusMessage: 'Decoded audio payload is empty' });
+    }
+    if (buffer.length > MAX_AUDIO_BYTES) {
+        throw createError({ statusCode: 413, statusMessage: 'Audio payload exceeds the 2 MB limit' });
+    }
+    return buffer;
 }
 
 // Audio zu WAV konvertieren für bessere Whisper-Kompatibilität
@@ -66,17 +99,18 @@ export default defineEventHandler(async (event) => {
     }
 
     const id = randomUUID();
-    const tmpAudioInput = join(tmpdir(), `ptt-input-${id}.${body.format || 'wav'}`);
+    const format = resolveAudioFormat(body.format);
+    const tmpAudioInput = join(tmpdir(), `ptt-input-${id}.${format}`);
     const tmpAudioWav = join(tmpdir(), `ptt-wav-${id}.wav`);
 
     try {
         // 1. Audio aus Base64 dekodieren und speichern
-        const audioBuffer = Buffer.from(body.audio, 'base64');
+        const audioBuffer = decodeAudioPayload(body.audio);
         await writeFile(tmpAudioInput, audioBuffer);
 
         // 2. Zu WAV konvertieren falls nötig (nur wenn FFmpeg verfügbar)
         let audioFileForWhisper = tmpAudioInput;
-        if (body.format !== 'wav') {
+        if (format !== 'wav') {
             try {
                 await convertToWav(tmpAudioInput, tmpAudioWav);
                 audioFileForWhisper = tmpAudioWav;
@@ -86,6 +120,7 @@ export default defineEventHandler(async (event) => {
         }
 
         // 3. OpenAI Whisper für Transkription
+        const openai = getOpenAIClient();
         const transcription = await openai.audio.transcriptions.create({
             file: createReadStream(audioFileForWhisper),
             model: "whisper-1",
