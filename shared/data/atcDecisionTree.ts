@@ -27,6 +27,7 @@ const atcDecisionTree = {
     "departure_freq": "125.350",
     "approach_freq": "120.800",
     "handoff_freq": "121.800",
+    "atis_freq": "118.025",
     "atis_code": "K",
     "gate": "B24",
     "trans_level": "FL070",
