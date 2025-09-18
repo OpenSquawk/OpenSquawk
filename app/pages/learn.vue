@@ -216,12 +216,36 @@
             <div class="target-row">
               <div class="target-main">
                 <div class="muted small">{{ activeLesson.desc }}</div>
-                <div class="target-text">{{ targetPhrase }}</div>
+                <div
+                    class="target-text"
+                    :class="{ 'audio-blur': audioContentHidden }"
+                    :aria-hidden="audioContentHidden ? 'true' : 'false'"
+                >
+                  {{ targetPhrase }}
+                </div>
+                <div v-if="audioContentHidden" class="audio-note muted small">
+                  Audio Challenge aktiv – zuerst anhören.
+                </div>
               </div>
               <div class="row wrap">
-                <button class="btn soft mini" type="button" :disabled="!targetPhrase" @click="say(targetPhrase)">
-                  <v-icon size="16">mdi-volume-high</v-icon>
+                <button
+                    class="btn soft mini"
+                    type="button"
+                    :disabled="!targetPhrase || ttsLoading"
+                    :aria-busy="ttsLoading ? 'true' : 'false'"
+                    @click="say(targetPhrase)"
+                >
+                  <v-icon size="16" :class="{ spin: ttsLoading }">{{ ttsLoading ? 'mdi-loading' : 'mdi-volume-high' }}</v-icon>
                   Say
+                </button>
+                <button
+                    v-if="audioContentHidden"
+                    class="btn ghost mini"
+                    type="button"
+                    @click="revealAudioContent"
+                >
+                  <v-icon size="16">mdi-eye</v-icon>
+                  Anzeigen
                 </button>
                 <button class="btn ghost mini" type="button" @click="rollScenario(true)">
                   <v-icon size="16">mdi-dice-5</v-icon>
@@ -235,7 +259,12 @@
               <v-icon size="16">mdi-lightbulb-on-outline</v-icon>
               {{ hint }}
             </div>
-            <div v-for="info in lessonInfo" :key="info" class="hint secondary">
+            <div
+                v-for="info in lessonInfo"
+                :key="info"
+                :class="['hint', 'secondary', { 'audio-blur': audioContentHidden }]"
+                :aria-hidden="audioContentHidden ? 'true' : 'false'"
+            >
               <v-icon size="16">mdi-information-outline</v-icon>
               {{ info }}
             </div>
@@ -328,8 +357,19 @@
 
         <div class="settings">
           <div class="set-row">
-            <span>Browser-TTS (Web Speech)</span>
+            <div class="set-info">
+              <span>Browser-TTS (Web Speech)</span>
+              <small class="muted">Läuft offline, startet schneller und spart unsere API-Anfragen.</small>
+            </div>
             <v-switch v-model="cfg.tts" color="cyan" hide-details inset/>
+          </div>
+
+          <div class="set-row">
+            <div class="set-info">
+              <span>Audio Challenge</span>
+              <small class="muted">Blendet Zieltext & Infos, bis du sie manuell einblendest.</small>
+            </div>
+            <v-switch v-model="cfg.audioChallenge" color="cyan" hide-details inset/>
           </div>
 
           <div class="set-row">
@@ -374,11 +414,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useApi } from '~/composables/useApi'
 
 type BlankWidth = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
+type FrequencyType = 'ATIS' | 'DEL' | 'GND' | 'TWR' | 'DEP' | 'APP' | 'CTR'
+
 type Frequency = {
-  type: string
+  type: FrequencyType
   label: string
   value: string
 }
@@ -400,6 +443,7 @@ type AirportData = {
     tower: string
     departure: string
     approach: string
+    center: string
   }
   transLevel: string
 }
@@ -465,13 +509,14 @@ type Scenario = {
   readabilityWord: string
   readabilityPhrase: string
   frequencies: Frequency[]
-  frequencyWords: Record<string, string>
+  frequencyWords: Record<FrequencyType, string>
   atisFreq: string
   deliveryFreq: string
   groundFreq: string
   towerFreq: string
   departureFreq: string
   approachFreq: string
+  centerFreq: string
   transLevel: string
   remarks: string
 }
@@ -612,7 +657,8 @@ const airportsData: AirportData[] = [
       ground: '121.800',
       tower: '118.700',
       departure: '125.350',
-      approach: '120.800'
+      approach: '120.800',
+      center: '134.200'
     },
     transLevel: 'FL070'
   },
@@ -632,7 +678,8 @@ const airportsData: AirportData[] = [
       ground: '121.800',
       tower: '118.700',
       departure: '129.050',
-      approach: '120.800'
+      approach: '120.800',
+      center: '133.700'
     },
     transLevel: 'FL070'
   },
@@ -652,7 +699,8 @@ const airportsData: AirportData[] = [
       ground: '121.900',
       tower: '119.220',
       departure: '123.875',
-      approach: '121.200'
+      approach: '121.200',
+      center: '135.050'
     },
     transLevel: 'FL060'
   }
@@ -828,13 +876,14 @@ function createBaseScenario(): Scenario {
     { type: 'GND', label: 'Ground', value: airport.freqs.ground },
     { type: 'TWR', label: 'Tower', value: airport.freqs.tower },
     { type: 'DEP', label: 'Departure', value: airport.freqs.departure },
-    { type: 'APP', label: 'Approach', value: airport.freqs.approach }
+    { type: 'APP', label: 'Approach', value: airport.freqs.approach },
+    { type: 'CTR', label: 'Center', value: airport.freqs.center }
   ]
 
-  const frequencyWords: Record<string, string> = frequencies.reduce((acc, freq) => {
+  const frequencyWords = frequencies.reduce((acc, freq) => {
     acc[freq.type] = frequencyToSpeech(freq.value)
     return acc
-  }, {} as Record<string, string>)
+  }, {} as Record<FrequencyType, string>)
 
   const readability = choice(readabilityScale)
 
@@ -907,6 +956,7 @@ function createBaseScenario(): Scenario {
     towerFreq: airport.freqs.tower,
     departureFreq: airport.freqs.departure,
     approachFreq: airport.freqs.approach,
+    centerFreq: airport.freqs.center,
     transLevel: airport.transLevel,
     remarks
   }
@@ -1007,8 +1057,8 @@ const modules = ref<ModuleDef[]>([
         desc: 'Kennung und Kerndaten aus der ATIS ziehen',
         keywords: ['ATIS', 'Wetter'],
         hints: [
-          'Schreibe nur den Buchstaben für die ATIS-Information.',
-          'Runway, Wind und QNH exakt übernehmen.'
+          'ATIS-Kennung als einzelnen Buchstaben merken.',
+          'Reihenfolge: Runway – Wind – Sicht – Temperatur – Taupunkt – QNH.'
         ],
         fields: [
           {
@@ -1020,7 +1070,7 @@ const modules = ref<ModuleDef[]>([
               scenario.atisCode.toLowerCase(),
               `Information ${scenario.atisCode}`
             ],
-            placeholder: 'Kilo',
+            placeholder: 'Buchstabe',
             width: 'xs',
             threshold: 0.9
           },
@@ -1043,6 +1093,27 @@ const modules = ref<ModuleDef[]>([
             width: 'md'
           },
           {
+            key: 'atis-visibility',
+            label: 'Sicht',
+            expected: scenario => scenario.atisSummary.visibility,
+            alternatives: scenario => [scenario.visibility, scenario.visibilityWords],
+            width: 'sm'
+          },
+          {
+            key: 'atis-temp',
+            label: 'Temperatur',
+            expected: scenario => scenario.atisSummary.temperature,
+            alternatives: scenario => [scenario.temperatureWords],
+            width: 'sm'
+          },
+          {
+            key: 'atis-dew',
+            label: 'Taupunkt',
+            expected: scenario => scenario.atisSummary.dewpoint,
+            alternatives: scenario => [scenario.dewpointWords],
+            width: 'sm'
+          },
+          {
             key: 'atis-qnh',
             label: 'QNH',
             expected: scenario => scenario.qnh.toString(),
@@ -1057,16 +1128,20 @@ const modules = ref<ModuleDef[]>([
           { type: 'field', key: 'atis-runway', width: 'sm' },
           { type: 'text', text: ', wind ' },
           { type: 'field', key: 'atis-wind', width: 'md' },
+          { type: 'text', text: ', visibility ' },
+          { type: 'field', key: 'atis-visibility', width: 'sm' },
+          { type: 'text', text: ', temperature ' },
+          { type: 'field', key: 'atis-temp', width: 'sm' },
+          { type: 'text', text: ', dew point ' },
+          { type: 'field', key: 'atis-dew', width: 'sm' },
           { type: 'text', text: ', QNH ' },
           { type: 'field', key: 'atis-qnh', width: 'sm' }
         ],
         defaultFrequency: 'ATIS',
         phrase: scenario => scenario.atisText,
-        info: scenario => [
-          `Runway: ${scenario.runway}`,
-          `Wind: ${scenario.wind} (${scenario.windWords})`,
-          `Sicht: ${scenario.visibility} (${scenario.visibilityWords})`,
-          `QNH: ${scenario.qnh}`
+        info: () => [
+          'Notiere Kennung, Runway, Wind, Sichtweite, Temperatur, Taupunkt und QNH.',
+          'Sicht: vier Ziffern oder 9999 für ≥10 km · QNH als vierstellige Zahl.'
         ],
         generate: createBaseScenario
       },
@@ -1425,6 +1500,49 @@ const modules = ref<ModuleDef[]>([
         generate: createBaseScenario
       },
       {
+        id: 'lineup',
+        title: 'Line-up Clearance',
+        desc: 'Aufrollen und warten bestätigen',
+        keywords: ['Tower', 'Line Up'],
+        hints: [
+          'Runway wiederholen, dann "line up and wait".',
+          'Callsign am Ende setzen.'
+        ],
+        fields: [
+          {
+            key: 'lineup-runway',
+            label: 'Runway',
+            expected: scenario => scenario.runway,
+            alternatives: scenario => [scenario.runway.replace(/^0/, ''), scenario.runwayWords],
+            width: 'sm'
+          },
+          {
+            key: 'lineup-callsign',
+            label: 'Callsign',
+            expected: scenario => scenario.radioCall,
+            alternatives: scenario => [
+              scenario.radioCall,
+              `${scenario.airlineCall} ${scenario.flightNumber}`,
+              scenario.callsign
+            ],
+            width: 'lg'
+          }
+        ],
+        readback: [
+          { type: 'text', text: 'Runway ' },
+          { type: 'field', key: 'lineup-runway', width: 'sm' },
+          { type: 'text', text: ', line up and wait, ' },
+          { type: 'field', key: 'lineup-callsign', width: 'lg' }
+        ],
+        defaultFrequency: 'TWR',
+        phrase: scenario => `${scenario.radioCall}, line up and wait runway ${scenario.runway}.`,
+        info: scenario => [
+          `Tower: ${scenario.towerFreq} (${scenario.frequencyWords.TWR})`,
+          `Line-up: runway ${scenario.runway}`
+        ],
+        generate: createBaseScenario
+      },
+      {
         id: 'takeoff',
         title: 'Takeoff Clearance',
         desc: 'Takeoff-Freigabe bestätigen',
@@ -1513,6 +1631,163 @@ const modules = ref<ModuleDef[]>([
           `Tower Handoff nach Start.`
         ],
         generate: createBaseScenario
+      },
+      {
+        id: 'departure-checkin',
+        title: 'Departure Check-in',
+        desc: 'Erstmeldung bei Departure',
+        keywords: ['Departure', 'Check-in'],
+        hints: [
+          'Einheit ansprechen, dann Callsign nennen.',
+          'Altitude und SID exakt wie gehört wiederholen.'
+        ],
+        fields: [
+          {
+            key: 'depcheck-callsign',
+            label: 'Callsign',
+            expected: scenario => scenario.radioCall,
+            alternatives: scenario => [
+              scenario.radioCall,
+              `${scenario.airlineCall} ${scenario.flightNumber}`,
+              scenario.callsign
+            ],
+            width: 'lg'
+          },
+          {
+            key: 'depcheck-alt',
+            label: 'Altitude',
+            expected: scenario => scenario.altitudes.initialWords,
+            alternatives: scenario => [
+              scenario.altitudes.initialWords,
+              scenario.altitudes.initial.toString(),
+              `${scenario.altitudes.initial} feet`
+            ],
+            width: 'md'
+          },
+          {
+            key: 'depcheck-sid',
+            label: 'SID',
+            expected: scenario => scenario.sid,
+            width: 'lg'
+          }
+        ],
+        readback: [
+          { type: 'text', text: scenario => `${scenario.airport.city} Departure, ` },
+          { type: 'field', key: 'depcheck-callsign', width: 'lg' },
+          { type: 'text', text: ', passing ' },
+          { type: 'field', key: 'depcheck-alt', width: 'md' },
+          { type: 'text', text: ', on SID ' },
+          { type: 'field', key: 'depcheck-sid', width: 'lg' }
+        ],
+        defaultFrequency: 'DEP',
+        phrase: scenario => `${scenario.airport.city} Departure, ${scenario.radioCall}, passing ${scenario.altitudes.initialWords}, on SID ${scenario.sid}.`,
+        info: scenario => [
+          `Initial Altitude: ${scenario.altitudes.initial} ft (${scenario.altitudes.initialWords})`,
+          `SID: ${scenario.sid}`
+        ],
+        generate: createBaseScenario
+      },
+      {
+        id: 'climb-instruction',
+        title: 'Climb & Direct',
+        desc: 'Steigauftrag komplett zurücklesen',
+        keywords: ['Departure', 'Climb'],
+        hints: [
+          'Mit "Climb" beginnen, dann Höhe und gegebenenfalls Direct.',
+          'Callsign am Ende wiederholen.'
+        ],
+        fields: [
+          {
+            key: 'climb-alt',
+            label: 'Altitude',
+            expected: scenario => scenario.altitudes.climbWords,
+            alternatives: scenario => [
+              scenario.altitudes.climbWords,
+              scenario.altitudes.climb.toString(),
+              `${scenario.altitudes.climb} feet`
+            ],
+            width: 'md'
+          },
+          {
+            key: 'climb-direct',
+            label: 'Direct',
+            expected: scenario => scenario.transition,
+            width: 'md'
+          },
+          {
+            key: 'climb-callsign',
+            label: 'Callsign',
+            expected: scenario => scenario.radioCall,
+            alternatives: scenario => [
+              scenario.radioCall,
+              `${scenario.airlineCall} ${scenario.flightNumber}`,
+              scenario.callsign
+            ],
+            width: 'lg'
+          }
+        ],
+        readback: [
+          { type: 'text', text: 'Climb ' },
+          { type: 'field', key: 'climb-alt', width: 'md' },
+          { type: 'text', text: ', direct ' },
+          { type: 'field', key: 'climb-direct', width: 'md' },
+          { type: 'text', text: ', ' },
+          { type: 'field', key: 'climb-callsign', width: 'lg' }
+        ],
+        defaultFrequency: 'DEP',
+        phrase: scenario => `${scenario.radioCall}, climb ${scenario.altitudes.climb} feet, proceed direct ${scenario.transition}.`,
+        info: scenario => [
+          `Climb: ${scenario.altitudes.climb} ft (${scenario.altitudes.climbWords})`,
+          `Direct to: ${scenario.transition}`
+        ],
+        generate: createBaseScenario
+      },
+      {
+        id: 'center-handoff',
+        title: 'Center Handoff',
+        desc: 'Übergabe an Center bestätigen',
+        keywords: ['Center', 'Handoff'],
+        hints: [
+          'Frequenz exakt wiedergeben (mit oder ohne Dezimalpunkt).',
+          'Callsign am Ende platzieren.'
+        ],
+        fields: [
+          {
+            key: 'ctr-freq',
+            label: 'Frequenz',
+            expected: scenario => scenario.centerFreq,
+            alternatives: scenario => [
+              scenario.centerFreq,
+              scenario.centerFreq.replace('.', ''),
+              scenario.frequencyWords.CTR
+            ],
+            width: 'md'
+          },
+          {
+            key: 'ctr-callsign',
+            label: 'Callsign',
+            expected: scenario => scenario.radioCall,
+            alternatives: scenario => [
+              scenario.radioCall,
+              `${scenario.airlineCall} ${scenario.flightNumber}`,
+              scenario.callsign
+            ],
+            width: 'lg'
+          }
+        ],
+        readback: [
+          { type: 'text', text: 'Contact center ' },
+          { type: 'field', key: 'ctr-freq', width: 'md' },
+          { type: 'text', text: ', ' },
+          { type: 'field', key: 'ctr-callsign', width: 'lg' }
+        ],
+        defaultFrequency: 'CTR',
+        phrase: scenario => `${scenario.radioCall}, contact center ${scenario.centerFreq}.`,
+        info: scenario => [
+          `Center: ${scenario.centerFreq} (${scenario.frequencyWords.CTR})`,
+          `Nächste Einheit: Center`
+        ],
+        generate: createBaseScenario
       }
     ]
   }
@@ -1525,9 +1800,17 @@ const activeFrequency = ref<Frequency | null>(null)
 const userAnswers = reactive<Record<string, string>>({})
 const result = ref<ScoreResult | null>(null)
 const evaluating = ref(false)
+const ttsLoading = ref(false)
+const audioElement = ref<HTMLAudioElement | null>(null)
+const sayCache = new Map<string, string>()
+const pendingSayRequests = new Map<string, Promise<string>>()
+const audioReveal = ref(!cfg.value.audioChallenge)
+
+const audioContentHidden = computed(() => cfg.value.audioChallenge && !audioReveal.value)
 
 const toast = ref({ show: false, text: '' })
 const showSettings = ref(false)
+const api = useApi()
 
 const isClient = typeof window !== 'undefined'
 
@@ -1551,19 +1834,29 @@ function readNumber(key: string, fallback: number): number {
   return Number.isFinite(value) ? value : fallback
 }
 
-const defaultCfg = { tts: true, radioLevel: 4, voice: '' }
-const cfg = ref({ ...defaultCfg })
+type LearnConfig = {
+  tts: boolean
+  radioLevel: number
+  voice: string
+  audioChallenge: boolean
+}
+
+const defaultCfg: LearnConfig = { tts: false, radioLevel: 4, voice: '', audioChallenge: false }
+const cfg = ref<LearnConfig>({ ...defaultCfg })
 
 if (isClient) {
-  const storedCfg = readStorage<{ tts?: boolean }>('os_cfg', {})
+  const storedCfg = readStorage<{ tts?: boolean; audioChallenge?: boolean }>('os_cfg', {})
   const storedLevel = readStorage<{ v?: number }>('os_cfg_level', {})
   const storedVoice = readStorage<{ v?: string }>('os_cfg_voice', {})
   cfg.value = {
     tts: storedCfg.tts ?? defaultCfg.tts,
     radioLevel: storedLevel.v ?? defaultCfg.radioLevel,
-    voice: storedVoice.v ?? defaultCfg.voice
+    voice: storedVoice.v ?? defaultCfg.voice,
+    audioChallenge: storedCfg.audioChallenge ?? defaultCfg.audioChallenge
   }
 }
+
+audioReveal.value = !cfg.value.audioChallenge
 
 const xp = ref(readNumber('os_xp', 0))
 const level = computed(() => 1 + Math.floor(xp.value / 300))
@@ -1575,10 +1868,18 @@ const progress = ref<Prog>(readStorage<Prog>('os_progress', {} as Prog))
 if (isClient) {
   watch(progress, value => localStorage.setItem('os_progress', JSON.stringify(value)), { deep: true })
   watch(xp, value => localStorage.setItem('os_xp', String(value)))
-  watch(() => cfg.value.tts, value => localStorage.setItem('os_cfg', JSON.stringify({ tts: value })))
+
+  const persistGeneralCfg = () => {
+    localStorage.setItem('os_cfg', JSON.stringify({ tts: cfg.value.tts, audioChallenge: cfg.value.audioChallenge }))
+  }
+
+  watch(() => cfg.value.tts, persistGeneralCfg)
+  watch(() => cfg.value.audioChallenge, persistGeneralCfg)
   watch(() => cfg.value.radioLevel, value => localStorage.setItem('os_cfg_level', JSON.stringify({ v: value })))
   watch(() => cfg.value.voice, value => localStorage.setItem('os_cfg_voice', JSON.stringify({ v: value })))
 }
+
+watch(() => cfg.value.audioChallenge, () => resetAudioReveal())
 
 const fieldMap = computed<Record<string, LessonField>>(() => {
   const map: Record<string, LessonField> = {}
@@ -1612,6 +1913,14 @@ const fieldStates = computed<Record<string, FieldState>>(() => {
   }
   return map
 })
+
+function resetAudioReveal() {
+  audioReveal.value = !cfg.value.audioChallenge
+}
+
+function revealAudioContent() {
+  audioReveal.value = true
+}
 
 function blankSizeClass(key: string, override?: BlankWidth): string {
   const field = fieldMap.value[key]
@@ -1670,6 +1979,7 @@ function rollScenario(clear = false) {
   const defaultType = activeLesson.value.defaultFrequency
   activeFrequency.value = generated.frequencies.find(freq => freq.type === (defaultType || 'DEL')) || generated.frequencies[0] || null
   resetAnswers(true)
+  resetAudioReveal()
   if (clear) {
     result.value = null
   }
@@ -1840,30 +2150,133 @@ function tilt(event: MouseEvent) {
   worldTiltStyle.value = { transform: `perspective(1200px) rotateX(${dy * -3}deg) rotateY(${dx * 3}deg)` }
 }
 
-function say(text: string) {
-  if (!text || !cfg.value.tts) return
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-  const synth = window.speechSynthesis
-  const utterance = new SpeechSynthesisUtterance(text)
-  const rate = 0.9 + (cfg.value.radioLevel - 3) * 0.12
-  utterance.rate = Math.min(1.5, Math.max(0.6, rate))
-  if (cfg.value.voice) {
-    const voiceName = cfg.value.voice.toLowerCase()
-    const voice = synth.getVoices().find(item => item.name.toLowerCase().includes(voiceName))
-    if (voice) utterance.voice = voice
+function buildSayCacheKey(text: string, rate: number): string {
+  const voice = cfg.value.voice?.trim().toLowerCase() || 'default'
+  const radioLevel = cfg.value.radioLevel
+  return `${voice}|${radioLevel}|${rate.toFixed(2)}|${text}`
+}
+
+async function requestSayAudio(cacheKey: string, payload: Record<string, unknown>): Promise<string> {
+  const pending = pendingSayRequests.get(cacheKey)
+  if (pending) {
+    return pending
   }
-  synth.cancel()
-  synth.speak(utterance)
+
+  const request = (async () => {
+    const response: any = await api.post('/api/atc/say', payload, { auth: false })
+    const audioData = response?.audio
+    if (!audioData?.base64) {
+      throw new Error('Missing audio data')
+    }
+    const mime = audioData.mime || 'audio/wav'
+    return `data:${mime};base64,${audioData.base64}`
+  })()
+
+  pendingSayRequests.set(cacheKey, request)
+
+  try {
+    const dataUrl = await request
+    sayCache.set(cacheKey, dataUrl)
+    return dataUrl
+  } finally {
+    pendingSayRequests.delete(cacheKey)
+  }
+}
+
+async function playAudioSource(source: string) {
+  const audio = new Audio(source)
+  audioElement.value = audio
+  audio.onended = () => {
+    if (audioElement.value === audio) {
+      audioElement.value = null
+    }
+  }
+  audio.onerror = () => {
+    if (audioElement.value === audio) {
+      audioElement.value = null
+    }
+  }
+  try {
+    await audio.play()
+  } catch (err) {
+    console.error('Audio playback failed', err)
+  }
+}
+
+async function say(text: string) {
+  const trimmed = text?.trim()
+  if (!trimmed) return
+
+  const rateBase = 0.9 + (cfg.value.radioLevel - 3) * 0.12
+  const normalizedRate = Math.min(1.5, Math.max(0.6, rateBase))
+
+  const hasBrowserTts = cfg.value.tts && typeof window !== 'undefined' && 'speechSynthesis' in window
+
+  stopAudio()
+
+  if (hasBrowserTts) {
+    const synth = window.speechSynthesis
+    const utterance = new SpeechSynthesisUtterance(trimmed)
+    utterance.rate = normalizedRate
+    if (cfg.value.voice) {
+      const voiceName = cfg.value.voice.toLowerCase()
+      const voice = synth.getVoices().find(item => item.name.toLowerCase().includes(voiceName))
+      if (voice) utterance.voice = voice
+    }
+    synth.cancel()
+    synth.speak(utterance)
+    return
+  }
+
+  if (ttsLoading.value) return
+
+  const payload: Record<string, unknown> = {
+    text: trimmed,
+    level: cfg.value.radioLevel,
+    speed: normalizedRate,
+    moduleId: current.value?.id || 'learn',
+    lessonId: activeLesson.value?.id || null,
+    tag: 'learn-target'
+  }
+
+  if (cfg.value.voice) {
+    payload.voice = cfg.value.voice
+  }
+
+  const cacheKey = buildSayCacheKey(trimmed, normalizedRate)
+
+  ttsLoading.value = true
+
+  try {
+    let dataUrl = sayCache.get(cacheKey)
+    if (!dataUrl) {
+      dataUrl = await requestSayAudio(cacheKey, payload)
+    }
+    await playAudioSource(dataUrl)
+  } catch (err) {
+    console.error('TTS request failed', err)
+  } finally {
+    ttsLoading.value = false
+  }
 }
 
 function stopAudio() {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.cancel()
   }
+  if (audioElement.value) {
+    try {
+      audioElement.value.pause()
+      audioElement.value.currentTime = 0
+    } catch (err) {
+      // ignore pause errors
+    }
+    audioElement.value = null
+  }
 }
 
 function testBeep() {
-  say('Frankfurt Ground, Lufthansa one two three, request taxi.')
+  void say('Frankfurt Ground, Lufthansa one two three, request taxi.')
 }
 
 onMounted(() => {
@@ -2556,6 +2969,46 @@ onMounted(() => {
 
 .hint.secondary {
   opacity: 0.8;
+}
+
+.audio-blur {
+  filter: blur(8px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.audio-note {
+  margin-top: 6px;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.set-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.set-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 70%;
 }
 
 .sr-only {
