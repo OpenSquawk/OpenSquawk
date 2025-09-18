@@ -64,6 +64,11 @@ function sanitizeConfig(input: Partial<LearnConfig> | undefined): LearnConfig | 
     config.radioLevel = Math.min(5, Math.max(1, level))
   }
 
+  if (typeof input.audioSpeed === 'number' && Number.isFinite(input.audioSpeed)) {
+    const rounded = Math.round(input.audioSpeed * 10) / 10
+    config.audioSpeed = Math.min(1.3, Math.max(0.7, rounded))
+  }
+
   if (typeof input.voice === 'string') {
     config.voice = input.voice.slice(0, 120)
   }
