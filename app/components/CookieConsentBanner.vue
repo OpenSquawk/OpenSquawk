@@ -155,6 +155,10 @@ const openManager = () => {
   align-items: flex-end;
   justify-content: center;
   padding: 1.5rem 1rem;
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   z-index: 9999;
 }
 
@@ -162,6 +166,7 @@ const openManager = () => {
   .cookie-consent-backdrop {
     align-items: center;
     padding: 2.5rem;
+    padding-bottom: calc(2.5rem + env(safe-area-inset-bottom, 0));
   }
 }
 
@@ -175,6 +180,28 @@ const openManager = () => {
   padding: clamp(1.75rem, 2.5vw, 2.5rem);
   line-height: 1.6;
   animation: cookie-slide-up 0.35s ease;
+  max-height: min(720px, calc(100vh - 3rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@supports (height: 100dvh) {
+  .cookie-consent-panel {
+    max-height: min(720px, calc(100dvh - 3rem));
+  }
+}
+
+@media (max-width: 767px) {
+  .cookie-consent-backdrop {
+    padding: 1.25rem 0.85rem;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0));
+  }
+
+  .cookie-consent-panel {
+    width: 100%;
+    border-radius: 18px;
+  }
 }
 
 .cookie-consent-header h2 {
