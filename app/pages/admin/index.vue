@@ -41,6 +41,7 @@
         <v-tab value="overview">Übersicht</v-tab>
         <v-tab value="users">Nutzer</v-tab>
         <v-tab value="invitations">Einladungen</v-tab>
+        <v-tab value="waitlist">Warteliste</v-tab>
         <v-tab value="logs">Funkprotokolle</v-tab>
       </v-tabs>
 
@@ -452,6 +453,165 @@
           </section>
         </v-window-item>
 
+        <v-window-item value="waitlist">
+          <section class="space-y-6">
+            <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 class="text-2xl font-semibold">Warteliste</h2>
+                <p class="text-sm text-white/70">
+                  Gesamt: {{ waitlistStats.total }} · Updates: {{ waitlistStats.updates }} · Aktiviert: {{ waitlistStats.activated }}
+                </p>
+              </div>
+              <div class="flex flex-wrap gap-2 text-xs text-white/60">
+                <v-chip size="small" color="cyan" variant="outlined">Gesamt: {{ waitlistStats.total }}</v-chip>
+                <v-chip size="small" color="cyan" variant="text">Updates: {{ waitlistStats.updates }}</v-chip>
+                <v-chip size="small" color="cyan" variant="text">Aktiviert: {{ waitlistStats.activated }}</v-chip>
+                <v-chip size="small" color="cyan" variant="text">Wartend: {{ waitlistStats.pending }}</v-chip>
+              </div>
+            </div>
+
+            <v-alert
+              v-if="waitlistError"
+              type="warning"
+              variant="tonal"
+              border="start"
+              density="comfortable"
+              class="bg-red-500/10 text-red-100"
+            >
+              {{ waitlistError }}
+            </v-alert>
+
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+              <div class="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <v-text-field
+                  v-model="waitlistSearch"
+                  label="Name, E-Mail oder Notizen"
+                  density="comfortable"
+                  variant="outlined"
+                  color="cyan"
+                  clearable
+                  prepend-inner-icon="mdi-magnify"
+                  hide-details
+                />
+                <v-select
+                  v-model="waitlistSubscription"
+                  :items="waitlistSubscriptionOptions"
+                  label="Opt-In"
+                  density="comfortable"
+                  variant="outlined"
+                  color="cyan"
+                  hide-details
+                />
+                <v-select
+                  v-model="waitlistStatus"
+                  :items="waitlistStatusOptions"
+                  label="Status"
+                  density="comfortable"
+                  variant="outlined"
+                  color="cyan"
+                  hide-details
+                />
+                <v-btn color="cyan" variant="tonal" :loading="waitlistLoading" @click="fetchWaitlist(true)">
+                  Filter anwenden
+                </v-btn>
+              </div>
+              <div class="text-xs text-white/50">
+                {{ waitlistPagination.total }} Einträge · Seite {{ waitlistPagination.page }} von {{ waitlistPagination.pages }}
+              </div>
+            </div>
+
+            <div v-if="waitlistLoading" class="py-12 text-center text-white/70">
+              <v-progress-circular indeterminate color="cyan" class="mb-4" />
+              <p>Warteliste wird geladen…</p>
+            </div>
+
+            <div v-else class="space-y-4">
+              <v-table v-if="waitlistEntries.length" density="comfortable" class="text-sm text-white/80">
+                <thead>
+                  <tr class="text-xs uppercase tracking-[0.3em] text-white/40">
+                    <th class="font-semibold">Kontakt</th>
+                    <th class="font-semibold">Beigetreten</th>
+                    <th class="font-semibold">Opt-In</th>
+                    <th class="font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="entry in waitlistEntries" :key="entry.id" class="align-top">
+                    <td class="space-y-2">
+                      <div class="font-medium text-white">{{ entry.email }}</div>
+                      <div v-if="entry.name" class="text-xs text-white/60">{{ entry.name }}</div>
+                      <div v-if="entry.notes" class="text-xs text-white/50">{{ entry.notes }}</div>
+                      <div class="flex flex-wrap gap-2 text-[11px] text-white/40">
+                        <span>Quelle: {{ entry.source || 'landing' }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div>{{ formatDateTime(entry.joinedAt) }}</div>
+                      <div class="text-xs text-white/50">{{ formatRelative(entry.joinedAt) }}</div>
+                    </td>
+                    <td>
+                      <div class="flex flex-wrap gap-2">
+                        <v-chip size="x-small" color="cyan" variant="outlined">Warteliste</v-chip>
+                        <v-chip
+                          v-if="entry.wantsProductUpdates"
+                          size="x-small"
+                          color="cyan"
+                          variant="tonal"
+                        >
+                          Updates
+                        </v-chip>
+                      </div>
+                      <div v-if="entry.updatesOptedInAt" class="mt-1 text-[11px] text-white/50">
+                        seit {{ formatDateTime(entry.updatesOptedInAt) }}
+                      </div>
+                    </td>
+                    <td>
+                      <v-chip
+                        size="small"
+                        :color="entry.activatedAt ? 'green' : 'orange'"
+                        variant="tonal"
+                        class="text-xs"
+                      >
+                        <template v-if="entry.activatedAt">
+                          Aktiviert · {{ formatRelative(entry.activatedAt) }}
+                        </template>
+                        <template v-else>
+                          Wartet auf Zugang
+                        </template>
+                      </v-chip>
+                    </td>
+                  </tr>
+                </tbody>
+              </v-table>
+              <p v-else class="py-12 text-center text-sm text-white/60">Keine Wartelisten-Einträge gefunden.</p>
+
+              <div class="flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <div class="text-xs text-white/50">
+                  Seite {{ waitlistPagination.page }} von {{ waitlistPagination.pages }} · {{ waitlistPagination.total }} Einträge
+                </div>
+                <div class="flex items-center gap-2">
+                  <v-btn
+                    variant="text"
+                    color="cyan"
+                    :disabled="waitlistPagination.page <= 1"
+                    @click="changeWaitlistPage(waitlistPagination.page - 1)"
+                  >
+                    Zurück
+                  </v-btn>
+                  <v-btn
+                    variant="text"
+                    color="cyan"
+                    :disabled="waitlistPagination.page >= waitlistPagination.pages"
+                    @click="changeWaitlistPage(waitlistPagination.page + 1)"
+                  >
+                    Weiter
+                  </v-btn>
+                </div>
+              </div>
+            </div>
+          </section>
+        </v-window-item>
+
         <v-window-item value="logs">
           <section class="space-y-6">
             <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -572,7 +732,7 @@
                         class="space-y-3 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-4 text-xs text-white/80"
                       >
                         <div v-if="entry.metadata?.decision" class="space-y-2">
-                          <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">LLM Decision Trace</p>
+                          <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">LLM Decision Summary</p>
                           <div class="grid gap-2 md:grid-cols-2">
                             <div class="rounded-lg border border-white/10 bg-black/30 p-3">
                               <p class="text-[11px] text-white/50">Next State</p>
@@ -590,6 +750,57 @@
                             <v-chip size="x-small" color="cyan" variant="outlined">
                               Radio Check: {{ entry.metadata.decision.radio_check ? 'Ja' : 'Nein' }}
                             </v-chip>
+                          </div>
+                        </div>
+                        <div v-if="entry.metadata?.decisionTrace?.calls?.length" class="space-y-3">
+                          <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">OpenAI Decision Calls</p>
+                          <div
+                            v-for="(call, index) in entry.metadata.decisionTrace.calls"
+                            :key="index"
+                            class="space-y-2 rounded-xl border border-white/10 bg-black/30 p-3"
+                          >
+                            <div class="flex items-center justify-between text-[11px] text-white/60">
+                              <span>
+                                Schritt: {{ call.stage === 'decision' ? 'Decision' : 'Readback-Check' }}
+                              </span>
+                              <span v-if="call.error" class="text-red-300">Fehler beim Aufruf</span>
+                            </div>
+                            <div>
+                              <p class="text-[11px] text-white/50">Request</p>
+                              <pre class="trace-json">{{ formatJson(call.request) }}</pre>
+                            </div>
+                            <div v-if="call.response">
+                              <p class="text-[11px] text-white/50">Response</p>
+                              <pre class="trace-json">{{ formatJson(call.response) }}</pre>
+                            </div>
+                            <div v-else class="rounded-lg border border-white/10 bg-black/40 p-2 text-[11px] text-white/60">
+                              Keine Antwort erhalten.
+                            </div>
+                            <div v-if="call.rawResponseText" class="space-y-1">
+                              <p class="text-[11px] text-white/50">Raw Response</p>
+                              <pre class="trace-json">{{ call.rawResponseText }}</pre>
+                            </div>
+                            <v-alert
+                              v-if="call.error"
+                              type="warning"
+                              variant="tonal"
+                              density="compact"
+                              class="bg-red-500/10 text-red-100"
+                            >
+                              {{ call.error }}
+                            </v-alert>
+                          </div>
+                          <div
+                            v-if="entry.metadata.decisionTrace.fallback?.used"
+                            class="space-y-1 rounded-xl border border-orange-400/40 bg-orange-500/10 p-3 text-[11px] text-orange-100"
+                          >
+                            <p class="text-xs uppercase tracking-[0.3em] text-orange-200/80">Fallback aktiviert</p>
+                            <p>
+                              Grund: {{ entry.metadata.decisionTrace.fallback.reason || 'unbekannt' }}
+                              <span v-if="entry.metadata.decisionTrace.fallback.selected">
+                                · Pfad: {{ entry.metadata.decisionTrace.fallback.selected }}
+                              </span>
+                            </p>
                           </div>
                         </div>
                         <div>
@@ -786,6 +997,31 @@ interface LogsResponse {
   pagination: { total: number; page: number; pageSize: number; pages: number }
 }
 
+interface WaitlistEntryItem {
+  id: string
+  email: string
+  name?: string
+  notes?: string
+  source?: string
+  joinedAt: string
+  activatedAt?: string
+  wantsProductUpdates: boolean
+  updatesOptedInAt?: string
+}
+
+interface WaitlistStatsSummary {
+  total: number
+  updates: number
+  activated: number
+  pending: number
+}
+
+interface WaitlistResponse {
+  items: WaitlistEntryItem[]
+  pagination: { total: number; page: number; pageSize: number; pages: number }
+  stats: WaitlistStatsSummary
+}
+
 interface CreateInviteResponse {
   success: boolean
   invitation: {
@@ -802,7 +1038,7 @@ useHead({ title: 'Admin • OpenSquawk' })
 const auth = useAuthStore()
 const api = useApi()
 
-const activeTab = ref<'overview' | 'users' | 'invitations' | 'logs'>('overview')
+const activeTab = ref<'overview' | 'users' | 'invitations' | 'waitlist' | 'logs'>('overview')
 const refreshing = ref(false)
 
 const overview = ref<OverviewData | null>(null)
@@ -851,6 +1087,25 @@ const invitationChannelOptions = [
   { title: 'Bootstrap', value: 'bootstrap' },
 ]
 
+const waitlistEntries = ref<WaitlistEntryItem[]>([])
+const waitlistPagination = reactive({ total: 0, page: 1, pages: 1, pageSize: 15 })
+const waitlistLoading = ref(false)
+const waitlistError = ref('')
+const waitlistSearch = ref('')
+const waitlistSubscription = ref<'all' | 'waitlist' | 'updates'>('all')
+const waitlistStatus = ref<'all' | 'pending' | 'activated'>('all')
+const waitlistSubscriptionOptions = [
+  { title: 'Alle Opt-Ins', value: 'all' },
+  { title: 'Nur Warteliste', value: 'waitlist' },
+  { title: 'Updates-Opt-in', value: 'updates' },
+]
+const waitlistStatusOptions = [
+  { title: 'Alle Status', value: 'all' },
+  { title: 'Wartend', value: 'pending' },
+  { title: 'Aktiviert', value: 'activated' },
+]
+const waitlistStats = reactive<WaitlistStatsSummary>({ total: 0, updates: 0, activated: 0, pending: 0 })
+
 const logs = ref<TransmissionEntry[]>([])
 const logPagination = reactive({ total: 0, page: 1, pages: 1, pageSize: 15 })
 const logLoading = ref(false)
@@ -893,11 +1148,13 @@ const createInviteResult = ref<{ code: string; expiresAt?: string } | null>(null
 
 const usersLoaded = ref(false)
 const invitationsLoaded = ref(false)
+const waitlistLoaded = ref(false)
 const logsLoaded = ref(false)
 
 let userSearchTimeout: ReturnType<typeof setTimeout> | undefined
 let invitationSearchTimeout: ReturnType<typeof setTimeout> | undefined
 let logSearchTimeout: ReturnType<typeof setTimeout> | undefined
+let waitlistSearchTimeout: ReturnType<typeof setTimeout> | undefined
 
 function extractErrorMessage(error: any, fallback: string) {
   return (
@@ -937,7 +1194,7 @@ function formatRelative(value?: string) {
   return formatDateTime(value)
 }
 
-function formatJson(value?: Record<string, any>) {
+function formatJson(value?: any) {
   if (!value) return '{}'
   try {
     return JSON.stringify(value, null, 2)
@@ -1063,6 +1320,46 @@ function changeInvitationPage(page: number) {
   fetchInvitations()
 }
 
+function computeWaitlistQuery() {
+  const query: Record<string, any> = {
+    page: waitlistPagination.page,
+    pageSize: waitlistPagination.pageSize,
+  }
+  if (waitlistSearch.value.trim()) query.search = waitlistSearch.value.trim()
+  if (waitlistSubscription.value !== 'all') query.updates = waitlistSubscription.value
+  if (waitlistStatus.value !== 'all') query.status = waitlistStatus.value
+  return query
+}
+
+async function fetchWaitlist(resetPage = false) {
+  if (resetPage) {
+    waitlistPagination.page = 1
+  }
+  waitlistLoading.value = true
+  waitlistError.value = ''
+  try {
+    const response = await api.get<WaitlistResponse>('/api/admin/waitlist', {
+      query: computeWaitlistQuery(),
+    })
+    waitlistEntries.value = response.items
+    Object.assign(waitlistPagination, response.pagination)
+    if (response.stats) {
+      Object.assign(waitlistStats, response.stats)
+    }
+    waitlistLoaded.value = true
+  } catch (error) {
+    waitlistError.value = extractErrorMessage(error, 'Warteliste konnte nicht geladen werden.')
+  } finally {
+    waitlistLoading.value = false
+  }
+}
+
+function changeWaitlistPage(page: number) {
+  if (page < 1 || page > waitlistPagination.pages) return
+  waitlistPagination.page = page
+  fetchWaitlist()
+}
+
 function computeLogQuery() {
   const query: Record<string, any> = {
     page: logPagination.page,
@@ -1145,6 +1442,8 @@ async function refreshActiveTab() {
       await fetchUsers(true)
     } else if (activeTab.value === 'invitations') {
       await fetchInvitations(true)
+    } else if (activeTab.value === 'waitlist') {
+      await fetchWaitlist(true)
     } else {
       await fetchLogs(true)
     }
@@ -1156,6 +1455,8 @@ async function refreshActiveTab() {
 watch(userRoleFilter, () => fetchUsers(true))
 watch(invitationStatus, () => fetchInvitations(true))
 watch(invitationChannel, () => fetchInvitations(true))
+watch(waitlistSubscription, () => fetchWaitlist(true))
+watch(waitlistStatus, () => fetchWaitlist(true))
 watch(logChannel, () => fetchLogs(true))
 watch(logDirection, () => fetchLogs(true))
 watch(logRole, () => fetchLogs(true))
@@ -1171,6 +1472,11 @@ watch(invitationSearch, () => {
   invitationSearchTimeout = setTimeout(() => fetchInvitations(true), 400)
 })
 
+watch(waitlistSearch, () => {
+  if (waitlistSearchTimeout) clearTimeout(waitlistSearchTimeout)
+  waitlistSearchTimeout = setTimeout(() => fetchWaitlist(true), 400)
+})
+
 watch(logSearch, () => {
   if (logSearchTimeout) clearTimeout(logSearchTimeout)
   logSearchTimeout = setTimeout(() => fetchLogs(true), 400)
@@ -1183,6 +1489,8 @@ watch(activeTab, (tab) => {
     fetchUsers(true)
   } else if (tab === 'invitations' && !invitationsLoaded.value) {
     fetchInvitations(true)
+  } else if (tab === 'waitlist' && !waitlistLoaded.value) {
+    fetchWaitlist(true)
   } else if (tab === 'logs' && !logsLoaded.value) {
     fetchLogs(true)
   }

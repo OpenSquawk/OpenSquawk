@@ -1,5 +1,6 @@
 // server/api/llm/decide.post.ts
 import { readBody, createError } from 'h3'
+import { routeDecision, type LLMDecisionInput } from '../../utils/openai'
 
 export default defineEventHandler(async (event) => {
     const body = await readBody<LLMDecisionInput | undefined>(event)
@@ -11,7 +12,7 @@ export default defineEventHandler(async (event) => {
     }
 
     try {
-        const decision = await routeDecision(body)
+        const { decision, trace } = await routeDecision(body)
 
         // Log für Debugging bei off-schema oder radio check
         if (decision.off_schema) {
@@ -19,6 +20,10 @@ export default defineEventHandler(async (event) => {
         }
         if (decision.radio_check) {
             console.log(`[ATC] Radio check processed: "${body.pilot_utterance}"`)
+        }
+
+        if (trace?.calls?.length) {
+            console.log('[ATC] Decision trace captured with', trace.calls.length, 'call(s)')
         }
 
         return decision

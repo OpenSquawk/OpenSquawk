@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
-import { getOpenAIClient, routeDecision } from "../../utils/openai";
+import { getOpenAIClient, routeDecision, type LLMDecisionResult } from "../../utils/openai";
 import { createReadStream } from "node:fs";
 import { TransmissionLog } from "../../models/TransmissionLog";
 import { getUserFromEvent } from "../../utils/auth";
@@ -139,6 +139,7 @@ export default defineEventHandler(async (event) => {
 
         const shouldAutoDecide = body.autoDecide !== false;
 
+        let decisionResult: LLMDecisionResult | null = null;
         let decision: PTTResponse['decision'];
 
         if (shouldAutoDecide) {
@@ -148,7 +149,8 @@ export default defineEventHandler(async (event) => {
                 pilot_utterance: transcribedText
             };
 
-            decision = await routeDecision(decisionInput);
+            decisionResult = await routeDecision(decisionInput);
+            decision = decisionResult.decision;
         }
 
         // 5. Cleanup
@@ -169,6 +171,7 @@ export default defineEventHandler(async (event) => {
                     moduleId: body.moduleId,
                     lessonId: body.lessonId,
                     decision,
+                    decisionTrace: decisionResult?.trace,
                     autoDecide: shouldAutoDecide,
                 },
             })
