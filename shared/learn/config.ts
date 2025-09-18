@@ -8,6 +8,7 @@ export type LearnProgress = Record<string, Record<string, LessonProgress>>
 export interface LearnConfig {
   tts: boolean
   radioLevel: number
+  audioSpeed: number
   voice: string
   audioChallenge: boolean
 }
@@ -21,6 +22,7 @@ export interface LearnState {
 export const LEARN_CONFIG_DEFAULTS: LearnConfig = {
   tts: false,
   radioLevel: 4,
+  audioSpeed: 1,
   voice: '',
   audioChallenge: false,
 }
