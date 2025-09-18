@@ -93,6 +93,14 @@ export const COMMUNICATION_STEPS = [
     // Weitere Steps können hier definiert werden
 ]
 
+type FrequencyVariableKey = 'atis_freq'
+    | 'delivery_freq'
+    | 'ground_freq'
+    | 'tower_freq'
+    | 'departure_freq'
+    | 'approach_freq'
+    | 'handoff_freq'
+
 // --- ATC Decision Tree laden ---
 export interface FlightContext {
     callsign: string
@@ -111,6 +119,7 @@ export interface FlightContext {
     departure_freq: string
     approach_freq: string
     handoff_freq: string
+    atis_freq?: string
     qnh_hpa: number | string
     taxi_route: string
     remarks?: string
@@ -216,6 +225,7 @@ export default function useCommunicationsEngine() {
         sid: 'ANEKI7S',
         transition: 'ANEKI',
         flight_level: 'FL360',
+        atis_freq: '118.025',
         ground_freq: '121.700',
         tower_freq: '118.700',
         departure_freq: '125.350',
@@ -287,6 +297,7 @@ export default function useCommunicationsEngine() {
             initial_altitude_ft: 5000,
             climb_altitude_ft: 7000,
             taxi_route: 'A, V',
+            atis_freq: '118.025',
             delivery_freq: '121.900',
             ground_freq: '121.700',
             tower_freq: '118.700',
@@ -320,6 +331,24 @@ export default function useCommunicationsEngine() {
 
         currentStateId.value = tree.value.start_state
         communicationLog.value = []
+    }
+
+    function updateFrequencyVariables(update: Partial<Record<FrequencyVariableKey, string>>) {
+        if (!update) return
+
+        const sanitizedEntries = Object.entries(update)
+            .filter(([, value]) => typeof value === 'string' && value.trim().length)
+            .map(([key, value]) => [key, value!.trim()]) as [FrequencyVariableKey, string][]
+
+        if (!sanitizedEntries.length) {
+            return
+        }
+
+        for (const [key, value] of sanitizedEntries) {
+            variables.value[key] = value
+        }
+
+        Object.assign(flightContext.value, Object.fromEntries(sanitizedEntries))
     }
 
     function buildLLMContext(pilotTranscript: string) {
@@ -576,6 +605,7 @@ export default function useCommunicationsEngine() {
 
         // Lifecycle
         initializeFlight,
+        updateFrequencyVariables,
 
         // Communication
         processPilotTransmission,

@@ -6,6 +6,7 @@ export interface ServerRuntimeConfig {
   llmModel: string
   ttsModel: string
   voiceId: string
+  openaipApiKey?: string
   usePiper: boolean
   piperPort: number
   useSpeaches: boolean
@@ -67,6 +68,7 @@ export function getServerRuntimeConfig(): ServerRuntimeConfig {
     llmModel: String(runtimeConfig.llmModel || '').trim() || 'gpt-5-nano',
     ttsModel: String(runtimeConfig.ttsModel || '').trim() || 'tts-1',
     voiceId: String(runtimeConfig.defaultVoiceId || '').trim() || 'alloy',
+    openaipApiKey: String(runtimeConfig.openaipApiKey || '').trim() || undefined,
     usePiper: toBoolean(runtimeConfig.usePiper),
     piperPort: toNumber(runtimeConfig.piperPort, 5001),
     useSpeaches: toBoolean(runtimeConfig.useSpeaches),
