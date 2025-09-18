@@ -1,34 +1,33 @@
 ---
-title: "Alpha-Prototyp bereit für frühe Tests"
+title: "Alpha prototype ready for early testing"
 date: "2025-09-15"
-summary: "Unser erster OpenSquawk Alpha-Build läuft lokal für MSFS und zeigt, wohin die Reise Richtung community-getriebener AI-ATC geht."
-bannerFile: "alpha-prototype.svg"
+summary: "Our first OpenSquawk alpha build runs locally for MSFS and shows where community-driven AI ATC is heading."
 ---
 
-Wir haben den Alpha-Prototyp von OpenSquawk intern stabilisiert und geben ihn jetzt an neugierige Mitentwickler:innen raus. Der Build kombiniert eine Nuxt-Oberfläche mit Node-Services für Speech-to-Text, Entscheidungslogik und TTS. Alles lässt sich lokal betreiben, solange du ein wenig Terminal-Erfahrung mitbringst.
+We have stabilised the OpenSquawk alpha prototype internally and are now handing it to curious co-developers. The build combines a Nuxt interface with Node services for speech-to-text, decision logic and TTS. Everything runs locally as long as you bring a bit of terminal experience.
 
-## Was dich erwartet
+## What to expect
 
-- Self-host Setup: `yarn install`, `.env` befüllen, danach `yarn dev` oder `docker compose up` für das volle Paket.
-- Simulator-Fokus: Microsoft Flight Simulator (MSFS) zuerst, X-Plane steht bereits in der Konzeptphase.
-- Zielbild: Community-driven Features, damit Trainingsrichtung VATSIM realitätsnah bleibt und Hosting langfristig bezahlbar wird.
+- Self-host setup: `yarn install`, fill your `.env`, then `yarn dev` or `docker compose up` for the full stack.
+- Simulator focus: Microsoft Flight Simulator (MSFS) first; X-Plane is already in the concept phase.
+- Target image: community-driven features so VATSIM training stays realistic and hosting remains affordable.
 
-## Startvoraussetzungen
+## Prerequisites
 
-- Grundkenntnisse in Node/Nuxt (Logs lesen, Pakete aktualisieren, `.env` konfigurieren).
-- Zugriff auf MSFS (PC) für die ersten Funkexperimente.
-- Bereitschaft, Issues zu dokumentieren und kleine Tweaks per Pull Request zu liefern.
+- Basic knowledge of Node/Nuxt (reading logs, updating packages, configuring `.env`).
+- Access to MSFS (PC) for the first radio experiments.
+- Willingness to document issues and ship small tweaks via pull request.
 
-## Wie du helfen kannst
+## How you can help
 
-- Teste den Alpha-Build und melde Findings als Issues – am besten mit Logs oder kurzen Screenshots.
-- Schau in die Issues labeled `help-wanted`, dort liegen konkrete Aufgaben für Node/Nuxt Devs, ATC SMEs, Tester:innen und Infra-/Kosten-Benchmarking.
-- Teile eigene Feature-Ideen direkt in der Roadmap oder schreib uns via [info@opensquawk.de](mailto:info@opensquawk.de).
+- Test the alpha build and report findings as issues – ideally with logs or quick screenshots.
+- Check the `help-wanted` issues for concrete tasks aimed at Node/Nuxt devs, ATC SMEs, testers and infra/cost benchmarking.
+- Share feature ideas directly in the roadmap or email us at [info@opensquawk.de](mailto:info@opensquawk.de).
 
-## Nächste Schritte
+## Next steps
 
-- X-Plane Plugin als nächstes Milestone.
-- Lernpfad-Module iterieren (Ground → Departure → Arrival → VATSIM).
-- Hosting-Kosten transparent benchmarken und im Blog teilen.
+- X-Plane plug-in as the next milestone.
+- Iterate learning modules (Ground → Departure → Arrival → VATSIM).
+- Benchmark hosting costs transparently and share them on the blog.
 
-Danke für jedes Feedback – gemeinsam bringen wir OpenSquawk Richtung „Open-source, low-cost AI ATC für Flugsimulatoren".
+Thanks for every piece of feedback – together we can turn OpenSquawk into open-source, low-cost AI ATC for flight simulators.
