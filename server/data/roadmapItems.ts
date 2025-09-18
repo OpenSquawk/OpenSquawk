@@ -21,7 +21,7 @@ export const ROADMAP_ITEMS: RoadmapItemDefinition[] = [
     description:
       'Feintuning für Stimmen, Hintergrundrauschen und prozedurale Antworten, damit Clearance, Handoffs und Phraseologie wie am echten Radar klingen.',
     category: 'Simulation',
-    icon: 'mdi-airplane-cog',
+    icon: 'mdi-rocket-launch'
   },
   {
     key: 'cockpit-intercom',
@@ -77,7 +77,7 @@ export const ROADMAP_ITEMS: RoadmapItemDefinition[] = [
     description:
       'Wechselnde Stimmen je Position, inklusive regionaler Akzente und geschlechtsneutraler Optionen.',
     category: 'Immersion',
-    icon: 'mdi-account-voice-outline',
+    icon: 'mdi-account-multiple',
   },
   {
     key: 'ai-traffic',
@@ -85,7 +85,7 @@ export const ROADMAP_ITEMS: RoadmapItemDefinition[] = [
     description:
       'Simulierte andere Piloten für Frequenzaufkommen, inklusive korrekter Callsigns, Handovers und Konflikt-Handling.',
     category: 'Traffic',
-    icon: 'mdi-airplane-multiple',
+    icon: 'mdi-airplane-takeoff',
   },
 ]
 
