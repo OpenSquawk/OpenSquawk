@@ -6,7 +6,6 @@ export interface NewsPost {
   body: string
   html: string
   readingTime: string
-  bannerFile: string
 }
 
 interface FrontMatter {
@@ -16,7 +15,6 @@ interface FrontMatter {
   excerpt?: string
   description?: string
   readingTime?: string
-  banner?: string
 }
 
 const rawNewsModules = import.meta.glob('~~/content/news/*.md', {
@@ -53,7 +51,6 @@ function parseNewsFile(path: string, raw: string): NewsPost | null {
   const excerpt = truncateText(excerptSource || firstParagraph(cleanBody), 220)
   const html = markdownToHtml(cleanBody)
   const readingTime = attributes.readingTime || formatReadingTime(cleanBody)
-  const bannerFile = normalizeBannerFile(attributes.banner, slug)
 
   return {
     slug,
@@ -63,7 +60,6 @@ function parseNewsFile(path: string, raw: string): NewsPost | null {
     body: cleanBody,
     html,
     readingTime,
-    bannerFile,
   }
 }
 
@@ -147,15 +143,7 @@ function truncateText(text: string, maxLength: number): string {
 function formatReadingTime(content: string): string {
   const words = content.split(/\s+/).filter(Boolean)
   const minutes = Math.max(1, Math.round(words.length / 180))
-  return `${minutes} Min Lesezeit`
-}
-
-function normalizeBannerFile(banner: string | undefined, slug: string): string {
-  const value = (banner || '').trim()
-  if (!value) {
-    return `${slug}.svg`
-  }
-  return value.includes('.') ? value : `${value}.svg`
+  return `${minutes} min read`
 }
 
 function markdownToHtml(markdown: string): string {

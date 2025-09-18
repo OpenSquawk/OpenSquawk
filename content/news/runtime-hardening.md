@@ -1,36 +1,36 @@
 ---
-title: "Runtime-Härtung & sichere Eingaben"
+title: "Runtime hardening & safer inputs"
 date: "2025-09-18"
-summary: "Neue Konfigurationszentrale, sichere Audio-Uploads und strengere Passwörter machen OpenSquawk robuster."
-readingTime: "3 Min Lesezeit"
+summary: "A new configuration hub, secure audio uploads and stronger passwords make OpenSquawk more robust."
+readingTime: "3 min read"
 ---
 
-Wir haben uns heute quer durch Backend, Runtime-Config und Onboarding gearbeitet, um OpenSquawk widerstandsfähiger zu machen. Drei Baustellen standen im Fokus: reproduzierbare Konfiguration, saubere Audio-Eingaben für den Funk-Workflow und ein härterer Schutz der Benutzerkonten.
+We worked across the backend, runtime config and onboarding today to make OpenSquawk more resilient. Three workstreams were in focus: reproducible configuration, clean audio inputs for the radio workflow and tighter protection for user accounts.
 
 ## Highlights
 
-- **Zentrale Runtime-Konfiguration:** Alle sensiblen Schlüssel (OpenAI, TTS, Piper & Speaches) laufen jetzt über eine gemeinsame Helper-Funktion. Fehlkonfigurationen fliegen sofort auf, inklusive klarer Fehlermeldung.
-- **Sicherere Funk-Eingaben:** Die PTT-API akzeptiert nur noch validiertes Base64-Audio bis 2 MB und standardisiert unbekannte Formate auf WAV, bevor Whisper loslegt.
-- **Stärkere Passwörter:** Registrierung prüft E-Mail-Format und Passwort-Qualität (Länge, Buchstaben/Zahlen, Sonderzeichen), damit Alpha-Zugänge nicht mit Trivialpasswörtern angelegt werden.
+- **Central runtime configuration:** All sensitive keys (OpenAI, TTS, Piper & Speaches) now flow through a shared helper. Misconfigurations show up instantly with clear error messages.
+- **Safer radio inputs:** The PTT API now accepts validated base64 audio up to 2 MB and standardises unknown formats to WAV before Whisper takes over.
+- **Stronger passwords:** Registration checks email format and password quality (length, letters/numbers, special characters) so alpha access is not created with trivial credentials.
 
 ## Details
 
-### Runtime-Konfiguration aufgeräumt
+### Runtime configuration tidied up
 
-Ein neues Utility (`server/utils/runtimeConfig.ts`) kapselt sämtliche Laufzeit-Variablen. `OpenAI`- und TTS-Clients ziehen daraus konsistent Schlüssel, Modelle, Voice-Defaults sowie Piper/Speaches-Schalter. Der Server stoppt mit einem erklärenden Fehler, falls `OPENAI_API_KEY` fehlt – besser früh scheitern als stumm 500er produzieren.
+A new utility (`server/utils/runtimeConfig.ts`) encapsulates every runtime variable. The `OpenAI` and TTS clients consistently pull keys, models, voice defaults as well as Piper/Speaches switches from there. The server now stops with an explanatory error if `OPENAI_API_KEY` is missing – better to fail early than silently throw 500s.
 
-### Audio-Endpunkte härter gemacht
+### Audio endpoints hardened
 
-Die Push-to-Talk-Route prüft Base64-Eingaben, begrenzt Dateigrößen auf praxisnahe 2 MB (~60 s Funk) und erzwingt bekannte Audioformate. Das reduziert Risiko von Speicherausreißern und sorgt dafür, dass FFmpeg nur bei echten Konvertierungen anspringt. Gleichzeitig lesen TTS-Endpunkte ihre Einstellungen jetzt aus der Runtime-Config und respektieren lokale Piper-Ports sowie Speaches-Basis-URLs.
+The push-to-talk route validates base64 input, caps file size at a practical 2 MB (~60 seconds of radio) and enforces known audio formats. That reduces the risk of memory spikes and ensures FFmpeg only kicks in for real conversions. At the same time, TTS endpoints now read their settings from the runtime config and respect local Piper ports and Speaches base URLs.
 
-### Onboarding abgesichert
+### Onboarding secured
 
-Die Registrierung verweigert invaliden Input ab sofort sofort: ungültige E-Mails, kurze Passwörter oder fehlende Sonderzeichen liefern verständliche Fehlermeldungen. So bleiben Test-Accounts verwaltbar und Sicherheitsstandards steigen, ohne den Flow zu bremsen.
+Registration immediately rejects invalid input: wrong emails, short passwords or missing special characters now return clear error messages. Test accounts stay manageable and security standards rise without slowing the flow.
 
-## Ausblick
+## Outlook
 
-- Hotjar/Analytics-Opt-in an die neue Config-Logik anbinden.
-- Für den Login dieselben Passwort-Guidelines rückspiegeln (Feedback-UI).
-- Größere Audiodateien optional asynchron verarbeiten, falls Langform-Transkripte spannend werden.
+- Connect the Hotjar/analytics opt-in to the new config logic.
+- Mirror the same password guidelines for login (including feedback UI).
+- Consider processing larger audio files asynchronously if long-form transcripts become interesting.
 
-Wenn euch weitere Hardenings einfallen: gerne Issues aufmachen oder direkt PRs schicken!
+If you have more hardening ideas, feel free to open issues or send PRs directly!
