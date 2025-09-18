@@ -67,7 +67,10 @@ export interface LLMDecision {
 type ReadbackStatus = 'ok' | 'missing' | 'incorrect' | 'uncertain'
 
 const READBACK_REQUIREMENTS: Record<string, string[]> = {
-    CD_READBACK_CHECK: ['dest', 'sid', 'runway', 'initial_altitude_ft', 'squawk']
+    CD_READBACK_CHECK: ['dest', 'sid', 'runway', 'initial_altitude_ft', 'squawk'],
+    GRD_TAXI_READBACK_CHECK: ['runway', 'taxi_route', 'hold_short'],
+    TWR_TAKEOFF_READBACK_CHECK: ['runway', 'cleared_takeoff'],
+    GRD_TAXI_IN_READBACK_CHECK: ['gate', 'taxi_route']
 }
 
 const READBACK_JSON_SCHEMA = {
@@ -134,6 +137,19 @@ function buildSpokenVariants(key: string, value: string): string[] {
     variants.add(normalized)
     variants.add(normalized.toUpperCase())
 
+    if (key === 'hold_short') {
+        const base = normalized.replace(/^holding\s+short/i, 'hold short')
+        variants.add(base)
+        if (!/\brunway\b/i.test(base)) {
+            variants.add(base.replace(/^(hold short)/i, '$1 runway'))
+        }
+    }
+
+    if (key === 'cleared_takeoff') {
+        variants.add(normalized.replace(/take-off/gi, 'takeoff'))
+        variants.add(normalized.replace(/take-off/gi, 'take off'))
+    }
+
     if (/^[A-Z]{3,4}$/.test(normalized.toUpperCase())) {
         variants.add(toPhonetic(normalized))
     }
@@ -186,6 +202,42 @@ function pickTransition(
 
 function fallbackNextState(input: LLMDecisionInput): string {
     return input.candidates[0]?.id || input.state_id || 'GEN_NO_REPLY'
+}
+
+function resolveReadbackValue(key: string, input: LLMDecisionInput): string | null {
+    const rawValue = input.variables?.[key]
+    if (rawValue !== undefined && rawValue !== null) {
+        const trimmed = `${rawValue}`.trim()
+        if (trimmed.length > 0) {
+            return trimmed
+        }
+    }
+
+    switch (key) {
+        case 'hold_short': {
+            const runway = input.variables?.runway
+            if (typeof runway === 'string' && runway.trim().length > 0) {
+                return `holding short ${runway}`.trim()
+            }
+            return 'holding short'
+        }
+        case 'cleared_takeoff': {
+            const runway = input.variables?.runway
+            if (typeof runway === 'string' && runway.trim().length > 0) {
+                return `cleared for take-off ${runway}`.trim()
+            }
+            return 'cleared for take-off'
+        }
+        case 'cleared_to_land': {
+            const runway = input.variables?.runway
+            if (typeof runway === 'string' && runway.trim().length > 0) {
+                return `cleared to land runway ${runway}`.trim()
+            }
+            return 'cleared to land'
+        }
+        default:
+            return null
+    }
 }
 
 // Extrahiere verwendete Variablen aus Templates
@@ -283,14 +335,24 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
 
     async function handleReadbackCheck(): Promise<LLMDecision> {
         const requiredKeys = READBACK_REQUIREMENTS[input.state_id] || input.state.readback_required || []
-        const expectedItems = requiredKeys
-            .map(key => ({ key, value: input.variables?.[key] }))
-            .filter(item => item.value !== undefined && item.value !== null && `${item.value}`.trim().length > 0)
-            .map(item => ({
-                key: item.key,
-                value: String(item.value),
-                spoken_variants: buildSpokenVariants(item.key, String(item.value))
-            }))
+        const expectedItems = requiredKeys.reduce<Array<{ key: string; value: string; spoken_variants: string[] }>>((acc, key) => {
+            const value = resolveReadbackValue(key, input)
+            if (!value) {
+                return acc
+            }
+
+            const normalizedValue = String(value)
+            if (!normalizedValue.trim().length) {
+                return acc
+            }
+
+            acc.push({
+                key,
+                value: normalizedValue,
+                spoken_variants: buildSpokenVariants(key, normalizedValue)
+            })
+            return acc
+        }, [])
 
         const okNext = pickTransition(input.state.ok_next, input.candidates)
         const badNext = pickTransition(input.state.bad_next, input.candidates)

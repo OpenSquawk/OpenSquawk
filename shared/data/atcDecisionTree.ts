@@ -114,6 +114,7 @@ const atcDecisionTree = {
       "role": "atc",
       "phase": "Clearance",
       "auto": "check_readback",
+      "readback_required": ["dest","sid","runway","initial_altitude_ft","squawk"],
       "ok_next": [{"to": "CD_CLR_COMPLETE"}],
       "bad_next": [{"to": "CD_READBACK_CORRECT"}],
       "on_timeout": [{"after_s": 6, "action": "say", "say_tpl": "{callsign}, read back clearance."}]
@@ -179,7 +180,21 @@ const atcDecisionTree = {
       "role": "pilot",
       "phase": "TaxiOut",
       "utterance_tpl": "{callsign} taxi to {runway} via {taxi_route}, holding short {runway}.",
-      "next": [{"to": "TWR_CONTACT"}]
+      "next": [{"to": "GRD_TAXI_READBACK_CHECK"}]
+    },
+    "GRD_TAXI_READBACK_CHECK": {
+      "role": "atc",
+      "phase": "TaxiOut",
+      "auto": "check_readback",
+      "readback_required": ["runway","taxi_route","hold_short"],
+      "ok_next": [{"to": "TWR_CONTACT"}],
+      "bad_next": [{"to": "GRD_TAXI_READBACK_CORRECT"}]
+    },
+    "GRD_TAXI_READBACK_CORRECT": {
+      "role": "atc",
+      "phase": "TaxiOut",
+      "say_tpl": "{callsign}, negative; taxi to runway {runway} via {taxi_route}, hold short runway {runway}.",
+      "next": [{"to": "GRD_TAXI_READBACK"}]
     },
 
     "TWR_CONTACT": {
@@ -216,7 +231,21 @@ const atcDecisionTree = {
       "role": "pilot",
       "phase": "Departure",
       "utterance_tpl": "{callsign} cleared for take-off {runway}.",
-      "next": [{"to": "DEP_CONTACT"}]
+      "next": [{"to": "TWR_TAKEOFF_READBACK_CHECK"}]
+    },
+    "TWR_TAKEOFF_READBACK_CHECK": {
+      "role": "atc",
+      "phase": "Departure",
+      "auto": "check_readback",
+      "readback_required": ["runway","cleared_takeoff"],
+      "ok_next": [{"to": "DEP_CONTACT"}],
+      "bad_next": [{"to": "TWR_TAKEOFF_READBACK_CORRECT"}]
+    },
+    "TWR_TAKEOFF_READBACK_CORRECT": {
+      "role": "atc",
+      "phase": "Departure",
+      "say_tpl": "{callsign}, negative; runway {runway}, cleared for take-off.",
+      "next": [{"to": "TWR_TAKEOFF_READBACK"}]
     },
 
     "DEP_CONTACT": {
@@ -373,7 +402,21 @@ const atcDecisionTree = {
       "role": "pilot",
       "phase": "TaxiIn",
       "utterance_tpl": "{callsign} taxi to stand {gate} via {taxi_route}.",
-      "next": [{"to": "FLOW_COMPLETE"}]
+      "next": [{"to": "GRD_TAXI_IN_READBACK_CHECK"}]
+    },
+    "GRD_TAXI_IN_READBACK_CHECK": {
+      "role": "atc",
+      "phase": "TaxiIn",
+      "auto": "check_readback",
+      "readback_required": ["gate","taxi_route"],
+      "ok_next": [{"to": "FLOW_COMPLETE"}],
+      "bad_next": [{"to": "GRD_TAXI_IN_READBACK_CORRECT"}]
+    },
+    "GRD_TAXI_IN_READBACK_CORRECT": {
+      "role": "atc",
+      "phase": "TaxiIn",
+      "say_tpl": "{callsign}, negative; taxi to stand {gate} via {taxi_route}.",
+      "next": [{"to": "GRD_TAXI_IN_READBACK"}]
     },
     "FLOW_COMPLETE": {
       "role": "system",
