@@ -5,7 +5,6 @@ import {existsSync} from "node:fs";
 import {join} from "node:path";
 import {randomUUID} from "node:crypto";
 import {normalize, TTS_MODEL, normalizeATC} from "../../utils/normalize";
-import {request} from "node:http";
 import { TransmissionLog } from "../../models/TransmissionLog";
 import { getUserFromEvent } from "../../utils/auth";
 
@@ -60,26 +59,24 @@ function fmtToExt(fmt: AudioFmt): string {
 }
 
 // ---- Piper HTTP helper ----
-async function piperTTS(text: string, voice: string): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-        const req = request(
-            {
-                hostname: "localhost",
-                port: Number(process.env.PIPER_PORT ?? 5001),
-                path: "/",
-                method: "POST",
-                headers: { "Content-Type": "application/json" }
-            },
-            (res) => {
-                const data: Buffer[] = [];
-                res.on("data", (chunk) => data.push(chunk));
-                res.on("end", () => resolve(Buffer.concat(data)));
-            }
-        );
-        req.on("error", reject);
-        req.write(JSON.stringify({ text, voice }));
-        req.end();
+async function piperTTS(text: string, voice: string, speed: number): Promise<Buffer> {
+    const baseUrl = (process.env.PIPER_BASE_URL || "").trim();
+    const port = Number(process.env.PIPER_PORT ?? 5001);
+    const endpoint = baseUrl ? `${baseUrl.replace(/\/+$/, "")}/v1/audio/speech` : `http://localhost:${port}/v1/audio/speech`;
+
+    const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, voice, speed })
     });
+
+    if (!response.ok) {
+        const errText = await response.text().catch(() => "");
+        throw new Error(`Piper request failed (${response.status}): ${errText || response.statusText}`);
+    }
+
+    const arrBuffer = await response.arrayBuffer();
+    return Buffer.from(arrBuffer);
 }
 
 // ---- Speaches HTTP helper ----
@@ -174,7 +171,7 @@ export default defineEventHandler(async (event) => {
             actualMime = fmtToMime(fmt);
         } else if (usePiper) {
             // Lokaler Piper
-            audioBuffer = await piperTTS(normalized, voice);
+            audioBuffer = await piperTTS(normalized, voice, speed);
             modelUsed = "piper-local";
             // Piper liefert WAV
             actualMime = "audio/wav";

@@ -1,0 +1,4 @@
+fastapi>=0.110,<0.112
+uvicorn[standard]>=0.29,<0.31
+faster-whisper>=0.10,<0.11
+numpy>=1.26,<2.0

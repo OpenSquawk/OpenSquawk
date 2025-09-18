@@ -1,6 +1,6 @@
 // server/api/atc/ptt.post.ts
 import { createError, readBody } from "h3";
-import { writeFile, rm } from "node:fs/promises";
+import { writeFile, rm, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
@@ -55,6 +55,34 @@ async function convertToWav(inputPath: string, outputPath: string) {
     ]);
 }
 
+async function transcribeWithLocalWhisper(filePath: string, format: string): Promise<string> {
+    const endpoint = (process.env.LOCAL_WHISPER_URL || "http://localhost:9000/v1/audio/transcriptions").trim();
+    const language = (process.env.LOCAL_WHISPER_LANGUAGE || "en").trim();
+
+    const audioBuffer = await readFile(filePath);
+    const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            audio: audioBuffer.toString("base64"),
+            format,
+            language
+        })
+    });
+
+    if (!response.ok) {
+        const errText = await response.text().catch(() => "");
+        throw new Error(`Local Whisper request failed (${response.status}): ${errText || response.statusText}`);
+    }
+
+    const data = await response.json() as { text?: string };
+    const text = (data?.text || "").trim();
+    if (!text) {
+        throw new Error("Local Whisper returned an empty transcription");
+    }
+    return text;
+}
+
 export default defineEventHandler(async (event) => {
     const body = await readBody<PTTRequest>(event);
 
@@ -85,15 +113,23 @@ export default defineEventHandler(async (event) => {
             }
         }
 
-        // 3. OpenAI Whisper für Transkription
-        const transcription = await openai.audio.transcriptions.create({
-            file: createReadStream(audioFileForWhisper),
-            model: "whisper-1",
-            language: "en",
-            prompt: "This is ATC radio communication with aviation phraseology including callsigns, runway numbers, and standard procedures."
-        });
+        const useLocalWhisper = (process.env.USE_LOCAL_WHISPER || "").toLowerCase() === "true";
 
-        const transcribedText = transcription.text.trim();
+        let transcribedText: string;
+
+        if (useLocalWhisper) {
+            transcribedText = await transcribeWithLocalWhisper(audioFileForWhisper, "wav");
+        } else {
+            // 3. OpenAI Whisper für Transkription
+            const transcription = await openai.audio.transcriptions.create({
+                file: createReadStream(audioFileForWhisper),
+                model: "whisper-1",
+                language: "en",
+                prompt: "This is ATC radio communication with aviation phraseology including callsigns, runway numbers, and standard procedures."
+            });
+
+            transcribedText = transcription.text.trim();
+        }
 
         if (!transcribedText) {
             throw createError({

@@ -75,8 +75,31 @@ bun run preview
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
 
 
-# Piper TTS local
-if you want to use local tts, install and run pip install "piper-tts[http]" on port 5001, then set USE_PIPER=true in .env
+## Local speech services (Docker)
 
-# Whisper Tiny local
-if you want to use local whisper tiny implement it #TODO
+For offline-friendly development you can run Whisper tiny and Piper locally via Docker. A ready-to-use setup lives under `docker/local-ai`.
+
+```bash
+cd docker/local-ai
+docker compose up --build
+```
+
+The compose stack starts two containers:
+
+- **opensquawk-whisper** – `faster-whisper` tiny.en model exposed on `http://localhost:9000/v1/audio/transcriptions`
+- **opensquawk-piper** – Piper TTS (default `en_US-ryan-low`) exposed on `http://localhost:5001/v1/audio/speech`
+
+On the first run the containers will download the required models into Docker volumes (`whisper-cache`, `piper-voices`). You can change the default voice/model via environment variables in `docker-compose.yml`.
+
+To make the Nuxt server use the local services, add the following to your `.env`:
+
+```bash
+USE_PIPER=true
+PIPER_BASE_URL=http://localhost:5001
+
+USE_LOCAL_WHISPER=true
+LOCAL_WHISPER_URL=http://localhost:9000/v1/audio/transcriptions
+LOCAL_WHISPER_LANGUAGE=en
+```
+
+Restart the Nuxt backend after updating the environment.

@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  whisper:
+    build:
+      context: ./whisper
+    image: opensquawk-local-whisper
+    container_name: opensquawk-whisper
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-tiny.en}
+      WHISPER_LANGUAGE: ${WHISPER_LANGUAGE:-en}
+      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+      WHISPER_BEAM_SIZE: ${WHISPER_BEAM_SIZE:-5}
+    ports:
+      - "9000:9000"
+    volumes:
+      - whisper-cache:/root/.cache
+    restart: unless-stopped
+
+  piper:
+    build:
+      context: ./piper
+    image: opensquawk-local-piper
+    container_name: opensquawk-piper
+    environment:
+      PIPER_VOICE: ${PIPER_VOICE:-en_US-ryan-low}
+      PIPER_LANGUAGE: ${PIPER_LANGUAGE:-en}
+      PIPER_MODEL_URL: ${PIPER_MODEL_URL:-}
+      PIPER_CONFIG_URL: ${PIPER_CONFIG_URL:-}
+      PIPER_PORT: ${PIPER_PORT:-5001}
+    ports:
+      - "5001:5001"
+    volumes:
+      - piper-voices:/app/models
+    restart: unless-stopped
+
+volumes:
+  whisper-cache:
+  piper-voices:
