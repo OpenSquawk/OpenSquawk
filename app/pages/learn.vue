@@ -305,6 +305,15 @@
               <v-icon size="18">mdi-check</v-icon>
               Prüfen
             </button>
+            <button
+                v-if="result"
+                class="btn soft"
+                type="button"
+                @click="advanceLesson"
+            >
+              <v-icon size="18">mdi-arrow-right</v-icon>
+              Weiter
+            </button>
             <button class="btn soft" type="button" @click="clearAnswers">
               <v-icon size="18">mdi-eraser</v-icon>
               Reset
@@ -375,6 +384,24 @@
           <div class="set-row">
             <span>Funk-Level (1..5)</span>
             <v-slider v-model="cfg.radioLevel" :min="1" :max="5" :step="1" color="cyan" thumb-label/>
+          </div>
+
+          <div class="set-row">
+            <div class="set-info">
+              <span>ATC Audio Geschwindigkeit</span>
+              <small class="muted">Passe die Wiedergabe zum Mitsprechen an.</small>
+            </div>
+            <div class="slider-col">
+              <v-slider
+                  v-model="cfg.playbackRate"
+                  :min="PLAYBACK_RATE_MIN"
+                  :max="PLAYBACK_RATE_MAX"
+                  :step="0.05"
+                  color="cyan"
+                  hide-details
+              />
+              <div class="slider-meta muted small">{{ cfg.playbackRate.toFixed(2) }}×</div>
+            </div>
           </div>
 
           <div class="set-row">
@@ -1839,21 +1866,39 @@ type LearnConfig = {
   radioLevel: number
   voice: string
   audioChallenge: boolean
+  playbackRate: number
 }
 
-const defaultCfg: LearnConfig = { tts: false, radioLevel: 4, voice: '', audioChallenge: false }
+const PLAYBACK_RATE_MIN = 0.75
+const PLAYBACK_RATE_MAX = 1.25
+
+const defaultCfg: LearnConfig = {
+  tts: false,
+  radioLevel: 4,
+  voice: '',
+  audioChallenge: false,
+  playbackRate: 1
+}
+
+function sanitizePlaybackRate(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return defaultCfg.playbackRate
+  }
+  return Math.min(PLAYBACK_RATE_MAX, Math.max(PLAYBACK_RATE_MIN, value))
+}
 const cfg = ref<LearnConfig>({ ...defaultCfg })
 audioReveal.value = !cfg.value.audioChallenge
 
 if (isClient) {
-  const storedCfg = readStorage<{ tts?: boolean; audioChallenge?: boolean }>('os_cfg', {})
+  const storedCfg = readStorage<{ tts?: boolean; audioChallenge?: boolean; playbackRate?: number }>('os_cfg', {})
   const storedLevel = readStorage<{ v?: number }>('os_cfg_level', {})
   const storedVoice = readStorage<{ v?: string }>('os_cfg_voice', {})
   cfg.value = {
     tts: storedCfg.tts ?? defaultCfg.tts,
     radioLevel: storedLevel.v ?? defaultCfg.radioLevel,
     voice: storedVoice.v ?? defaultCfg.voice,
-    audioChallenge: storedCfg.audioChallenge ?? defaultCfg.audioChallenge
+    audioChallenge: storedCfg.audioChallenge ?? defaultCfg.audioChallenge,
+    playbackRate: sanitizePlaybackRate(storedCfg.playbackRate)
   }
 }
 
@@ -1871,11 +1916,19 @@ if (isClient) {
   watch(xp, value => localStorage.setItem('os_xp', String(value)))
 
   const persistGeneralCfg = () => {
-    localStorage.setItem('os_cfg', JSON.stringify({ tts: cfg.value.tts, audioChallenge: cfg.value.audioChallenge }))
+    const safeRate = sanitizePlaybackRate(cfg.value.playbackRate)
+    if (safeRate !== cfg.value.playbackRate) {
+      cfg.value.playbackRate = safeRate
+    }
+    localStorage.setItem(
+      'os_cfg',
+      JSON.stringify({ tts: cfg.value.tts, audioChallenge: cfg.value.audioChallenge, playbackRate: safeRate })
+    )
   }
 
   watch(() => cfg.value.tts, persistGeneralCfg)
   watch(() => cfg.value.audioChallenge, persistGeneralCfg)
+  watch(() => cfg.value.playbackRate, persistGeneralCfg)
   watch(() => cfg.value.radioLevel, value => localStorage.setItem('os_cfg_level', JSON.stringify({ v: value })))
   watch(() => cfg.value.voice, value => localStorage.setItem('os_cfg_voice', JSON.stringify({ v: value })))
 }
@@ -2089,6 +2142,51 @@ function quickContinue(id: string) {
   activeLesson.value = next
 }
 
+function findNextLesson(): Lesson | null {
+  if (!current.value || !activeLesson.value) return null
+  const mod = current.value
+  const lessons = mod.lessons
+  const moduleProgress = progress.value[mod.id] || {}
+  const currentIndex = lessons.findIndex(lesson => lesson.id === activeLesson.value?.id)
+  if (currentIndex === -1) return null
+
+  for (let idx = currentIndex + 1; idx < lessons.length; idx++) {
+    const candidate = lessons[idx]
+    if (!moduleProgress[candidate.id]?.done) {
+      return candidate
+    }
+  }
+
+  const otherUndone = lessons.find((lesson, idx) => idx !== currentIndex && !moduleProgress[lesson.id]?.done)
+  if (otherUndone) {
+    return otherUndone
+  }
+
+  if (currentIndex + 1 < lessons.length) {
+    return lessons[currentIndex + 1]
+  }
+
+  return null
+}
+
+function advanceLesson() {
+  if (!activeLesson.value) return
+  const next = findNextLesson()
+  if (next) {
+    activeLesson.value = next
+    return
+  }
+
+  rollScenario(true)
+  if (current.value) {
+    const moduleProgress = progress.value[current.value.id] || {}
+    const allDone = current.value.lessons.every(lesson => moduleProgress[lesson.id]?.done)
+    toastNow(allDone ? 'Alle Lektionen abgeschlossen – neues Szenario geladen.' : 'Neues Szenario geladen.')
+  } else {
+    toastNow('Neues Szenario geladen.')
+  }
+}
+
 function selectLesson(lesson: Lesson) {
   activeLesson.value = lesson
 }
@@ -2184,8 +2282,9 @@ async function requestSayAudio(cacheKey: string, payload: Record<string, unknown
   }
 }
 
-async function playAudioSource(source: string) {
+async function playAudioSource(source: string, playbackRate = 1) {
   const audio = new Audio(source)
+  audio.playbackRate = playbackRate
   audioElement.value = audio
   audio.onended = () => {
     if (audioElement.value === audio) {
@@ -2210,6 +2309,8 @@ async function say(text: string) {
 
   const rateBase = 0.9 + (cfg.value.radioLevel - 3) * 0.12
   const normalizedRate = Math.min(1.5, Math.max(0.6, rateBase))
+  const playbackRate = sanitizePlaybackRate(cfg.value.playbackRate)
+  const combinedRate = Math.min(2, Math.max(0.5, normalizedRate * playbackRate))
 
   const hasBrowserTts = cfg.value.tts && typeof window !== 'undefined' && 'speechSynthesis' in window
 
@@ -2218,7 +2319,7 @@ async function say(text: string) {
   if (hasBrowserTts) {
     const synth = window.speechSynthesis
     const utterance = new SpeechSynthesisUtterance(trimmed)
-    utterance.rate = normalizedRate
+    utterance.rate = combinedRate
     if (cfg.value.voice) {
       const voiceName = cfg.value.voice.toLowerCase()
       const voice = synth.getVoices().find(item => item.name.toLowerCase().includes(voiceName))
@@ -2253,7 +2354,7 @@ async function say(text: string) {
     if (!dataUrl) {
       dataUrl = await requestSayAudio(cacheKey, payload)
     }
-    await playAudioSource(dataUrl)
+    await playAudioSource(dataUrl, playbackRate)
   } catch (err) {
     console.error('TTS request failed', err)
   } finally {
@@ -3010,6 +3111,17 @@ onMounted(() => {
   flex-direction: column;
   gap: 4px;
   max-width: 70%;
+}
+
+.slider-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.slider-meta {
+  text-align: right;
 }
 
 .sr-only {
