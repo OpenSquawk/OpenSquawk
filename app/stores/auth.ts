@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 
+export const AUTH_TOKEN_STORAGE_KEY = 'os_access_token'
+
 interface Credentials {
   email: string
   password: string
@@ -30,15 +32,15 @@ interface AuthState {
 
 function loadToken(): string {
   if (typeof window === 'undefined') return ''
-  return localStorage.getItem('os_access_token') || ''
+  return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || ''
 }
 
 function persistToken(token: string) {
   if (typeof window === 'undefined') return
   if (token) {
-    localStorage.setItem('os_access_token', token)
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token)
   } else {
-    localStorage.removeItem('os_access_token')
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
   }
 }
 
