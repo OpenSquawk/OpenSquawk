@@ -1029,11 +1029,11 @@ const roadmapImportanceLabel = (value?: number) => {
 }
 const roadmapImportanceShortLabel = (value: number) => {
   const labels: Record<number, string> = {
-    1: 'Optional',
-    2: 'Später',
-    3: 'Wichtig',
-    4: 'Dringend',
-    5: 'Top',
+    1: 'Nein',
+    2: 'Egal',
+    3: 'Später',
+    4: 'Wichtig',
+    5: 'Top'
   }
   return labels[value] || ''
 }
