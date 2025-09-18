@@ -21,8 +21,8 @@
         <v-card class="bg-white/5 backdrop-blur border border-white/10">
           <v-card-text class="space-y-4">
             <div>
-              <h2 class="text-lg font-semibold">VATSIM Integration</h2>
-              <p class="text-sm text-white/70">Gib deine CID ein um deine gefilterten Flugpläne zu laden</p>
+              <h2 class="text-lg font-semibold">VATSIM integration</h2>
+              <p class="text-sm text-white/70">Enter your CID to load your filtered flight plans.</p>
             </div>
             <v-text-field
                 v-model="vatsimId"
@@ -41,7 +41,7 @@
                 :loading="loading"
                 @click="loadFlightPlans"
             >
-              Flugpläne abrufen
+              Load flight plans
             </v-btn>
             <v-alert
                 v-if="error"
@@ -59,8 +59,8 @@
         <v-card class="bg-white/5 backdrop-blur border border-white/10">
           <v-card-text class="space-y-4">
             <div>
-              <h2 class="text-lg font-semibold">Demo Mode</h2>
-              <p class="text-sm text-white/70">Starte mit einem Beispiel-Flugplan zum Testen</p>
+              <h2 class="text-lg font-semibold">Demo mode</h2>
+              <p class="text-sm text-white/70">Start with a sample flight plan to test the workflow.</p>
             </div>
             <v-btn
                 block
@@ -68,7 +68,7 @@
                 variant="outlined"
                 @click="startDemoFlight"
             >
-              Demo starten (DLH39A EDDF→EDDM)
+              Start demo (DLH39A EDDF→EDDM)
             </v-btn>
           </v-card-text>
         </v-card>
@@ -80,20 +80,20 @@
           <v-btn icon @click="currentScreen = 'login'" class="text-cyan-300">
             <v-icon>mdi-arrow-left</v-icon>
           </v-btn>
-          <h2 class="text-lg font-semibold">Verfügbare Flugpläne</h2>
+          <h2 class="text-lg font-semibold">Available flight plans</h2>
           <v-chip color="cyan" variant="outlined" size="small">{{ vatsimId }}</v-chip>
         </div>
 
         <div v-if="loading" class="text-center py-8">
           <v-progress-circular indeterminate color="cyan" class="mb-4" />
-          <p class="text-sm text-white/70">Lade Flugpläne von VATSIM...</p>
+          <p class="text-sm text-white/70">Loading flight plans from VATSIM…</p>
         </div>
 
         <div v-else-if="flightPlans.length === 0" class="text-center py-8">
           <v-icon size="48" class="text-white/30 mb-4">mdi-airplane-off</v-icon>
-          <p class="text-white/70">Keine Flugpläne gefunden</p>
+          <p class="text-white/70">No flight plans found</p>
           <v-btn color="cyan" variant="outlined" class="mt-4" @click="currentScreen = 'login'">
-            Zurück
+            Back
           </v-btn>
         </div>
 
@@ -135,7 +135,7 @@
           <v-card-text class="space-y-4">
             <div class="flex items-start justify-between gap-3">
               <div>
-                <p class="text-xs uppercase tracking-[0.3em] text-white/50">Aktiver Flug</p>
+                <p class="text-xs uppercase tracking-[0.3em] text-white/50">Active flight</p>
                 <h2 class="text-2xl font-semibold">{{ flightContext.callsign || 'N/A' }}</h2>
                 <p class="text-sm text-white/70">{{ flightContext.dep }} → {{ flightContext.dest }}</p>
               </div>
@@ -203,7 +203,7 @@
                 @click="backToSetup"
                 prepend-icon="mdi-airplane-off"
             >
-              Neuen Flug wählen
+              Choose a different flight
             </v-btn>
           </v-card-text>
         </v-card>
@@ -247,7 +247,7 @@
                 @click="swapFrequencies"
                 :class="{ 'swap-animation': swapAnimation }"
             >
-              Frequenzen tauschen
+              Swap frequencies
             </v-btn>
 
             <!-- Signal Quality -->
@@ -270,7 +270,7 @@
         <v-card v-if="currentStep" class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-3">
             <div class="flex items-center justify-between">
-              <p class="text-xs uppercase tracking-[0.3em] text-white/40">Erwartete Kommunikation</p>
+              <p class="text-xs uppercase tracking-[0.3em] text-white/40">Expected communication</p>
               <v-chip color="orange" variant="tonal" size="small">{{ currentStep.frequencyName }}</v-chip>
             </div>
 
@@ -285,7 +285,7 @@
             <div v-if="currentStep.pilot" class="space-y-2 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 text-sm">
               <div class="flex items-center gap-2 text-blue-300">
                 <v-icon size="16">mdi-account-pilot</v-icon>
-                <span class="text-xs uppercase font-semibold">Pilot (Du)</span>
+                <span class="text-xs uppercase font-semibold">Pilot (you)</span>
               </div>
               <p class="font-mono text-white">{{ normalizeExpectedText(currentStep.pilot) }}</p>
             </div>
@@ -314,9 +314,9 @@
                 class="bg-cyan-500/10 text-cyan-100 mb-4"
                 density="compact"
             >
-              Mikrofonberechtigung erforderlich für Push-To-Talk.
+              Microphone permission required for push-to-talk.
               <template #append>
-                <v-btn color="cyan" size="small" variant="flat" @click="requestMicAccess">Erlauben</v-btn>
+                <v-btn color="cyan" size="small" variant="flat" @click="requestMicAccess">Allow</v-btn>
               </template>
             </v-alert>
 
@@ -344,7 +344,7 @@
                     {{ radioMode === 'atc' ? 'ATC' : 'INTERCOM' }}
                   </p>
                   <p class="mt-2 text-sm text-white/60">
-                    {{ radioMode === 'atc' ? `Sendet auf ${frequencies.active}` : 'Crew Intercom • Checklist' }}
+                    {{ radioMode === 'atc' ? `Transmitting on ${frequencies.active}` : 'Crew Intercom • Checklist' }}
                   </p>
                 </div>
               </div>
@@ -376,7 +376,7 @@
                   prepend-icon="mdi-information-variant"
                   density="comfortable"
               >
-                ATIS abhören
+                Listen to ATIS
               </v-btn>
               <v-btn
                   color="cyan"
@@ -386,7 +386,7 @@
                   prepend-icon="mdi-progress-check"
                   density="comfortable"
               >
-                Voller Flug (Simulation)
+                Full flight (simulation)
               </v-btn>
             </div>
           </v-card-text>
@@ -396,7 +396,7 @@
         <v-card class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
-              <h3 class="text-lg font-semibold">Frequenzübersicht</h3>
+              <h3 class="text-lg font-semibold">Frequency directory</h3>
               <div class="flex items-center gap-2">
                 <v-progress-circular
                     v-if="airportFrequencyLoading"
@@ -421,7 +421,7 @@
             <v-expansion-panels variant="accordion" class="bg-transparent">
               <v-expansion-panel>
                 <v-expansion-panel-title class="text-sm text-white/70">
-                  Frequenzen für {{ flightContext.dep || 'Abflug' }}
+                  Frequencies for {{ flightContext.dep || 'Departure' }}
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
                   <div
@@ -429,13 +429,13 @@
                       class="flex items-center gap-2 text-sm text-white/60"
                   >
                     <v-progress-circular indeterminate size="20" color="cyan" />
-                    <span>Lade Frequenzen vom Netzwerk…</span>
+                    <span>Loading frequencies from the network…</span>
                   </div>
                   <div
                       v-else-if="airportFrequencies.length === 0"
                       class="text-xs text-white/50"
                   >
-                    Keine Frequenzen verfügbar. Bitte später erneut versuchen.
+                    No frequencies available. Please try again later.
                   </div>
                   <div v-else class="space-y-3">
                     <div
@@ -527,7 +527,7 @@
                 @click:append-inner="sendPilotText"
             />
             <p class="text-xs text-white/50">
-              Für Notfälle wenn PTT nicht funktioniert oder für Tests
+              For emergencies when PTT fails or for testing.
             </p>
           </v-card-text>
         </v-card>
@@ -546,7 +546,7 @@
                 </v-chip>
               </div>
               <v-chip size="small" :color="simulationRunning ? 'orange' : 'grey'" variant="tonal">
-                {{ simulationRunning ? 'Läuft' : 'Bereit' }}
+                {{ simulationRunning ? 'Running' : 'Ready' }}
               </v-chip>
             </div>
 
@@ -564,7 +564,7 @@
                 v-if="simulationRunning && simulationTrace.length === 0"
                 class="text-sm text-white/60"
             >
-              Simulation initialisiert...
+              Simulation initializing…
             </div>
 
             <div
@@ -602,7 +602,7 @@
             </div>
 
             <div class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
-              <p class="text-xs uppercase tracking-[0.3em] text-white/40">Aktueller Knoten</p>
+              <p class="text-xs uppercase tracking-[0.3em] text-white/40">Current node</p>
               <p class="font-mono text-sm text-white">{{ debugState?.id || '—' }}</p>
               <p class="text-[11px] text-white/50">
                 {{ debugState ? `${debugState.role} • ${debugState.phase}` : 'N/A' }}
@@ -612,12 +612,12 @@
                 Auto: <span class="font-mono text-white">{{ debugState.sayPlain }}</span>
               </p>
               <p v-if="debugState?.sayNormalized" class="text-[11px] text-white/40">
-                Funk: {{ debugState.sayNormalized }}
+                Radio: {{ debugState.sayNormalized }}
               </p>
             </div>
 
             <div>
-              <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Nächste Entscheidungen</p>
+              <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Next decisions</p>
               <div v-if="debugNextStates.length" class="space-y-2">
                 <div
                     v-for="state in debugNextStates"
@@ -646,11 +646,11 @@
                     ATC: <span class="font-mono text-white">{{ state.sayPlain }}</span>
                   </p>
                   <p v-if="state.sayNormalized" class="text-[11px] text-white/40">
-                    Funk: {{ state.sayNormalized }}
+                    Radio: {{ state.sayNormalized }}
                   </p>
                 </div>
               </div>
-              <p v-else class="text-xs text-white/50">Keine weiteren Entscheidungen verfügbar.</p>
+              <p v-else class="text-xs text-white/50">No further decisions available.</p>
             </div>
           </v-card-text>
         </v-card>
@@ -671,7 +671,7 @@
                   :disabled="log.length === 0"
                   @click="clearLog"
               >
-                Leeren
+                Clear
               </v-btn>
             </div>
 
@@ -702,7 +702,7 @@
               </div>
 
               <p v-if="log.length === 0" class="text-xs text-white/50 text-center py-4">
-                Noch keine Kommunikation aufgezeichnet.
+                No transmissions logged yet.
               </p>
             </div>
           </v-card-text>
@@ -730,7 +730,7 @@
                     class="text-xs uppercase tracking-[0.3em]"
                     :class="lastTransmissionFaulty ? 'text-red-300' : 'text-cyan-300'"
                 >
-                  Letzte Übertragung
+                  Last transmission
                 </span>
               </div>
               <div class="flex flex-wrap items-center gap-1">
@@ -740,7 +740,7 @@
                     color="red"
                     variant="flat"
                 >
-                  Fehlerhaft
+                  Faulty
                 </v-chip>
                 <v-btn
                     variant="text"
@@ -752,7 +752,7 @@
                   <template #prepend>
                     <v-icon size="16">mdi-alert-circle-outline</v-icon>
                   </template>
-                  {{ lastTransmissionFaulty ? 'Fehler bearbeiten' : 'Fehler markieren' }}
+                  {{ lastTransmissionFaulty ? 'Review issue' : 'Mark issue' }}
                 </v-btn>
                 <v-btn
                     v-if="lastTransmissionFaulty"
@@ -765,7 +765,7 @@
                   <template #prepend>
                     <v-icon size="16">mdi-restore</v-icon>
                   </template>
-                  Zurücksetzen
+                  Reset
                 </v-btn>
                 <v-btn
                     variant="text"
@@ -777,7 +777,7 @@
                   <template #prepend>
                     <v-icon size="16">mdi-close</v-icon>
                   </template>
-                  Löschen
+                  Delete
                 </v-btn>
               </div>
             </div>
@@ -786,12 +786,12 @@
                 v-if="lastTransmissionFaulty"
                 class="space-y-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2"
             >
-              <p class="text-xs uppercase tracking-[0.25em] text-red-200/80">Fehlerbeschreibung</p>
+              <p class="text-xs uppercase tracking-[0.25em] text-red-200/80">Issue description</p>
               <p v-if="lastTransmissionFaultNote" class="text-sm text-red-100">
                 {{ lastTransmissionFaultNote }}
               </p>
               <p v-else class="text-xs text-red-200/70">
-                Als fehlerhaft markiert.
+                Marked as faulty.
               </p>
             </div>
           </v-card-text>
@@ -801,16 +801,16 @@
           <v-card class="bg-[#0b101d] border border-white/10 text-white">
             <v-card-title class="flex items-center gap-2 text-base font-semibold">
               <v-icon icon="mdi-alert-circle-outline" color="#f87171" size="20" />
-              Übertragung als fehlerhaft markieren
+              Flag transmission as faulty
             </v-card-title>
             <v-card-text class="space-y-4 text-sm text-white/70">
               <p>
-                Hinterlasse optional eine kurze Beschreibung, damit das Dev Team die
-                Übertragung nachvollziehen kann.
+                Leave an optional short description so the dev team can trace the
+                transmission.
               </p>
               <v-textarea
                   v-model="transmissionIssueNote"
-                  label="Fehlerbeschreibung (optional)"
+                  label="Issue description (optional)"
                   variant="outlined"
                   color="red"
                   rows="3"
@@ -819,7 +819,7 @@
             </v-card-text>
             <v-card-actions class="justify-end gap-2">
               <v-btn variant="text" color="grey" @click="cancelTransmissionIssue">
-                Abbrechen
+                Cancel
               </v-btn>
               <v-btn
                   v-if="lastTransmissionFaulty"
@@ -827,10 +827,10 @@
                   color="cyan"
                   @click="removeTransmissionIssue"
               >
-                Markierung entfernen
+                Remove flag
               </v-btn>
               <v-btn color="red" variant="flat" @click="confirmTransmissionIssue">
-                Speichern
+                Save
               </v-btn>
             </v-card-actions>
           </v-card>
@@ -844,7 +844,7 @@
             <div class="space-y-4">
               <div>
                 <label class="text-xs uppercase tracking-[0.3em] text-white/40 block mb-2">
-                  Signal Stärke
+                  Signal strength
                 </label>
                 <v-slider
                     v-model="signalStrength"
@@ -863,14 +863,14 @@
                     v-model="radioEffectsEnabled"
                     color="cyan"
                     inset
-                    label="Radio-Effekte"
+                    label="Radio effects"
                     hide-details
                 />
                 <v-switch
                     v-model="readbackEnabled"
                     color="cyan"
                     inset
-                    label="Readback Stimme"
+                    label="Readback voice"
                     hide-details
                 />
                 <v-switch
@@ -1579,11 +1579,11 @@ const loadFlightPlans = async () => {
       flightPlans.value = response.slice(0, 10)
       currentScreen.value = 'flightselect'
     } else {
-      error.value = 'Keine Flugpläne für diese VATSIM ID gefunden'
+      error.value = 'No flight plans found for this VATSIM ID'
     }
   } catch (err) {
     console.error('Error loading flight plans:', err)
-    error.value = 'Fehler beim Laden der Flugpläne. Bitte VATSIM ID prüfen.'
+    error.value = 'Error loading flight plans. Please check the VATSIM ID.'
   } finally {
     loading.value = false
   }
@@ -1947,7 +1947,7 @@ const playAtisBroadcast = async () => {
     }
 
     if (!content) {
-      setLastTransmission('ATIS: Keine aktuellen Informationen verfügbar')
+      setLastTransmission('ATIS: No current information available')
       return
     }
 

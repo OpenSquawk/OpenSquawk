@@ -4,26 +4,26 @@
       <div class="grid gap-10 lg:grid-cols-[1.1fr_1fr] items-start">
         <div class="space-y-6">
           <NuxtLink to="/" class="inline-flex items-center gap-2 text-sm text-white/70 hover:text-cyan-300">
-            <v-icon icon="mdi-arrow-left" size="18" /> Zurück zur Landingpage
+            <v-icon icon="mdi-arrow-left" size="18" /> Back to landing page
           </NuxtLink>
           <div class="space-y-4">
             <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">OpenSquawk Alpha Access</p>
-            <h1 class="text-3xl md:text-4xl font-semibold">Melde dich an oder sichere dir deinen Invite</h1>
+            <h1 class="text-3xl md:text-4xl font-semibold">Sign in or claim your invite</h1>
             <p class="text-white/70">
-              Registrierungen sind nur mit Einladungscode möglich. Codes werden nach Eintrag auf die Warteliste vergeben oder von bestehenden Mitgliedern nach zwei Wochen Nutzungsdauer ausgestellt.
+              Registration requires an invitation code. Codes are issued after joining the waitlist or shared by active members after two weeks of use.
             </p>
           </div>
           <div class="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-4">
-            <h2 class="text-lg font-semibold">So bekommst du Zugang</h2>
+            <h2 class="text-lg font-semibold">How to get access</h2>
             <ol class="space-y-3 text-white/70 text-sm">
-              <li class="flex gap-3"><span class="chip">1</span><span>Auf der <NuxtLink to="/#cta" class="text-cyan-300 underline">Warteliste</NuxtLink> eintragen.</span></li>
-              <li class="flex gap-3"><span class="chip">2</span><span>Invite per E-Mail erhalten oder von einem aktiven Nutzer einen Code bekommen.</span></li>
-              <li class="flex gap-3"><span class="chip">3</span><span>Hier registrieren, AGB & Datenschutz bestätigen und direkt loslegen.</span></li>
+              <li class="flex gap-3"><span class="chip">1</span><span>Join the <NuxtLink to="/#cta" class="text-cyan-300 underline">waitlist</NuxtLink>.</span></li>
+              <li class="flex gap-3"><span class="chip">2</span><span>Receive your invite by email or get a code from an active member.</span></li>
+              <li class="flex gap-3"><span class="chip">3</span><span>Register here, accept the terms & privacy policy and start flying.</span></li>
             </ol>
           </div>
           <div class="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-5">
             <p class="text-sm text-cyan-100">
-              Tipp: Nach 14 Tagen aktiver Nutzung kannst du selbst bis zu zwei Einladungscodes generieren und mit Freunden teilen.
+              Tip: After 14 days of active use you can generate up to two invitation codes yourself and share them with friends.
             </p>
           </div>
         </div>
@@ -42,14 +42,14 @@
                 :class="mode === 'register' ? 'border-cyan-400 bg-cyan-400/20 text-white' : 'border-white/10 text-white/70 hover:text-white'"
                 @click="mode = 'register'"
             >
-              Registrieren
+              Register
             </button>
           </div>
 
           <form v-if="mode === 'login'" class="space-y-4" @submit.prevent="submitLogin">
             <div class="space-y-3">
               <div>
-                <label class="text-xs uppercase tracking-[0.3em] text-white/40">E-Mail</label>
+                <label class="text-xs uppercase tracking-[0.3em] text-white/40">Email</label>
                 <input
                     v-model.trim="loginForm.email"
                     type="email"
@@ -59,7 +59,7 @@
                 />
               </div>
               <div>
-                <label class="text-xs uppercase tracking-[0.3em] text-white/40">Passwort</label>
+                <label class="text-xs uppercase tracking-[0.3em] text-white/40">Password</label>
                 <input
                     v-model="loginForm.password"
                     type="password"
@@ -70,7 +70,7 @@
               </div>
               <div class="text-right">
                 <NuxtLink to="/forgot-password" class="text-xs text-cyan-300 underline hover:text-cyan-200">
-                  Passwort vergessen?
+                  Forgot your password?
                 </NuxtLink>
               </div>
             </div>
@@ -78,7 +78,7 @@
             <button type="submit" class="btn btn-primary w-full" :disabled="loginLoading">
               <span v-if="loginLoading" class="flex items-center justify-center gap-2">
                 <v-progress-circular indeterminate size="16" width="2" color="white" />
-                Anmeldung…
+                Signing you in…
               </span>
               <span v-else>Login</span>
             </button>
@@ -94,12 +94,12 @@
                     v-model.trim="registerForm.name"
                     type="text"
                     autocomplete="name"
-                    placeholder="Vorname Nachname"
+                    placeholder="First Last"
                     class="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400"
                 />
               </div>
               <div>
-                <label class="text-xs uppercase tracking-[0.3em] text-white/40">E-Mail</label>
+                <label class="text-xs uppercase tracking-[0.3em] text-white/40">Email</label>
                 <input
                     v-model.trim="registerForm.email"
                     type="email"
@@ -109,7 +109,7 @@
                 />
               </div>
               <div>
-                <label class="text-xs uppercase tracking-[0.3em] text-white/40">Passwort</label>
+                <label class="text-xs uppercase tracking-[0.3em] text-white/40">Password</label>
                 <input
                     v-model="registerForm.password"
                     type="password"
@@ -118,13 +118,13 @@
                     autocomplete="new-password"
                     class="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400"
                 />
-                <p class="mt-1 text-xs text-white/50">Mindestens 8 Zeichen, gerne inkl. Zahl & Sonderzeichen.</p>
+                <p class="mt-1 text-xs text-white/50">At least 8 characters, ideally include a number and special character.</p>
               </div>
               <div>
                 <div class="flex items-center justify-between">
-                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">Einladungscode</label>
+                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">Invitation code</label>
                   <button type="button" class="text-[11px] text-cyan-300 underline" @click="checkInvitationCode" :disabled="!registerForm.invitationCode">
-                    Code prüfen
+                    Check code
                   </button>
                 </div>
                 <input
@@ -132,31 +132,31 @@
                     type="text"
                     required
                     class="mt-1 w-full uppercase tracking-widest rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400"
-                    placeholder="z.B. ABCD1234"
+                    placeholder="e.g. ABCD1234"
                 />
-                <p v-if="invitationStatus === 'valid'" class="mt-1 text-xs text-green-300">Code ist gültig.</p>
-                <p v-else-if="invitationStatus === 'invalid'" class="mt-1 text-xs text-red-300">Dieser Einladungscode ist ungültig oder bereits verwendet.</p>
-                <p v-else-if="invitationStatus === 'checking'" class="mt-1 text-xs text-white/60">Prüfe Einladungscode…</p>
+                <p v-if="invitationStatus === 'valid'" class="mt-1 text-xs text-green-300">Code is valid.</p>
+                <p v-else-if="invitationStatus === 'invalid'" class="mt-1 text-xs text-red-300">This invitation code is invalid or already used.</p>
+                <p v-else-if="invitationStatus === 'checking'" class="mt-1 text-xs text-white/60">Checking invitation code…</p>
               </div>
             </div>
 
             <div class="space-y-2 text-xs text-white/60">
               <label class="flex items-start gap-3">
                 <input type="checkbox" v-model="registerForm.acceptTerms" class="mt-1" required />
-                <span>Ich akzeptiere die <NuxtLink to="/agb" class="text-cyan-300 underline">AGB</NuxtLink>.</span>
+                <span>I accept the <NuxtLink to="/agb" class="text-cyan-300 underline">Terms of Service</NuxtLink>.</span>
               </label>
               <label class="flex items-start gap-3">
                 <input type="checkbox" v-model="registerForm.acceptPrivacy" class="mt-1" required />
-                <span>Ich habe die <NuxtLink to="/datenschutz" class="text-cyan-300 underline">Datenschutzerklärung</NuxtLink> gelesen und stimme der Datenverarbeitung zu.</span>
+                <span>I have read the <NuxtLink to="/datenschutz" class="text-cyan-300 underline">privacy policy</NuxtLink> and consent to data processing.</span>
               </label>
             </div>
 
             <button type="submit" class="btn btn-primary w-full" :disabled="registerLoading || !canRegister">
               <span v-if="registerLoading" class="flex items-center justify-center gap-2">
                 <v-progress-circular indeterminate size="16" width="2" color="white" />
-                Registriere…
+                Registering…
               </span>
-              <span v-else>Account erstellen</span>
+              <span v-else>Create account</span>
             </button>
 
             <p v-if="registerError" class="text-sm text-red-300">{{ registerError }}</p>
@@ -221,7 +221,7 @@ async function submitLogin() {
     await auth.fetchUser()
     router.push('/pm')
   } catch (err: any) {
-    const message = err?.data?.statusMessage || err?.message || 'Anmeldung fehlgeschlagen'
+    const message = err?.data?.statusMessage || err?.message || 'Login failed'
     loginError.value = message
   } finally {
     loginLoading.value = false
@@ -271,7 +271,7 @@ async function submitRegister() {
     await auth.fetchUser()
     router.push('/pm')
   } catch (err: any) {
-    const message = err?.data?.statusMessage || err?.message || 'Registrierung fehlgeschlagen'
+    const message = err?.data?.statusMessage || err?.message || 'Registration failed'
     registerError.value = message
   } finally {
     registerLoading.value = false
@@ -279,7 +279,7 @@ async function submitRegister() {
 }
 
 useHead({
-  title: 'OpenSquawk – Login & Einladung',
+  title: 'OpenSquawk – Login & invite',
   meta: [
     { name: 'robots', content: 'noindex,nofollow' },
   ],
