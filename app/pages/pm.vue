@@ -581,15 +581,132 @@
         </v-card>
 
         <!-- Last Transmission -->
-        <v-card v-if="lastTransmission" class="bg-cyan-500/10 border border-cyan-400/20">
-          <v-card-text class="space-y-2">
-            <div class="flex items-center gap-2">
-              <v-icon icon="mdi-microphone-outline" size="16" class="text-cyan-300" />
-              <span class="text-xs uppercase tracking-[0.3em] text-cyan-300">Letzte Übertragung</span>
+        <v-card
+            v-if="lastTransmission"
+            :class="[
+              'border backdrop-blur',
+              lastTransmissionFaulty
+                ? 'bg-red-500/10 border-red-400/30'
+                : 'bg-cyan-500/10 border-cyan-400/20'
+            ]"
+        >
+          <v-card-text class="space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <v-icon
+                    icon="mdi-microphone-outline"
+                    size="16"
+                    :class="lastTransmissionFaulty ? 'text-red-300' : 'text-cyan-300'"
+                />
+                <span
+                    class="text-xs uppercase tracking-[0.3em]"
+                    :class="lastTransmissionFaulty ? 'text-red-300' : 'text-cyan-300'"
+                >
+                  Letzte Übertragung
+                </span>
+              </div>
+              <div class="flex flex-wrap items-center gap-1">
+                <v-chip
+                    v-if="lastTransmissionFaulty"
+                    size="x-small"
+                    color="red"
+                    variant="flat"
+                >
+                  Fehlerhaft
+                </v-chip>
+                <v-btn
+                    variant="text"
+                    size="small"
+                    :color="lastTransmissionFaulty ? 'red' : 'amber'"
+                    class="text-[0.65rem] uppercase tracking-[0.3em]"
+                    @click="startTransmissionIssueFlow"
+                >
+                  <template #prepend>
+                    <v-icon size="16">mdi-alert-circle-outline</v-icon>
+                  </template>
+                  {{ lastTransmissionFaulty ? 'Fehler bearbeiten' : 'Fehler markieren' }}
+                </v-btn>
+                <v-btn
+                    v-if="lastTransmissionFaulty"
+                    variant="text"
+                    size="small"
+                    color="cyan"
+                    class="text-[0.65rem] uppercase tracking-[0.3em]"
+                    @click="resetLastTransmissionFault"
+                >
+                  <template #prepend>
+                    <v-icon size="16">mdi-restore</v-icon>
+                  </template>
+                  Zurücksetzen
+                </v-btn>
+                <v-btn
+                    variant="text"
+                    size="small"
+                    color="cyan"
+                    class="text-[0.65rem] uppercase tracking-[0.3em]"
+                    @click="clearLastTransmission"
+                >
+                  <template #prepend>
+                    <v-icon size="16">mdi-close</v-icon>
+                  </template>
+                  Löschen
+                </v-btn>
+              </div>
             </div>
-            <p class="text-sm text-white font-mono">{{ lastTransmission }}</p>
+            <p class="text-sm text-white font-mono whitespace-pre-line">{{ lastTransmission }}</p>
+            <div
+                v-if="lastTransmissionFaulty"
+                class="space-y-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2"
+            >
+              <p class="text-xs uppercase tracking-[0.25em] text-red-200/80">Fehlerbeschreibung</p>
+              <p v-if="lastTransmissionFaultNote" class="text-sm text-red-100">
+                {{ lastTransmissionFaultNote }}
+              </p>
+              <p v-else class="text-xs text-red-200/70">
+                Als fehlerhaft markiert.
+              </p>
+            </div>
           </v-card-text>
         </v-card>
+
+        <v-dialog v-model="showTransmissionIssueDialog" max-width="420">
+          <v-card class="bg-[#0b101d] border border-white/10 text-white">
+            <v-card-title class="flex items-center gap-2 text-base font-semibold">
+              <v-icon icon="mdi-alert-circle-outline" color="#f87171" size="20" />
+              Übertragung als fehlerhaft markieren
+            </v-card-title>
+            <v-card-text class="space-y-4 text-sm text-white/70">
+              <p>
+                Hinterlasse optional eine kurze Beschreibung, damit das Dev Team die
+                Übertragung nachvollziehen kann.
+              </p>
+              <v-textarea
+                  v-model="transmissionIssueNote"
+                  label="Fehlerbeschreibung (optional)"
+                  variant="outlined"
+                  color="red"
+                  rows="3"
+                  auto-grow
+              />
+            </v-card-text>
+            <v-card-actions class="justify-end gap-2">
+              <v-btn variant="text" color="grey" @click="cancelTransmissionIssue">
+                Abbrechen
+              </v-btn>
+              <v-btn
+                  v-if="lastTransmissionFaulty"
+                  variant="text"
+                  color="cyan"
+                  @click="removeTransmissionIssue"
+              >
+                Markierung entfernen
+              </v-btn>
+              <v-btn color="red" variant="flat" @click="confirmTransmissionIssue">
+                Speichern
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
 
         <!-- Settings -->
         <v-card class="bg-white/5 border border-white/10">
@@ -676,9 +793,61 @@ const {
   getStateDetails
 } = engine
 
+const lastTransmission = ref('')
+const lastTransmissionFaulty = ref(false)
+const lastTransmissionFaultNote = ref('')
+const showTransmissionIssueDialog = ref(false)
+const transmissionIssueNote = ref('')
+
+function setLastTransmission(text: string) {
+  lastTransmission.value = text
+  lastTransmissionFaulty.value = false
+  lastTransmissionFaultNote.value = ''
+}
+
+function clearLastTransmission() {
+  setLastTransmission('')
+}
+
+function markLastTransmissionFault(note: string) {
+  if (!lastTransmission.value) return
+  lastTransmissionFaulty.value = true
+  lastTransmissionFaultNote.value = note
+}
+
+function resetLastTransmissionFault() {
+  lastTransmissionFaulty.value = false
+  lastTransmissionFaultNote.value = ''
+}
+
+function startTransmissionIssueFlow() {
+  if (!lastTransmission.value) return
+  transmissionIssueNote.value = lastTransmissionFaultNote.value
+  showTransmissionIssueDialog.value = true
+}
+
+function confirmTransmissionIssue() {
+  if (!lastTransmission.value) {
+    showTransmissionIssueDialog.value = false
+    return
+  }
+
+  markLastTransmissionFault(transmissionIssueNote.value.trim())
+  showTransmissionIssueDialog.value = false
+}
+
+function removeTransmissionIssue() {
+  resetLastTransmissionFault()
+  showTransmissionIssueDialog.value = false
+}
+
+function cancelTransmissionIssue() {
+  showTransmissionIssueDialog.value = false
+}
+
 const clearLog = () => {
   clearCommunicationLog()
-  lastTransmission.value = ''
+  clearLastTransmission()
 }
 
 // UI State
@@ -686,7 +855,6 @@ const currentScreen = ref<'login' | 'flightselect' | 'monitor'>('login')
 const loading = ref(false)
 const error = ref('')
 const pilotInput = ref('')
-const lastTransmission = ref('')
 const radioMode = ref<'atc' | 'intercom'>('atc')
 const isRecording = ref(false)
 const micPermission = ref(false)
@@ -1071,7 +1239,7 @@ const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = 
 
     if (response.success && response.audio) {
       if (options.updateLastTransmission !== false) {
-        lastTransmission.value = options.lastTransmissionLabel || `ATC: ${prepared.plain}`
+        setLastTransmission(options.lastTransmissionLabel || `ATC: ${prepared.plain}`)
       }
       await playAudioWithEffects(response.audio.base64)
     }
@@ -1117,7 +1285,7 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   if (!transcript) return
 
   const prefix = source === 'ptt' ? 'Pilot (PTT)' : 'Pilot'
-  lastTransmission.value = `${prefix}: ${transcript}`
+  setLastTransmission(`${prefix}: ${transcript}`)
 
   const quickResponse = processPilotTransmission(transcript)
 
@@ -1142,7 +1310,7 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
     }
   } catch (e) {
     console.error('LLM decision failed', e)
-    lastTransmission.value = `${prefix}: ${transcript} (LLM failed)`
+    setLastTransmission(`${prefix}: ${transcript} (LLM failed)`)
   }
 }
 
@@ -1199,7 +1367,7 @@ const startDemoFlight = () => {
 const backToSetup = () => {
   currentScreen.value = 'login'
   selectedPlan.value = null
-  lastTransmission.value = ''
+  clearLastTransmission()
 }
 
 // Audio/PTT Functions
@@ -1289,7 +1457,7 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
       })
 
       if (result.success) {
-        lastTransmission.value = `INTERCOM: ${result.transcription}`
+        setLastTransmission(`INTERCOM: ${result.transcription}`)
         const transcription = result.transcription.toLowerCase()
         if (transcription.includes('checklist') || transcription.includes('check list')) {
           speakWithRadioEffects('Checklist functionality available in advanced mode', {
@@ -1318,7 +1486,7 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
     }
   } catch (err) {
     console.error('Error processing transmission:', err)
-    lastTransmission.value = 'Error processing audio'
+    setLastTransmission('Error processing audio')
   }
 }
 
@@ -1423,7 +1591,7 @@ const recordCurrentAtcMessage = () => {
     payload: { text: plain, normalized }
   })
 
-  lastTransmission.value = `ATC: ${plain}`
+  setLastTransmission(`ATC: ${plain}`)
   recordedAtcStates.add(state.id)
 }
 
@@ -1515,7 +1683,7 @@ const runFullSimulation = async () => {
         payload: { text: pilotText, normalized: pilotNormalized }
       })
 
-      lastTransmission.value = `Pilot: ${pilotText}`
+      setLastTransmission(`Pilot: ${pilotText}`)
 
       const quickResponse = processPilotTransmission(pilotText)
       if (quickResponse) {
@@ -1595,6 +1763,12 @@ const runFullSimulation = async () => {
 // Lifecycle
 onMounted(async () => {
   await requestMicAccess()
+})
+
+watch(showTransmissionIssueDialog, (open) => {
+  if (!open) {
+    transmissionIssueNote.value = ''
+  }
 })
 
 // Watch for frequency changes from engine
