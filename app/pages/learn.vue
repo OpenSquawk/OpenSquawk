@@ -1804,7 +1804,7 @@ const ttsLoading = ref(false)
 const audioElement = ref<HTMLAudioElement | null>(null)
 const sayCache = new Map<string, string>()
 const pendingSayRequests = new Map<string, Promise<string>>()
-const audioReveal = ref(!cfg.value.audioChallenge)
+const audioReveal = ref(true)
 
 const audioContentHidden = computed(() => cfg.value.audioChallenge && !audioReveal.value)
 
@@ -1843,6 +1843,7 @@ type LearnConfig = {
 
 const defaultCfg: LearnConfig = { tts: false, radioLevel: 4, voice: '', audioChallenge: false }
 const cfg = ref<LearnConfig>({ ...defaultCfg })
+audioReveal.value = !cfg.value.audioChallenge
 
 if (isClient) {
   const storedCfg = readStorage<{ tts?: boolean; audioChallenge?: boolean }>('os_cfg', {})
