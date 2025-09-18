@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  speaches:
+    build:
+      context: ./speaches
+    image: opensquawk-local-speaches
+    container_name: opensquawk-speaches
+    environment:
+      SPEACHES_PORT: "${SPEACHES_PORT:-5005}"
+      SPEACHES_TTS_MODELS: "${SPEACHES_TTS_MODELS:-speaches-ai/piper-en_US-ryan-low speaches-ai/piper-de_DE-thorsten-low speaches-ai/piper-en_GB-alba-low}"
+      SPEACHES_STT_MODEL: "${SPEACHES_STT_MODEL:-tiny.en}"
+      SPEACHES_WHISPER_LANGUAGE: "${SPEACHES_WHISPER_LANGUAGE:-en}"
+      SPEACHES_WHISPER_DEVICE: "${SPEACHES_WHISPER_DEVICE:-cpu}"
+      SPEACHES_WHISPER_COMPUTE: "${SPEACHES_WHISPER_COMPUTE:-int8}"
+      SPEACHES_WHISPER_WORKERS: "${SPEACHES_WHISPER_WORKERS:-1}"
+    ports:
+      - "${SPEACHES_PORT:-5005}:5005"
+    volumes:
+      - speaches-cache:/app/models
+    restart: unless-stopped
+
+volumes:
+  speaches-cache:

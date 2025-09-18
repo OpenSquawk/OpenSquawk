@@ -5,7 +5,6 @@ import {existsSync} from "node:fs";
 import {join} from "node:path";
 import {randomUUID} from "node:crypto";
 import {normalize, TTS_MODEL, normalizeATC} from "../../utils/normalize";
-import {request} from "node:http";
 import { TransmissionLog } from "../../models/TransmissionLog";
 import { getUserFromEvent } from "../../utils/auth";
 
@@ -60,40 +59,39 @@ function fmtToExt(fmt: AudioFmt): string {
 }
 
 // ---- Piper HTTP helper ----
-async function piperTTS(text: string, voice: string): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-        const req = request(
-            {
-                hostname: "localhost",
-                port: Number(process.env.PIPER_PORT ?? 5001),
-                path: "/",
-                method: "POST",
-                headers: { "Content-Type": "application/json" }
-            },
-            (res) => {
-                const data: Buffer[] = [];
-                res.on("data", (chunk) => data.push(chunk));
-                res.on("end", () => resolve(Buffer.concat(data)));
-            }
-        );
-        req.on("error", reject);
-        req.write(JSON.stringify({ text, voice }));
-        req.end();
+async function piperTTS(text: string, voice: string, speed: number): Promise<Buffer> {
+    const baseUrl = (process.env.PIPER_BASE_URL || "").trim();
+    const port = Number(process.env.PIPER_PORT ?? 5001);
+    const endpoint = baseUrl ? `${baseUrl.replace(/\/+$/, "")}/v1/audio/speech` : `http://localhost:${port}/v1/audio/speech`;
+
+    const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, voice, speed })
     });
+
+    if (!response.ok) {
+        const errText = await response.text().catch(() => "");
+        throw new Error(`Piper request failed (${response.status}): ${errText || response.statusText}`);
+    }
+
+    const arrBuffer = await response.arrayBuffer();
+    return Buffer.from(arrBuffer);
 }
 
 // ---- Speaches HTTP helper ----
 // Env:
 // USE_SPEACHES=true
 // SPEACHES_BASE_URL="https://..."
-// SPEECH_MODEL_ID="speaches-ai/piper-en_US-ryan-low"
-// VOICE_ID="en_US-ryan-low"
+// SPEACHES_TTS_MODEL_ID="speaches-ai/piper-en_US-ryan-low"
+// SPEACHES_TTS_VOICE_ID="en_US-ryan-low"
 async function speachesTTS(
     input: string,
     voice: string,
     model: string,
     response_format: AudioFmt,
-    baseUrl: string
+    baseUrl: string,
+    speed: number
 ): Promise<Buffer> {
     const url = `${baseUrl.replace(/\/+$/, "")}/v1/audio/speech`;
     const body = {
@@ -101,7 +99,8 @@ async function speachesTTS(
         model,
         voice,
         // API erwartet "response_format": "mp3" | "flac" | "wav" | "pcm"
-        response_format
+        response_format,
+        speed
     };
     const res = await fetch(url, {
         method: "POST",
@@ -132,7 +131,8 @@ export default defineEventHandler(async (event) => {
     if (!raw) throw createError({ statusCode: 400, statusMessage: "text required" });
 
     const level = Math.max(1, Math.min(5, Math.floor(body?.level ?? 4)));
-    const voice = (body?.voice || process.env.VOICE_ID || "alloy").trim();
+    const defaultVoice = (process.env.SPEACHES_TTS_VOICE_ID || process.env.VOICE_ID || "alloy").trim();
+    const voice = (body?.voice || defaultVoice).trim();
     const speed = Math.max(0.5, Math.min(2.0, body?.speed || 1.0));
 
     const normalized = normalizeATC(raw);
@@ -163,18 +163,18 @@ export default defineEventHandler(async (event) => {
 
         if (useSpeaches) {
             // Speaches (bevorzugt klein: MP3, alternativ FLAC/WAV/PCM)
-            const baseUrl = process.env.SPEACHES_BASE_URL || "";
-            const model = process.env.SPEECH_MODEL_ID || "speaches-ai/piper-en_US-ryan-low";
+            const baseUrl = (process.env.SPEACHES_BASE_URL || "http://localhost:5005").trim();
+            const model = (process.env.SPEACHES_TTS_MODEL_ID || process.env.SPEECH_MODEL_ID || "speaches-ai/piper-en_US-ryan-low").trim();
             if (!baseUrl) {
                 throw new Error("SPEACHES_BASE_URL not set");
             }
-            audioBuffer = await speachesTTS(normalized, voice, model, fmt, baseUrl);
+            audioBuffer = await speachesTTS(normalized, voice, model, fmt, baseUrl, speed);
             modelUsed = model;
             // Server liefert korrektes Format gemäß response_format
             actualMime = fmtToMime(fmt);
         } else if (usePiper) {
             // Lokaler Piper
-            audioBuffer = await piperTTS(normalized, voice);
+            audioBuffer = await piperTTS(normalized, voice, speed);
             modelUsed = "piper-local";
             // Piper liefert WAV
             actualMime = "audio/wav";
