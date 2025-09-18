@@ -1,6 +1,7 @@
 // composables/communicationsEngine.ts
 import { ref, computed, readonly } from 'vue'
 import atcDecisionTree from "../data/atcDecisionTree";
+import type { AirportFrequency } from "../types/airport";
 
 // --- DecisionTree-Types (aus ~/data/atcDecisionTree.json abgeleitet) ---
 type Role = 'pilot' | 'atc' | 'system'
@@ -103,6 +104,7 @@ export interface FlightContext {
     runway: string
     squawk: string
     atis_code: string
+    atis_freq?: string
     sid: string
     transition: string
     flight_level: string
@@ -213,6 +215,7 @@ export default function useCommunicationsEngine() {
         runway: '25R',
         squawk: '1234',
         atis_code: 'K',
+        atis_freq: '118.020',
         sid: 'ANEKI7S',
         transition: 'ANEKI',
         flight_level: 'FL360',
@@ -281,6 +284,7 @@ export default function useCommunicationsEngine() {
             runway: genRunway(),
             squawk: fpl.assignedsquawk || genSquawk(),
             atis_code: genATIS(),
+            atis_freq: '118.020',
             sid: genSID(fpl.route || ''),
             transition: 'DCT',
             cruise_flight_level: fpl.altitude ? `FL${String(Math.floor(parseInt(fpl.altitude) / 100)).padStart(3, '0')}` : 'FL360',
@@ -320,6 +324,50 @@ export default function useCommunicationsEngine() {
 
         currentStateId.value = tree.value.start_state
         communicationLog.value = []
+    }
+
+    function applyAirportFrequencies(airport: string, freqs: AirportFrequency[]) {
+        if (!Array.isArray(freqs) || freqs.length === 0) return
+
+        const findFrequency = (candidates: string[]) => {
+            return freqs.find((entry) => {
+                const type = entry.type?.toUpperCase?.() ?? ''
+                const name = entry.name?.toUpperCase?.() ?? ''
+                return candidates.some(candidate => type.includes(candidate) || name.includes(candidate))
+            })?.frequency
+        }
+
+        const updates: Record<string, string> = {}
+        const atis = findFrequency(['ATIS'])
+        if (atis) updates.atis_freq = atis
+        const delivery = findFrequency(['DEL', 'CLEAR'])
+        if (delivery) updates.delivery_freq = delivery
+        const ground = findFrequency(['GND', 'GROUND', 'APRON'])
+        if (ground) updates.ground_freq = ground
+        const tower = findFrequency(['TWR', 'TOWER'])
+        if (tower) updates.tower_freq = tower
+        const departure = findFrequency(['DEP', 'DEPART'])
+        if (departure) updates.departure_freq = departure
+        const approach = findFrequency(['APP', 'APPROACH'])
+        if (approach) updates.approach_freq = approach
+        const center = findFrequency(['CTR', 'CENTER', 'CONTROL', 'RADAR', 'ACC'])
+        if (center) updates.handoff_freq = center
+
+        if (Object.keys(updates).length === 0) return
+
+        variables.value = {
+            ...variables.value,
+            ...updates
+        }
+
+        flightContext.value = {
+            ...flightContext.value,
+            ...updates
+        }
+
+        if (airport && airport.length === 4) {
+            flightContext.value.dep = airport.toUpperCase()
+        }
     }
 
     function buildLLMContext(pilotTranscript: string) {
@@ -576,6 +624,7 @@ export default function useCommunicationsEngine() {
 
         // Lifecycle
         initializeFlight,
+        applyAirportFrequencies,
 
         // Communication
         processPilotTransmission,

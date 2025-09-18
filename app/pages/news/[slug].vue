@@ -6,12 +6,11 @@
       </NuxtLink>
 
       <article v-if="post" class="card space-y-6">
-        <NuxtImg
+        <img
             v-if="bannerSrc"
             :src="bannerSrc"
             :alt="`${post.title} – Beitragsbild`"
             class="news-banner"
-            sizes="sm:100vw md:900px lg:1100px"
             loading="lazy"
         />
         <header class="space-y-2">

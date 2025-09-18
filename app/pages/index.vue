@@ -406,7 +406,7 @@
             </div>
           </div>
           <div class="card" data-aos="fade-left">
-            <nuxt-img src="/img/landing/runway.jpeg" alt="Runway" class="rounded-lg w-full object-cover" />
+            <img src="/img/landing/runway.jpeg" alt="Runway" class="rounded-lg w-full object-cover" loading="lazy" />
           </div>
         </div>
       </div>

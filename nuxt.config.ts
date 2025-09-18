@@ -10,12 +10,12 @@ export default defineNuxtConfig({
       '@pinia/nuxt',
       'nuxt-mongoose',
       'nuxt-module-hotjar',
-      '@nuxt/image',
     ],
     aos: {once: true, duration: 600, easing: 'ease-out'},
     app: {head: {link: [{rel: 'icon', type: 'image/jpeg', href: '/img/logo.jpeg'}]}},
     runtimeConfig: {
         openaiKey: process.env.OPENAI_API_KEY,
+        openAipKey: process.env.OPENAIP_API_KEY,
         llmModel: process.env.LLM_MODEL || 'gpt-5-nano',
         ttsModel: process.env.TTS_MODEL || 'tts-1',
         jwtSecret: process.env.JWT_SECRET,

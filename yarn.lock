@@ -1215,28 +1215,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nuxt/image@npm:1.11.0":
-  version: 1.11.0
-  resolution: "@nuxt/image@npm:1.11.0"
-  dependencies:
-    "@nuxt/kit": "npm:^3.18.0"
-    consola: "npm:^3.4.2"
-    defu: "npm:^6.1.4"
-    h3: "npm:^1.15.3"
-    image-meta: "npm:^0.2.1"
-    ipx: "npm:^2.1.1"
-    knitwork: "npm:^1.2.0"
-    ohash: "npm:^2.0.11"
-    pathe: "npm:^2.0.3"
-    std-env: "npm:^3.9.0"
-    ufo: "npm:^1.6.1"
-  dependenciesMeta:
-    ipx:
-      optional: true
-  checksum: 10c0/ed95f2d3abe98e181b8448a88a456891402d3843364dcf366a1c686cc0ec1e52c2fa661926d67ad3e3dc3a19c92b03947786934ce8c8a35f0f2b41cf64f0dcdc
-  languageName: node
-  linkType: hard
-
 "@nuxt/kit@npm:4.1.2, @nuxt/kit@npm:^4.1.1":
   version: 4.1.2
   resolution: "@nuxt/kit@npm:4.1.2"
@@ -7359,7 +7337,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "opensquawk@workspace:."
   dependencies:
-    "@nuxt/image": "npm:1.11.0"
     "@nuxtjs/tailwindcss": "npm:6.14.0"
     "@pinia/nuxt": "npm:0.11.2"
     "@types/fluent-ffmpeg": "npm:^2"

@@ -354,9 +354,14 @@
 
         <!-- Quick Actions -->
         <v-card class="bg-white/5 border border-white/10">
-          <v-card-text class="space-y-3">
-            <h3 class="text-lg font-semibold">Quick Actions</h3>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <v-card-text class="space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold">Quick Actions</h3>
+              <v-chip v-if="atisFrequency" size="small" color="cyan" variant="tonal" class="font-mono">
+                {{ atisFrequency.frequency }}
+              </v-chip>
+            </div>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <v-btn
                   color="orange"
                   variant="flat"
@@ -377,6 +382,83 @@
               >
                 Voller Flug (Simulation)
               </v-btn>
+              <v-btn
+                  color="purple"
+                  variant="tonal"
+                  @click="handleTuneAtis"
+                  :loading="atisLoading"
+                  :disabled="!atisFrequency"
+                  prepend-icon="mdi-broadcast"
+                  density="comfortable"
+              >
+                ATIS abhören
+              </v-btn>
+            </div>
+            <div class="space-y-2">
+              <v-btn
+                  block
+                  variant="tonal"
+                  color="cyan"
+                  class="justify-between"
+                  @click="toggleFrequencyList"
+                  :loading="airportFrequenciesLoading"
+              >
+                <div class="flex items-center gap-2">
+                  <v-icon size="18">mdi-signal-variant</v-icon>
+                  <span>Frequenzen {{ flightContext.dep || 'N/A' }}</span>
+                </div>
+                <v-icon>{{ showFrequencyList ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+              </v-btn>
+              <v-expand-transition>
+                <div
+                    v-if="showFrequencyList"
+                    class="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3"
+                >
+                  <div v-if="airportFrequenciesLoading" class="flex items-center gap-2 text-sm text-white/70">
+                    <v-progress-circular indeterminate size="20" color="cyan" />
+                    <span>Lade Frequenzen…</span>
+                  </div>
+                  <v-alert
+                      v-else-if="airportFrequenciesError"
+                      type="warning"
+                      density="comfortable"
+                      variant="tonal"
+                      class="bg-amber-500/10 text-amber-200"
+                  >
+                    {{ airportFrequenciesError }}
+                  </v-alert>
+                  <div v-else-if="airportFrequencies.length" class="space-y-2">
+                    <div
+                        v-for="entry in airportFrequencies"
+                        :key="`${entry.type}-${entry.frequency}`"
+                        class="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/40 px-3 py-2"
+                    >
+                      <div>
+                        <p class="text-sm font-medium text-white">
+                          {{ frequencyDisplayName(entry) }}
+                        </p>
+                        <p v-if="entry.description" class="text-xs text-white/50">
+                          {{ entry.description }}
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <v-chip size="small" color="cyan" variant="outlined" class="font-mono">
+                          {{ entry.frequency }}
+                        </v-chip>
+                        <v-btn
+                            variant="text"
+                            color="cyan"
+                            size="small"
+                            @click="quickTuneFrequency(entry.frequency, entry)"
+                        >
+                          TUNE
+                        </v-btn>
+                      </div>
+                    </div>
+                  </div>
+                  <p v-else class="text-sm text-white/60">Keine Frequenzen verfügbar.</p>
+                </div>
+              </v-expand-transition>
             </div>
           </v-card-text>
         </v-card>
@@ -650,6 +732,7 @@ import { useRouter } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
+import type { AirportFrequency } from '~/shared/types/airport'
 
 // Core State
 const engine = useCommunicationsEngine()
@@ -667,6 +750,7 @@ const {
   flightContext,
   currentStep,
   initializeFlight,
+  applyAirportFrequencies,
   processPilotTransmission,
   buildLLMContext,
   applyLLMDecision,
@@ -706,6 +790,23 @@ const frequencies = ref({
   active: '121.900',
   standby: '118.100'
 })
+
+const airportFrequencies = ref<AirportFrequency[]>([])
+const airportFrequenciesLoading = ref(false)
+const airportFrequenciesError = ref('')
+const showFrequencyList = ref(false)
+
+type AtisInfo = {
+  icao: string
+  frequency?: string
+  text: string
+  code?: string
+  lastUpdated?: string
+}
+
+const atisInfo = ref<AtisInfo | null>(null)
+const atisLoading = ref(false)
+const atisError = ref('')
 
 onMounted(async () => {
   if (!auth.accessToken) {
@@ -753,6 +854,46 @@ const radioQuality = computed(() => {
 })
 
 const completedPilotSteps = computed(() => simulationTrace.value.filter(entry => entry.kind === 'pilot').length)
+
+const atisFrequency = computed(() => {
+  const entry = findAirportFrequency(['ATIS'])
+  const fallback = flightContext.value.atis_freq
+  const frequency = entry?.frequency || (typeof fallback === 'string' ? fallback : '')
+  if (!frequency) return null
+
+  return {
+    frequency,
+    name: entry?.name || 'ATIS',
+    source: entry ? 'catalog' : 'context'
+  }
+})
+
+function findAirportFrequency(types: string[]): AirportFrequency | undefined {
+  if (!Array.isArray(types) || !types.length) return undefined
+  const targets = types.map(type => type.toUpperCase())
+  return airportFrequencies.value.find((entry) => {
+    const type = entry.type?.toUpperCase?.() ?? ''
+    const name = entry.name?.toUpperCase?.() ?? ''
+    return targets.some(target => type.includes(target) || name.includes(target))
+  })
+}
+
+const frequencyTypeLabels: Record<string, string> = {
+  ATIS: 'ATIS',
+  DEL: 'Clearance Delivery',
+  GND: 'Ground',
+  TWR: 'Tower',
+  DEP: 'Departure',
+  APP: 'Approach',
+  CTR: 'Center'
+}
+
+const frequencyDisplayName = (entry: AirportFrequency) => {
+  if (!entry) return ''
+  if (entry.name) return entry.name
+  const upper = entry.type?.toUpperCase?.() ?? ''
+  return frequencyTypeLabels[upper] || upper || 'Frequency'
+}
 
 type PreparedSpeech = {
   template: string
@@ -1112,6 +1253,41 @@ const speakPilotReadback = (text: string) => {
   })
 }
 
+const handleTuneAtis = async () => {
+  const freqInfo = atisFrequency.value
+  const dep = flightContext.value.dep
+  if (!freqInfo || !dep) return
+
+  atisLoading.value = true
+
+  try {
+    const atisEntry = findAirportFrequency(['ATIS']) || { type: 'ATIS', frequency: freqInfo.frequency, name: freqInfo.name }
+    quickTuneFrequency(freqInfo.frequency, atisEntry)
+
+    const hasText = await loadAtisInfo(dep)
+    const info = atisInfo.value
+
+    if (hasText && info?.text) {
+      const prefix = info.code ? `Information ${info.code}. ` : ''
+      speakWithRadioEffects(`${prefix}${info.text}`, {
+        tag: 'atis-broadcast',
+        updateLastTransmission: false,
+        useNormalizedForTTS: false,
+        delayMs: 400
+      })
+      lastTransmission.value = `System: ATIS ${dep} (${freqInfo.frequency})`
+    } else {
+      const fallbackMessage = atisError.value || `Keine ATIS Daten für ${dep}`
+      lastTransmission.value = `System: ${fallbackMessage}`
+    }
+  } catch (err) {
+    console.error('ATIS playback failed:', err)
+    lastTransmission.value = 'System: ATIS konnte nicht abgespielt werden'
+  } finally {
+    atisLoading.value = false
+  }
+}
+
 const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' = 'text') => {
   const transcript = message.trim()
   if (!transcript) return
@@ -1172,19 +1348,127 @@ const loadFlightPlans = async () => {
   }
 }
 
-const startMonitoring = (flightPlan: any) => {
+const quickTuneFrequency = (frequency: string, entry?: AirportFrequency | null) => {
+  const target = frequency?.trim()
+  if (!target) return
+
+  if (frequencies.value.active !== target) {
+    frequencies.value.standby = frequencies.value.active
+    frequencies.value.active = target
+  }
+
+  const label = entry ? frequencyDisplayName(entry) : ''
+  if (label) {
+    lastTransmission.value = `System: ${label} ${target} eingestellt`
+  } else {
+    lastTransmission.value = `System: Frequenz ${target} eingestellt`
+  }
+}
+
+const loadAirportFrequencies = async (icao: string) => {
+  const code = icao.toUpperCase()
+  airportFrequenciesLoading.value = true
+  airportFrequenciesError.value = ''
+
+  try {
+    const response = await api.get('/api/airports/frequencies', {
+      query: { icao: code }
+    })
+
+    const list: AirportFrequency[] = Array.isArray(response?.frequencies) ? response.frequencies : []
+    airportFrequencies.value = list
+
+    if (!response?.success && !list.length) {
+      airportFrequenciesError.value = 'Keine Frequenzen für diesen Airport gefunden.'
+    }
+
+    if (list.length) {
+      applyAirportFrequencies(code, list)
+      const ground = findAirportFrequency(['GND', 'GROUND', 'APRON'])
+      if (ground?.frequency) {
+        frequencies.value.standby = ground.frequency
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load airport frequencies:', err)
+    airportFrequencies.value = []
+    airportFrequenciesError.value = 'Frequenzen konnten nicht geladen werden.'
+  } finally {
+    airportFrequenciesLoading.value = false
+  }
+}
+
+const toggleFrequencyList = () => {
+  showFrequencyList.value = !showFrequencyList.value
+  if (showFrequencyList.value && !airportFrequencies.value.length && flightContext.value.dep) {
+    loadAirportFrequencies(flightContext.value.dep)
+  }
+}
+
+const loadAtisInfo = async (icao: string): Promise<boolean> => {
+  const code = icao.toUpperCase()
+  atisError.value = ''
+
+  try {
+    const feed = await api.get('/api/vatsim/feed')
+    const entries: any[] = Array.isArray(feed?.atis) ? feed.atis : []
+    const match = entries.find((entry) => {
+      const callsign = String(entry?.callsign || '').toUpperCase()
+      const entryIcao = String(entry?.icao || entry?.airport || '').toUpperCase()
+      return callsign.startsWith(code) || entryIcao === code
+    })
+
+    if (match) {
+      const textParts = Array.isArray(match.text_atis)
+        ? match.text_atis
+        : [match.text_atis ?? match.text ?? '']
+      const text = textParts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
+
+      atisInfo.value = {
+        icao: code,
+        frequency: match.frequency || match.freq,
+        text,
+        code: match.atis_code || match.code,
+        lastUpdated: match.last_updated || match.timestamp || match.update_timestamp
+      }
+
+      if (!text) {
+        atisError.value = 'ATIS ist derzeit leer.'
+      }
+
+      return Boolean(text)
+    }
+
+    atisInfo.value = { icao: code, text: '' }
+    atisError.value = 'Kein ATIS auf VATSIM aktiv.'
+    return false
+  } catch (err) {
+    console.error('Failed to load ATIS feed:', err)
+    atisInfo.value = { icao: code, text: '' }
+    atisError.value = 'ATIS konnte nicht geladen werden.'
+    return false
+  }
+}
+
+const startMonitoring = async (flightPlan: any) => {
   selectedPlan.value = flightPlan
   initializeFlight(flightPlan)
   currentScreen.value = 'monitor'
 
-  // Set appropriate frequency based on departure airport
-  if (flightPlan.dep === 'EDDF') {
-    frequencies.value.active = '121.900' // Frankfurt Delivery
-    frequencies.value.standby = '121.700' // Frankfurt Ground
+  airportFrequencies.value = []
+  airportFrequenciesError.value = ''
+  showFrequencyList.value = false
+  atisInfo.value = null
+  atisError.value = ''
+  atisLoading.value = false
+
+  const depIcao = flightPlan.dep || flightPlan.departure || flightPlan.origin
+  if (typeof depIcao === 'string' && depIcao.length === 4) {
+    await loadAirportFrequencies(depIcao.toUpperCase())
   }
 }
 
-const startDemoFlight = () => {
+const startDemoFlight = async () => {
   const demoFlight = {
     callsign: 'DLH39A',
     aircraft: 'A320/L',
@@ -1193,13 +1477,18 @@ const startDemoFlight = () => {
     altitude: '36000',
     assignedsquawk: '1234'
   }
-  startMonitoring(demoFlight)
+  await startMonitoring(demoFlight)
 }
 
 const backToSetup = () => {
   currentScreen.value = 'login'
   selectedPlan.value = null
   lastTransmission.value = ''
+  airportFrequencies.value = []
+  airportFrequenciesError.value = ''
+  showFrequencyList.value = false
+  atisInfo.value = null
+  atisError.value = ''
 }
 
 // Audio/PTT Functions
@@ -1482,7 +1771,7 @@ const runFullSimulation = async () => {
       payload: { timestamp: new Date().toISOString(), steps: simulationStepCount }
     })
 
-    startDemoFlight()
+    await startDemoFlight()
     await nextTick()
     clearLog()
     recordedAtcStates.clear()
