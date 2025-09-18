@@ -10,6 +10,7 @@ export interface LearnConfig {
   radioLevel: number
   voice: string
   audioChallenge: boolean
+  audioSpeed: number
 }
 
 export interface LearnState {
@@ -23,6 +24,7 @@ export const LEARN_CONFIG_DEFAULTS: LearnConfig = {
   radioLevel: 4,
   voice: '',
   audioChallenge: false,
+  audioSpeed: 1,
 }
 
 export function createDefaultLearnConfig(): LearnConfig {
