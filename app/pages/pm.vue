@@ -863,7 +863,7 @@ const signalStrength = ref(4)
 const radioCheckLoading = ref(false)
 const radioEffectsEnabled = ref(true)
 const readbackEnabled = ref(false)
-const debugMode = ref(false)
+const debugMode = ref(true)
 
 const simulationRunning = ref(false)
 const simulationTrace = ref<SimulationTraceEntry[]>([])

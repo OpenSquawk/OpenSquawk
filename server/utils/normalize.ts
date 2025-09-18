@@ -154,6 +154,11 @@ const NATO: Record<string, string> = {
 // Airline-Telephony (erweiterbar)
 export const CALLSIGN_MAP: Record<string,string> = {
     DLH: "Lufthansa",
+    EWG: "Eurowings",
+    THY: "Turkish",
+    JBU: "JetBlue",
+    NAX: "Norwegian",
+    SWR: "Swiss",
     BAW: "Speedbird",
     AFR: "Air France",
     KLM: "KLM",

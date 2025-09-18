@@ -2,7 +2,7 @@ const atcDecisionTree = {
   "schema_version": "1.0",
   "name": "icao_atc_decision_tree",
   "description": "Machine-readable ICAO/FAA-style ATC flow for IFR, suited for LLM+Whisper+TTS loop.",
-  "start_state": "PREFLIGHT_START",
+  "start_state": "CD_CHECK_ATIS",
   "end_states": ["FLOW_COMPLETE"],
   "variables": {
     "callsign": "DLH39A",
