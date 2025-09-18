@@ -12,11 +12,13 @@ interface RegisterPayload extends Credentials {
   acceptPrivacy: boolean
 }
 
+type UserRole = 'user' | 'admin' | 'dev'
+
 interface AuthUser {
   id: string
   email: string
   name?: string
-  role: string
+  role: UserRole
   createdAt: string
 }
 

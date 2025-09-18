@@ -2,6 +2,8 @@ import mongoose from 'mongoose'
 
 const { Schema } = mongoose
 
+export type InvitationChannel = 'user' | 'bootstrap' | 'manual' | 'admin'
+
 export interface InvitationCodeDocument extends mongoose.Document {
   code: string
   createdBy?: mongoose.Types.ObjectId
@@ -9,7 +11,7 @@ export interface InvitationCodeDocument extends mongoose.Document {
   expiresAt?: Date
   usedBy?: mongoose.Types.ObjectId
   usedAt?: Date
-  channel: 'user' | 'bootstrap' | 'manual'
+  channel: InvitationChannel
   label?: string
 }
 
@@ -20,7 +22,7 @@ const invitationSchema = new mongoose.Schema<InvitationCodeDocument>({
   expiresAt: { type: Date },
   usedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   usedAt: { type: Date },
-  channel: { type: String, enum: ['user', 'bootstrap', 'manual'], default: 'user' },
+  channel: { type: String, enum: ['user', 'bootstrap', 'manual', 'admin'], default: 'user' },
   label: { type: String, trim: true },
 })
 
