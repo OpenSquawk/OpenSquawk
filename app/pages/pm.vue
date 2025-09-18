@@ -901,6 +901,28 @@ const engine = useCommunicationsEngine()
 const auth = useAuthStore()
 const api = useApi()
 const router = useRouter()
+
+const STORAGE_KEYS = {
+  selectedPlan: 'pm_selected_plan',
+  vatsimId: 'pm_vatsim_id'
+} as const
+
+let restoringFromStorage = true
+
+const persistSelectedPlan = (plan: any | null) => {
+  if (typeof window === 'undefined') return
+
+  try {
+    if (plan) {
+      window.localStorage.setItem(STORAGE_KEYS.selectedPlan, JSON.stringify(plan))
+    } else {
+      window.localStorage.removeItem(STORAGE_KEYS.selectedPlan)
+    }
+  } catch (err) {
+    console.warn('Failed to persist flight selection', err)
+  }
+}
+
 const {
   currentState,
   nextCandidates,
@@ -1010,19 +1032,41 @@ const frequencySources = ref({ vatsim: false, openaip: false })
 const atisPlaybackLoading = ref(false)
 
 onMounted(async () => {
-  if (!auth.accessToken) {
-    const refreshed = await auth.tryRefresh()
-    if (!refreshed) {
-      router.push('/login')
-      return
+  try {
+    if (!auth.accessToken) {
+      const refreshed = await auth.tryRefresh()
+      if (!refreshed) {
+        router.push('/login')
+        return
+      }
     }
-  }
 
-  if (!auth.user) {
-    await auth.fetchUser().catch((err) => {
-      console.error('Session initialisation failed', err)
-      router.push('/login')
-    })
+    if (!auth.user) {
+      await auth.fetchUser().catch((err) => {
+        console.error('Session initialisation failed', err)
+        router.push('/login')
+      })
+    }
+
+    if (typeof window !== 'undefined') {
+      const storedVatsimId = window.localStorage.getItem(STORAGE_KEYS.vatsimId)
+      if (storedVatsimId) {
+        vatsimId.value = storedVatsimId
+      }
+
+      const storedPlanRaw = window.localStorage.getItem(STORAGE_KEYS.selectedPlan)
+      if (storedPlanRaw) {
+        try {
+          const parsedPlan = JSON.parse(storedPlanRaw)
+          await startMonitoring(parsedPlan)
+        } catch (err) {
+          console.warn('Failed to restore stored flight plan', err)
+          window.localStorage.removeItem(STORAGE_KEYS.selectedPlan)
+        }
+      }
+    }
+  } finally {
+    restoringFromStorage = false
   }
 })
 
@@ -1030,6 +1074,7 @@ watch(
   () => auth.accessToken,
   (token) => {
     if (!token) {
+      persistSelectedPlan(null)
       router.push('/login')
     }
   }
@@ -1039,6 +1084,19 @@ watch(
 const vatsimId = ref('1857215')
 const flightPlans = ref<any[]>([])
 const selectedPlan = ref<any>(null)
+
+watch(vatsimId, (id) => {
+  if (restoringFromStorage || typeof window === 'undefined') {
+    return
+  }
+
+  const trimmed = id.trim()
+  if (trimmed) {
+    window.localStorage.setItem(STORAGE_KEYS.vatsimId, trimmed)
+  } else {
+    window.localStorage.removeItem(STORAGE_KEYS.vatsimId)
+  }
+})
 
 // Audio
 const mediaRecorder = ref<MediaRecorder | null>(null)
@@ -1535,6 +1593,7 @@ const startMonitoring = async (flightPlan: any) => {
   selectedPlan.value = flightPlan
   initializeFlight(flightPlan)
   currentScreen.value = 'monitor'
+  persistSelectedPlan(flightPlan)
 
   // Set appropriate frequency based on departure airport
   if (flightPlan.dep === 'EDDF') {
@@ -1560,6 +1619,7 @@ const startDemoFlight = () => {
 const backToSetup = () => {
   currentScreen.value = 'login'
   selectedPlan.value = null
+  persistSelectedPlan(null)
   clearLastTransmission()
   airportFrequencies.value = []
   frequencySources.value = { vatsim: false, openaip: false }
