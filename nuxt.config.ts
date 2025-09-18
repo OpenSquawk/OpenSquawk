@@ -19,6 +19,7 @@ export default defineNuxtConfig({
         llmModel: process.env.LLM_MODEL || 'gpt-5-nano',
         ttsModel: process.env.TTS_MODEL || 'tts-1',
         defaultVoiceId: process.env.VOICE_ID || 'alloy',
+        openaipApiKey: process.env.OPENAIP_API_KEY,
         usePiper: process.env.USE_PIPER,
         piperPort: process.env.PIPER_PORT,
         useSpeaches: process.env.USE_SPEACHES,
