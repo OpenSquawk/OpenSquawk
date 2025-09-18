@@ -1,17 +1,18 @@
-// yarn add openai dotenv
+// yarn add openai
 import OpenAI from "openai";
-import dotenv from "dotenv";
 import fs from "node:fs";
+import { getServerRuntimeConfig } from "./runtimeConfig";
 
-dotenv.config();
+const { openaiKey, openaiProject, llmModel, ttsModel } = getServerRuntimeConfig();
+const normalizeClientOptions: ConstructorParameters<typeof OpenAI>[0] = { apiKey: openaiKey };
+if (openaiProject) {
+    normalizeClientOptions.project = openaiProject;
+}
 
-export const normalize = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY!,
-    project: process.env.OPENAI_PROJECT, // optional
-});
+export const normalize = new OpenAI(normalizeClientOptions);
 
-export const LLM_MODEL = process.env.LLM_MODEL || "gpt-5-nano";
-export const TTS_MODEL = process.env.TTS_MODEL || "tts-1";
+export const LLM_MODEL = llmModel;
+export const TTS_MODEL = ttsModel;
 
 /* =========================
    LLM PROMPTS (überarbeitet)

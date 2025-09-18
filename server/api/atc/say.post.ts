@@ -5,14 +5,10 @@ import {existsSync} from "node:fs";
 import {join} from "node:path";
 import {randomUUID} from "node:crypto";
 import {normalize, TTS_MODEL, normalizeATC} from "../../utils/normalize";
+import { getServerRuntimeConfig } from "../../utils/runtimeConfig";
 import {request} from "node:http";
 import { TransmissionLog } from "../../models/TransmissionLog";
 import { getUserFromEvent } from "../../utils/auth";
-
-// dotenv config
-import {config} from "dotenv";
-
-config();
 
 
 function outDir() {
@@ -60,12 +56,12 @@ function fmtToExt(fmt: AudioFmt): string {
 }
 
 // ---- Piper HTTP helper ----
-async function piperTTS(text: string, voice: string): Promise<Buffer> {
+async function piperTTS(text: string, voice: string, port: number): Promise<Buffer> {
     return new Promise((resolve, reject) => {
         const req = request(
             {
                 hostname: "localhost",
-                port: Number(process.env.PIPER_PORT ?? 5001),
+                port,
                 path: "/",
                 method: "POST",
                 headers: { "Content-Type": "application/json" }
@@ -117,6 +113,7 @@ async function speachesTTS(
 }
 
 export default defineEventHandler(async (event) => {
+    const runtimeConfig = getServerRuntimeConfig();
     const body = await readBody<{
         text?: string;
         level?: number;
@@ -132,15 +129,15 @@ export default defineEventHandler(async (event) => {
     if (!raw) throw createError({ statusCode: 400, statusMessage: "text required" });
 
     const level = Math.max(1, Math.min(5, Math.floor(body?.level ?? 4)));
-    const voice = (body?.voice || process.env.VOICE_ID || "alloy").trim();
+    const voice = (body?.voice || runtimeConfig.voiceId).trim();
     const speed = Math.max(0.5, Math.min(2.0, body?.speed || 1.0));
 
     const normalized = normalizeATC(raw);
     if (!normalized) throw createError({ statusCode: 400, statusMessage: "normalized text empty" });
 
     // Routing
-    const useSpeaches = (process.env.USE_SPEACHES || "").toLowerCase() === "true";
-    const usePiper = !useSpeaches && (process.env.USE_PIPER || "").toLowerCase() === "true";
+    const useSpeaches = runtimeConfig.useSpeaches;
+    const usePiper = !useSpeaches && runtimeConfig.usePiper;
 
     // Format
     const requestedFmt = (body?.format === "smallest" ? "mp3" : body?.format) as AudioFmt | undefined;
@@ -163,8 +160,8 @@ export default defineEventHandler(async (event) => {
 
         if (useSpeaches) {
             // Speaches (bevorzugt klein: MP3, alternativ FLAC/WAV/PCM)
-            const baseUrl = process.env.SPEACHES_BASE_URL || "";
-            const model = process.env.SPEECH_MODEL_ID || "speaches-ai/piper-en_US-ryan-low";
+            const baseUrl = runtimeConfig.speachesBaseUrl || "";
+            const model = runtimeConfig.speechModelId || "speaches-ai/piper-en_US-ryan-low";
             if (!baseUrl) {
                 throw new Error("SPEACHES_BASE_URL not set");
             }
@@ -174,7 +171,7 @@ export default defineEventHandler(async (event) => {
             actualMime = fmtToMime(fmt);
         } else if (usePiper) {
             // Lokaler Piper
-            audioBuffer = await piperTTS(normalized, voice);
+            audioBuffer = await piperTTS(normalized, voice, runtimeConfig.piperPort);
             modelUsed = "piper-local";
             // Piper liefert WAV
             actualMime = "audio/wav";

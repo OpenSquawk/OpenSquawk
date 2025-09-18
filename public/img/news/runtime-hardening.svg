@@ -1,0 +1,28 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" rx="32" fill="#0B1020"/>
+  <g filter="url(#glow)">
+    <circle cx="260" cy="180" r="220" fill="#22D3EE" fill-opacity="0.25"/>
+    <circle cx="960" cy="420" r="280" fill="#0EA5E9" fill-opacity="0.18"/>
+  </g>
+  <rect x="100" y="140" width="440" height="280" rx="24" stroke="#22D3EE" stroke-opacity="0.4" stroke-width="2" fill="url(#card)"/>
+  <rect x="660" y="220" width="440" height="220" rx="24" stroke="#38BDF8" stroke-opacity="0.4" stroke-width="2" fill="url(#card)"/>
+  <text x="120" y="220" fill="#E2E8F0" font-size="54" font-weight="700" font-family="'Inter', 'Segoe UI', sans-serif">Runtime Hardening</text>
+  <text x="120" y="280" fill="#A5F3FC" font-size="24" font-family="'Inter', 'Segoe UI', sans-serif">Config • Validation • ATC Audio</text>
+  <text x="120" y="340" fill="#94A3B8" font-size="20" font-family="'Inter', 'Segoe UI', sans-serif">Validierte Eingaben & klare Fehlermeldungen halten</text>
+  <text x="120" y="370" fill="#94A3B8" font-size="20" font-family="'Inter', 'Segoe UI', sans-serif">die Alpha-Testumgebung stabil.</text>
+  <path d="M760 270L900 270" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+  <path d="M760 330L960 330" stroke="#22D3EE" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <path d="M760 390L930 390" stroke="#38BDF8" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+  <circle cx="760" cy="270" r="10" fill="#22D3EE"/>
+  <circle cx="760" cy="330" r="10" fill="#22D3EE"/>
+  <circle cx="760" cy="390" r="10" fill="#38BDF8"/>
+  <defs>
+    <filter id="glow" x="-120" y="-120" width="1440" height="870" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="80" result="blur"/>
+    </filter>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F172A" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0B1120" stop-opacity="0.6"/>
+    </linearGradient>
+  </defs>
+</svg>

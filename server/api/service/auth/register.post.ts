@@ -3,6 +3,7 @@ import { hashPassword, issueAuthTokens } from '../../../utils/auth'
 import { User } from '../../../models/User'
 import { InvitationCode } from '../../../models/InvitationCode'
 import { WaitlistEntry } from '../../../models/WaitlistEntry'
+import { isValidEmail, validatePasswordStrength } from '../../../utils/validation'
 
 interface RegisterBody {
   email?: string
@@ -15,17 +16,27 @@ interface RegisterBody {
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<RegisterBody>(event)
-  const email = body.email?.trim().toLowerCase()
-  const password = body.password?.trim()
+  const emailInput = body.email?.trim() || ''
+  const password = body.password?.trim() || ''
   const name = body.name?.trim()
   const code = body.invitationCode?.trim().toUpperCase()
+  const email = emailInput.toLowerCase()
 
-  if (!email || !password || !code) {
+  if (!emailInput || !password || !code) {
     throw createError({ statusCode: 400, statusMessage: 'Bitte E-Mail, Passwort und Einladungscode angeben' })
   }
 
   if (!body.acceptPrivacy || !body.acceptTerms) {
     throw createError({ statusCode: 400, statusMessage: 'Bitte AGB und Datenschutz bestätigen' })
+  }
+
+  if (!isValidEmail(emailInput)) {
+    throw createError({ statusCode: 400, statusMessage: 'Bitte eine gültige E-Mail-Adresse angeben' })
+  }
+
+  const passwordValidation = validatePasswordStrength(password)
+  if (!passwordValidation.valid) {
+    throw createError({ statusCode: 400, statusMessage: passwordValidation.message || 'Passwort ist zu schwach' })
   }
 
   const existingUser = await User.findOne({ email })
