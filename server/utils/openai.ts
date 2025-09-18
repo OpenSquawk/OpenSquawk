@@ -179,14 +179,18 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
     try {
         const client = ensureOpenAI()
         const model = getModel()
-        const r = await client.chat.completions.create({
+        const body = {
             model,
             response_format: { type: 'json_object' },
             messages: [
                 { role: 'system', content: system },
                 { role: 'user', content: user }
             ]
-        })
+        }
+
+        console.log("calling LLM with body:", body)
+
+        const r = await client.chat.completions.create(body)
 
         const raw = r.choices?.[0]?.message?.content || '{}'
         const parsed = JSON.parse(raw)
@@ -195,6 +199,8 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         if (!parsed.next_state || typeof parsed.next_state !== 'string') {
             throw new Error('Invalid next_state')
         }
+
+        console.log("LLM decision:", parsed)
 
         return parsed as LLMDecision
 
