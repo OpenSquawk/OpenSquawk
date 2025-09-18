@@ -64,6 +64,14 @@ export const ROADMAP_ITEMS: RoadmapItemDefinition[] = [
     icon: 'mdi-server',
   },
   {
+    key: 'premium-api-access',
+    title: 'Premium-Zugriff auf schnelle APIs',
+    description:
+      'Optionale Monatsabos für performantere Speech- & Sim-APIs mit priorisierten Kontingenten zu niedrigen Beträgen.',
+    category: 'Business',
+    icon: 'mdi-credit-card-clock',
+  },
+  {
     key: 'multi-voice',
     title: 'Mehrere ATC-Stimmen',
     description:

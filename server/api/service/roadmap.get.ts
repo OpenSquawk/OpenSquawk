@@ -41,6 +41,17 @@ export default defineEventHandler(async () => {
       scorePercent,
       lastVoteAt: stat?.lastVoteAt ? stat.lastVoteAt.toISOString() : null,
     }
+  }).sort((a, b) => {
+    const voteDelta = (b.votes ?? 0) - (a.votes ?? 0)
+    if (voteDelta !== 0) {
+      return voteDelta
+    }
+    const avgA = a.averageImportance ?? 0
+    const avgB = b.averageImportance ?? 0
+    if (avgB !== avgA) {
+      return avgB - avgA
+    }
+    return a.title.localeCompare(b.title)
   })
 
   const totalVotes = items.reduce((acc, item) => acc + item.votes, 0)
