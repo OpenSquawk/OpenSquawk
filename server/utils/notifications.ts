@@ -11,6 +11,16 @@ interface MailPayload extends MailOptions {
   from: string
 }
 
+type NotificationDataEntry = readonly [string, ...unknown[]]
+
+interface AdminNotificationInput {
+  event: string
+  summary?: string
+  message?: string
+  data?: NotificationDataEntry[]
+  from?: string
+}
+
 interface SmtpConfig {
   host: string
   port: number
@@ -92,11 +102,74 @@ export async function sendMail(options: MailOptions) {
   return success
 }
 
-export async function sendAdminNotification(subject: string, text: string) {
+function formatNotificationValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '—'
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value)
+  }
+  if (value instanceof Date) {
+    return value.toISOString()
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => formatNotificationValue(entry)).join(', ')
+  }
+  try {
+    return JSON.stringify(value)
+  } catch (error) {
+    return String(value)
+  }
+}
+
+function formatAdminNotification(notification: AdminNotificationInput) {
+  const summary = notification.summary?.trim()
+  const subject = summary && summary.length > 0 ? summary : notification.event
+
+  const lines: string[] = []
+  lines.push(subject)
+  lines.push('')
+  lines.push(`Event: ${notification.event}`)
+
+  const message = notification.message?.trim()
+  if (message) {
+    lines.push('')
+    lines.push(message)
+  }
+
+  if (notification.data?.length) {
+    lines.push('')
+    lines.push('Details:')
+    for (const entry of notification.data) {
+      const [label, ...values] = entry
+      const formattedValue = values.length
+        ? values.map((value) => formatNotificationValue(value)).join(' | ')
+        : '—'
+      lines.push(`- ${label}: ${formattedValue}`)
+    }
+  }
+
+  return { subject, text: lines.join('\n'), from: notification.from }
+}
+
+export async function sendAdminNotification(notification: string | AdminNotificationInput, text?: string) {
   const to = process.env.NOTIFY_EMAIL_TO || ADMIN_EMAIL_FALLBACK
-  const success = await sendMail({ to, subject, text })
+
+  let mailOptions: MailOptions
+
+  if (typeof notification === 'string') {
+    mailOptions = { to, subject: notification, text: text || '' }
+  } else {
+    const formatted = formatAdminNotification(notification)
+    mailOptions = { to, subject: formatted.subject, text: formatted.text, from: formatted.from }
+  }
+
+  const success = await sendMail(mailOptions)
   if (!success) {
-    console.info(`[notify:fallback] ${subject}\nEmpfänger: ${to}\n${text}`)
+    console.info(`[notify:fallback] ${mailOptions.subject}\nEmpfänger: ${to}\n${mailOptions.text}`)
   }
   return success
 }
