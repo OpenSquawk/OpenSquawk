@@ -9,7 +9,6 @@ export default defineNuxtConfig({
       'nuxt-aos',
       '@pinia/nuxt',
       'nuxt-mongoose',
-      'nuxt-module-hotjar',
       '@nuxt/image',
     ],
     aos: {once: true, duration: 600, easing: 'ease-out'},
