@@ -64,6 +64,28 @@ export interface LLMDecision {
     radio_check?: boolean
 }
 
+export interface LLMDecisionTraceCall {
+    stage: 'readback-check' | 'decision'
+    request: Record<string, any>
+    response?: any
+    rawResponseText?: string
+    error?: string
+}
+
+export interface LLMDecisionTrace {
+    calls: LLMDecisionTraceCall[]
+    fallback?: {
+        used: boolean
+        reason?: string
+        selected?: string
+    }
+}
+
+export interface LLMDecisionResult {
+    decision: LLMDecision
+    trace?: LLMDecisionTrace
+}
+
 type ReadbackStatus = 'ok' | 'missing' | 'incorrect' | 'uncertain'
 
 const READBACK_REQUIREMENTS: Record<string, string[]> = {
@@ -329,11 +351,19 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
     }
 }
 
-export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecision> {
+export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisionResult> {
     const pilotUtterance = (input.pilot_utterance || '').trim()
     const pilotText = pilotUtterance.toLowerCase()
+    const trace: LLMDecisionTrace = { calls: [] }
 
-    async function handleReadbackCheck(): Promise<LLMDecision> {
+    const finalize = (decision: LLMDecision): LLMDecisionResult => {
+        if (!trace.calls.length && !trace.fallback) {
+            return { decision }
+        }
+        return { decision, trace }
+    }
+
+    async function handleReadbackCheck(): Promise<LLMDecisionResult> {
         const requiredKeys = READBACK_REQUIREMENTS[input.state_id] || input.state.readback_required || []
         const expectedItems = requiredKeys.reduce<Array<{ key: string; value: string; spoken_variants: string[] }>>((acc, key) => {
             const value = resolveReadbackValue(key, input)
@@ -359,7 +389,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         const defaultNext = fallbackNextState(input)
 
         if (!expectedItems.length) {
-            return { next_state: okNext ?? defaultNext }
+            return finalize({ next_state: okNext ?? defaultNext })
         }
 
         const sanitizedPilot = sanitizeForQuickMatch(pilotUtterance)
@@ -369,57 +399,72 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         })
 
         if (heuristicsOk && okNext) {
-            return { next_state: okNext }
+            return finalize({ next_state: okNext })
+        }
+
+        const payload = {
+            state_id: input.state_id,
+            callsign: input.variables?.callsign,
+            pilot_utterance: pilotUtterance,
+            expected_items: expectedItems,
+            controller_instruction: input.state.say_tpl ?? null
+        }
+
+        const requestBody = {
+            model: getModel(),
+            response_format: { type: 'json_schema', json_schema: READBACK_JSON_SCHEMA },
+            messages: [
+                {
+                    role: 'system',
+                    content: [
+                        'You are an aviation clearance readback checker.',
+                        'Evaluate if the pilot_utterance correctly repeats every item in expected_items.',
+                        'Return JSON with keys: status (ok, missing, incorrect, uncertain), missing (array), incorrect (array), notes (optional).',
+                        'Treat reasonable phonetic variations as correct.'
+                    ].join(' ')
+                },
+                { role: 'user', content: JSON.stringify(payload) }
+            ]
+        }
+
+        const callTrace: LLMDecisionTraceCall = {
+            stage: 'readback-check',
+            request: JSON.parse(JSON.stringify(requestBody))
         }
 
         try {
             const client = ensureOpenAI()
-            const model = getModel()
-            const payload = {
-                state_id: input.state_id,
-                callsign: input.variables?.callsign,
-                pilot_utterance: pilotUtterance,
-                expected_items: expectedItems,
-                controller_instruction: input.state.say_tpl ?? null
-            }
-
-            const response = await client.chat.completions.create({
-                model,
-                response_format: { type: 'json_schema', json_schema: READBACK_JSON_SCHEMA },
-                messages: [
-                    {
-                        role: 'system',
-                        content: [
-                            'You are an aviation clearance readback checker.',
-                            'Evaluate if the pilot_utterance correctly repeats every item in expected_items.',
-                            'Return JSON with keys: status (ok, missing, incorrect, uncertain), missing (array), incorrect (array), notes (optional).',
-                            'Treat reasonable phonetic variations as correct.'
-                        ].join(' ')
-                    },
-                    { role: 'user', content: JSON.stringify(payload) }
-                ]
-            })
+            const response = await client.chat.completions.create(requestBody)
 
             const raw = response.choices?.[0]?.message?.content || '{}'
+            callTrace.response = JSON.parse(JSON.stringify(response))
+            callTrace.rawResponseText = raw
+            trace.calls.push(callTrace)
+
             const parsed = JSON.parse(raw) as { status?: ReadbackStatus }
             const status: ReadbackStatus = parsed.status || 'uncertain'
 
             if (status === 'ok') {
-                return { next_state: okNext ?? defaultNext }
+                return finalize({ next_state: okNext ?? defaultNext })
             }
 
             if ((status === 'missing' || status === 'incorrect') && badNext) {
-                return { next_state: badNext }
+                return finalize({ next_state: badNext })
             }
 
             if (status === 'uncertain' && okNext) {
-                return { next_state: okNext }
+                return finalize({ next_state: okNext })
             }
 
-            return { next_state: badNext ?? defaultNext }
+            return finalize({ next_state: badNext ?? defaultNext })
         } catch (err) {
+            callTrace.error = err instanceof Error ? err.message : String(err)
+            trace.calls.push(callTrace)
+            if (!trace.fallback) {
+                trace.fallback = { used: true, reason: callTrace.error, selected: 'readback-check-fallback' }
+            }
             console.warn('[ATC] Readback check failed, using fallback:', err)
-            return { next_state: okNext ?? defaultNext }
+            return finalize({ next_state: okNext ?? defaultNext })
         }
     }
 
@@ -433,26 +478,26 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             || input.candidates.find(c => c.state?.role === 'system')
 
         if (interruptCandidate) {
-            return { next_state: interruptCandidate.id }
+            return finalize({ next_state: interruptCandidate.id })
         }
     }
 
     // Sofortige Erkennung ohne LLM für häufige Cases
     if (pilotText.includes('radio check') || pilotText.includes('signal test') ||
         (pilotText.includes('read') && (pilotText.includes('check') || pilotText.includes('you')))) {
-        return {
+        return finalize({
             next_state: input.state_id,
             radio_check: true,
             controller_say_tpl: `${input.variables.callsign}, read you five by five.`
-        }
+        })
     }
 
     // Emergency ohne LLM
     if (pilotText.startsWith('mayday') && input.flags.in_air) {
-        return { next_state: 'INT_MAYDAY' }
+        return finalize({ next_state: 'INT_MAYDAY' })
     }
     if (pilotText.startsWith('pan pan') && input.flags.in_air) {
-        return { next_state: 'INT_PANPAN' }
+        return finalize({ next_state: 'INT_PANPAN' })
     }
 
     const optimizedInput = optimizeInputForLLM(input)
@@ -464,7 +509,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
 
     // Wenn keine ATC-States verfügbar, einfache Transition ohne Response
     if (atcCandidates.length === 0 && input.candidates.length > 0) {
-        return { next_state: input.candidates[0].id }
+        return finalize({ next_state: input.candidates[0].id })
     }
 
     // Kompakter aber informativer Prompt - mit Variable-Info für intelligente Responses
@@ -493,23 +538,32 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
 
     const user = JSON.stringify(optimizedInput)
 
+    const body = {
+        model: getModel(),
+        response_format: { type: 'json_object' },
+        messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: user }
+        ]
+    }
+
+    const callTrace: LLMDecisionTraceCall = {
+        stage: 'decision',
+        request: JSON.parse(JSON.stringify(body))
+    }
+
     try {
         const client = ensureOpenAI()
-        const model = getModel()
-        const body = {
-            model,
-            response_format: { type: 'json_object' },
-            messages: [
-                { role: 'system', content: system },
-                { role: 'user', content: user }
-            ]
-        }
 
         console.log("calling LLM with body:", body)
 
         const r = await client.chat.completions.create(body)
 
         const raw = r.choices?.[0]?.message?.content || '{}'
+        callTrace.response = JSON.parse(JSON.stringify(r))
+        callTrace.rawResponseText = raw
+        trace.calls.push(callTrace)
+
         const parsed = JSON.parse(raw)
 
         // Minimal validation
@@ -519,9 +573,14 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
 
         console.log("LLM decision:", parsed)
 
-        return parsed as LLMDecision
+        return finalize(parsed as LLMDecision)
 
     } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : String(e)
+        callTrace.error = errorMessage
+        trace.calls.push(callTrace)
+        const fallbackInfo = { used: true, reason: errorMessage } as NonNullable<LLMDecisionTrace['fallback']>
+        trace.fallback = fallbackInfo
         console.error('LLM JSON parse error, using smart fallback:', e)
 
         // Smart keyword-based fallback - mit Template-Variablen
@@ -529,45 +588,50 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
 
         // Pilot braucht Clearance → ATC muss antworten
         if (pilotText.includes('clearance') || pilotText.includes('request clearance')) {
-            return {
+            fallbackInfo.selected = 'clearance'
+            return finalize({
                 next_state: 'CD_ISSUE_CLR',
                 off_schema: true,
                 controller_say_tpl: `{callsign}, cleared to {dest} via {sid} departure, runway {runway}, climb {initial_altitude_ft} feet, squawk {squawk}.`
-            }
+            })
         }
 
         // Pilot fragt nach Taxi → ATC muss antworten
         if (pilotText.includes('taxi') || pilotText.includes('pushback')) {
-            return {
+            fallbackInfo.selected = 'taxi'
+            return finalize({
                 next_state: 'GRD_TAXI_INSTR',
                 off_schema: true,
                 controller_say_tpl: `{callsign}, taxi to runway {runway} via {taxi_route}, hold short runway {runway}.`
-            }
+            })
         }
 
         // Pilot ready for takeoff → ATC muss antworten
         if (pilotText.includes('takeoff') || pilotText.includes('ready')) {
-            return {
+            fallbackInfo.selected = 'takeoff'
+            return finalize({
                 next_state: 'TWR_TAKEOFF_CLR',
                 off_schema: true,
                 controller_say_tpl: `{callsign}, wind {remarks}, runway {runway} cleared for take-off.`
-            }
+            })
         }
 
         // Pilot readback oder acknowledgment → keine ATC response nötig
         if (pilotText.includes('wilco') || pilotText.includes('roger') ||
             pilotText.includes('cleared') || pilotText.includes('copied')) {
-            return {
+            fallbackInfo.selected = 'acknowledge'
+            return finalize({
                 next_state: input.candidates[0]?.id || 'GEN_NO_REPLY'
                 // Keine controller_say_tpl - Pilot hat nur acknowledged
-            }
+            })
         }
 
         // Generic fallback - mit Template
-        return {
+        fallbackInfo.selected = 'generic'
+        return finalize({
             next_state: 'GEN_NO_REPLY',
             off_schema: true,
             controller_say_tpl: `{callsign}, say again your last transmission.`
-        }
+        })
     }
 }
