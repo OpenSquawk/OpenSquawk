@@ -57,16 +57,16 @@ export default defineEventHandler(async (event) => {
 
       if (!previouslyWantedUpdates && updateResult.created) {
         const dataEntries = [
-          ['E-Mail', email],
+          { label: 'E-Mail', value: email },
         ]
         if (name) {
-          dataEntries.push(['Name', name])
+          dataEntries.push({ label: 'Name', value: name })
         }
         if (notes) {
-          dataEntries.push(['Notizen', notes])
+          dataEntries.push({ label: 'Notizen', value: notes })
         }
-        dataEntries.push(['Quelle', source])
-        dataEntries.push(['Opt-In', 'Produkt-Updates'])
+        dataEntries.push({ label: 'Quelle', value: source })
+        dataEntries.push({ label: 'Opt-In', value: 'Produkt-Updates' })
 
         await sendAdminNotification({
           event: 'Neue Updates-Liste (via Warteliste)',
@@ -106,16 +106,16 @@ export default defineEventHandler(async (event) => {
   }
 
   const dataEntries = [
-    ['E-Mail', email],
+    { label: 'E-Mail', value: email },
   ]
   if (name) {
-    dataEntries.push(['Name', name])
+    dataEntries.push({ label: 'Name', value: name })
   }
   if (notes) {
-    dataEntries.push(['Notizen', notes])
+    dataEntries.push({ label: 'Notizen', value: notes })
   }
-  dataEntries.push(['Quelle', source])
-  dataEntries.push(['Opt-In', wantsProductUpdates ? 'Produkt-Updates' : 'Nur Warteliste'])
+  dataEntries.push({ label: 'Quelle', value: source })
+  dataEntries.push({ label: 'Opt-In', value: wantsProductUpdates ? 'Produkt-Updates' : 'Nur Warteliste' })
 
   await sendAdminNotification({
     event: 'Neue Wartelisten-Anmeldung',

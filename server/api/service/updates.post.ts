@@ -38,9 +38,9 @@ export default defineEventHandler(async (event) => {
 
   if (result.created) {
     const dataEntries = [
-      ['E-Mail', email],
-      ['Name', name || null],
-      ['Quelle', source],
+      { label: 'E-Mail', value: email },
+      { label: 'Name', value: name || null },
+      { label: 'Quelle', value: source },
     ]
     await sendAdminNotification({
       event: 'Neue Updates-Liste',

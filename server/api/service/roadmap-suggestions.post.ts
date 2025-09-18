@@ -45,10 +45,10 @@ export default defineEventHandler(async (event) => {
   })
 
   const dataEntries = [
-    ['Titel', title],
-    ['Beschreibung', details],
-    ['E-Mail', email || null],
-    ['Kontaktaufnahme erlaubt', allowContact],
+    { label: 'Titel', value: title },
+    { label: 'Beschreibung', value: details },
+    { label: 'E-Mail', value: email || null },
+    { label: 'Kontaktaufnahme erlaubt', value: allowContact },
   ]
 
   await sendAdminNotification({
