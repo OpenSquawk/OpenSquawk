@@ -8,14 +8,37 @@
           <span class="text-white">OpenSquawk</span>
         </NuxtLink>
         <div class="hidden md:flex gap-6 text-sm">
-          <NuxtLink to="#features" class="hover:text-cyan-300">Vision</NuxtLink>
-          <NuxtLink to="#roadmap" class="hover:text-cyan-300">Roadmap</NuxtLink>
-          <NuxtLink to="#pricing" class="hover:text-cyan-300">Preise</NuxtLink>
-          <NuxtLink to="#contributing" class="hover:text-cyan-300">Mitmachen</NuxtLink>
+          <NuxtLink to="#features" class="hover:text-cyan-300">
+            {{ locale === 'de' ? 'Vision' : 'Vision' }}
+          </NuxtLink>
+          <NuxtLink to="#roadmap" class="hover:text-cyan-300">
+            {{ locale === 'de' ? 'Roadmap' : 'Roadmap' }}
+          </NuxtLink>
+          <NuxtLink to="#pricing" class="hover:text-cyan-300">
+            {{ locale === 'de' ? 'Preise' : 'Pricing' }}
+          </NuxtLink>
+          <NuxtLink to="#contributing" class="hover:text-cyan-300">
+            {{ locale === 'de' ? 'Mitmachen' : 'Get involved' }}
+          </NuxtLink>
           <NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink>
         </div>
         <div class="flex items-center gap-2">
-          <NuxtLink to="#cta" class="btn btn-primary text-sm">Warteliste</NuxtLink>
+          <div class="relative">
+            <label for="landing-language" class="sr-only">
+              {{ locale === 'de' ? 'Sprache wählen' : 'Choose language' }}
+            </label>
+            <select
+                id="landing-language"
+                v-model="locale"
+                class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium uppercase tracking-wide text-white/80 outline-none focus:border-cyan-400 focus:text-white"
+            >
+              <option value="de">Deutsch</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <NuxtLink to="#cta" class="btn btn-primary text-sm">
+            {{ locale === 'de' ? 'Warteliste' : 'Waitlist' }}
+          </NuxtLink>
           <NuxtLink
               to="https://github.com/FaktorxMensch/OpenSquawk"
               external
@@ -43,41 +66,66 @@
             <span class="text-cyan-400">Open-source, low-cost AI ATC</span>
           </h1>
           <p class="mt-4 md:mt-6 text-white/80 text-base md:text-lg">
-            Wir bauen eine offene, bezahlbare KI-Flugsicherung für Flugsimulatoren – community-getrieben, mit selbst gehosteten
-            und gehosteten Optionen in Planung.
+            <span v-if="locale === 'de'">
+              Wir bauen eine offene, bezahlbare KI-Flugsicherung für Flugsimulatoren – community-getrieben, mit selbst gehosteten
+              und gehosteten Optionen in Planung.
+            </span>
+            <span v-else>
+              We are building an open, affordable AI air traffic control for flight simulators – community-driven, with
+              self-hosted and hosted options in planning.
+            </span>
           </p>
           <ul class="mt-6 space-y-2 text-white/70 text-sm md:text-base">
             <li class="flex items-start gap-2">
               <v-icon icon="mdi-account-group" size="18" class="mt-[3px] text-cyan-300" />
-              <span>Community-Roadmap bestimmt Prioritäten. Features landen nur, wenn sie euch wirklich helfen.</span>
+              <span v-if="locale === 'de'">Community-Roadmap bestimmt Prioritäten. Features landen nur, wenn sie euch wirklich helfen.</span>
+              <span v-else>Community roadmap sets the priorities. Features only ship when they truly help you.</span>
             </li>
             <li class="flex items-start gap-2">
               <v-icon icon="mdi-airplane" size="18" class="mt-[3px] text-cyan-300" />
-              <span><strong>Simulator-Support</strong>: MSFS zuerst, X-Plane als nächstes – mit Blick auf VATSIM-kompatible Trainings.</span>
+              <span v-if="locale === 'de'"><strong>Simulator-Support</strong>: MSFS zuerst, X-Plane als nächstes – mit Blick auf VATSIM-kompatible Trainings.</span>
+              <span v-else><strong>Simulator support</strong>: MSFS first, X-Plane next – all with VATSIM-ready training in mind.</span>
             </li>
           </ul>
           <p class="mt-2 text-sm text-white/70">
-            Wir suchen Mitentwickler:innen (Node/Nuxt, ATC SMEs, Tester, Infra/Kosten). Meld dich via
+            <span v-if="locale === 'de'">
+              Wir suchen Mitentwickler:innen (Node/Nuxt, ATC SMEs, Tester, Infra/Kosten). Meld dich via
+            </span>
+            <span v-else>
+              We are looking for collaborators (Node/Nuxt, ATC SMEs, testers, infra/cost benchmarking). Reach out via
+            </span>
             <a class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
           </p>
           <div class="flex flex-col sm:flex-row gap-3 mt-6">
-            <NuxtLink to="#cta" class="btn btn-primary text-base">Warteliste beitreten</NuxtLink>
-            <NuxtLink to="/news" class="btn btn-ghost text-base">News lesen</NuxtLink>
+            <NuxtLink to="#cta" class="btn btn-primary text-base">
+              {{ locale === 'de' ? 'Warteliste beitreten' : 'Join the waitlist' }}
+            </NuxtLink>
+            <NuxtLink to="/news" class="btn btn-ghost text-base">
+              {{ locale === 'de' ? 'News lesen' : 'Read news' }}
+            </NuxtLink>
           </div>
           <div class="mt-8 max-w-xl" data-aos="fade-up" data-aos-delay="120">
             <form class="rounded-2xl border border-white/10 bg-black/30 p-5 space-y-4" @submit.prevent="submitUpdates">
               <div class="space-y-1">
-                <h3 class="text-lg font-semibold">Neue Features zuerst erfahren</h3>
-                <p class="text-sm text-white/70">Trag dich in die Feature-Liste ein und erhalte Updates zu Releases, Drops & Lerninhalten.</p>
+                <h3 class="text-lg font-semibold">
+                  {{ locale === 'de' ? 'Neue Features zuerst erfahren' : 'Hear about new features first' }}
+                </h3>
+                <p class="text-sm text-white/70">
+                  {{
+                    locale === 'de'
+                      ? 'Trag dich in die Feature-Liste ein und erhalte Updates zu Releases, Drops & Lerninhalten.'
+                      : 'Join the feature list and get updates on releases, drops & learning content.'
+                  }}
+                </p>
               </div>
               <div class="flex flex-col gap-3 sm:flex-row">
                 <input
                     v-model.trim="updatesForm.email"
                     type="email"
                     required
-                    placeholder="dein@email"
+                    :placeholder="locale === 'de' ? 'dein@email' : 'your@email'"
                     class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
-                    aria-label="E-Mail für Produkt-Updates"
+                    :aria-label="locale === 'de' ? 'E-Mail für Produkt-Updates' : 'Email for product updates'"
                 />
                 <button
                     type="submit"
@@ -86,24 +134,48 @@
                 >
                   <span v-if="updatesSubmitting" class="flex items-center gap-2">
                     <v-progress-circular indeterminate size="16" width="2" color="white" />
-                    Speichere…
+                    {{ locale === 'de' ? 'Speichere…' : 'Saving…' }}
                   </span>
-                  <span v-else>Benachrichtigt mich</span>
+                  <span v-else>{{ locale === 'de' ? 'Benachrichtigt mich' : 'Notify me' }}</span>
                 </button>
               </div>
               <div class="space-y-2 text-xs text-white/60">
                 <label class="flex items-start gap-3">
                   <input type="checkbox" v-model="updatesForm.consentMarketing" class="mt-1" required />
-                  <span>Ja, informiert mich per E-Mail über neue Features, Wartelisten-Drops & Lerninhalte.</span>
+                  <span>
+                    {{
+                      locale === 'de'
+                        ? 'Ja, informiert mich per E-Mail über neue Features, Wartelisten-Drops & Lerninhalte.'
+                        : 'Yes, email me when new features, waitlist drops or learning content go live.'
+                    }}
+                  </span>
                 </label>
                 <label class="flex items-start gap-3">
                   <input type="checkbox" v-model="updatesForm.consentPrivacy" class="mt-1" required />
-                  <span>Ich habe die <NuxtLink to="/datenschutz" class="text-cyan-300 underline">Datenschutzerklärung</NuxtLink> gelesen.</span>
+                  <span>
+                    <template v-if="locale === 'de'">
+                      Ich habe die
+                      <NuxtLink to="/datenschutz" class="text-cyan-300 underline">Datenschutzerklärung</NuxtLink>
+                      gelesen.
+                    </template>
+                    <template v-else>
+                      I have read the
+                      <NuxtLink to="/datenschutz" class="text-cyan-300 underline">privacy policy</NuxtLink>.
+                    </template>
+                  </span>
                 </label>
               </div>
-              <p v-if="updatesSuccess" class="text-sm text-green-300">Danke! Wir informieren dich, sobald neue Features live gehen.</p>
+              <p v-if="updatesSuccess" class="text-sm text-green-300">
+                {{ locale === 'de' ? 'Danke! Wir informieren dich, sobald neue Features live gehen.' : 'Thanks! We will let you know when new features go live.' }}
+              </p>
               <p v-else-if="updatesError" class="text-sm text-red-300">{{ updatesError }}</p>
-              <p v-else class="text-xs text-white/50">Kein Spam – maximal relevante Produkt-Updates. Abmeldung jederzeit per Link möglich.</p>
+              <p v-else class="text-xs text-white/50">
+                {{
+                  locale === 'de'
+                    ? 'Kein Spam – maximal relevante Produkt-Updates. Abmeldung jederzeit per Link möglich.'
+                    : 'No spam – only relevant product updates. Unsubscribe any time.'
+                }}
+              </p>
             </form>
           </div>
         </div>
@@ -111,7 +183,9 @@
           <div class="card relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/5 to-transparent"></div>
 <!--            <img src="/img/simulator.jpg" alt="Cockpit" class="rounded-xl w-full object-cover" />-->
-            <div class="absolute bottom-3 right-3 text-xs text-white/70 bg-black/40 px-2 py-1 rounded">Symbolbild</div>
+            <div class="absolute bottom-3 right-3 text-xs text-white/70 bg-black/40 px-2 py-1 rounded">
+              {{ locale === 'de' ? 'Symbolbild' : 'Placeholder image' }}
+            </div>
           </div>
         </div>
       </div>
@@ -121,10 +195,22 @@
     <section class="py-10 border-t border-white/10 bg-[#0a0f1c]" data-aos="fade-up">
       <div class="container-outer">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6 items-center opacity-80 text-sm md:text-base">
-          <div class="flex items-center justify-center gap-2 text-white/60"><v-icon icon="mdi-test-tube" class="opacity-70"/>Alpha-Status</div>
-          <div class="flex items-center justify-center gap-2 text-white/60"><v-icon icon="mdi-microsoft-xbox" class="opacity-70"/>MSFS (Fokus)</div>
-          <div class="flex items-center justify-center gap-2 text-white/60"><v-icon icon="mdi-airplane" class="opacity-70"/>X‑Plane (als nächstes)</div>
-          <div class="flex items-center justify-center gap-2 text-white/60"><v-icon icon="mdi-headset" class="opacity-70"/>VATSIM-Lernpfad (geplant)</div>
+          <div class="flex items-center justify-center gap-2 text-white/60">
+            <v-icon icon="mdi-test-tube" class="opacity-70" />
+            {{ locale === 'de' ? 'Alpha-Status' : 'Alpha status' }}
+          </div>
+          <div class="flex items-center justify-center gap-2 text-white/60">
+            <v-icon icon="mdi-microsoft-xbox" class="opacity-70" />
+            {{ locale === 'de' ? 'MSFS (Fokus)' : 'MSFS (focus)' }}
+          </div>
+          <div class="flex items-center justify-center gap-2 text-white/60">
+            <v-icon icon="mdi-airplane" class="opacity-70" />
+            {{ locale === 'de' ? 'X‑Plane (als nächstes)' : 'X-Plane (up next)' }}
+          </div>
+          <div class="flex items-center justify-center gap-2 text-white/60">
+            <v-icon icon="mdi-headset" class="opacity-70" />
+            {{ locale === 'de' ? 'VATSIM-Lernpfad (geplant)' : 'VATSIM learning path (planned)' }}
+          </div>
         </div>
       </div>
     </section>
@@ -133,52 +219,100 @@
     <section id="features" class="py-16 md:py-24 bg-gradient-to-b from-[#0a0f1c] to-[#0b1020]">
       <div class="container-outer">
         <div class="max-w-2xl mb-10" data-aos="fade-up">
-          <h2 class="text-3xl md:text-4xl font-semibold">Vision & Fokus</h2>
-          <p class="mt-3 text-white/80">Open-source, low-cost AI ATC für Flugsimulatoren. Community-getriebene Features, transparente Kosten und Wahlfreiheit zwischen Self-host und späterem Hosting.</p>
+          <h2 class="text-3xl md:text-4xl font-semibold">
+            {{ locale === 'de' ? 'Vision & Fokus' : 'Vision & focus' }}
+          </h2>
+          <p class="mt-3 text-white/80">
+            {{
+              locale === 'de'
+                ? 'Open-source, low-cost AI ATC für Flugsimulatoren. Community-getriebene Features, transparente Kosten und Wahlfreiheit zwischen Self-host und späterem Hosting.'
+                : 'Open-source, low-cost AI ATC for flight simulation. Community-driven features, transparent costs and the freedom to self-host or use hosted options later.'
+            }}
+          </p>
         </div>
 
         <div class="grid md:grid-cols-3 gap-6">
           <div class="card" data-aos="fade-up" data-aos-delay="0">
             <div class="flex items-center gap-3">
               <div class="p-2 rounded-lg bg-cyan-500/20 border border-cyan-400/20"><v-icon icon="mdi-tower-fire" class="text-cyan-300"/></div>
-              <h3 class="font-semibold text-lg">Offene AI-ATC-Grundlage</h3>
+              <h3 class="font-semibold text-lg">
+                {{ locale === 'de' ? 'Offene AI-ATC-Grundlage' : 'Open AI ATC foundation' }}
+              </h3>
             </div>
-            <p class="mt-3 text-white/80">Wir entwickeln eine erschwingliche Kernplattform für Funkanalyse, Entscheidungslogik und Voices, die jede:r inspizieren und erweitern kann.</p>
+            <p class="mt-3 text-white/80">
+              {{
+                locale === 'de'
+                  ? 'Wir entwickeln eine erschwingliche Kernplattform für Funkanalyse, Entscheidungslogik und Voices, die jede:r inspizieren und erweitern kann.'
+                  : 'We are building an affordable core for radio analysis, decision logic and voices that anyone can inspect and extend.'
+              }}
+            </p>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="100">
             <div class="flex items-center gap-3">
               <div class="p-2 rounded-lg bg-cyan-500/20 border border-cyan-400/20"><v-icon icon="mdi-vote" class="text-cyan-300"/></div>
-              <h3 class="font-semibold text-lg">Community entscheidet</h3>
+              <h3 class="font-semibold text-lg">
+                {{ locale === 'de' ? 'Community entscheidet' : 'Community decides' }}
+              </h3>
             </div>
-            <p class="mt-3 text-white/80">Roadmap-Votes und Vorschläge aus der Community lenken unsere Prioritäten – Training, Tools oder Integrationen entstehen mit euch.</p>
+            <p class="mt-3 text-white/80">
+              {{
+                locale === 'de'
+                  ? 'Roadmap-Votes und Vorschläge aus der Community lenken unsere Prioritäten – Training, Tools oder Integrationen entstehen mit euch.'
+                  : 'Roadmap votes and community proposals steer our priorities – training, tools and integrations grow with you.'
+              }}
+            </p>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="200">
             <div class="flex items-center gap-3">
               <div class="p-2 rounded-lg bg-cyan-500/20 border border-cyan-400/20"><v-icon icon="mdi-source-repository" class="text-cyan-300"/></div>
-              <h3 class="font-semibold text-lg">Self-host & Hosted Optionen</h3>
+              <h3 class="font-semibold text-lg">
+                {{ locale === 'de' ? 'Self-host & Hosted Optionen' : 'Self-host & hosted options' }}
+              </h3>
             </div>
-            <p class="mt-3 text-white/80">Beta-Ziel: eigene Instanz per Docker in Minuten oder später fair kalkulierte Hosting-Pläne – offen, transparent, bezahlbar.</p>
+            <p class="mt-3 text-white/80">
+              {{
+                locale === 'de'
+                  ? 'Beta-Ziel: eigene Instanz per Docker in Minuten oder später fair kalkulierte Hosting-Pläne – offen, transparent, bezahlbar.'
+                  : 'Beta goal: spin up your own instance via Docker within minutes or pick fairly priced hosting plans – open, transparent, affordable.'
+              }}
+            </p>
           </div>
         </div>
 
         <div class="grid md:grid-cols-2 gap-6 mt-6">
           <div class="card" data-aos="fade-up" data-aos-delay="0">
-            <h3 class="font-semibold text-lg">Simulator-Support (Plan)</h3>
-            <p class="mt-3 text-white/80">Wir fokussieren zuerst Microsoft Flight Simulator, arbeiten parallel am X-Plane-Konzept und sammeln Feedback für weitere Plattformen.</p>
+            <h3 class="font-semibold text-lg">
+              {{ locale === 'de' ? 'Simulator-Support (Plan)' : 'Simulator support (plan)' }}
+            </h3>
+            <p class="mt-3 text-white/80">
+              {{
+                locale === 'de'
+                  ? 'Wir fokussieren zuerst Microsoft Flight Simulator, arbeiten parallel am X-Plane-Konzept und sammeln Feedback für weitere Plattformen.'
+                  : 'We focus on Microsoft Flight Simulator first, work on the X-Plane concept in parallel and gather feedback for additional platforms.'
+              }}
+            </p>
             <ul class="mt-3 space-y-2 text-white/70 text-sm list-disc list-inside">
-              <li>MSFS Alpha: lokale Anbindung + Funkworkflows im Test</li>
-              <li>X-Plane: Plugin-Skizze, Community-Review willkommen</li>
-              <li>VATSIM/IVAO: Lernpfad & Phraseologie-Übungen geplant</li>
+              <li>{{ locale === 'de' ? 'MSFS Alpha: lokale Anbindung + Funkworkflows im Test' : 'MSFS alpha: local connector + radio workflows in testing' }}</li>
+              <li>{{ locale === 'de' ? 'X-Plane: Plugin-Skizze, Community-Review willkommen' : 'X-Plane: plugin sketch, community review welcome' }}</li>
+              <li>{{ locale === 'de' ? 'VATSIM/IVAO: Lernpfad & Phraseologie-Übungen geplant' : 'VATSIM/IVAO: learning path & phraseology drills planned' }}</li>
             </ul>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="100">
-            <h3 class="font-semibold text-lg">Alpha-Prototyp</h3>
-            <p class="mt-3 text-white/80">Der aktuelle Build läuft lokal (Node/Nuxt + Services). Zum Setup brauchst du Terminal-Basics und Lust auf Experimente.</p>
+            <h3 class="font-semibold text-lg">
+              {{ locale === 'de' ? 'Alpha-Prototyp' : 'Alpha prototype' }}
+            </h3>
+            <p class="mt-3 text-white/80">
+              {{
+                locale === 'de'
+                  ? 'Der aktuelle Build läuft lokal (Node/Nuxt + Services). Zum Setup brauchst du Terminal-Basics und Lust auf Experimente.'
+                  : 'The current build runs locally (Node/Nuxt + services). You will need basic terminal skills and a taste for experimentation.'
+              }}
+            </p>
             <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-console"/>Setup via CLI</div>
               <div class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-docker"/>Docker Compose optional</div>
-              <div class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-account-hard-hat"/>Fehler melden erwünscht</div>
-              <div class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-source-branch"/>PRs & Roadmap-Votes willkommen</div>
+              <div class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-account-hard-hat"/>{{ locale === 'de' ? 'Fehler melden erwünscht' : 'Bug reports welcome' }}</div>
+              <div class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-source-branch"/>{{ locale === 'de' ? 'PRs & Roadmap-Votes willkommen' : 'PRs & roadmap votes welcome' }}</div>
             </div>
           </div>
         </div>
@@ -190,7 +324,13 @@
       <div class="container-outer space-y-8">
         <div class="max-w-2xl" data-aos="fade-up">
           <h2 class="text-3xl md:text-4xl font-semibold">News & Updates</h2>
-          <p class="mt-3 text-white/80">Content-driven Beiträge halten dich auf dem Laufenden. Alle Artikel liegen als Markdown vor – neue Stories landen automatisch hier.</p>
+          <p class="mt-3 text-white/80">
+            {{
+              locale === 'de'
+                ? 'Content-driven Beiträge halten dich auf dem Laufenden. Alle Artikel liegen als Markdown vor – neue Stories landen automatisch hier.'
+                : 'Content-driven posts keep you in the loop. All articles are stored in Markdown – new stories show up here automatically.'
+            }}
+          </p>
         </div>
         <div v-if="latestNews.length" class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           <article
@@ -206,16 +346,22 @@
             </div>
             <div class="mt-auto flex items-center justify-between text-xs text-white/60">
               <span>{{ post.readingTime }}</span>
-              <NuxtLink :to="`/news/${post.slug}`" class="text-cyan-300 text-sm font-medium hover:underline">Weiterlesen</NuxtLink>
+              <NuxtLink :to="`/news/${post.slug}`" class="text-cyan-300 text-sm font-medium hover:underline">
+                {{ locale === 'de' ? 'Weiterlesen' : 'Read more' }}
+              </NuxtLink>
             </div>
           </article>
         </div>
         <div v-else class="card text-sm text-white/70" data-aos="fade-up">
-          Noch keine News veröffentlicht – der erste Beitrag folgt in Kürze.
+          {{ locale === 'de' ? 'Noch keine News veröffentlicht – der erste Beitrag folgt in Kürze.' : 'No news published yet – the first post is coming soon.' }}
         </div>
         <div class="flex items-center gap-3" data-aos="fade-up">
-          <NuxtLink to="/news" class="btn btn-ghost">Alle News ansehen</NuxtLink>
-          <span class="text-xs text-white/50">Schreib uns, falls du eigene Erfahrungsberichte teilen willst.</span>
+          <NuxtLink to="/news" class="btn btn-ghost">
+            {{ locale === 'de' ? 'Alle News ansehen' : 'View all news' }}
+          </NuxtLink>
+          <span class="text-xs text-white/50">
+            {{ locale === 'de' ? 'Schreib uns, falls du eigene Erfahrungsberichte teilen willst.' : 'Tell us if you want to share your own experience.' }}
+          </span>
         </div>
       </div>
     </section>
@@ -224,22 +370,25 @@
     <section id="roadmap" class="py-16 md:py-24 bg-[#0b1020] border-y border-white/10">
       <div class="container-outer space-y-10">
         <div class="max-w-3xl" data-aos="fade-up">
-          <h2 class="text-3xl md:text-4xl font-semibold">Roadmap & Community-Voting</h2>
+          <h2 class="text-3xl md:text-4xl font-semibold">
+            {{ locale === 'de' ? 'Roadmap & Community-Voting' : 'Roadmap & community voting' }}
+          </h2>
           <p class="mt-3 text-white/80">
-            Stimme ab, was als Nächstes Priorität bekommt. Wir kombinieren die Votes mit Zeitstempel, um Features für Training,
-            Immersion und Infrastruktur zu planen.
+            {{
+              locale === 'de'
+                ? 'Stimme ab, was als Nächstes Priorität bekommt. Wir kombinieren die Votes mit Zeitstempel, um Features für Training, Immersion und Infrastruktur zu planen.'
+                : 'Vote on what should take priority next. We combine votes with timestamps to plan features for training, immersion and infrastructure.'
+            }}
           </p>
           <div class="mt-4 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
             <v-icon icon="mdi-account-group" size="18" class="text-cyan-300" />
-            <span>
-              {{ formatNumber(roadmapTotals) }} abgegebene Stimmen · letzte 7 Tage: +{{ formatNumber(roadmapRecent7Days) }}
-            </span>
+            <span>{{ roadmapStatsLabel }}</span>
           </div>
         </div>
 
         <div class="space-y-6">
           <div v-if="roadmapLoading" class="card text-white/70" data-aos="fade-up">
-            Wir laden die aktuellen Roadmap-Prioritäten…
+            {{ locale === 'de' ? 'Wir laden die aktuellen Roadmap-Prioritäten…' : 'Loading current roadmap priorities…' }}
           </div>
           <template v-else>
             <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -264,9 +413,17 @@
                       </template>
                       <template v-else>—</template>
                     </div>
-                    <div>{{ formatNumber(item.votes) }} Stimmen</div>
-                    <div v-if="item.lastVoteAt" class="text-white/40">zuletzt {{ formatRelativeFromNow(item.lastVoteAt) }}</div>
-                    <div v-else class="text-white/40">noch keine Stimmen</div>
+                    <div>
+                      <span v-if="locale === 'de'">{{ formatNumber(item.votes) }} Stimmen</span>
+                      <span v-else>{{ formatNumber(item.votes) }} votes</span>
+                    </div>
+                    <div v-if="item.lastVoteAt" class="text-white/40">
+                      <span v-if="locale === 'de'">zuletzt {{ formatRelativeFromNow(item.lastVoteAt) }}</span>
+                      <span v-else>last vote {{ formatRelativeFromNow(item.lastVoteAt) }}</span>
+                    </div>
+                    <div v-else class="text-white/40">
+                      {{ locale === 'de' ? 'noch keine Stimmen' : 'no votes yet' }}
+                    </div>
                   </div>
                 </div>
                 <p class="text-sm text-white/70">{{ item.description }}</p>
@@ -275,10 +432,16 @@
                 </div>
                 <div class="space-y-3">
                   <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.3em] text-white/50">
-                    <span>Priorität wählen</span>
-                    <span v-if="roadmapTouched[item.key]" class="text-cyan-300">markiert</span>
+                    <span>{{ locale === 'de' ? 'Priorität wählen' : 'Choose priority' }}</span>
+                    <span v-if="roadmapTouched[item.key]" class="text-cyan-300">
+                      {{ locale === 'de' ? 'markiert' : 'marked' }}
+                    </span>
                   </div>
-                  <div class="roadmap-scale" role="group" :aria-label="`Priorität für ${item.title}`">
+                  <div
+                      class="roadmap-scale"
+                      role="group"
+                      :aria-label="locale === 'de' ? `Priorität für ${item.title}` : `Priority for ${item.title}`"
+                  >
                     <button
                         v-for="value in ROADMAP_SCALE"
                         :key="value"
@@ -301,9 +464,15 @@
 
             <div class="card flex flex-col gap-4 border-white/10 bg-white/5 md:flex-row md:items-center md:justify-between" data-aos="fade-up">
               <div class="space-y-2">
-                <h4 class="text-lg font-semibold">Deine Auswahl speichern</h4>
+                <h4 class="text-lg font-semibold">
+                  {{ locale === 'de' ? 'Deine Auswahl speichern' : 'Save your selection' }}
+                </h4>
                 <p class="text-sm text-white/70">
-                  Wir speichern jede Stimme einzeln mit Zeitpunkt – so sehen wir, was euch gerade wichtig ist. Du kannst mehrere Karten anpassen und alles gemeinsam absenden.
+                  {{
+                    locale === 'de'
+                      ? 'Wir speichern jede Stimme einzeln mit Zeitpunkt – so sehen wir, was euch gerade wichtig ist. Du kannst mehrere Karten anpassen und alles gemeinsam absenden.'
+                      : 'We store every vote individually with a timestamp, so we see what matters right now. Adjust several cards and submit everything together.'
+                  }}
                 </p>
               </div>
               <div class="flex w-full flex-col gap-2 md:w-auto">
@@ -315,44 +484,60 @@
                 >
                   <span v-if="roadmapSubmitting" class="flex items-center gap-2">
                     <v-progress-circular indeterminate size="16" width="2" color="white" />
-                    Speichere Stimmen…
+                    {{ locale === 'de' ? 'Speichere Stimmen…' : 'Saving votes…' }}
                   </span>
-                  <span v-else>Stimmen abschicken</span>
+                  <span v-else>{{ locale === 'de' ? 'Stimmen abschicken' : 'Submit votes' }}</span>
                 </button>
-                <p v-if="roadmapSuccess" class="text-center text-sm text-green-300 md:text-left">Danke! Deine Stimmen sind angekommen.</p>
+                <p v-if="roadmapSuccess" class="text-center text-sm text-green-300 md:text-left">
+                  {{ locale === 'de' ? 'Danke! Deine Stimmen sind angekommen.' : 'Thanks! Your votes have been recorded.' }}
+                </p>
                 <p v-else-if="roadmapError" class="text-center text-sm text-red-300 md:text-left">{{ roadmapError }}</p>
                 <p v-else class="text-center text-xs text-white/50 md:text-left">
-                  Tipp: Prioritäten nur anpassen, wenn du zu dem Punkt Feedback hast.
+                  {{ locale === 'de' ? 'Tipp: Prioritäten nur anpassen, wenn du zu dem Punkt Feedback hast.' : 'Tip: Only adjust priorities when you have feedback for that topic.' }}
                 </p>
               </div>
             </div>
           </template>
           <div class="card space-y-4" data-aos="fade-up">
             <div class="space-y-2">
-              <h4 class="text-lg font-semibold">Fehlt dir etwas in der Roadmap?</h4>
-              <p class="text-sm text-white/70">Teile deinen Feature-Wunsch oder ein Problem, das wir lösen sollen. Wir priorisieren Community-Ideen.</p>
+              <h4 class="text-lg font-semibold">
+                {{ locale === 'de' ? 'Fehlt dir etwas in der Roadmap?' : 'Missing something on the roadmap?' }}
+              </h4>
+              <p class="text-sm text-white/70">
+                {{
+                  locale === 'de'
+                    ? 'Teile deinen Feature-Wunsch oder ein Problem, das wir lösen sollen. Wir priorisieren Community-Ideen.'
+                    : 'Share the feature you are missing or a problem we should solve. We prioritise community ideas.'
+                }}
+              </p>
             </div>
             <form class="space-y-3" @submit.prevent="submitRoadmapSuggestion">
               <input
                   v-model.trim="roadmapSuggestionForm.title"
                   type="text"
                   required
-                  placeholder="Kurzer Titel – z. B. 'ATIS-Integration für EDDF'"
+                  :placeholder="
+                    locale === 'de'
+                      ? 'Kurzer Titel – z. B. ATIS-Integration für EDDF'
+                      : 'Short title – e.g. ATIS integration for EDDF'
+                  "
                   class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
-                  aria-label="Titel für Roadmap-Vorschlag"
+                  :aria-label="
+                    locale === 'de' ? 'Titel für Roadmap-Vorschlag' : 'Title for roadmap suggestion'
+                  "
               />
               <textarea
                   v-model.trim="roadmapSuggestionForm.details"
                   rows="4"
                   required
-                  placeholder="Beschreibe, warum das wichtig ist oder wie es dir helfen würde."
+                  :placeholder="locale === 'de' ? 'Beschreibe, warum das wichtig ist oder wie es dir helfen würde.' : 'Describe why this matters or how it would help you.'"
                   class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
               />
               <div class="grid gap-3 sm:grid-cols-2">
                 <input
                     v-model.trim="roadmapSuggestionForm.email"
                     type="email"
-                    placeholder="E-Mail (optional)"
+                    :placeholder="locale === 'de' ? 'E-Mail (optional)' : 'Email (optional)'"
                     class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
                 />
                 <label class="flex items-start gap-3 text-xs text-white/60">
@@ -362,12 +547,26 @@
                       class="mt-1"
                       :disabled="!roadmapSuggestionForm.email"
                   />
-                  <span>Gern per E-Mail nachhaken, falls Rückfragen auftauchen.</span>
+                  <span>
+                    {{
+                      locale === 'de'
+                        ? 'Gern per E-Mail nachhaken, falls Rückfragen auftauchen.'
+                        : 'Feel free to follow up by email if questions pop up.'
+                    }}
+                  </span>
                 </label>
               </div>
               <label class="flex items-start gap-3 text-xs text-white/60">
                 <input type="checkbox" v-model="roadmapSuggestionForm.consentPrivacy" class="mt-1" required />
-                <span>Ich habe die <NuxtLink to="/datenschutz" class="text-cyan-300 underline">Datenschutzerklärung</NuxtLink> gelesen und willige in die Verarbeitung meines Vorschlags ein.</span>
+                <span>
+                  <template v-if="locale === 'de'">
+                    Ich habe die <NuxtLink to="/datenschutz" class="text-cyan-300 underline">Datenschutzerklärung</NuxtLink>
+                    gelesen und willige in die Verarbeitung meines Vorschlags ein.
+                  </template>
+                  <template v-else>
+                    I have read the <NuxtLink to="/datenschutz" class="text-cyan-300 underline">privacy policy</NuxtLink> and consent to the processing of my suggestion.
+                  </template>
+                </span>
               </label>
               <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <button
@@ -377,13 +576,17 @@
                 >
                   <span v-if="roadmapSuggestionSubmitting" class="flex items-center gap-2">
                     <v-progress-circular indeterminate size="16" width="2" color="white" />
-                    Sende Vorschlag…
+                    {{ locale === 'de' ? 'Sende Vorschlag…' : 'Sending suggestion…' }}
                   </span>
-                  <span v-else>Vorschlag senden</span>
+                  <span v-else>{{ locale === 'de' ? 'Vorschlag senden' : 'Send suggestion' }}</span>
                 </button>
-                <p v-if="roadmapSuggestionSuccess" class="text-sm text-green-300">Danke! Wir prüfen deinen Vorschlag und melden uns ggf. zurück.</p>
+                <p v-if="roadmapSuggestionSuccess" class="text-sm text-green-300">
+                  {{ locale === 'de' ? 'Danke! Wir prüfen deinen Vorschlag und melden uns ggf. zurück.' : 'Thanks! We will review your suggestion and follow up if needed.' }}
+                </p>
                 <p v-else-if="roadmapSuggestionError" class="text-sm text-red-300">{{ roadmapSuggestionError }}</p>
-                <p v-else class="text-xs text-white/50">Wir lesen jeden Vorschlag persönlich. Optionales Kontaktfeld nur für Rückfragen.</p>
+                <p v-else class="text-xs text-white/50">
+                  {{ locale === 'de' ? 'Wir lesen jeden Vorschlag persönlich. Optionales Kontaktfeld nur für Rückfragen.' : 'We read every suggestion personally. The optional contact field is only used for follow-ups.' }}
+                </p>
               </div>
             </form>
           </div>
@@ -396,18 +599,30 @@
       <div class="container-outer">
         <div class="grid md:grid-cols-2 gap-8 items-center">
           <div data-aos="fade-right">
-            <h2 class="text-3xl md:text-4xl font-semibold">Lernpfad (in Arbeit)</h2>
-            <p class="mt-3 text-white/80">Gemeinsam mit der Community strukturieren wir Trainingsmodule – vom ersten Funkkontakt bis zu Netzwerken wie VATSIM. Feedback aus Tests fließt direkt in jedes Kapitel.</p>
+            <h2 class="text-3xl md:text-4xl font-semibold">
+              {{ locale === 'de' ? 'Lernpfad (in Arbeit)' : 'Learning path (in progress)' }}
+            </h2>
+            <p class="mt-3 text-white/80">
+              {{
+                locale === 'de'
+                  ? 'Gemeinsam mit der Community strukturieren wir Trainingsmodule – vom ersten Funkkontakt bis zu Netzwerken wie VATSIM. Feedback aus Tests fließt direkt in jedes Kapitel.'
+                  : 'Together with the community we structure training modules – from the first radio call to networks like VATSIM. Feedback from tests flows straight into every chapter.'
+              }}
+            </p>
             <ol class="mt-5 space-y-3 text-white/80">
-              <li class="flex gap-3"><span class="chip">1</span><span><b>Basics</b> (Konzept): Funkalphabet, Zahlen, Standard-Readbacks.</span></li>
-              <li class="flex gap-3"><span class="chip">2</span><span><b>Ground</b> (Alpha): Taxi-Flows, Hotspots, Holding-short.</span></li>
-              <li class="flex gap-3"><span class="chip">3</span><span><b>Departure</b> (geplant): SID-Handling, Altitude-/Speed-Calls.</span></li>
-              <li class="flex gap-3"><span class="chip">4</span><span><b>Arrival</b> (geplant): STARs, Vectors, Approach-Briefing.</span></li>
-              <li class="flex gap-3"><span class="chip">5</span><span><b>VATSIM</b> (Community-Beta): Checklisten, Etiquette, Live-Übungen.</span></li>
+              <li class="flex gap-3"><span class="chip">1</span><span><b>Basics</b> ({{ locale === 'de' ? 'Konzept' : 'concept' }}): {{ locale === 'de' ? 'Funkalphabet, Zahlen, Standard-Readbacks.' : 'phonetic alphabet, numbers, standard readbacks.' }}</span></li>
+              <li class="flex gap-3"><span class="chip">2</span><span><b>Ground</b> ({{ locale === 'de' ? 'Alpha' : 'alpha' }}): {{ locale === 'de' ? 'Taxi-Flows, Hotspots, Holding-short.' : 'taxi flows, hotspots, holding short.' }}</span></li>
+              <li class="flex gap-3"><span class="chip">3</span><span><b>Departure</b> ({{ locale === 'de' ? 'geplant' : 'planned' }}): {{ locale === 'de' ? 'SID-Handling, Altitude-/Speed-Calls.' : 'SID handling, altitude/speed calls.' }}</span></li>
+              <li class="flex gap-3"><span class="chip">4</span><span><b>Arrival</b> ({{ locale === 'de' ? 'geplant' : 'planned' }}): {{ locale === 'de' ? 'STARs, Vectors, Approach-Briefing.' : 'STARs, vectors, approach briefing.' }}</span></li>
+              <li class="flex gap-3"><span class="chip">5</span><span><b>VATSIM</b> ({{ locale === 'de' ? 'Community-Beta' : 'community beta' }}): {{ locale === 'de' ? 'Checklisten, Etiquette, Live-Übungen.' : 'checklists, etiquette, live practice.' }}</span></li>
             </ol>
             <div class="mt-6 flex gap-3">
-              <NuxtLink to="#roadmap" class="btn btn-primary">Roadmap ansehen</NuxtLink>
-              <NuxtLink to="/news" class="btn btn-ghost">News lesen</NuxtLink>
+              <NuxtLink to="#roadmap" class="btn btn-primary">
+                {{ locale === 'de' ? 'Roadmap ansehen' : 'View roadmap' }}
+              </NuxtLink>
+              <NuxtLink to="/news" class="btn btn-ghost">
+                {{ locale === 'de' ? 'News lesen' : 'Read news' }}
+              </NuxtLink>
             </div>
           </div>
           <div class="card" data-aos="fade-left">
@@ -422,9 +637,24 @@
       <div class="container-outer">
         <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4" data-aos="fade-up">
           <div class="max-w-2xl">
-            <h2 class="text-3xl md:text-4xl font-semibold">Preise (Zielbild)</h2>
-            <p class="mt-3 text-white/80">Wir arbeiten an einer fairen Kalkulation für Hosting. Zahlen unten sind grobe Zielwerte – Feedback willkommen.
-              <button @click="yearly=!yearly" class="chip ml-2"><span>{{ yearly ? 'jährlich' : 'monatlich' }}</span></button>
+            <h2 class="text-3xl md:text-4xl font-semibold">
+              {{ locale === 'de' ? 'Preise (Zielbild)' : 'Pricing (target)' }}
+            </h2>
+            <p class="mt-3 text-white/80">
+              {{
+                locale === 'de'
+                  ? 'Wir arbeiten an einer fairen Kalkulation für Hosting. Zahlen unten sind grobe Zielwerte – Feedback willkommen.'
+                  : 'We are working on fair hosting prices. Figures below are rough targets – feedback welcome.'
+              }}
+              <button @click="yearly = !yearly" class="chip ml-2">
+                <span>
+                  {{
+                    yearly
+                      ? (locale === 'de' ? 'jährlich' : 'yearly')
+                      : (locale === 'de' ? 'monatlich' : 'monthly')
+                  }}
+                </span>
+              </button>
             </p>
           </div>
         </div>
@@ -433,13 +663,17 @@
           <!-- OSS -->
           <div class="card relative" data-aos="fade-up" data-aos-delay="0">
             <div class="absolute -top-3 right-4 chip">Community</div>
-            <h3 class="text-xl font-semibold">Open‑Source (Self‑host)</h3>
-            <p class="mt-2 text-white/80">Volle Kontrolle. Eigene Infrastruktur. API‑Keys selbst verwalten.</p>
-            <div class="mt-5 text-3xl font-semibold">0€<span class="text-white/60 text-sm font-normal"> / immer</span></div>
+            <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Open‑Source (Self‑host)' : 'Open-source (self-host)' }}</h3>
+            <p class="mt-2 text-white/80">
+              {{ locale === 'de' ? 'Volle Kontrolle. Eigene Infrastruktur. API-Keys selbst verwalten.' : 'Full control. Your infrastructure. Manage API keys yourself.' }}
+            </p>
+            <div class="mt-5 text-3xl font-semibold">
+              0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ immer' : '/ forever' }}</span>
+            </div>
             <ul class="mt-5 space-y-2 text-white/80 text-sm">
-              <li>✔ Voller Funktionsumfang</li>
+              <li>{{ locale === 'de' ? '✔ Voller Funktionsumfang' : '✔ Full feature set' }}</li>
               <li>✔ Plugins & SDK</li>
-              <li>✔ Community‑Support</li>
+              <li>{{ locale === 'de' ? '✔ Community‑Support' : '✔ Community support' }}</li>
             </ul>
             <NuxtLink
                 to="https://github.com/FaktorxMensch/OpenSquawk"
@@ -448,35 +682,51 @@
                 rel="noopener"
                 class="btn btn-ghost w-full mt-6"
             >
-              Repository ansehen
+              {{ locale === 'de' ? 'Repository ansehen' : 'View repository' }}
             </NuxtLink>
           </div>
           <!-- Hosted Basic -->
           <div class="card border-2 border-cyan-400/40 relative shadow-[0_0_40px_rgba(34,211,238,.25)]" data-aos="fade-up" data-aos-delay="100">
-            <div class="absolute -top-3 right-4 chip bg-cyan-500/30 border-cyan-400/50">Empfohlen</div>
+            <div class="absolute -top-3 right-4 chip bg-cyan-500/30 border-cyan-400/50">{{ locale === 'de' ? 'Empfohlen' : 'Recommended' }}</div>
             <h3 class="text-xl font-semibold">Hosted – Basic</h3>
-            <p class="mt-2 text-white/80">Geplanter Rundum-Service: Kein Setup, Updates inklusive. Aktuell nur als Konzept.</p>
-            <div class="mt-5 text-3xl font-semibold"><span>{{ yearly ? '≈4€' : '≈4,50€' }}</span><span class="text-white/60 text-sm font-normal"> / Monat*</span></div>
+            <p class="mt-2 text-white/80">
+              {{ locale === 'de' ? 'Geplanter Rundum-Service: Kein Setup, Updates inklusive. Aktuell nur als Konzept.' : 'Planned full-service offering: zero setup, updates included. Currently concept only.' }}
+            </p>
+            <div class="mt-5 text-3xl font-semibold">
+              <span>{{ yearly ? (locale === 'de' ? '≈4€' : '≈€4') : (locale === 'de' ? '≈4,50€' : '≈€4.50') }}</span>
+              <span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Monat*' : '/ month*' }}</span>
+            </div>
             <ul class="mt-5 space-y-2 text-white/80 text-sm">
-              <li>✔ Fair-Use Audio-Minuten (Ausarbeitung)</li>
-              <li>✔ Lernpfad & Fortschritt (abhängig von Community-Feedback)</li>
-              <li>✔ Updates & Cloud-Scaling (Kostenmodell in Arbeit)</li>
+              <li>{{ locale === 'de' ? '✔ Fair-Use Audio-Minuten (Ausarbeitung)' : '✔ Fair-use audio minutes (work in progress)' }}</li>
+              <li>{{ locale === 'de' ? '✔ Lernpfad & Fortschritt (abhängig von Community-Feedback)' : '✔ Learning path & progress (depends on community feedback)' }}</li>
+              <li>{{ locale === 'de' ? '✔ Updates & Cloud-Scaling (Kostenmodell in Arbeit)' : '✔ Updates & cloud scaling (pricing model in progress)' }}</li>
             </ul>
-            <NuxtLink to="#cta" class="btn btn-primary w-full mt-6">Interesse melden</NuxtLink>
-            <p class="mt-3 text-xs text-white/60">* Zielwert, finale Preise folgen nach Kostentest.</p>
+            <NuxtLink to="#cta" class="btn btn-primary w-full mt-6">
+              {{ locale === 'de' ? 'Interesse melden' : 'Register interest' }}
+            </NuxtLink>
+            <p class="mt-3 text-xs text-white/60">
+              {{ locale === 'de' ? '* Zielwert, finale Preise folgen nach Kostentest.' : '* Target value, final pricing after cost validation.' }}
+            </p>
           </div>
           <!-- Hosted Pro -->
           <div class="card relative" data-aos="fade-up" data-aos-delay="200">
-            <div class="absolute -top-3 right-4 chip">Power‑User</div>
+            <div class="absolute -top-3 right-4 chip">{{ locale === 'de' ? 'Power‑User' : 'Power users' }}</div>
             <h3 class="text-xl font-semibold">Hosted – Pro</h3>
-            <p class="mt-2 text-white/80">Konzept für größere Gruppen & virtuelle Airlines. Preise werden gemeinsam kalkuliert.</p>
-            <div class="mt-5 text-3xl font-semibold"><span>{{ yearly ? '≈12€' : '≈14€' }}</span><span class="text-white/60 text-sm font-normal"> / Monat*</span></div>
+            <p class="mt-2 text-white/80">
+              {{ locale === 'de' ? 'Konzept für größere Gruppen & virtuelle Airlines. Preise werden gemeinsam kalkuliert.' : 'Concept for larger groups and virtual airlines. Pricing will be calculated together.' }}
+            </p>
+            <div class="mt-5 text-3xl font-semibold">
+              <span>{{ yearly ? (locale === 'de' ? '≈12€' : '≈€12') : (locale === 'de' ? '≈14€' : '≈€14') }}</span>
+              <span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Monat*' : '/ month*' }}</span>
+            </div>
             <ul class="mt-5 space-y-2 text-white/80 text-sm">
-              <li>✔ Höhere Limits (nach Bedarf)</li>
-              <li>✔ Team-Seats & Rollen (Diskussion offen)</li>
-              <li>✔ Priorisierter Support (Community + optional SLA)</li>
+              <li>{{ locale === 'de' ? '✔ Höhere Limits (nach Bedarf)' : '✔ Higher limits (as needed)' }}</li>
+              <li>{{ locale === 'de' ? '✔ Team-Seats & Rollen (Diskussion offen)' : '✔ Team seats & roles (open for discussion)' }}</li>
+              <li>{{ locale === 'de' ? '✔ Priorisierter Support (Community + optional SLA)' : '✔ Prioritised support (community + optional SLA)' }}</li>
             </ul>
-            <NuxtLink to="#cta" class="btn btn-ghost w-full mt-6">Kontakt aufnehmen</NuxtLink>
+            <NuxtLink to="#cta" class="btn btn-ghost w-full mt-6">
+              {{ locale === 'de' ? 'Kontakt aufnehmen' : 'Get in touch' }}
+            </NuxtLink>
           </div>
         </div>
       </div>
@@ -487,16 +737,22 @@
       <div class="container-outer">
         <div class="grid md:grid-cols-2 gap-8 items-center">
           <div data-aos="fade-right">
-            <h2 class="text-3xl md:text-4xl font-semibold">Open‑Source, Community‑getrieben</h2>
-            <p class="mt-3 text-white/80">Transparente Architektur, klare Roadmap, offene Issues. Baue eigene Voices, Integrationen und Workflows.</p>
+            <h2 class="text-3xl md:text-4xl font-semibold">
+              {{ locale === 'de' ? 'Open‑Source, Community‑getrieben' : 'Open-source, community-driven' }}
+            </h2>
+            <p class="mt-3 text-white/80">
+              {{ locale === 'de' ? 'Transparente Architektur, klare Roadmap, offene Issues. Baue eigene Voices, Integrationen und Workflows.' : 'Transparent architecture, clear roadmap, open issues. Build your own voices, integrations and workflows.' }}
+            </p>
             <ul class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <li class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-license"/>MIT/Apache‑Lizenz (tbd)</li>
+              <li class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-license"/>{{ locale === 'de' ? 'MIT/Apache‑Lizenz (tbd)' : 'MIT/Apache licence (tbd)' }}</li>
               <li class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-docker"/>Docker‑Compose / Helm</li>
               <li class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-puzzle"/>Plugin‑SDK (TS/JS)</li>
               <li class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-console"/>CLI & REST API</li>
             </ul>
             <div class="mt-6 flex flex-col sm:flex-row gap-3">
-              <NuxtLink to="#cta" class="btn btn-primary">Mitmachen</NuxtLink>
+              <NuxtLink to="#cta" class="btn btn-primary">
+                {{ locale === 'de' ? 'Mitmachen' : 'Get involved' }}
+              </NuxtLink>
               <NuxtLink
                   to="https://github.com/OpenSquawk/OpenSquawk"
                   external
@@ -504,7 +760,7 @@
                   rel="noopener"
                   class="btn btn-ghost"
               >
-                GitHub-Repository
+                {{ locale === 'de' ? 'GitHub-Repository' : 'GitHub repository' }}
               </NuxtLink>
               <NuxtLink to="/news" class="btn btn-ghost">News</NuxtLink>
             </div>
@@ -527,14 +783,18 @@ POST /api/route/taxi
     <section class="py-16 md:py-24 bg-[#0b1020]">
       <div class="container-outer">
         <div class="max-w-2xl mb-10" data-aos="fade-up">
-          <h2 class="text-3xl md:text-4xl font-semibold">So funktioniert’s</h2>
-          <p class="mt-3 text-white/80">Audio rein → Verständnis → Antwort raus. Designed für niedrige Latenz & klare Funk‑Disziplin.</p>
+          <h2 class="text-3xl md:text-4xl font-semibold">
+            {{ locale === 'de' ? 'So funktioniert’s' : 'How it works' }}
+          </h2>
+          <p class="mt-3 text-white/80">
+            {{ locale === 'de' ? 'Audio rein → Verständnis → Antwort raus. Designed für niedrige Latenz & klare Funk‑Disziplin.' : 'Audio in → understanding → response out. Designed for low latency and clean radio discipline.' }}
+          </p>
         </div>
         <div class="grid md:grid-cols-4 gap-4 md:gap-6">
-          <div class="card" data-aos="fade-up" data-aos-delay="0"><h3 class="font-semibold flex items-center gap-2"><v-icon icon="mdi-waveform"/>1 · ASR</h3><p class="mt-2 text-white/80">Streaming‑Speech‑to‑Text mit Funk‑Tuning.</p></div>
-          <div class="card" data-aos="fade-up" data-aos-delay="100"><h3 class="font-semibold flex items-center gap-2"><v-icon icon="mdi-brain"/>2 · NLU</h3><p class="mt-2 text-white/80">LLM versteht Intention, Kontext, State.</p></div>
-          <div class="card" data-aos="fade-up" data-aos-delay="200"><h3 class="font-semibold flex items-center gap-2"><v-icon icon="mdi-logic-gate-and"/>3 · Logic</h3><p class="mt-2 text-white/80">Regeln, Flugdaten, Taxi‑Routing, Validierung.</p></div>
-          <div class="card" data-aos="fade-up" data-aos-delay="300"><h3 class="font-semibold flex items-center gap-2"><v-icon icon="mdi-microphone"/>4 · TTS</h3><p class="mt-2 text-white/80">Natürliches Voice‑Out mit korrekten Zahlen.</p></div>
+          <div class="card" data-aos="fade-up" data-aos-delay="0"><h3 class="font-semibold flex items-center gap-2"><v-icon icon="mdi-waveform"/>1 · ASR</h3><p class="mt-2 text-white/80">{{ locale === 'de' ? 'Streaming‑Speech‑to‑Text mit Funk‑Tuning.' : 'Streaming speech-to-text tuned for radio.' }}</p></div>
+          <div class="card" data-aos="fade-up" data-aos-delay="100"><h3 class="font-semibold flex items-center gap-2"><v-icon icon="mdi-brain"/>2 · NLU</h3><p class="mt-2 text-white/80">{{ locale === 'de' ? 'LLM versteht Intention, Kontext, State.' : 'LLM understands intent, context and state.' }}</p></div>
+          <div class="card" data-aos="fade-up" data-aos-delay="200"><h3 class="font-semibold flex items-center gap-2"><v-icon icon="mdi-logic-gate-and"/>3 · Logic</h3><p class="mt-2 text-white/80">{{ locale === 'de' ? 'Regeln, Flugdaten, Taxi‑Routing, Validierung.' : 'Rules, flight data, taxi routing, validation.' }}</p></div>
+          <div class="card" data-aos="fade-up" data-aos-delay="300"><h3 class="font-semibold flex items-center gap-2"><v-icon icon="mdi-microphone"/>4 · TTS</h3><p class="mt-2 text-white/80">{{ locale === 'de' ? 'Natürliches Voice‑Out mit korrekten Zahlen.' : 'Natural voice-out with accurate numbers.' }}</p></div>
         </div>
       </div>
     </section>
@@ -544,27 +804,37 @@ POST /api/route/taxi
       <div class="container-outer">
         <div class="grid md:grid-cols-2 gap-8 items-start">
           <div data-aos="fade-right">
-            <h2 class="text-3xl md:text-4xl font-semibold">Mitentwickeln</h2>
-            <p class="mt-3 text-white/80">Issues labeled <code class="text-xs bg-white/10 px-1.5 py-0.5 rounded">help-wanted</code> markieren Aufgaben, bei denen wir Support brauchen. Alles passiert offen auf GitHub.</p>
+            <h2 class="text-3xl md:text-4xl font-semibold">
+              {{ locale === 'de' ? 'Mitentwickeln' : 'Contribute' }}
+            </h2>
+            <p class="mt-3 text-white/80">
+              {{ locale === 'de' ? 'Issues mit dem Label ' : 'Issues with the label ' }}<code class="text-xs bg-white/10 px-1.5 py-0.5 rounded">help-wanted</code>{{ locale === 'de' ? ' zeigen Aufgaben, bei denen wir Unterstützung brauchen. Alles passiert offen auf GitHub.' : ' highlight tasks where we need support. Everything happens transparently on GitHub.' }}
+            </p>
             <ul class="mt-5 space-y-3 text-white/80 text-sm">
-              <li class="flex gap-3"><v-icon icon="mdi-nodejs" class="text-cyan-300 mt-[2px]"/><span>Node/Nuxt Devs für Backend & Frontend.</span></li>
-              <li class="flex gap-3"><v-icon icon="mdi-headset" class="text-cyan-300 mt-[2px]"/><span>ATC SMEs für Phraseologie, Verfahren und Trainingsfeedback.</span></li>
-              <li class="flex gap-3"><v-icon icon="mdi-test-tube" class="text-cyan-300 mt-[2px]"/><span>Tester:innen für Alpha-Builds & Simulator-Integration.</span></li>
-              <li class="flex gap-3"><v-icon icon="mdi-cash-multiple" class="text-cyan-300 mt-[2px]"/><span>Infra- & Kosten-Benchmarking, damit Hosting bezahlbar bleibt.</span></li>
+              <li class="flex gap-3"><v-icon icon="mdi-nodejs" class="text-cyan-300 mt-[2px]"/><span>{{ locale === 'de' ? 'Node/Nuxt Devs für Backend & Frontend.' : 'Node/Nuxt devs for backend & frontend.' }}</span></li>
+              <li class="flex gap-3"><v-icon icon="mdi-headset" class="text-cyan-300 mt-[2px]"/><span>{{ locale === 'de' ? 'ATC SMEs für Phraseologie, Verfahren und Trainingsfeedback.' : 'ATC SMEs for phraseology, procedures and training feedback.' }}</span></li>
+              <li class="flex gap-3"><v-icon icon="mdi-test-tube" class="text-cyan-300 mt-[2px]"/><span>{{ locale === 'de' ? 'Tester:innen für Alpha-Builds & Simulator-Integration.' : 'Testers for alpha builds & simulator integration.' }}</span></li>
+              <li class="flex gap-3"><v-icon icon="mdi-cash-multiple" class="text-cyan-300 mt-[2px]"/><span>{{ locale === 'de' ? 'Infra- & Kosten-Benchmarking, damit Hosting bezahlbar bleibt.' : 'Infra & cost benchmarking to keep hosting affordable.' }}</span></li>
             </ul>
-            <p class="mt-5 text-sm text-white/70">Schreib uns an <a href="mailto:info@opensquawk.de" class="text-cyan-300 underline">info@opensquawk.de</a> oder kommentiere direkt im Issue.</p>
+            <p class="mt-5 text-sm text-white/70">
+              {{ locale === 'de' ? 'Schreib uns an ' : 'Email us at ' }}<a href="mailto:info@opensquawk.de" class="text-cyan-300 underline">info@opensquawk.de</a>{{ locale === 'de' ? ' oder kommentiere direkt im Issue.' : ' or leave a comment directly on the issue.' }}
+            </p>
             <div class="mt-6 flex gap-3">
-              <NuxtLink to="#roadmap" class="btn btn-primary">Roadmap mitgestalten</NuxtLink>
-              <NuxtLink to="/news" class="btn btn-ghost">Neuigkeiten</NuxtLink>
+              <NuxtLink to="#roadmap" class="btn btn-primary">
+                {{ locale === 'de' ? 'Roadmap mitgestalten' : 'Shape the roadmap' }}
+              </NuxtLink>
+              <NuxtLink to="/news" class="btn btn-ghost">
+                {{ locale === 'de' ? 'Neuigkeiten' : 'Latest updates' }}
+              </NuxtLink>
             </div>
           </div>
           <div class="card" data-aos="fade-left">
-            <h3 class="font-semibold text-lg">Aktuelle Fokus-Themen</h3>
+            <h3 class="font-semibold text-lg">{{ locale === 'de' ? 'Aktuelle Fokus-Themen' : 'Current focus areas' }}</h3>
             <ul class="mt-3 space-y-2 text-white/70 text-sm list-disc list-inside">
-              <li>Alpha-Prototyp stabilisieren & Setup vereinfachen</li>
-              <li>MSFS & X-Plane Anbindung verifizieren</li>
-              <li>Roadmap-Ideen bewerten & priorisieren</li>
-              <li>Kostenmodell für Hosting durchrechnen</li>
+              <li>{{ locale === 'de' ? 'Alpha-Prototyp stabilisieren & Setup vereinfachen' : 'Stabilise the alpha prototype & simplify setup' }}</li>
+              <li>{{ locale === 'de' ? 'MSFS & X-Plane Anbindung verifizieren' : 'Verify MSFS & X-Plane integration' }}</li>
+              <li>{{ locale === 'de' ? 'Roadmap-Ideen bewerten & priorisieren' : 'Review & prioritise roadmap ideas' }}</li>
+              <li>{{ locale === 'de' ? 'Kostenmodell für Hosting durchrechnen' : 'Model hosting costs' }}</li>
             </ul>
           </div>
         </div>
@@ -577,35 +847,59 @@ POST /api/route/taxi
         <div class="card grid gap-8 md:grid-cols-2" data-aos="zoom-in">
           <div class="space-y-4">
             <div>
-              <h3 class="text-2xl md:text-3xl font-semibold">Frühzugang & Warteliste</h3>
+              <h3 class="text-2xl md:text-3xl font-semibold">
+                {{ locale === 'de' ? 'Frühzugang & Warteliste' : 'Early access & waitlist' }}
+              </h3>
               <p class="mt-2 text-white/80">
-                Trag dich ein und sichere dir deinen Platz für den Alpha-Build. Aktuell (inkl. interner Tests) warten
+                {{
+                  locale === 'de'
+                    ? 'Trag dich ein und sichere dir deinen Platz für den Alpha-Build. Aktuell (inkl. interner Tests) warten '
+                    : 'Sign up to secure your spot for the alpha build. Right now (including internal tests) there are '
+                }}
                 <span class="font-semibold text-cyan-300">{{ waitlistCountDisplay }}</span>
-                Interessierte auf den nächsten Invite-Drop.
+                {{
+                  locale === 'de'
+                    ? ' Interessierte auf den nächsten Invite-Drop.'
+                    : ' interested pilots waiting for the next invite drop.'
+                }}
               </p>
             </div>
             <div class="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-4">
-              <div v-if="waitlistLoading" class="text-sm text-white/60">Lade Warteliste…</div>
+              <div v-if="waitlistLoading" class="text-sm text-white/60">
+                {{ locale === 'de' ? 'Lade Warteliste…' : 'Loading waitlist…' }}
+              </div>
               <template v-else>
                 <div class="grid gap-3 sm:grid-cols-3">
                   <div class="glass rounded-xl p-3">
-                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">Neu (7 Tage)</div>
+                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">
+                      {{ locale === 'de' ? 'Neu (7 Tage)' : 'New (7 days)' }}
+                    </div>
                     <div class="mt-1 text-lg font-semibold text-white">+{{ formatNumber(waitlistRecent7) }}</div>
-                    <div class="text-xs text-white/50">aktive Lernplätze</div>
+                    <div class="text-xs text-white/50">
+                      {{ locale === 'de' ? 'aktive Lernplätze' : 'Active learning slots' }}
+                    </div>
                   </div>
                   <div class="glass rounded-xl p-3">
-                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">Neu (30 Tage)</div>
+                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">
+                      {{ locale === 'de' ? 'Neu (30 Tage)' : 'New (30 days)' }}
+                    </div>
                     <div class="mt-1 text-lg font-semibold text-white">+{{ formatNumber(waitlistRecent30) }}</div>
-                    <div class="text-xs text-white/50">Langfristiger Zufluss</div>
+                    <div class="text-xs text-white/50">
+                      {{ locale === 'de' ? 'Langfristiger Zufluss' : 'Long-term inflow' }}
+                    </div>
                   </div>
                   <div class="glass rounded-xl p-3">
-                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">Sichtbarer Puffer</div>
+                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">
+                      {{ locale === 'de' ? 'Sichtbarer Puffer' : 'Visible buffer' }}
+                    </div>
                     <div class="mt-1 text-lg font-semibold text-white">+{{ formatNumber(waitlistSyntheticBoost) }}</div>
-                    <div class="text-xs text-white/50">Reserve für nächste Drops</div>
+                    <div class="text-xs text-white/50">
+                      {{ locale === 'de' ? 'Reserve für nächste Drops' : 'Reserve for upcoming drops' }}
+                    </div>
                   </div>
                 </div>
                 <div class="text-xs text-white/60">
-                  Letzte Anmeldung:
+                  {{ locale === 'de' ? 'Letzte Anmeldung:' : 'Last signup:' }}
                   <span class="font-medium text-white">{{ waitlistLastJoinedFormatted }}</span>
                   <span v-if="waitlistStats?.lastJoinedAt" class="text-white/40">
                     ({{ formatRelativeFromNow(waitlistStats?.lastJoinedAt) }})
@@ -614,48 +908,76 @@ POST /api/route/taxi
               </template>
             </div>
             <p class="text-xs text-white/60">
-              Wir senden Einladungen in Batches, priorisieren aktive Wartelistenplätze und verschicken Einladungscodes per E-Mail.
+              {{
+                locale === 'de'
+                  ? 'Wir senden Einladungen in Batches, priorisieren aktive Wartelistenplätze und verschicken Einladungscodes per E-Mail.'
+                  : 'We send invites in batches, prioritise active waitlist spots and deliver invite codes via email.'
+              }}
             </p>
           </div>
           <form class="space-y-4" @submit.prevent="submitWaitlist">
             <div class="grid gap-3">
               <input
                   v-model.trim="waitlistForm.name"
-                  aria-label="Name"
+                  :aria-label="locale === 'de' ? 'Name' : 'Name'"
                   type="text"
-                  placeholder="Vor- und Nachname (optional)"
+                  :placeholder="
+                    locale === 'de'
+                      ? 'Vor- und Nachname (optional)'
+                      : 'First and last name (optional)'
+                  "
                   class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
               />
               <input
                   v-model.trim="waitlistForm.email"
-                  aria-label="E-Mail"
+                  :aria-label="locale === 'de' ? 'E-Mail' : 'Email'"
                   type="email"
                   required
-                  placeholder="dein@email"
+                  :placeholder="locale === 'de' ? 'dein@email' : 'your@email'"
                   class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
               />
               <textarea
                   v-model.trim="waitlistForm.notes"
                   rows="3"
-                  placeholder="Was möchtest du mit OpenSquawk lernen? (optional)"
+                  :placeholder="
+                    locale === 'de'
+                      ? 'Was möchtest du mit OpenSquawk lernen? (optional)'
+                      : 'What do you want to learn with OpenSquawk? (optional)'
+                  "
                   class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
               />
             </div>
             <div class="space-y-2 text-xs text-white/60">
               <label class="flex items-start gap-3">
                 <input type="checkbox" v-model="waitlistForm.subscribeUpdates" class="mt-1" />
-                <span>Ja, informiert mich, wenn neue Features, Drops oder Lerninhalte starten.</span>
+                <span>
+                  {{
+                    locale === 'de'
+                      ? 'Ja, informiert mich, wenn neue Features, Drops oder Lerninhalte starten.'
+                      : 'Yes, keep me posted when new features, drops or learning content go live.'
+                  }}
+                </span>
               </label>
               <label class="flex items-start gap-3">
                 <input type="checkbox" v-model="waitlistForm.consentTerms" class="mt-1" required />
                 <span>
-                  Ich akzeptiere die <NuxtLink to="/agb" class="text-cyan-300 underline">AGB</NuxtLink> von OpenSquawk.
+                  <template v-if="locale === 'de'">
+                    Ich akzeptiere die <NuxtLink to="/agb" class="text-cyan-300 underline">AGB</NuxtLink> von OpenSquawk.
+                  </template>
+                  <template v-else>
+                    I accept the <NuxtLink to="/agb" class="text-cyan-300 underline">terms of service</NuxtLink> of OpenSquawk.
+                  </template>
                 </span>
               </label>
               <label class="flex items-start gap-3">
                 <input type="checkbox" v-model="waitlistForm.consentPrivacy" class="mt-1" required />
                 <span>
-                  Ich habe die <NuxtLink to="/datenschutz" class="text-cyan-300 underline">Datenschutzerklärung</NuxtLink> gelesen und willige in die Speicherung meiner Angaben zur Kontaktaufnahme ein.
+                  <template v-if="locale === 'de'">
+                    Ich habe die <NuxtLink to="/datenschutz" class="text-cyan-300 underline">Datenschutzerklärung</NuxtLink> gelesen und willige in die Speicherung meiner Angaben zur Kontaktaufnahme ein.
+                  </template>
+                  <template v-else>
+                    I have read the <NuxtLink to="/datenschutz" class="text-cyan-300 underline">privacy policy</NuxtLink> and consent to storing my details for contact purposes.
+                  </template>
                 </span>
               </label>
             </div>
@@ -666,13 +988,24 @@ POST /api/route/taxi
             >
               <span v-if="waitlistSubmitting" class="flex items-center gap-2">
                 <v-progress-circular indeterminate size="16" width="2" color="white" />
-                Sende Daten…
+                {{ locale === 'de' ? 'Sende Daten…' : 'Sending data…' }}
               </span>
-              <span v-else>Auf Warteliste setzen</span>
+              <span v-else>{{ locale === 'de' ? 'Auf Warteliste setzen' : 'Join the waitlist' }}</span>
             </button>
             <p v-if="waitlistSuccess" class="text-sm text-green-300">
-              Danke! Wir haben dich auf der Warteliste eingetragen und melden uns, sobald Plätze frei werden.
-              <span v-if="waitlistLastOptInUpdates" class="mt-1 block text-xs text-green-200/80">Zusätzlich erhältst du Produkt-Updates, sobald neue Features live gehen.</span>
+              <template v-if="locale === 'de'">
+                Danke! Wir haben dich auf der Warteliste eingetragen und melden uns, sobald Plätze frei werden.
+              </template>
+              <template v-else>
+                Thank you! You are on the waitlist and we will reach out as soon as slots open up.
+              </template>
+              <span v-if="waitlistLastOptInUpdates" class="mt-1 block text-xs text-green-200/80">
+                {{
+                  locale === 'de'
+                    ? 'Zusätzlich erhältst du Produkt-Updates, sobald neue Features live gehen.'
+                    : 'You will also receive product updates when new features go live.'
+                }}
+              </span>
             </p>
             <p v-else-if="waitlistError" class="text-sm text-red-300">{{ waitlistError }}</p>
           </form>
@@ -685,24 +1018,58 @@ POST /api/route/taxi
       <div class="container-outer">
         <div class="max-w-2xl mb-10" data-aos="fade-up">
           <h2 class="text-3xl md:text-4xl font-semibold">FAQ</h2>
-          <p class="mt-3 text-white/80">Kurz beantwortet.</p>
+          <p class="mt-3 text-white/80">
+            {{ locale === 'de' ? 'Kurz beantwortet.' : 'Quick answers.' }}
+          </p>
         </div>
         <div class="grid md:grid-cols-2 gap-6">
           <div class="card" data-aos="fade-up" data-aos-delay="0">
-            <h3 class="font-semibold">Ist das für reale Luftfahrt?</h3>
-            <p class="mt-2 text-white/80">Nein, OpenSquawk ist für Flugsimulatoren und Training. Nicht für den realen Flugfunk.</p>
+            <h3 class="font-semibold">
+              {{ locale === 'de' ? 'Ist das für reale Luftfahrt?' : 'Is this for real-world aviation?' }}
+            </h3>
+            <p class="mt-2 text-white/80">
+              {{
+                locale === 'de'
+                  ? 'Nein, OpenSquawk ist für Flugsimulatoren und Training. Nicht für den realen Flugfunk.'
+                  : 'No, OpenSquawk is for flight simulators and training. It is not intended for real-world radio comms.'
+              }}
+            </p>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="100">
-            <h3 class="font-semibold">Welche Simulatoren werden unterstützt?</h3>
-            <p class="mt-2 text-white/80">MSFS zuerst (Alpha-Fokus), X‑Plane als nächstes. Weitere Simulatoren richten wir nach Community-Bedarf aus.</p>
+            <h3 class="font-semibold">
+              {{ locale === 'de' ? 'Welche Simulatoren werden unterstützt?' : 'Which simulators are supported?' }}
+            </h3>
+            <p class="mt-2 text-white/80">
+              {{
+                locale === 'de'
+                  ? 'MSFS zuerst (Alpha-Fokus), X‑Plane als nächstes. Weitere Simulatoren richten wir nach Community-Bedarf aus.'
+                  : 'MSFS first (alpha focus), X-Plane next. Additional simulators will follow community demand.'
+              }}
+            </p>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="200">
-            <h3 class="font-semibold">Kann ich selbst hosten?</h3>
-            <p class="mt-2 text-white/80">Alpha: Docker-Compose + Node-Services sind verfügbar. Doku & Installer werden gerade ergänzt. Hosting-Optionen folgen.</p>
+            <h3 class="font-semibold">
+              {{ locale === 'de' ? 'Kann ich selbst hosten?' : 'Can I self-host?' }}
+            </h3>
+            <p class="mt-2 text-white/80">
+              {{
+                locale === 'de'
+                  ? 'Alpha: Docker-Compose + Node-Services sind verfügbar. Doku & Installer werden gerade ergänzt. Hosting-Optionen folgen.'
+                  : 'Alpha: Docker Compose + Node services are available. Docs and installers are in progress. Hosting options will follow.'
+              }}
+            </p>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="300">
-            <h3 class="font-semibold">Wie günstig ist „Hosted – Basic“?</h3>
-            <p class="mt-2 text-white/80">Zielwert aktuell ~4–5 € monatlich, final nach Kosten-Benchmarking. Wir teilen Ergebnisse transparent im Blog.</p>
+            <h3 class="font-semibold">
+              {{ locale === 'de' ? 'Wie günstig ist „Hosted – Basic“?' : 'How affordable is “Hosted – Basic”?' }}
+            </h3>
+            <p class="mt-2 text-white/80">
+              {{
+                locale === 'de'
+                  ? 'Zielwert aktuell ~4–5 € monatlich, final nach Kosten-Benchmarking. Wir teilen Ergebnisse transparent im Blog.'
+                  : 'Current target is ~€4–5 per month, final pricing after cost benchmarking. We will share the results transparently on the blog.'
+              }}
+            </p>
           </div>
         </div>
       </div>
@@ -714,37 +1081,87 @@ POST /api/route/taxi
         <div class="grid md:grid-cols-4 gap-6">
           <div>
             <div class="flex items-center gap-2 font-semibold"><v-icon icon="mdi-radar" class="text-cyan-400"/>OpenSquawk</div>
-            <p class="mt-3 text-white/70 text-sm">Open-source, low-cost AI ATC für Flugsimulatoren. Alpha-Prototyp verfügbar – benötigt leichte Programmierkenntnisse.</p>
+            <p class="mt-3 text-white/70 text-sm">
+              {{
+                locale === 'de'
+                  ? 'Open-source, low-cost AI ATC für Flugsimulatoren. Alpha-Prototyp verfügbar – benötigt leichte Programmierkenntnisse.'
+                  : 'Open-source, low-cost AI ATC for flight simulators. Alpha prototype available – basic coding skills recommended.'
+              }}
+            </p>
           </div>
           <div>
-            <h4 class="font-semibold mb-3">Produkt</h4>
+            <h4 class="font-semibold mb-3">{{ locale === 'de' ? 'Produkt' : 'Product' }}</h4>
             <ul class="space-y-2 text-white/70 text-sm">
-              <li><NuxtLink to="#features" class="hover:text-cyan-300">Vision</NuxtLink></li>
-              <li><NuxtLink to="#learn" class="hover:text-cyan-300">Lernpfad</NuxtLink></li>
-              <li><NuxtLink to="#pricing" class="hover:text-cyan-300">Preise</NuxtLink></li>
-              <li><NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink></li>
+              <li>
+                <NuxtLink to="#features" class="hover:text-cyan-300">
+                  {{ locale === 'de' ? 'Vision' : 'Vision' }}
+                </NuxtLink>
+              </li>
+              <li>
+                <NuxtLink to="#learn" class="hover:text-cyan-300">
+                  {{ locale === 'de' ? 'Lernpfad' : 'Learning path' }}
+                </NuxtLink>
+              </li>
+              <li>
+                <NuxtLink to="#pricing" class="hover:text-cyan-300">
+                  {{ locale === 'de' ? 'Preise' : 'Pricing' }}
+                </NuxtLink>
+              </li>
+              <li>
+                <NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink>
+              </li>
             </ul>
           </div>
           <div>
-            <h4 class="font-semibold mb-3">Ressourcen</h4>
+            <h4 class="font-semibold mb-3">{{ locale === 'de' ? 'Ressourcen' : 'Resources' }}</h4>
             <ul class="space-y-2 text-white/70 text-sm">
-              <li><NuxtLink to="#opensource" class="hover:text-cyan-300">Open‑Source</NuxtLink></li>
+              <li>
+                <NuxtLink to="#opensource" class="hover:text-cyan-300">
+                  {{ locale === 'de' ? 'Open‑Source' : 'Open-source' }}
+                </NuxtLink>
+              </li>
               <li><NuxtLink to="#news" class="hover:text-cyan-300">News</NuxtLink></li>
-              <li><NuxtLink to="#contributing" class="hover:text-cyan-300">Mitmachen</NuxtLink></li>
+              <li>
+                <NuxtLink to="#contributing" class="hover:text-cyan-300">
+                  {{ locale === 'de' ? 'Mitmachen' : 'Get involved' }}
+                </NuxtLink>
+              </li>
               <li><a href="mailto:info@opensquawk.de" class="hover:text-cyan-300">info@opensquawk.de</a></li>
             </ul>
           </div>
           <div>
-            <h4 class="font-semibold mb-3">Rechtliches</h4>
+            <h4 class="font-semibold mb-3">{{ locale === 'de' ? 'Rechtliches' : 'Legal' }}</h4>
             <ul class="space-y-2 text-white/70 text-sm">
-              <li><NuxtLink to="/impressum" class="hover:text-cyan-300">Impressum</NuxtLink></li>
-              <li><NuxtLink to="/datenschutz" class="hover:text-cyan-300">Datenschutz</NuxtLink></li>
-              <li><NuxtLink to="/agb" class="hover:text-cyan-300">AGB</NuxtLink></li>
-              <li><NuxtLink to="/api-docs" class="hover:text-cyan-300">API-Dokumentation</NuxtLink></li>
+              <li>
+                <NuxtLink to="/impressum" class="hover:text-cyan-300">
+                  {{ locale === 'de' ? 'Impressum' : 'Imprint' }}
+                </NuxtLink>
+              </li>
+              <li>
+                <NuxtLink to="/datenschutz" class="hover:text-cyan-300">
+                  {{ locale === 'de' ? 'Datenschutz' : 'Privacy' }}
+                </NuxtLink>
+              </li>
+              <li>
+                <NuxtLink to="/agb" class="hover:text-cyan-300">
+                  {{ locale === 'de' ? 'AGB' : 'Terms' }}
+                </NuxtLink>
+              </li>
+              <li>
+                <NuxtLink to="/api-docs" class="hover:text-cyan-300">
+                  {{ locale === 'de' ? 'API-Dokumentation' : 'API documentation' }}
+                </NuxtLink>
+              </li>
             </ul>
           </div>
         </div>
-        <div class="mt-8 pt-6 border-t border-white/10 text-xs text-white/60">© {{ year }} OpenSquawk. Nicht für reale Luftfahrt. *VATSIM/IVAO: Marken der jeweiligen Eigentümer.</div>
+        <div class="mt-8 pt-6 border-t border-white/10 text-xs text-white/60">
+          {{
+            locale === 'de'
+              ? `© ${year} OpenSquawk. Nicht für reale Luftfahrt. *VATSIM/IVAO: Marken der jeweiligen Eigentümer.`
+              : `© ${year} OpenSquawk. Not for real-world aviation. *VATSIM/IVAO: trademarks of their respective owners.`
+          }}
+        </div>
       </div>
     </footer>
   </div>
@@ -753,16 +1170,64 @@ POST /api/route/taxi
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useHead } from '#imports'
+import { useHead, useState } from '#imports'
 import { useApi } from '~/composables/useApi'
 import { getAllNews } from '~~/shared/utils/news'
 import type { NewsPost } from '~~/shared/utils/news'
 
 const api = useApi()
 
-const numberFormatter = new Intl.NumberFormat('de-DE')
-const formatNumber = (value: number | null | undefined) => numberFormatter.format(Math.max(0, Math.round(value ?? 0)))
+const SUPPORTED_LOCALES = ['de', 'en'] as const
+type Locale = (typeof SUPPORTED_LOCALES)[number]
+const DEFAULT_LOCALE: Locale = 'de'
+const LOCALE_STORAGE_KEY = 'opensquawk-locale'
+
+const locale = useState<Locale>('landing-locale', () => DEFAULT_LOCALE)
+
+const numberFormatter = computed(() => new Intl.NumberFormat(locale.value === 'de' ? 'de-DE' : 'en-US'))
+const formatNumber = (value: number | null | undefined) => numberFormatter.value.format(Math.max(0, Math.round(value ?? 0)))
 const ROADMAP_SCALE = [1, 2, 3, 4, 5] as const
+
+const isLocale = (value: string | null | undefined): value is Locale =>
+  Boolean(value && SUPPORTED_LOCALES.includes(value as Locale))
+
+const detectLocaleFromNavigator = (): Locale => {
+  if (!import.meta.client) {
+    return DEFAULT_LOCALE
+  }
+  const navigatorLocales =
+    typeof navigator !== 'undefined'
+      ? [...(navigator.languages ?? []), navigator.language]
+      : []
+  for (const lang of navigatorLocales) {
+    const normalized = lang?.toLowerCase().split('-')[0] as Locale | undefined
+    if (normalized && SUPPORTED_LOCALES.includes(normalized)) {
+      return normalized
+    }
+  }
+  return DEFAULT_LOCALE
+}
+
+const applyInitialLocale = () => {
+  if (!import.meta.client) return
+  const stored = localStorage.getItem(LOCALE_STORAGE_KEY)
+  if (isLocale(stored)) {
+    locale.value = stored
+    return
+  }
+  locale.value = detectLocaleFromNavigator()
+}
+
+watch(
+  locale,
+  (value) => {
+    if (!import.meta.client) return
+    localStorage.setItem(LOCALE_STORAGE_KEY, value)
+  },
+)
+
+const dateLocale = computed(() => (locale.value === 'de' ? 'de-DE' : 'en-US'))
+const shortDateOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' }
 
 interface WaitlistStats {
   count: number
@@ -917,7 +1382,8 @@ async function submitWaitlist() {
     waitlistForm.consentTerms = false
     waitlistForm.subscribeUpdates = false
   } catch (err: any) {
-    const message = err?.data?.statusMessage || err?.message || 'Anmeldung fehlgeschlagen'
+    const fallback = locale.value === 'de' ? 'Anmeldung fehlgeschlagen' : 'Registration failed'
+    const message = err?.data?.statusMessage || err?.message || fallback
     waitlistError.value = message
   } finally {
     waitlistSubmitting.value = false
@@ -947,7 +1413,9 @@ async function submitUpdates() {
     updatesForm.consentPrivacy = false
     updatesForm.consentMarketing = false
   } catch (err: any) {
-    const message = err?.data?.statusMessage || err?.message || 'Konnte Anmeldung nicht speichern'
+    const fallback =
+      locale.value === 'de' ? 'Konnte Anmeldung nicht speichern' : 'Could not save sign-up'
+    const message = err?.data?.statusMessage || err?.message || fallback
     updatesError.value = message
   } finally {
     updatesSubmitting.value = false
@@ -955,12 +1423,12 @@ async function submitUpdates() {
 }
 
 const formatWaitlistDate = (iso: string) => {
-  if (!iso) return 'unbekannt'
-  return new Date(iso).toLocaleDateString('de-DE', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+  if (!iso) return locale.value === 'de' ? 'unbekannt' : 'unknown'
+  const parsed = new Date(iso)
+  if (Number.isNaN(parsed.getTime())) {
+    return locale.value === 'de' ? 'unbekannt' : 'unknown'
+  }
+  return parsed.toLocaleDateString(dateLocale.value, shortDateOptions)
 }
 
 const formatRelativeFromNow = (iso?: string | null) => {
@@ -971,38 +1439,53 @@ const formatRelativeFromNow = (iso?: string | null) => {
   const minute = 1000 * 60
   const hour = minute * 60
   const day = hour * 24
-  if (diff < minute) return 'gerade eben'
+  if (diff < minute) return locale.value === 'de' ? 'gerade eben' : 'just now'
   if (diff < hour) {
     const mins = Math.round(diff / minute)
-    return `vor ${mins} Min`
+    if (locale.value === 'de') {
+      return `vor ${mins} Min`
+    }
+    return `${mins} min${mins === 1 ? '' : 's'} ago`
   }
   if (diff < day) {
     const hours = Math.round(diff / hour)
-    return `vor ${hours} Std`
+    if (locale.value === 'de') {
+      return `vor ${hours} Std`
+    }
+    return `${hours} hr${hours === 1 ? '' : 's'} ago`
   }
   if (diff < day * 14) {
     const days = Math.round(diff / day)
-    return `vor ${days} Tag${days === 1 ? '' : 'en'}`
+    if (locale.value === 'de') {
+      return `vor ${days} Tag${days === 1 ? '' : 'en'}`
+    }
+    return `${days} day${days === 1 ? '' : 's'} ago`
   }
   const weeks = Math.round(diff / (day * 7))
   if (weeks < 9) {
-    return `vor ${weeks} Woche${weeks === 1 ? '' : 'n'}`
+    if (locale.value === 'de') {
+      return `vor ${weeks} Woche${weeks === 1 ? '' : 'n'}`
+    }
+    return `${weeks} wk${weeks === 1 ? '' : 's'} ago`
   }
   const months = Math.round(diff / (day * 30))
-  return `vor ${months} Monat${months === 1 ? '' : 'en'}`
+  if (locale.value === 'de') {
+    return `vor ${months} Monat${months === 1 ? '' : 'en'}`
+  }
+  return `${months} mo${months === 1 ? '' : 's'} ago`
 }
 
-const formatAverage = (value: number) => value.toFixed(1).replace('.', ',')
+const formatAverage = (value: number) => {
+  const result = value.toFixed(1)
+  return locale.value === 'de' ? result.replace('.', ',') : result
+}
 
 const formatNewsDate = (iso: string) => {
-  if (!iso) return 'tbd'
+  const fallback = locale.value === 'de' ? 'folgt' : 'tbd'
+  if (!iso) return fallback
   const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return 'tbd'
-  return date.toLocaleDateString('de-DE', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+  if (Number.isNaN(date.getTime())) return fallback
+  return date.toLocaleDateString(dateLocale.value, shortDateOptions)
 }
 
 const roadmapItems = ref<RoadmapItemWithStats[]>([])
@@ -1016,25 +1499,48 @@ const roadmapSuccess = ref(false)
 const roadmapError = ref('')
 
 const hasRoadmapVote = computed(() => Object.values(roadmapTouched).some(Boolean))
+const roadmapStatsLabel = computed(() => {
+  const total = formatNumber(roadmapTotals.value)
+  const recent = formatNumber(roadmapRecent7Days.value)
+  return locale.value === 'de'
+    ? `${total} abgegebene Stimmen · letzte 7 Tage: +${recent}`
+    : `${total} votes submitted · last 7 days: +${recent}`
+})
 
 const roadmapImportanceLabel = (value?: number) => {
-  const labels: Record<number, string> = {
+  const german: Record<number, string> = {
     1: 'Nettes Add-on, nicht dringend',
     2: 'Kann warten',
     3: 'Wichtig für mich',
     4: 'Sehr wichtig',
     5: 'Top-Priorität',
   }
-  return labels[value ?? 0] || 'Noch nicht bewertet'
+  const english: Record<number, string> = {
+    1: 'Nice to have, not urgent',
+    2: 'Can wait',
+    3: 'Important for me',
+    4: 'Very important',
+    5: 'Top priority',
+  }
+  const labels = locale.value === 'de' ? german : english
+  return labels[value ?? 0] || (locale.value === 'de' ? 'Noch nicht bewertet' : 'Not rated yet')
 }
 const roadmapImportanceShortLabel = (value: number) => {
-  const labels: Record<number, string> = {
+  const german: Record<number, string> = {
     1: 'Nein',
     2: 'Egal',
     3: 'Später',
     4: 'Wichtig',
-    5: 'Top'
+    5: 'Top',
   }
+  const english: Record<number, string> = {
+    1: 'No',
+    2: 'Meh',
+    3: 'Later',
+    4: 'Important',
+    5: 'Top',
+  }
+  const labels = locale.value === 'de' ? german : english
   return labels[value] || ''
 }
 
@@ -1101,7 +1607,9 @@ async function submitRoadmapVotes() {
     })
     await loadRoadmap()
   } catch (err: any) {
-    const message = err?.data?.statusMessage || err?.message || 'Konnte Stimmen nicht speichern'
+    const fallback =
+      locale.value === 'de' ? 'Konnte Stimmen nicht speichern' : 'Could not submit votes'
+    const message = err?.data?.statusMessage || err?.message || fallback
     roadmapError.value = message
   } finally {
     roadmapSubmitting.value = false
@@ -1134,30 +1642,50 @@ async function submitRoadmapSuggestion() {
     roadmapSuggestionForm.allowContact = false
     roadmapSuggestionForm.consentPrivacy = false
   } catch (err: any) {
-    const message = err?.data?.statusMessage || err?.message || 'Konnte Vorschlag nicht speichern'
+    const fallback =
+      locale.value === 'de' ? 'Konnte Vorschlag nicht speichern' : 'Could not save suggestion'
+    const message = err?.data?.statusMessage || err?.message || fallback
     roadmapSuggestionError.value = message
   } finally {
     roadmapSuggestionSubmitting.value = false
   }
 }
 
-useHead({
-  title: 'OpenSquawk – Open-source, low-cost AI ATC für Flugsimulatoren',
-  meta: [
-    { name: 'description', content: 'Wir bauen OpenSquawk: Open-source, low-cost AI ATC für Flugsimulatoren. Community-Roadmap, Self-host & Hosting in Planung, Alpha-Prototyp verfügbar.' },
-    { name: 'theme-color', content: '#0ea5e9' },
-    { property: 'og:title', content: 'OpenSquawk – Open-source, low-cost AI ATC' },
-    { property: 'og:description', content: 'Alpha-Prototyp für Simulatorpiloten. Community-getriebene Features, Self-host & geplante Hosting-Optionen.' },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:image', content: 'https://opensquawk.example.com/cover.png' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: 'OpenSquawk – Open-source, low-cost AI ATC' },
-    { name: 'twitter:description', content: 'Alpha-Prototyp mit Community-Roadmap. Self-host heute, Hosting morgen.' },
-    { name: 'twitter:image', content: 'https://opensquawk.example.com/cover.png' }
-  ]
+useHead(() => {
+  const isGerman = locale.value === 'de'
+  const title = isGerman
+    ? 'OpenSquawk – Open-source, low-cost AI ATC für Flugsimulatoren'
+    : 'OpenSquawk – Open-source, low-cost AI ATC for flight simulation'
+  const description = isGerman
+    ? 'Wir bauen OpenSquawk: Open-source, low-cost AI ATC für Flugsimulatoren. Community-Roadmap, Self-host & Hosting in Planung, Alpha-Prototyp verfügbar.'
+    : 'We are building OpenSquawk: open-source, low-cost AI ATC for flight sim pilots. Community roadmap, self-host today, hosted options in planning.'
+  const ogDescription = isGerman
+    ? 'Alpha-Prototyp für Simulatorpiloten. Community-getriebene Features, Self-host & geplante Hosting-Optionen.'
+    : 'Alpha prototype for sim pilots. Community-driven features, self-host today, hosted options tomorrow.'
+  const twitterDescription = isGerman
+    ? 'Alpha-Prototyp mit Community-Roadmap. Self-host heute, Hosting morgen.'
+    : 'Alpha prototype with community roadmap. Self-host today, hosted later.'
+
+  return {
+    htmlAttrs: { lang: isGerman ? 'de' : 'en' },
+    title,
+    meta: [
+      { name: 'description', content: description },
+      { name: 'theme-color', content: '#0ea5e9' },
+      { property: 'og:title', content: 'OpenSquawk – Open-source, low-cost AI ATC' },
+      { property: 'og:description', content: ogDescription },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:image', content: 'https://opensquawk.example.com/cover.png' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: 'OpenSquawk – Open-source, low-cost AI ATC' },
+      { name: 'twitter:description', content: twitterDescription },
+      { name: 'twitter:image', content: 'https://opensquawk.example.com/cover.png' },
+    ],
+  }
 })
 
 onMounted(async () => {
+  applyInitialLocale()
   await Promise.all([loadWaitlistStats(), loadRoadmap()])
   // @ts-ignore – optionaler Fallback
   if (!('AOS' in window)) {
