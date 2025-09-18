@@ -16,6 +16,15 @@
         </div>
         <div class="flex items-center gap-2">
           <NuxtLink to="/news" class="btn btn-ghost text-sm">News</NuxtLink>
+          <NuxtLink
+              to="https://github.com/OpenSquawk/OpenSquawk"
+              external
+              target="_blank"
+              rel="noopener"
+              class="btn btn-ghost text-sm"
+          >
+            GitHub
+          </NuxtLink>
           <NuxtLink to="#cta" class="btn btn-primary text-sm">Frühzugang</NuxtLink>
         </div>
       </nav>
@@ -436,7 +445,15 @@
               <li>✔ Plugins & SDK</li>
               <li>✔ Community‑Support</li>
             </ul>
-            <NuxtLink to="#opensource" class="btn btn-ghost w-full mt-6">Repository ansehen</NuxtLink>
+            <NuxtLink
+                to="https://github.com/OpenSquawk/OpenSquawk"
+                external
+                target="_blank"
+                rel="noopener"
+                class="btn btn-ghost w-full mt-6"
+            >
+              Repository ansehen
+            </NuxtLink>
           </div>
           <!-- Hosted Basic -->
           <div class="card border-2 border-cyan-400/40 relative shadow-[0_0_40px_rgba(34,211,238,.25)]" data-aos="fade-up" data-aos-delay="100">
@@ -482,8 +499,17 @@
               <li class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-puzzle"/>Plugin‑SDK (TS/JS)</li>
               <li class="glass rounded-xl p-3 flex items-center gap-2"><v-icon icon="mdi-console"/>CLI & REST API</li>
             </ul>
-            <div class="mt-6 flex gap-3">
+            <div class="mt-6 flex flex-col sm:flex-row gap-3">
               <NuxtLink to="#cta" class="btn btn-primary">Mitmachen</NuxtLink>
+              <NuxtLink
+                  to="https://github.com/OpenSquawk/OpenSquawk"
+                  external
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn-ghost"
+              >
+                GitHub-Repository
+              </NuxtLink>
               <NuxtLink to="/news" class="btn btn-ghost">News</NuxtLink>
             </div>
           </div>
