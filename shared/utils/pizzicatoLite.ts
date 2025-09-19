@@ -268,11 +268,16 @@ class TremoloEffect implements EffectNode {
   private modulationGain: GainNode
   private started = false
   private depth: number
+  private offset?: number
+  private randomizePhase: boolean
 
   inputNode: AudioNode
   outputNode: AudioNode
 
-  constructor(context: AudioContext, options: { speed?: number; depth?: number; type?: OscillatorType } = {}) {
+  constructor(
+    context: AudioContext,
+    options: { speed?: number; depth?: number; type?: OscillatorType; offset?: number; randomizePhase?: boolean } = {}
+  ) {
     this.context = context
     this.input = context.createGain()
     this.output = context.createGain()
@@ -286,6 +291,8 @@ class TremoloEffect implements EffectNode {
     this.oscillator = context.createOscillator()
     this.oscillator.type = options.type ?? 'sine'
     this.oscillator.frequency.value = options.speed ?? 5
+    this.offset = options.offset
+    this.randomizePhase = options.randomizePhase !== false
 
     this.input.connect(this.output)
     this.oscillator.connect(this.modulationGain)
@@ -298,7 +305,12 @@ class TremoloEffect implements EffectNode {
   onActivate() {
     if (this.started) return
     try {
-      this.oscillator.start()
+      let offset = this.offset ?? 0
+      if (this.offset === undefined && this.randomizePhase) {
+        const frequency = Math.max(0.0001, this.oscillator.frequency.value)
+        offset = Math.random() * (1 / frequency)
+      }
+      this.oscillator.start(0, offset)
       this.started = true
     } catch {
       // oscillator already started
