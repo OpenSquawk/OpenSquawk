@@ -3287,17 +3287,17 @@ onMounted(() => {
   radial-gradient(600px 300px at 10% -5%, color-mix(in srgb, var(--accent2) 15%, transparent), transparent 60%),
   linear-gradient(180deg, var(--bg) 0%, var(--bg) 60%, var(--bg2) 100%);
   margin-top: -3em;
-  padding: 18px 0 8px;
-  padding-top: 4em;
+  padding: clamp(14px, 4vw, 24px) 0 clamp(6px, 2.5vw, 16px);
+  padding-top: clamp(2em, 6vw, 3.25em);
 }
 
 .hero-panel {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
-  gap: 20px;
+  gap: clamp(14px, 2.5vw, 20px);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 6%, transparent);
-  padding: 24px;
+  padding: clamp(14px, 2.8vw, 20px);
   transform-style: preserve-3d;
   border-radius: 24px;
   box-shadow: 0 30px 80px rgba(0, 0, 0, .35)
@@ -3339,14 +3339,14 @@ onMounted(() => {
 }
 
 .hero-highlight {
-  margin-top: 18px;
+  margin-top: clamp(10px, 2vw, 16px);
   border: 1px solid var(--border);
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent2) 10%, transparent));
-  padding: 18px;
+  padding: clamp(12px, 2.5vw, 16px);
   border-radius: 20px;
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 18px;
+  gap: clamp(12px, 2vw, 16px);
   position: relative;
   overflow: hidden
 }
@@ -3496,7 +3496,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 12px;
-  margin-top: 18px
+  margin-top: clamp(12px, 2vw, 16px)
 }
 
 .metric-card {
@@ -3586,7 +3586,7 @@ onMounted(() => {
 .hero-right {
   display: flex;
   flex-direction: column;
-  gap: 18px
+  gap: clamp(12px, 2vw, 16px)
 }
 
 .badge-stack {
@@ -4158,8 +4158,18 @@ onMounted(() => {
 
 /* Responsive */
 @media (max-width: 980px) {
+  .hero {
+    padding-top: clamp(1.75em, 9vw, 2.75em);
+  }
+
   .hero-panel {
-    grid-template-columns: 1fr
+    grid-template-columns: 1fr;
+    padding: clamp(14px, 5vw, 18px);
+    gap: clamp(12px, 4vw, 18px);
+  }
+
+  .hero-highlight {
+    grid-template-columns: 1fr;
   }
 
   .module-content {
@@ -4191,6 +4201,26 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
+  .hero {
+    padding-top: clamp(1.5em, 10vw, 2.25em);
+  }
+
+  .hero-panel {
+    padding: 14px;
+  }
+
+  .hero-right {
+    gap: 12px;
+  }
+
+  .hero-highlight {
+    gap: 12px;
+  }
+
+  .hero-highlight-meta {
+    align-items: flex-start;
+  }
+
   .objective-progress {
     flex-direction: column;
     align-items: flex-start;
