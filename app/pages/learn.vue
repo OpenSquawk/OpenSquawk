@@ -14,11 +14,17 @@
         </div>
 
         <div class="hud-right">
-          <div v-if="primaryObjective" class="next-objective">
+          <button
+              v-if="primaryObjective"
+              type="button"
+              class="next-objective"
+              :aria-label="`Go to ${primaryObjective.title}`"
+              @click="goToPrimaryObjective"
+          >
             <span class="next-label">Next up</span>
-            <span class="next-value">{{ primaryObjective.title }}</span>
+            <span class="next-value" :title="primaryObjective.title">{{ primaryObjective.title }}</span>
             <span class="next-status">{{ primaryObjective.status }}</span>
-          </div>
+          </button>
 
           <!-- Quick ATC: Voice & Level -->
           <div class="chip inline">
@@ -2468,6 +2474,18 @@ function resumeMissionObjective() {
   panel.value = 'hub'
 }
 
+function goToPrimaryObjective() {
+  const objective = primaryObjective.value
+  if (!objective) return
+
+  if (objective.moduleId) {
+    quickContinue(objective.moduleId)
+    return
+  }
+
+  panel.value = 'hub'
+}
+
 function selectLesson(lesson: Lesson) {
   activeLesson.value = lesson
 }
@@ -3053,16 +3071,31 @@ onMounted(() => {
 }
 
 .next-objective {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  padding: 8px 12px;
-  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 999px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 6%, transparent);
-  min-width: 180px;
-  max-width: 240px;
+  max-width: 280px;
+  min-width: 0;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.next-objective:hover,
+.next-objective:focus-visible {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  border-color: color-mix(in srgb, var(--text) 18%, transparent);
+  outline: none;
+}
+
+.next-objective:active {
+  transform: translateY(1px);
 }
 
 .next-label {
@@ -3070,18 +3103,29 @@ onMounted(() => {
   letter-spacing: .18em;
   text-transform: uppercase;
   color: var(--t3);
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .next-value {
   font-weight: 600;
   color: var(--t2);
-  text-align: right;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .next-status {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--t3);
-  text-align: right;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .icon-btn {
@@ -3997,12 +4041,15 @@ onMounted(() => {
   }
 
   .next-objective {
+    flex-direction: column;
     align-items: flex-start;
+    gap: 2px;
+    max-width: 100%;
   }
 
-  .next-value,
-  .next-status {
-    text-align: left;
+  .next-value {
+    width: 100%;
+    white-space: normal;
   }
 }
 
