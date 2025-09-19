@@ -5,7 +5,7 @@ export type Lesson = { id: string; title: string; desc: string; target: string; 
 export type ModuleDef = { id: string; title: string; subtitle: string; art: string; lessons: Lesson[] }
 
 const modules = ref<ModuleDef[]>([
-    // NEW: ICAO Kapitel
+    // New: ICAO chapter
     {
         id: 'icao',
         title: 'ICAO Alphabet',
@@ -15,33 +15,33 @@ const modules = ref<ModuleDef[]>([
             {
                 id: 'alpha',
                 title: 'Alphabet A–M',
-                desc: 'Alpha bis Mike sprechen.',
+                desc: 'Say Alpha through Mike.',
                 target: 'Alpha Bravo Charlie Delta Echo Foxtrot Golf Hotel India Juliett Kilo Lima Mike.',
-                hints: ['konstant sprechen', 'deutlich trennen'],
+                hints: ['Keep a steady pace', 'Separate each word clearly'],
                 keywords: ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliett', 'Kilo', 'Lima', 'Mike']
             },
             {
                 id: 'alpha2',
                 title: 'Alphabet N–Z',
-                desc: 'November bis Zulu.',
+                desc: 'November through Zulu.',
                 target: 'November Oscar Papa Quebec Romeo Sierra Tango Uniform Victor Whiskey X-ray Yankee Zulu.',
-                hints: ['X-ray mit hyphen', 'Juliett mit zwei t'],
+                hints: ['Spell X-ray with a hyphen', "Juliett has two t's"],
                 keywords: ['November', 'Oscar', 'Papa', 'Quebec', 'Romeo', 'Sierra', 'Tango', 'Uniform', 'Victor', 'Whiskey', 'X-ray', 'Yankee', 'Zulu']
             },
             {
                 id: 'numbers',
-                title: 'Zahlen',
-                desc: 'ICAO-Nummernlesen.',
+                title: 'Numbers',
+                desc: 'Read ICAO numbers.',
                 target: 'Tree Fower Fife Six Seven Eight Niner Zero.',
                 hints: ['Nine → Niner', 'Three → Tree', 'Four → Fower', 'Five → Fife'],
                 keywords: ['Tree', 'Fower', 'Fife', 'Niner']
             },
             {
                 id: 'callsign-icao',
-                title: 'Callsign Buchstabieren',
-                desc: 'Beispiel-Callsign.',
+                title: 'Spell the call sign',
+                desc: 'Sample call sign.',
                 target: 'DLH one two three, Lufthansa one two three.',
-                hints: ['DLH → Lufthansa', 'Nummern ICAO'],
+                hints: ['DLH → Lufthansa', 'Use ICAO numbers'],
                 keywords: ['Lufthansa', 'DLH', 'one', 'two', 'three']
             }
         ]
@@ -49,19 +49,19 @@ const modules = ref<ModuleDef[]>([
     {
         id: 'basics',
         title: 'Basics',
-        subtitle: 'Callsign · Struktur · Zahlen',
+        subtitle: 'Call sign · Structure · Numbers',
         art: 'https://images.unsplash.com/photo-1541392822270-85b2ff6c4577?q=80&w=1600&auto=format&fit=crop',
         lessons: [
             {
                 id: 'checkin',
                 title: 'Check-in',
-                desc: 'Erster Call korrekt.',
+                desc: 'Make the first call correctly.',
                 target: 'Frankfurt Ground, Lufthansa one two three at stand A12, request taxi.',
                 hints: ['Station • Callsign • Position • Intent'],
                 keywords: ['Frankfurt Ground', 'Lufthansa', 'stand', 'request taxi']
             },
             {
-                id: 'readback', title: 'Short Readback', desc: 'Kurz bestätigen.',
+                id: 'readback', title: 'Short Readback', desc: 'Give a short acknowledgement.',
                 target: 'Lufthansa one two three, roger.',
                 hints: ['Callsign + roger/affirm'], keywords: ['roger', 'affirm']
             }
@@ -79,7 +79,7 @@ const modules = ref<ModuleDef[]>([
                 hints: ['Taxi to runway • via • hold short'], keywords: ['taxi to runway', 'via', 'hold short']
             },
             {
-                id: 'handoff', title: 'Handoff', desc: 'Frequenzwechsel.',
+                id: 'handoff', title: 'Handoff', desc: 'Frequency change.',
                 target: 'Contact Tower on one one niner decimal five, Lufthansa one two three.',
                 hints: ['Contact Tower on … • decimal'], keywords: ['Contact Tower', 'decimal']
             }
@@ -92,7 +92,7 @@ const modules = ref<ModuleDef[]>([
         art: 'https://images.unsplash.com/photo-1494412685616-a5d310fbb07d?q=80&w=1600&auto=format&fit=crop',
         lessons: [
             {
-                id: 'lineup', title: 'Line up', desc: 'Aufrollen und warten.',
+                id: 'lineup', title: 'Line up', desc: 'Line up and wait.',
                 target: 'Lufthansa one two three, line up and wait runway two five.',
                 hints: ['line up and wait'], keywords: ['line up and wait']
             }
@@ -105,7 +105,7 @@ const modules = ref<ModuleDef[]>([
         art: 'https://images.unsplash.com/photo-1542089363-07b2d92aacc3?q=80&w=1600&auto=format&fit=crop',
         lessons: [
             {
-                id: 'vacate', title: 'Vacate', desc: 'Verlasse Bahn, melde frei.',
+                id: 'vacate', title: 'Vacate', desc: 'Exit the runway and report clear.',
                 target: 'Lufthansa one two three, vacated runway two five via A six.',
                 hints: ['vacated runway • via taxiway'], keywords: ['vacated', 'runway']
             }
@@ -118,7 +118,7 @@ const modules = ref<ModuleDef[]>([
         art: 'https://images.unsplash.com/photo-1508264769638-658b34d79f6e?q=80&w=1600&auto=format&fit=crop',
         lessons: [
             {
-                id: 'checkin', title: 'IFR Check-in', desc: 'Erster Online-Call.',
+                id: 'checkin', title: 'IFR Check-in', desc: 'First online call.',
                 target: 'Frankfurt Ground, Lufthansa one two three, A320 at stand A12, IFR to Munich, information Bravo, request clearance.',
                 hints: ['IFR/VFR • ATIS Info • Request'], keywords: ['IFR', 'information', 'request clearance']
             }

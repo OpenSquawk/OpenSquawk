@@ -10,28 +10,27 @@
     >
       <section class="cookie-consent-panel">
         <header class="cookie-consent-header">
-          <h2 id="cookie-consent-title">Cookies &amp; Analysen</h2>
+          <h2 id="cookie-consent-title">Cookies &amp; Analytics</h2>
           <p id="cookie-consent-description">
-            Wir verwenden notwendige Cookies, damit die Website zuverlässig funktioniert. Darüber hinaus würden wir gern optionale
-            Analyse-Cookies von Hotjar einsetzen, um das Nutzungserlebnis zu verbessern. Sie entscheiden, ob Sie diese zulassen –
-            alle Details finden Sie in unserer
-            <a href="/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>.
+            We use essential cookies to keep the site reliable. We would also like to enable optional Hotjar analytics cookies to
+            improve the experience. You decide whether to allow them—full details are available in our
+            <a href="/datenschutz" target="_blank" rel="noopener">privacy policy</a>.
           </p>
         </header>
 
         <div class="cookie-consent-options" role="list">
           <article class="cookie-option is-required" role="listitem">
             <div class="cookie-option-text">
-              <h3>Notwendige Cookies</h3>
-              <p>Speichern Ihre Auswahl und sorgen für sichere Anmeldung sowie eine stabile Grundfunktionalität.</p>
+              <h3>Necessary cookies</h3>
+              <p>Store your preferences and keep sign-in secure while ensuring the core experience remains stable.</p>
             </div>
-            <span class="cookie-option-badge" aria-hidden="true">Immer aktiv</span>
+            <span class="cookie-option-badge" aria-hidden="true">Always active</span>
           </article>
 
           <article class="cookie-option" role="listitem">
             <div class="cookie-option-text">
-              <h3>Analyse (Hotjar)</h3>
-              <p>Hilft uns, Nutzungsverhalten anonym auszuwerten und unsere Inhalte gezielt zu verbessern.</p>
+              <h3>Analytics (Hotjar)</h3>
+              <p>Helps us analyse anonymised usage patterns and improve our content in a focused way.</p>
             </div>
             <button
               type="button"
@@ -44,21 +43,20 @@
                 <span class="cookie-toggle-thumb" />
               </span>
               <span class="sr-only">
-                Analyse-Cookies {{ analyticsSelection ? 'deaktivieren' : 'aktivieren' }}
+                {{ analyticsSelection ? 'Disable analytics cookies' : 'Enable analytics cookies' }}
               </span>
             </button>
           </article>
         </div>
 
         <p class="cookie-consent-note">
-          Optionales Tracking wird erst nach Ihrer Zustimmung geladen. Sie können Ihre Entscheidung jederzeit über „Cookie-Einstellungen“
-          unten links widerrufen.
+          Optional tracking loads only after you agree. You can change your decision any time via "Cookie settings" in the lower left.
         </p>
 
         <div class="cookie-consent-actions">
-          <button type="button" class="cookie-button ghost" @click="handleRejectAll">Nur notwendige</button>
-          <button type="button" class="cookie-button secondary" @click="handleSave">Auswahl speichern</button>
-          <button type="button" class="cookie-button primary" @click="handleAcceptAll">Alle akzeptieren</button>
+          <button type="button" class="cookie-button ghost" @click="handleRejectAll">Essential only</button>
+          <button type="button" class="cookie-button secondary" @click="handleSave">Save selection</button>
+          <button type="button" class="cookie-button primary" @click="handleAcceptAll">Accept all</button>
         </div>
       </section>
     </div>
@@ -66,7 +64,7 @@
 
   <transition name="cookie-manage">
     <button v-if="showManageButton" type="button" class="cookie-manage-button" @click="openManager">
-      Cookie-Einstellungen
+      Cookie settings
     </button>
   </transition>
 </template>

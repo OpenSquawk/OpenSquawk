@@ -10,7 +10,7 @@
           </button>
           <span class="brand">OpenSquawk</span>
           <span class="sep">|</span>
-          <span class="mode">Lernwelt</span>
+          <span class="mode">Training Hub</span>
         </div>
 
         <div class="hud-right">
@@ -26,16 +26,16 @@
 
           <button class="btn ghost" @click="panel='progress'">
             <v-icon size="18">mdi-chart-line</v-icon>
-            Fortschritt
+            Progress
           </button>
 
           <!-- ATC Einstellungen -->
-          <button class="btn ghost" @click="showSettings=true" title="ATC-Einstellungen">
+          <button class="btn ghost" @click="showSettings=true" title="ATC settings">
             <v-icon size="18">mdi-tune</v-icon>
             ATC
           </button>
 
-          <button class="btn ghost" @click="resetAll" title="Zurücksetzen">
+          <button class="btn ghost" @click="resetAll" title="Reset">
             <v-icon size="18">mdi-refresh</v-icon>
             Reset
           </button>
@@ -49,16 +49,16 @@
         <div class="panel hero-panel" :style="worldTiltStyle" @mousemove="tilt">
           <div class="hero-left">
             <div class="eyebrow">ALPHA BUILD · TRAINING</div>
-            <h1 class="h1">ATC Lernwelt</h1>
-            <p class="muted">Geführte Pfade · Missionen · XP · Abzeichen. Lokal gespeichert.</p>
+            <h1 class="h1">ATC Learning Hub</h1>
+            <p class="muted">Guided paths · missions · XP · badges. Stored locally.</p>
             <div class="actions">
               <button class="btn primary" @click="panel='hub'">
                 <v-icon>mdi-play</v-icon>
-                Losfliegen
+                Start training
               </button>
               <button class="btn ghost" @click="panel='progress'">
                 <v-icon>mdi-progress-check</v-icon>
-                Fortschritt
+                Progress
               </button>
               <button class="btn ghost" @click="testBeep">
                 <v-icon>mdi-volume-high</v-icon>
@@ -86,7 +86,7 @@
                 </div>
                 <div class="card-title">{{ d.title }}</div>
                 <div class="card-sub muted">{{ d.sub }}</div>
-                <button class="btn mini soft" @click="startDaily(d)">Annehmen</button>
+                <button class="btn mini soft" @click="startDaily(d)">Accept</button>
               </div>
             </div>
           </div>
@@ -98,7 +98,7 @@
     <main v-if="panel==='hub'" class="container" role="main">
       <div class="hub-head">
         <h2 class="h2">Mission Hub</h2>
-        <div class="muted">Starte mit ICAO Alphabet & Zahlen, dann Basics, Ground …</div>
+        <div class="muted">Start with the ICAO alphabet & numbers, then basics, ground, and more.</div>
       </div>
 
       <div class="tiles">
@@ -128,7 +128,7 @@
               </button>
               <button class="btn soft" @click="quickContinue(m.id)">
                 <v-icon size="18">mdi-skip-next</v-icon>
-                Weiter
+                Continue
               </button>
             </div>
           </div>
@@ -137,7 +137,7 @@
     </main>
 
     <!-- MODULE -->
-    <section v-if="panel==='module' && current" class="container play" aria-label="Modul">
+    <section v-if="panel==='module' && current" class="container play" aria-label="Module">
       <div class="play-head">
         <div class="crumbs">
           <button class="link" @click="panel='hub'">
@@ -167,8 +167,8 @@
               <v-icon size="18">mdi-headset</v-icon>
               {{ l.title }}
             </div>
-            <div class="chip" :class="{ ok: bestScore(current.id,l.id)>=80 }">
-              {{ bestScore(current.id, l.id) ? bestScore(current.id, l.id) + '%' : 'neu' }}
+              <div class="chip" :class="{ ok: bestScore(current.id,l.id)>=80 }">
+              {{ bestScore(current.id, l.id) ? bestScore(current.id, l.id) + '%' : 'new' }}
             </div>
           </div>
           <div class="muted small">{{ l.desc }}</div>
@@ -186,12 +186,12 @@
             <div class="scenario-sub">{{ scenario.radioCall }}</div>
           </div>
           <div class="scenario-item">
-            <span class="scenario-label">Flugplatz</span>
+            <span class="scenario-label">Airport</span>
             <div class="scenario-value">{{ scenario.airport.icao }}</div>
             <div class="scenario-sub">{{ scenario.airport.name }}</div>
           </div>
           <div class="scenario-item wide">
-            <span class="scenario-label">Frequenzen</span>
+            <span class="scenario-label">Frequencies</span>
             <div class="freq-chips">
               <button
                   v-for="freq in scenario.frequencies"
@@ -224,7 +224,7 @@
                   {{ targetPhrase }}
                 </div>
                 <div v-if="audioContentHidden" class="audio-note muted small">
-                  Audio Challenge aktiv – zuerst anhören.
+                  Audio challenge active – listen first.
                 </div>
               </div>
               <div class="row wrap">
@@ -245,11 +245,11 @@
                     @click="revealAudioContent"
                 >
                   <v-icon size="16">mdi-eye</v-icon>
-                  Anzeigen
+                  Reveal text
                 </button>
                 <button class="btn ghost mini" type="button" @click="rollScenario(true)">
                   <v-icon size="16">mdi-dice-5</v-icon>
-                  Würfeln
+                  Roll
                 </button>
               </div>
             </div>
@@ -272,7 +272,7 @@
         </div>
 
         <div class="col">
-          <div class="label">Deine Readback</div>
+          <div class="label">Your readback</div>
           <div class="panel readback-panel">
             <div class="cloze">
               <template v-for="(segment, idx) in activeLesson.readback" :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
@@ -303,7 +303,7 @@
           <div class="row wrap controls">
             <button class="btn primary" type="button" :disabled="evaluating" @click="evaluate">
               <v-icon size="18">mdi-check</v-icon>
-              Prüfen
+              Check
             </button>
             <button class="btn soft" type="button" @click="clearAnswers">
               <v-icon size="18">mdi-eraser</v-icon>
@@ -311,20 +311,20 @@
             </button>
             <button class="btn ghost" type="button" @click="fillSolution">
               <v-icon size="18">mdi-auto-fix</v-icon>
-              Autotext
+              Auto-fill
             </button>
           </div>
           <div v-if="result" class="score">
             <div class="score-num">{{ result.score }}%</div>
             <div class="muted small">
-              Felder korrekt: {{ result.hits }}/{{ activeLesson.fields.length }} · Ähnlichkeit: {{ Math.round(result.sim * 100) }}%
+              Fields correct: {{ result.hits }}/{{ activeLesson.fields.length }} · Similarity: {{ Math.round(result.sim * 100) }}%
             </div>
           </div>
           <div v-if="result" class="field-checks">
             <div v-for="field in result.fields" :key="field.key" class="field-check" :class="{ ok: field.pass }">
               <div class="field-name">{{ field.label }}</div>
               <div class="field-answer">{{ field.answer || '—' }}</div>
-              <div class="field-expected">Soll: {{ field.expected }}</div>
+              <div class="field-expected">Expected: {{ field.expected }}</div>
             </div>
           </div>
         </div>
@@ -332,8 +332,8 @@
     </section>
 
     <!-- PROGRESS -->
-    <section v-if="panel==='progress'" class="container" aria-label="Fortschritt">
-      <h2 class="h2">Gesamtfortschritt</h2>
+    <section v-if="panel==='progress'" class="container" aria-label="Progress">
+      <h2 class="h2">Overall progress</h2>
       <div class="progress-grid">
         <div v-for="m in modules" :key="m.id" class="panel">
           <div class="row between">
@@ -353,27 +353,27 @@
     <!-- SETTINGS DIALOG -->
     <v-dialog v-model="showSettings" max-width="720">
       <div class="panel dialog">
-        <h3 class="h3">ATC Einstellungen</h3>
+        <h3 class="h3">ATC settings</h3>
 
         <div class="settings">
           <div class="set-row">
             <div class="set-info">
-              <span>Browser-TTS (Web Speech)</span>
-              <small class="muted">Läuft offline, startet schneller und spart unsere API-Anfragen.</small>
+              <span>Browser TTS (Web Speech)</span>
+              <small class="muted">Runs offline, starts faster, and saves our API calls.</small>
             </div>
             <v-switch v-model="cfg.tts" color="cyan" hide-details inset/>
           </div>
 
           <div class="set-row">
             <div class="set-info">
-              <span>Audio Challenge</span>
-              <small class="muted">Blendet Zieltext & Infos, bis du sie manuell einblendest.</small>
+              <span>Audio challenge</span>
+              <small class="muted">Hides target text & info until you reveal it manually.</small>
             </div>
             <v-switch v-model="cfg.audioChallenge" color="cyan" hide-details inset/>
           </div>
 
           <div class="set-row">
-            <span>Funk-Level (1..5)</span>
+            <span>Radio level (1..5)</span>
             <v-slider v-model="cfg.radioLevel" :min="1" :max="5" :step="1" color="cyan" thumb-label/>
           </div>
 
@@ -383,22 +383,22 @@
           </div>
 
           <div class="set-row">
-            <span>Probe-TTS</span>
+            <span>Test TTS</span>
             <div class="row">
               <button class="btn soft" @click="say('Frankfurt Ground, Lufthansa one two three, request taxi.')">
                 <v-icon>mdi-volume-high</v-icon>
-                Probe
+                Test
               </button>
               <button class="btn ghost" @click="stopAudio">
                 <v-icon>mdi-stop</v-icon>
-                Stopp
+                Stop
               </button>
             </div>
           </div>
         </div>
 
         <div class="row end">
-          <button class="btn soft" @click="showSettings=false">Schließen</button>
+          <button class="btn soft" @click="showSettings=false">Close</button>
         </div>
       </div>
     </v-dialog>
@@ -668,7 +668,7 @@ const airportsData: AirportData[] = [
   },
   {
     icao: 'EDDM',
-    name: 'München',
+    name: 'Munich',
     city: 'Munich',
     runways: ['26R', '26L', '08R', '08L'],
     stands: ['211', '214', '302', 'N16', 'H45'],
@@ -1014,17 +1014,17 @@ const modules = ref<ModuleDef[]>([
     lessons: [
       {
         id: 'icao-alphabet',
-        title: 'ICAO Alphabet & Zahlen',
-        desc: 'Buchstaben und Ziffern sauber buchstabieren',
+        title: 'ICAO Alphabet & Numbers',
+        desc: 'Spell letters and digits clearly',
         keywords: ['Alphabet', 'Numbers', 'Normalize'],
         hints: [
-          'Buchstabiere jeden Buchstaben mit dem ICAO-Namen (z. B. Delta, Lima, Hotel).',
-          'Ziffern im Funk: tree, fower, fife, niner.'
+          'Spell each letter with its ICAO name (e.g. Delta, Lima, Hotel).',
+          'Use ATC numbers: tree, fower, fife, niner.'
         ],
         fields: [
           {
             key: 'letters',
-            label: 'Buchstaben',
+            label: 'Letters',
             expected: scenario => scenario.callsignNato,
             placeholder: 'Delta Lima Hotel',
             width: 'xl',
@@ -1032,7 +1032,7 @@ const modules = ref<ModuleDef[]>([
           },
           {
             key: 'digits',
-            label: 'Zahlen',
+            label: 'Numbers',
             expected: scenario => scenario.flightNumberWords,
             placeholder: 'one two three',
             width: 'lg',
@@ -1040,7 +1040,7 @@ const modules = ref<ModuleDef[]>([
           }
         ],
         readback: [
-          { type: 'text', text: 'Rufezeichen: ' },
+          { type: 'text', text: 'Call sign: ' },
           { type: 'field', key: 'letters', width: 'lg' },
           { type: 'text', text: ' · ' },
           { type: 'field', key: 'digits', width: 'md' }
@@ -1048,21 +1048,21 @@ const modules = ref<ModuleDef[]>([
         defaultFrequency: 'DEL',
         phrase: scenario => `${scenario.callsignNato} ${scenario.flightNumberWords}`,
         info: scenario => [
-          `Kennzeichen: ${scenario.callsign}`,
-          `Airline Call: ${scenario.radioCall}`,
-          `ICAO: ${scenario.callsignNato}`,
-          `Flightnummer gesprochen: ${scenario.flightNumberWords}`
+          `Callsign: ${scenario.callsign}`,
+          `Radio call: ${scenario.radioCall}`,
+          `ICAO spelling: ${scenario.callsignNato}`,
+          `Flight number spoken: ${scenario.flightNumberWords}`
         ],
         generate: createBaseScenario
       },
       {
         id: 'atis',
-        title: 'ATIS verstehen',
-        desc: 'Kennung und Kerndaten aus der ATIS ziehen',
-        keywords: ['ATIS', 'Wetter'],
+        title: 'Understand the ATIS',
+        desc: 'Extract the identifier and key data from the ATIS',
+        keywords: ['ATIS', 'Weather'],
         hints: [
-          'ATIS-Kennung als einzelnen Buchstaben merken.',
-          'Reihenfolge: Runway – Wind – Sicht – Temperatur – Taupunkt – QNH.'
+          'Remember the ATIS identifier as a single letter.',
+          'Order: runway – wind – visibility – temperature – dew point – QNH.'
         ],
         fields: [
           {
@@ -1074,7 +1074,7 @@ const modules = ref<ModuleDef[]>([
               scenario.atisCode.toLowerCase(),
               `Information ${scenario.atisCode}`
             ],
-            placeholder: 'Buchstabe',
+            placeholder: 'Letter',
             width: 'xs',
             threshold: 0.9
           },
@@ -1098,21 +1098,21 @@ const modules = ref<ModuleDef[]>([
           },
           {
             key: 'atis-visibility',
-            label: 'Sicht',
+            label: 'Visibility',
             expected: scenario => scenario.atisSummary.visibility,
             alternatives: scenario => [scenario.visibility, scenario.visibilityWords],
             width: 'sm'
           },
           {
             key: 'atis-temp',
-            label: 'Temperatur',
+            label: 'Temperature',
             expected: scenario => scenario.atisSummary.temperature,
             alternatives: scenario => [scenario.temperatureWords],
             width: 'sm'
           },
           {
             key: 'atis-dew',
-            label: 'Taupunkt',
+            label: 'Dew point',
             expected: scenario => scenario.atisSummary.dewpoint,
             alternatives: scenario => [scenario.dewpointWords],
             width: 'sm'
@@ -1144,19 +1144,19 @@ const modules = ref<ModuleDef[]>([
         defaultFrequency: 'ATIS',
         phrase: scenario => scenario.atisText,
         info: () => [
-          'Notiere Kennung, Runway, Wind, Sichtweite, Temperatur, Taupunkt und QNH.',
-          'Sicht: vier Ziffern oder 9999 für ≥10 km · QNH als vierstellige Zahl.'
+          'Note the identifier, runway, wind, visibility, temperature, dew point, and QNH.',
+          'Visibility: four digits or 9999 for ≥10 km; QNH as a four-digit value.'
         ],
         generate: createBaseScenario
       },
       {
         id: 'metar',
-        title: 'METAR entschlüsseln',
-        desc: 'Rohe METAR-Werte extrahieren',
+        title: 'Decode the METAR',
+        desc: 'Extract the raw METAR values',
         keywords: ['METAR', 'Weather'],
         hints: [
-          'METAR blockweise lesen: Wind – Sicht – Wolken – Temperatur – QNH.',
-          'Der Temperaturblock hat die Form 18/10, Minuswerte beginnen mit M.'
+          'Read the METAR in blocks: wind – visibility – clouds – temperature – QNH.',
+          'The temperature block looks like 18/10; negative values start with M.'
         ],
         fields: [
           {
@@ -1172,7 +1172,7 @@ const modules = ref<ModuleDef[]>([
           },
           {
             key: 'metar-vis',
-            label: 'Sicht',
+            label: 'Visibility',
             expected: scenario => scenario.metarSegments.visibility,
             alternatives: scenario => [scenario.visibility],
             placeholder: '9999',
@@ -1199,9 +1199,9 @@ const modules = ref<ModuleDef[]>([
         readback: [
           { type: 'text', text: 'Wind ' },
           { type: 'field', key: 'metar-wind', width: 'md' },
-          { type: 'text', text: ', Sicht ' },
+          { type: 'text', text: ', visibility ' },
           { type: 'field', key: 'metar-vis', width: 'sm' },
-          { type: 'text', text: ', Temperatur ' },
+          { type: 'text', text: ', temperature ' },
           { type: 'field', key: 'metar-temp', width: 'md' },
           { type: 'text', text: ', QNH ' },
           { type: 'field', key: 'metar-qnh', width: 'sm' }
@@ -1210,18 +1210,18 @@ const modules = ref<ModuleDef[]>([
         phrase: scenario => scenario.metar,
         info: scenario => [
           `METAR: ${scenario.metar}`,
-          `Interpretation: Wind ${scenario.metarSegments.wind}, Sicht ${scenario.visibilityWords}, Temperatur ${scenario.temperature}°C, QNH ${scenario.qnh}`
+          `Interpretation: Wind ${scenario.metarSegments.wind}, visibility ${scenario.visibilityWords}, temperature ${scenario.temperature}°C, QNH ${scenario.qnh}`
         ],
         generate: createBaseScenario
       },
       {
         id: 'radio-check',
         title: 'Radio Check',
-        desc: 'Lesbarkeit melden',
+        desc: 'Report readability',
         keywords: ['Ground', 'Comms'],
         hints: [
-          'Antwort besteht aus "Readability" plus Zahl.',
-          'Beende den Check immer mit deinem Callsign.'
+          'Reply with "Readability" followed by the number.',
+          'Always finish the check with your call sign.'
         ],
         fields: [
           {
@@ -1238,7 +1238,7 @@ const modules = ref<ModuleDef[]>([
           },
           {
             key: 'rc-readability',
-            label: 'Lesbarkeit',
+            label: 'Readability',
             expected: scenario => scenario.readabilityWord,
             alternatives: scenario => [scenario.readability.toString(), scenario.readabilityWord],
             placeholder: 'five',
@@ -1254,8 +1254,8 @@ const modules = ref<ModuleDef[]>([
         defaultFrequency: 'GND',
         phrase: scenario => `${scenario.airport.name} Ground, ${scenario.radioCall}, radio check on ${scenario.groundFreq}.`,
         info: scenario => [
-          `Frequenz: ${scenario.groundFreq} (${scenario.frequencyWords.GND})`,
-          `Erwartete Antwort: Readability ${scenario.readability} (${scenario.readabilityWord})`
+          `Frequency: ${scenario.groundFreq} (${scenario.frequencyWords.GND})`,
+          `Expected response: Readability ${scenario.readability} (${scenario.readabilityWord})`
         ],
         generate: createBaseScenario
       }
@@ -1264,17 +1264,17 @@ const modules = ref<ModuleDef[]>([
   {
     id: 'arc',
     title: 'ARC Decision Tree',
-    subtitle: 'Vom Clearance Call bis Departure',
+    subtitle: 'From clearance call to departure',
     art: gradientArt(['#f97316', '#fb923c', '#0f172a']),
     lessons: [
       {
         id: 'clearance-contact',
-        title: 'Delivery: Erstkontakt',
-        desc: 'Clearance Delivery kontaktieren',
+        title: 'Delivery: Initial contact',
+        desc: 'Contact clearance delivery',
         keywords: ['Delivery', 'Clearance'],
         hints: [
-          'Reihenfolge: Einheit, Callsign, ATIS, Ziel, Stand, Request.',
-          'ATIS als einzelner Buchstabe sprechen.'
+          'Order: unit, call sign, ATIS, destination, stand, request.',
+          'Say the ATIS as a single letter.'
         ],
         fields: [
           {
@@ -1298,7 +1298,7 @@ const modules = ref<ModuleDef[]>([
           },
           {
             key: 'cd-stand',
-            label: 'Stand',
+            label: 'Stand/Gate',
             expected: scenario => scenario.stand,
             width: 'sm'
           }
@@ -1318,20 +1318,20 @@ const modules = ref<ModuleDef[]>([
         defaultFrequency: 'DEL',
         phrase: scenario => `${scenario.airport.city} Delivery, ${scenario.radioCall}, information ${scenario.atisCode}, IFR to ${scenario.destination.city}, stand ${scenario.stand}, request clearance.`,
         info: scenario => [
-          `ATIS ${scenario.atisCode}`,
-          `Ziel: ${scenario.destination.city} (${scenario.destination.icao})`,
-          `Stand: ${scenario.stand}`
+          `ATIS: ${scenario.atisCode}`,
+          `Destination: ${scenario.destination.city} (${scenario.destination.icao})`,
+          `Stand/Gate: ${scenario.stand}`
         ],
         generate: createBaseScenario
       },
       {
         id: 'clearance-readback',
         title: 'Clearance Readback',
-        desc: 'Freigabe komplett zurücklesen',
+        desc: 'Read back the clearance in full',
         keywords: ['Delivery', 'Readback'],
         hints: [
-          'Reihenfolge merken: Ziel – SID – Runway – Altitude – Squawk.',
-          'Zahlen bei Altitude und Squawk sauber ausschreiben.'
+          'Remember the order: destination – SID – runway – altitude – squawk.',
+          'Speak altitude and squawk digits clearly.'
         ],
         fields: [
           {
@@ -1393,11 +1393,11 @@ const modules = ref<ModuleDef[]>([
       {
         id: 'pushback',
         title: 'Push & Start Readback',
-        desc: 'Pushback-Freigabe bestätigen',
+        desc: 'Acknowledge the pushback clearance',
         keywords: ['Ground', 'Pushback'],
         hints: [
-          'Bahnrichtung und QNH übernehmen, Callsign ans Ende.',
-          'QNH darf als Zahl oder "QNH xxxx" stehen.'
+          'Repeat the runway direction and QNH, call sign at the end.',
+          'QNH may be just the number or "QNH xxxx".'
         ],
         fields: [
           {
@@ -1437,7 +1437,7 @@ const modules = ref<ModuleDef[]>([
         defaultFrequency: 'GND',
         phrase: scenario => `${scenario.radioCall}, push and start approved, facing runway ${scenario.runway}. QNH ${scenario.qnh}.`,
         info: scenario => [
-          `Stand: ${scenario.stand}`,
+          `Stand/Gate: ${scenario.stand}`,
           `Ground: ${scenario.groundFreq} (${scenario.frequencyWords.GND})`
         ],
         generate: createBaseScenario
@@ -1445,11 +1445,11 @@ const modules = ref<ModuleDef[]>([
       {
         id: 'taxi',
         title: 'Taxi Readback',
-        desc: 'Taxi-Freigabe mit Hold Short',
+        desc: 'Read back the taxi clearance with hold short',
         keywords: ['Ground', 'Taxi'],
         hints: [
-          'Route wie gehört wiederholen, inklusive Hold Short.',
-          'Am Ende wieder Callsign.'
+          'Repeat the route exactly as received, including the hold short.',
+          'Finish with the call sign.'
         ],
         fields: [
           {
@@ -1498,19 +1498,19 @@ const modules = ref<ModuleDef[]>([
         defaultFrequency: 'GND',
         phrase: scenario => `${scenario.radioCall}, taxi to runway ${scenario.runway} via ${scenario.taxiRoute}, hold short runway ${scenario.runway}.`,
         info: scenario => [
-          `Taxi-Route: ${scenario.taxiRoute}`,
-          `Hold Short: ${scenario.runway}`
+          `Taxi route: ${scenario.taxiRoute}`,
+          `Hold short: ${scenario.runway}`
         ],
         generate: createBaseScenario
       },
       {
         id: 'lineup',
         title: 'Line-up Clearance',
-        desc: 'Aufrollen und warten bestätigen',
+        desc: 'Acknowledge line up and wait',
         keywords: ['Tower', 'Line Up'],
         hints: [
-          'Runway wiederholen, dann "line up and wait".',
-          'Callsign am Ende setzen.'
+          'Repeat the runway, then say "line up and wait".',
+          'Place the call sign at the end.'
         ],
         fields: [
           {
@@ -1549,11 +1549,11 @@ const modules = ref<ModuleDef[]>([
       {
         id: 'takeoff',
         title: 'Takeoff Clearance',
-        desc: 'Takeoff-Freigabe bestätigen',
+        desc: 'Acknowledge the takeoff clearance',
         keywords: ['Tower', 'Departure'],
         hints: [
-          'Reihenfolge: Runway – cleared for takeoff – Callsign.',
-          'Windangabe kann entfallen, wenn nicht gefordert.'
+          'Order: runway – cleared for takeoff – call sign.',
+          'Wind information can be omitted if it was not given.'
         ],
         fields: [
           {
@@ -1592,11 +1592,11 @@ const modules = ref<ModuleDef[]>([
       {
         id: 'departure-handoff',
         title: 'Departure Handoff',
-        desc: 'Auf Departure wechseln',
+        desc: 'Switch to departure',
         keywords: ['Departure', 'Handoff'],
         hints: [
-          'Frequenz exakt wiederholen, optional als Zahl oder gesprochen.',
-          'Callsign am Ende anhängen.'
+          'Repeat the frequency exactly, either as digits or spoken form.',
+          'Append the call sign at the end.'
         ],
         fields: [
           {
@@ -1632,18 +1632,18 @@ const modules = ref<ModuleDef[]>([
         phrase: scenario => `${scenario.radioCall}, contact departure ${scenario.departureFreq}.`,
         info: scenario => [
           `Departure: ${scenario.departureFreq} (${scenario.frequencyWords.DEP})`,
-          `Tower Handoff nach Start.`
+          `Tower handoff after departure.`
         ],
         generate: createBaseScenario
       },
       {
         id: 'departure-checkin',
         title: 'Departure Check-in',
-        desc: 'Erstmeldung bei Departure',
+        desc: 'Initial call to departure',
         keywords: ['Departure', 'Check-in'],
         hints: [
-          'Einheit ansprechen, dann Callsign nennen.',
-          'Altitude und SID exakt wie gehört wiederholen.'
+          'Address the unit first, then state the call sign.',
+          'Repeat the altitude and SID exactly as received.'
         ],
         fields: [
           {
@@ -1694,11 +1694,11 @@ const modules = ref<ModuleDef[]>([
       {
         id: 'climb-instruction',
         title: 'Climb & Direct',
-        desc: 'Steigauftrag komplett zurücklesen',
+        desc: 'Read back the climb instruction in full',
         keywords: ['Departure', 'Climb'],
         hints: [
-          'Mit "Climb" beginnen, dann Höhe und gegebenenfalls Direct.',
-          'Callsign am Ende wiederholen.'
+          'Start with "Climb", then the altitude and any direct clearance.',
+          'Repeat the call sign at the end.'
         ],
         fields: [
           {
@@ -1749,11 +1749,11 @@ const modules = ref<ModuleDef[]>([
       {
         id: 'center-handoff',
         title: 'Center Handoff',
-        desc: 'Übergabe an Center bestätigen',
+        desc: 'Acknowledge the handoff to center',
         keywords: ['Center', 'Handoff'],
         hints: [
-          'Frequenz exakt wiedergeben (mit oder ohne Dezimalpunkt).',
-          'Callsign am Ende platzieren.'
+          'Repeat the frequency exactly (with or without the decimal point).',
+          'Place the call sign at the end.'
         ],
         fields: [
           {
@@ -1789,7 +1789,7 @@ const modules = ref<ModuleDef[]>([
         phrase: scenario => `${scenario.radioCall}, contact center ${scenario.centerFreq}.`,
         info: scenario => [
           `Center: ${scenario.centerFreq} (${scenario.frequencyWords.CTR})`,
-          `Nächste Einheit: Center`
+          `Next unit: Center`
         ],
         generate: createBaseScenario
       }
@@ -2003,7 +2003,7 @@ function blankStateClass(key: string): string {
 }
 
 function fieldLabel(key: string): string {
-  return fieldMap.value[key]?.label ?? 'Feld'
+  return fieldMap.value[key]?.label ?? 'Field'
 }
 
 function fieldPlaceholder(key: string): string {
@@ -2185,9 +2185,9 @@ function avgScore(modId: string) {
 }
 
 const dailies = ref([
-  { id: 'd1', title: '3 Readbacks ≥80%', sub: 'Belohnung: +50 XP', reward: 50 },
-  { id: 'd2', title: '1 Modul starten', sub: 'Belohnung: +20 XP', reward: 20 },
-  { id: 'd3', title: 'Zielphrase abspielen', sub: 'Belohnung: +10 XP', reward: 10 }
+  { id: 'd1', title: '3 readbacks ≥80%', sub: 'Reward: +50 XP', reward: 50 },
+  { id: 'd2', title: 'Start 1 module', sub: 'Reward: +20 XP', reward: 20 },
+  { id: 'd3', title: 'Play the target phrase', sub: 'Reward: +10 XP', reward: 10 }
 ])
 
 function startDaily(daily: { id: string; reward: number; title: string }) {
