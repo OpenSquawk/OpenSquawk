@@ -14,7 +14,7 @@ export const learnModules: ModuleDef[] = [
     id: 'normalize',
     title: 'Normalize · Fundamentals',
     subtitle: 'Alphabet, ATIS, METAR & Radio Check',
-    art: 'https://images.unsplash.com/photo-1488085061387-422e29b40080?q=80&w=1600&auto=format&fit=crop',
+    art: '/img/learn/modules/img10.jpeg',
     lessons: [
       {
         id: 'icao-alphabet',
@@ -269,7 +269,7 @@ export const learnModules: ModuleDef[] = [
     id: 'arc',
     title: 'ARC Decision Tree',
     subtitle: 'From clearance call to departure',
-    art: gradientArt(['#f97316', '#fb923c', '#0f172a']),
+    art: '/img/learn/modules/img2.jpeg',
     lessons: [
       {
         id: 'clearance-contact',
