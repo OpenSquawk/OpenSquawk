@@ -1,8 +1,8 @@
-// composables/communicationsEngine.ts
+// communicationsEngine composable
 import { ref, computed, readonly } from 'vue'
 import atcDecisionTree from "../data/atcDecisionTree";
 
-// --- DecisionTree-Types (aus ~/data/atcDecisionTree.json abgeleitet) ---
+// --- DecisionTree types (derived from ~/data/atcDecisionTree.json) ---
 type Role = 'pilot' | 'atc' | 'system'
 type Phase =
     | 'Preflight' | 'Clearance' | 'PushStart' | 'TaxiOut' | 'Departure'
@@ -31,8 +31,8 @@ interface DTState {
     auto?: 'check_readback' | 'monitor' | 'end' | 'pop_stack_or_route_by_intent'
     readback_required?: string[]
     actions?: (DTActionSet | string)[]
-    frequency?: string // Für einfachere Freq-Zugriffe
-    frequencyName?: string // Name der Frequenz (DEL, GND, TWR, etc.)
+    frequency?: string // Shortcut for accessing frequencies
+    frequencyName?: string // Frequency label (DEL, GND, TWR, etc.)
 }
 
 interface DecisionTree {
@@ -47,8 +47,8 @@ interface DecisionTree {
         emergency_active: boolean
         current_unit: string
         stack: string[]
-        off_schema_count: number // Zähler für Off-Schema Antworten
-        radio_checks_done: number // Zähler für Radio Checks
+        off_schema_count: number // Counter for off-schema responses
+        radio_checks_done: number // Counter for radio checks
     }
     policies: {
         timeouts: {
@@ -67,7 +67,7 @@ interface DecisionTree {
     states: Record<string, DTState>
 }
 
-// Flight Phases und Communication Steps für bessere Integration
+// Flight phases and communication steps for better integration
 export const FLIGHT_PHASES = [
     { id: 'clearance', name: 'Clearance Delivery', frequency: '121.900', action: 'Request IFR clearance' },
     { id: 'ground', name: 'Ground Control', frequency: '121.700', action: 'Request pushback and taxi' },
@@ -90,7 +90,7 @@ export const COMMUNICATION_STEPS = [
         atc: '{callsign}, cleared to {dest} via {sid} departure, runway {runway}, climb {initial_altitude_ft} feet, squawk {squawk}.',
         pilotResponse: '{callsign} cleared {dest} via {sid}, runway {runway}, climb {initial_altitude_ft}, squawk {squawk}.'
     }
-    // Weitere Steps können hier definiert werden
+    // Additional steps can be defined here
 ]
 
 type FrequencyVariableKey = 'atis_freq'
@@ -101,7 +101,7 @@ type FrequencyVariableKey = 'atis_freq'
     | 'approach_freq'
     | 'handoff_freq'
 
-// --- ATC Decision Tree laden ---
+// --- Load ATC decision tree ---
 export interface FlightContext {
     callsign: string
     aircraft: string
@@ -140,7 +140,7 @@ export interface EngineLog {
     offSchema?: boolean
 }
 
-// NATO/ICAO Normalizer (gekürzt für bessere Performance)
+// NATO/ICAO normalizer trimmed for better performance
 const NATO_PHONETIC: Record<string, string> = {
     A: 'Alpha', B: 'Bravo', C: 'Charlie', D: 'Delta', E: 'Echo', F: 'Foxtrot',
     G: 'Golf', H: 'Hotel', I: 'India', J: 'Juliett', K: 'Kilo', L: 'Lima',
@@ -212,7 +212,7 @@ export default function useCommunicationsEngine() {
     const currentStateId = ref<string>(tree.value.start_state)
     const communicationLog = ref<EngineLog[]>([])
 
-    // Flight Context für bessere Integration mit pm_alt.vue Stil
+    // Flight context used for pm_alt.vue integration
     const flightContext = ref<FlightContext>({
         callsign: '',
         aircraft: 'A320',
@@ -264,7 +264,7 @@ export default function useCommunicationsEngine() {
         }
     })
 
-    // Current Step für pm_alt.vue Integration
+    // Current step for pm_alt.vue integration
     const currentStep = computed(() => {
         const phase = flightContext.value.phase
         const step = COMMUNICATION_STEPS.find(s => s.phase === phase)
@@ -280,7 +280,7 @@ export default function useCommunicationsEngine() {
     })
 
     function initializeFlight(fpl: any) {
-        // Variablen setzen
+        // Set variables
         variables.value = {
             ...variables.value,
             callsign: fpl.callsign || fpl.callsign,
@@ -313,7 +313,7 @@ export default function useCommunicationsEngine() {
             time_now: new Date().toISOString()
         }
 
-        // Flight Context aktualisieren
+        // Update flight context
         Object.assign(flightContext.value, {
             ...variables.value,
             phase: 'clearance'
@@ -364,11 +364,11 @@ export default function useCommunicationsEngine() {
     }
 
     function applyLLMDecision(decision: any) {
-        // Updates anwenden
+        // Apply updates
         if (decision.updates) Object.assign(variables.value, decision.updates)
         if (decision.flags) Object.assign(flags.value, decision.flags)
 
-        // Off-Schema und Radio Check Tracking
+        // Track off-schema responses and radio checks
         if (decision.off_schema) {
             flags.value.off_schema_count++
             console.log(`[Engine] Off-schema response #${flags.value.off_schema_count}`)
@@ -378,7 +378,7 @@ export default function useCommunicationsEngine() {
             console.log(`[Engine] Radio check #${flags.value.radio_checks_done}`)
         }
 
-        // Controller Response
+        // Controller response
         if (decision.controller_say_tpl) {
             speak('atc', decision.controller_say_tpl, currentStateId.value, {
                 radioCheck: decision.radio_check,
@@ -386,7 +386,7 @@ export default function useCommunicationsEngine() {
             })
         }
 
-        // State Transition (nur wenn nicht Radio Check)
+        // State transition (only when not a radio check)
         if (!decision.radio_check) {
             moveTo(decision.next_state)
         }
@@ -396,7 +396,7 @@ export default function useCommunicationsEngine() {
         // Log pilot input
         speak('pilot', transcript, currentStateId.value)
 
-        // Radio Check Detection (fallback falls LLM es nicht erkennt)
+        // Radio check detection (fallback if the LLM misses it)
         const t = transcript.toLowerCase()
         if (t.includes('radio check') || (t.includes('read') && t.includes('check'))) {
             const callsign = variables.value.callsign || ''
@@ -417,7 +417,7 @@ export default function useCommunicationsEngine() {
             return null
         }
 
-        return null // LLM soll entscheiden
+        return null // Let the LLM decide
     }
 
     function processUserTransmission(transcript: string): string | null {
@@ -437,7 +437,7 @@ export default function useCommunicationsEngine() {
         currentStateId.value = stateId
         const s = currentState.value
 
-        // Actions ausführen
+        // Execute actions
         for (const act of s.actions ?? []) {
             if (typeof act === 'string') continue
             if (act.if && !safeEvalBoolean(act.if)) continue
@@ -457,7 +457,7 @@ export default function useCommunicationsEngine() {
             speak(s.role, s.say_tpl, s.id!)
         }
 
-        // Phase Update für Flight Context
+        // Update flight context phase
         updateFlightPhase(s.phase)
     }
 
@@ -599,7 +599,7 @@ export default function useCommunicationsEngine() {
         communicationLog: readonly(communicationLog),
         clearCommunicationLog: () => { communicationLog.value = [] },
 
-        // pm_alt.vue Integration
+        // pm_alt.vue integration
         flightContext: readonly(flightContext),
         currentStep,
 

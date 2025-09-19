@@ -21,7 +21,7 @@
         <v-card class="bg-white/5 backdrop-blur border border-white/10">
           <v-card-text class="space-y-4">
             <div>
-              <h2 class="text-lg font-semibold">VATSIM integration</h2>
+              <h2 class="text-lg font-semibold">VATSIM Integration</h2>
               <p class="text-sm text-white/70">Enter your CID to load your filtered flight plans.</p>
             </div>
             <v-text-field
@@ -59,8 +59,8 @@
         <v-card class="bg-white/5 backdrop-blur border border-white/10">
           <v-card-text class="space-y-4">
             <div>
-              <h2 class="text-lg font-semibold">Demo mode</h2>
-              <p class="text-sm text-white/70">Start with a sample flight plan to test the workflow.</p>
+              <h2 class="text-lg font-semibold">Demo Mode</h2>
+              <p class="text-sm text-white/70">Start with a sample flight plan for testing.</p>
             </div>
             <v-btn
                 block
@@ -203,7 +203,7 @@
                 @click="backToSetup"
                 prepend-icon="mdi-airplane-off"
             >
-              Choose a different flight
+              Select new flight
             </v-btn>
           </v-card-text>
         </v-card>
@@ -285,7 +285,7 @@
             <div v-if="currentStep.pilot" class="space-y-2 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 text-sm">
               <div class="flex items-center gap-2 text-blue-300">
                 <v-icon size="16">mdi-account-pilot</v-icon>
-                <span class="text-xs uppercase font-semibold">Pilot (you)</span>
+                <span class="text-xs uppercase font-semibold">Pilot (You)</span>
               </div>
               <p class="font-mono text-white">{{ normalizeExpectedText(currentStep.pilot) }}</p>
             </div>
@@ -396,7 +396,7 @@
         <v-card class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
-              <h3 class="text-lg font-semibold">Frequency directory</h3>
+              <h3 class="text-lg font-semibold">Frequency overview</h3>
               <div class="flex items-center gap-2">
                 <v-progress-circular
                     v-if="airportFrequencyLoading"
@@ -421,7 +421,7 @@
             <v-expansion-panels variant="accordion" class="bg-transparent">
               <v-expansion-panel>
                 <v-expansion-panel-title class="text-sm text-white/70">
-                  Frequencies for {{ flightContext.dep || 'Departure' }}
+                  Frequencies for {{ flightContext.dep || 'departure' }}
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
                   <div
@@ -527,7 +527,7 @@
                 @click:append-inner="sendPilotText"
             />
             <p class="text-xs text-white/50">
-              For emergencies when PTT fails or for testing.
+              For emergencies when PTT fails or for testing
             </p>
           </v-card-text>
         </v-card>
@@ -564,7 +564,7 @@
                 v-if="simulationRunning && simulationTrace.length === 0"
                 class="text-sm text-white/60"
             >
-              Simulation initializing…
+              Simulation initializing...
             </div>
 
             <div
@@ -609,7 +609,7 @@
                 <span v-if="debugState?.frequencyName" class="ml-1 text-white/40">({{ debugState.frequencyName }})</span>
               </p>
               <p v-if="debugState?.sayPlain" class="text-xs text-white/70">
-                Auto: <span class="font-mono text-white">{{ debugState.sayPlain }}</span>
+                Auto (LLM): <span class="font-mono text-white">{{ debugState.sayPlain }}</span>
               </p>
               <p v-if="debugState?.sayNormalized" class="text-[11px] text-white/40">
                 Radio: {{ debugState.sayNormalized }}
@@ -617,7 +617,7 @@
             </div>
 
             <div>
-              <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Next decisions</p>
+              <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Upcoming decisions</p>
               <div v-if="debugNextStates.length" class="space-y-2">
                 <div
                     v-for="state in debugNextStates"
@@ -702,7 +702,7 @@
               </div>
 
               <p v-if="log.length === 0" class="text-xs text-white/50 text-center py-4">
-                No transmissions logged yet.
+                No communications recorded yet.
               </p>
             </div>
           </v-card-text>
@@ -752,7 +752,7 @@
                   <template #prepend>
                     <v-icon size="16">mdi-alert-circle-outline</v-icon>
                   </template>
-                  {{ lastTransmissionFaulty ? 'Review issue' : 'Mark issue' }}
+                  {{ lastTransmissionFaulty ? 'Edit issue' : 'Mark as faulty' }}
                 </v-btn>
                 <v-btn
                     v-if="lastTransmissionFaulty"
@@ -801,12 +801,11 @@
           <v-card class="bg-[#0b101d] border border-white/10 text-white">
             <v-card-title class="flex items-center gap-2 text-base font-semibold">
               <v-icon icon="mdi-alert-circle-outline" color="#f87171" size="20" />
-              Flag transmission as faulty
+              Mark transmission as faulty
             </v-card-title>
             <v-card-text class="space-y-4 text-sm text-white/70">
               <p>
-                Leave an optional short description so the dev team can trace the
-                transmission.
+                Optionally leave a short note so the dev team can follow up on the transmission.
               </p>
               <v-textarea
                   v-model="transmissionIssueNote"
