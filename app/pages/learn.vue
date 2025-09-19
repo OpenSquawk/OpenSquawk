@@ -635,7 +635,7 @@ const atcNumberWords: Record<string, string> = {
   '1': 'one',
   '2': 'two',
   '3': 'tree',
-  '4': 'fower',
+  '4': 'four',
   '5': 'fife',
   '6': 'six',
   '7': 'seven',
