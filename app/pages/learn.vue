@@ -15,13 +15,6 @@
 
         <div class="hud-right">
 
-          <!-- Quick ATC: Voice & Level -->
-          <div class="chip inline">
-            <v-icon size="16" class="text-accent">mdi-radio-handheld</v-icon>
-            <span class="ml-1">L {{ cfg.radioLevel }}</span>
-            <input type="range" min="1" max="5" step="1" v-model.number="cfg.radioLevel"/>
-          </div>
-
           <!-- ATC Einstellungen -->
           <button class="btn ghost" @click="showSettings=true" title="ATC settings">
             <v-icon size="18">mdi-tune</v-icon>
@@ -246,14 +239,7 @@
                 <v-icon size="18">{{ modulePrimaryIcon(m.id) }}</v-icon>
                 {{ modulePrimaryLabel(m.id) }}
               </button>
-              <button
-                  class="btn ghost"
-                  :disabled="!isModuleUnlocked(m.id)"
-                  @click="openModule(m.id)"
-              >
-                <v-icon size="18">{{ moduleSecondaryIcon(m.id) }}</v-icon>
-                {{ moduleSecondaryLabel(m.id) }}
-              </button>
+
             </div>
           </div>
         </div>
@@ -508,13 +494,9 @@
 
           <div class="set-row">
             <span>Radio level (1..5)</span>
-            <v-slider v-model="cfg.radioLevel" :min="1" :max="5" :step="1" color="cyan" thumb-label/>
+            <v-slider hide-details v-model="cfg.radioLevel" :min="1" :max="5" :step="1" color="cyan" thumb-label/>
           </div>
 
-          <div class="set-row">
-            <span>Voice</span>
-            <v-text-field v-model="cfg.voice" placeholder="alloy" hide-details density="compact" variant="outlined"/>
-          </div>
 
           <div class="set-row">
             <span>Test TTS</span>
@@ -3235,9 +3217,6 @@ onMounted(() => {
   outline: none;
 }
 
-.next-objective:active {
-  transform: translateY(1px);
-}
 
 .next-header {
   display: flex;
@@ -3720,7 +3699,6 @@ onMounted(() => {
 }
 
 .challenge-card:hover {
-  transform: translateY(-6px);
   box-shadow: 0 16px 34px rgba(0, 0, 0, .28)
 }
 
@@ -3831,7 +3809,6 @@ onMounted(() => {
 }
 
 .tile:hover {
-  transform: translateY(-6px);
   box-shadow: 0 18px 40px rgba(0, 0, 0, .3)
 }
 
@@ -4040,7 +4017,6 @@ onMounted(() => {
 }
 
 .lesson:hover {
-  transform: translateY(-4px);
   box-shadow: 0 14px 26px rgba(0, 0, 0, .22)
 }
 
