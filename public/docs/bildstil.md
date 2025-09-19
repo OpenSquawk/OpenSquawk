@@ -1,9 +1,3 @@
-**Einheitlicher Bildstil-Prompt (Template)**
+**Unified Image-Style Prompt (Template)**
 
-> *Ultra-realistic flight-simulator inspired scene, 8k cinematic render, dramatic golden/blue hour light, soft volumetric clouds, HDR depth, teal-orange color grade, rich atmosphere and lens-flare effects, subtle motion blur, shallow depth of field, absolutely **no text**, no logos, no readable signage, and no cockpit or ATC equipment shown in identifiable technical detail—only suggestive silhouettes or abstract shapes so it cannot be used for real procedures. Natural airport environment or aerial perspective, photorealistic textures, filmic composition, wide-angle 50 mm lens look.*
-
-Für jedes Kapitel einfach am Ende das konkrete Motiv ergänzen.
-
-So bleiben Stil, Farben und Licht konsistent, während alle Szenen textfrei und technisch unverfänglich bleiben.
-
-am besten gehst du immer auf closeups von iwas und draussen und im hintergrund in der unschärfe flughafen sachen. da gibt s ja super viele dinge bei nem airport und in der luft
+*Ultra-realistic flight-sim–inspired scene, 8K cinematic render, dramatic golden/blue-hour lighting, soft volumetric clouds, HDR depth, teal-orange grade, rich atmosphere with subtle lens flare, gentle motion blur, shallow depth of field. Absolutely **no text**, no logos, no readable signage expcept on runways, taxiways if applicable. **Strictly no cockpit instruments, avionics displays, control panels, EFBs, or ATC hardware in identifiable detail**—use only vague silhouettes/abstract shapes so it can’t be used for real procedures. Natural airport environment or aerial perspective, photorealistic textures, filmic composition, 50 mm lens look. Prefer outdoor close-ups with airport context softly out of focus. — *\[append the specific subject/motif here]*.*
