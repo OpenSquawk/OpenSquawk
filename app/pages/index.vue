@@ -15,7 +15,7 @@
             {{ locale === 'de' ? 'Roadmap' : 'Roadmap' }}
           </NuxtLink>
           <NuxtLink to="#pricing" class="hover:text-cyan-300">
-            {{ locale === 'de' ? 'Preise' : 'Pricing' }}
+            {{ locale === 'de' ? 'Pläne' : 'Plans' }}
           </NuxtLink>
           <NuxtLink to="#contributing" class="hover:text-cyan-300">
             {{ locale === 'de' ? 'Mitmachen' : 'Get involved' }}
@@ -650,10 +650,11 @@
           </div>
         </div>
 
-        <div class="mt-8 grid md:grid-cols-3 gap-6">
+        <div class="mt-8 grid md:grid-cols-3 gap-6 items-stretch">
           <!-- OSS -->
-          <div class="card relative" data-aos="fade-up" data-aos-delay="0">
+          <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="0">
             <div class="absolute -top-3 right-4 chip">Community</div>
+<<<<<<< HEAD
             <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Open‑Source (Self‑host)' : 'Open-source (self-host)' }}</h3>
             <p class="mt-2 text-white/80">
               {{
@@ -664,12 +665,26 @@
             </p>
             <div class="mt-5 text-3xl font-semibold">
               0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ immer' : '/ forever' }}</span>
+=======
+            <div class="flex flex-col flex-1">
+              <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Open‑Source (Self‑host)' : 'Open-source (self-host)' }}</h3>
+              <p class="mt-2 text-white/80">
+                {{
+                  locale === 'de'
+                    ? 'Volle Kontrolle über Infrastruktur und Daten. Selbst hosten bleibt immer eine Option.'
+                    : 'Full control over infrastructure and data. Self-hosting is always an option.'
+                }}
+              </p>
+              <div class="mt-5 text-3xl font-semibold">
+                0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ immer' : '/ forever' }}</span>
+              </div>
+              <ul class="mt-5 space-y-2 text-white/80 text-sm">
+                <li>{{ locale === 'de' ? '✔ Voller Funktionsumfang' : '✔ Full feature set' }}</li>
+                <li>✔ Plugins & SDK</li>
+                <li>{{ locale === 'de' ? '✔ Community‑Support' : '✔ Community support' }}</li>
+              </ul>
+>>>>>>> 2b6aa53 (Adjust pricing layout and waitlist copy)
             </div>
-            <ul class="mt-5 space-y-2 text-white/80 text-sm">
-              <li>{{ locale === 'de' ? '✔ Voller Funktionsumfang' : '✔ Full feature set' }}</li>
-              <li>✔ Plugins & SDK</li>
-              <li>{{ locale === 'de' ? '✔ Community‑Support' : '✔ Community support' }}</li>
-            </ul>
             <NuxtLink
                 to="https://github.com/FaktorxMensch/OpenSquawk"
                 external
@@ -681,6 +696,7 @@
             </NuxtLink>
           </div>
           <!-- Hosted Community -->
+<<<<<<< HEAD
           <div class="card border-2 border-cyan-400/40 relative shadow-[0_0_40px_rgba(34,211,238,.25)]" data-aos="fade-up" data-aos-delay="100">
             <div class="absolute -top-3 right-4 chip bg-cyan-500/30 border-cyan-400/50">{{ locale === 'de' ? 'Empfohlen' : 'Recommended' }}</div>
             <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Hosted – Lernmodus' : 'Hosted – learning mode' }}</h3>
@@ -699,11 +715,34 @@
               <li>{{ locale === 'de' ? '✔ Kein Setup, Updates durch uns' : '✔ No setup, updates handled by us' }}</li>
               <li>{{ locale === 'de' ? '✔ Live-ATC via deinen OpenAI API-Key' : '✔ Live ATC via your OpenAI API key' }}</li>
             </ul>
+=======
+          <div class="card border-2 border-cyan-400/40 relative shadow-[0_0_40px_rgba(34,211,238,.25)] flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="100">
+            <div class="absolute -top-3 right-4 chip bg-cyan-500/30 border-cyan-400/50">{{ locale === 'de' ? 'Empfohlen' : 'Recommended' }}</div>
+            <div class="flex flex-col flex-1">
+              <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Hosted – Lernmodus' : 'Hosted – learning mode' }}</h3>
+              <p class="mt-2 text-white/80">
+                {{
+                  locale === 'de'
+                    ? 'Wir übernehmen die Grundkosten, damit du mit allen Basisfunktionen trainieren kannst. Für Live-ATC hinterlegst du deinen eigenen OpenAI API-Key – wir nutzen ihn nur für die Funkanfragen im Hintergrund.'
+                    : 'We cover the base costs so you can train with all fundamental features. For live ATC you provide your own OpenAI API key – we only use it for the background radio requests.'
+                }}
+              </p>
+              <div class="mt-5 text-3xl font-semibold">
+                0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Beta' : '/ beta' }}</span>
+              </div>
+              <ul class="mt-5 space-y-2 text-white/80 text-sm">
+                <li>{{ locale === 'de' ? '✔ Lernmodule & Basisfunktionen inklusive' : '✔ Learning modules & core features included' }}</li>
+                <li>{{ locale === 'de' ? '✔ Kein Setup, Updates durch uns' : '✔ No setup, updates handled by us' }}</li>
+                <li>{{ locale === 'de' ? '✔ Live-ATC via deinen OpenAI API-Key' : '✔ Live ATC via your OpenAI API key' }}</li>
+              </ul>
+            </div>
+>>>>>>> 2b6aa53 (Adjust pricing layout and waitlist copy)
             <NuxtLink to="#cta" class="btn btn-primary w-full mt-6">
               {{ locale === 'de' ? 'Warteliste' : 'Join waitlist' }}
             </NuxtLink>
           </div>
           <!-- Hosted Teams -->
+<<<<<<< HEAD
           <div class="card relative" data-aos="fade-up" data-aos-delay="200">
             <div class="absolute -top-3 right-4 chip">{{ locale === 'de' ? 'Teams' : 'Teams' }}</div>
             <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Hosted – Community Server' : 'Hosted – community server' }}</h3>
@@ -722,6 +761,28 @@
               <li>{{ locale === 'de' ? '✔ Eigener OpenAI API-Key oder Self-Host fallback' : '✔ Use your own OpenAI API key or self-host fallback' }}</li>
               <li>{{ locale === 'de' ? '✔ Feedback entscheidet über den weiteren Ausbau' : '✔ Feedback guides the next milestones' }}</li>
             </ul>
+=======
+          <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="200">
+            <div class="absolute -top-3 right-4 chip">{{ locale === 'de' ? 'Teams' : 'Teams' }}</div>
+            <div class="flex flex-col flex-1">
+              <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Hosted – Community Server' : 'Hosted – community server' }}</h3>
+              <p class="mt-2 text-white/80">
+                {{
+                  locale === 'de'
+                    ? 'Für virtuelle Airlines und Gruppen, die gemeinsam üben möchten. Wir testen dedizierte Umgebungen – aktuell ebenfalls 0€ und mit eigenem API-Key.'
+                    : 'For virtual airlines and groups that want to practise together. We are testing dedicated environments – currently also €0 and powered by your own API key.'
+                }}
+              </p>
+              <div class="mt-5 text-3xl font-semibold">
+                0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Beta' : '/ beta' }}</span>
+              </div>
+              <ul class="mt-5 space-y-2 text-white/80 text-sm">
+                <li>{{ locale === 'de' ? '✔ Gemeinsame Sessions & Rollen in Planung' : '✔ Shared sessions & roles in planning' }}</li>
+                <li>{{ locale === 'de' ? '✔ Eigener OpenAI API-Key oder Self-Host fallback' : '✔ Use your own OpenAI API key or self-host fallback' }}</li>
+                <li>{{ locale === 'de' ? '✔ Feedback entscheidet über den weiteren Ausbau' : '✔ Feedback guides the next milestones' }}</li>
+              </ul>
+            </div>
+>>>>>>> 2b6aa53 (Adjust pricing layout and waitlist copy)
             <NuxtLink to="#cta" class="btn btn-ghost w-full mt-6">
               {{ locale === 'de' ? 'Kontakt aufnehmen' : 'Get in touch' }}
             </NuxtLink>
@@ -877,40 +938,11 @@ POST /api/route/taxi
                 }}
               </p>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-4">
+            <div>
               <div v-if="waitlistLoading" class="text-sm text-white/60">
                 {{ locale === 'de' ? 'Lade Warteliste…' : 'Loading waitlist…' }}
               </div>
               <template v-else>
-                <div class="grid gap-3 sm:grid-cols-3">
-                  <div class="glass rounded-xl p-3">
-                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">
-                      {{ locale === 'de' ? 'Neu (7 Tage)' : 'New (7 days)' }}
-                    </div>
-                    <div class="mt-1 text-lg font-semibold text-white">+{{ formatNumber(waitlistRecent7) }}</div>
-                    <div class="text-xs text-white/50">
-                      {{ locale === 'de' ? 'aktive Lernplätze' : 'Active learning slots' }}
-                    </div>
-                  </div>
-                  <div class="glass rounded-xl p-3">
-                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">
-                      {{ locale === 'de' ? 'Neu (30 Tage)' : 'New (30 days)' }}
-                    </div>
-                    <div class="mt-1 text-lg font-semibold text-white">+{{ formatNumber(waitlistRecent30) }}</div>
-                    <div class="text-xs text-white/50">
-                      {{ locale === 'de' ? 'Langfristiger Zufluss' : 'Long-term inflow' }}
-                    </div>
-                  </div>
-                  <div class="glass rounded-xl p-3">
-                    <div class="text-[11px] uppercase tracking-[0.3em] text-white/50">
-                      {{ locale === 'de' ? 'Sichtbarer Puffer' : 'Visible buffer' }}
-                    </div>
-                    <div class="mt-1 text-lg font-semibold text-white">+{{ formatNumber(waitlistSyntheticBoost) }}</div>
-                    <div class="text-xs text-white/50">
-                      {{ locale === 'de' ? 'Reserve für nächste Drops' : 'Reserve for upcoming drops' }}
-                    </div>
-                  </div>
-                </div>
                 <div class="text-xs text-white/60">
                   {{ locale === 'de' ? 'Letzte Anmeldung:' : 'Last signup:' }}
                   <span class="font-medium text-white">{{ waitlistLastJoinedFormatted }}</span>
@@ -1312,9 +1344,6 @@ const allNewsEntries = computed<NewsPost[]>(() => getAllNews())
 const latestNews = computed<NewsPost[]>(() => allNewsEntries.value.slice(0, 3))
 
 const waitlistCountDisplay = computed(() => formatNumber(waitlistStats.value?.displayCount ?? 0))
-const waitlistRecent7 = computed(() => waitlistStats.value?.recent7Days ?? 0)
-const waitlistRecent30 = computed(() => waitlistStats.value?.recent30Days ?? 0)
-const waitlistSyntheticBoost = computed(() => waitlistStats.value?.syntheticBoost ?? 0)
 const waitlistLastJoinedFormatted = computed(() => {
   const iso = waitlistStats.value?.lastJoinedAt
   if (!iso) return '–'
@@ -1723,6 +1752,7 @@ onMounted(async () => {
 .btn-primary { @apply bg-cyan-500 text-white hover:bg-cyan-400 shadow-[0_0_40px_rgba(34,211,238,.25)]; }
 .btn-ghost { @apply bg-white/5 text-white hover:bg-white/10; }
 .card { @apply glass rounded-2xl p-5 md:p-6; }
+.pricing-card { overflow: visible; }
 .chip { @apply inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 text-white px-3 py-1 text-xs; }
 .roadmap-scale {
   display: grid;
