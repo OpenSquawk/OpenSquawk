@@ -638,23 +638,14 @@
         <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4" data-aos="fade-up">
           <div class="max-w-2xl">
             <h2 class="text-3xl md:text-4xl font-semibold">
-              {{ locale === 'de' ? 'Preise (Zielbild)' : 'Pricing (target)' }}
+              {{ locale === 'de' ? 'Pläne & Hosting' : 'Plans & hosting' }}
             </h2>
             <p class="mt-3 text-white/80">
               {{
                 locale === 'de'
-                  ? 'Wir arbeiten an einer fairen Kalkulation für Hosting. Zahlen unten sind grobe Zielwerte – Feedback willkommen.'
-                  : 'We are working on fair hosting prices. Figures below are rough targets – feedback welcome.'
+                  ? 'Drei Wege, OpenSquawk zu nutzen – alle aktuell für 0€, solange wir die Infrastruktur stemmen können.'
+                  : 'Three ways to use OpenSquawk – all currently €0 while we cover the infrastructure.'
               }}
-              <button @click="yearly = !yearly" class="chip ml-2">
-                <span>
-                  {{
-                    yearly
-                      ? (locale === 'de' ? 'jährlich' : 'yearly')
-                      : (locale === 'de' ? 'monatlich' : 'monthly')
-                  }}
-                </span>
-              </button>
             </p>
           </div>
         </div>
@@ -665,7 +656,11 @@
             <div class="absolute -top-3 right-4 chip">Community</div>
             <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Open‑Source (Self‑host)' : 'Open-source (self-host)' }}</h3>
             <p class="mt-2 text-white/80">
-              {{ locale === 'de' ? 'Volle Kontrolle. Eigene Infrastruktur. API-Keys selbst verwalten.' : 'Full control. Your infrastructure. Manage API keys yourself.' }}
+              {{
+                locale === 'de'
+                  ? 'Volle Kontrolle über Infrastruktur und Daten. Selbst hosten bleibt immer eine Option.'
+                  : 'Full control over infrastructure and data. Self-hosting is always an option.'
+              }}
             </p>
             <div class="mt-5 text-3xl font-semibold">
               0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ immer' : '/ forever' }}</span>
@@ -685,49 +680,67 @@
               {{ locale === 'de' ? 'Repository ansehen' : 'View repository' }}
             </NuxtLink>
           </div>
-          <!-- Hosted Basic -->
+          <!-- Hosted Community -->
           <div class="card border-2 border-cyan-400/40 relative shadow-[0_0_40px_rgba(34,211,238,.25)]" data-aos="fade-up" data-aos-delay="100">
             <div class="absolute -top-3 right-4 chip bg-cyan-500/30 border-cyan-400/50">{{ locale === 'de' ? 'Empfohlen' : 'Recommended' }}</div>
-            <h3 class="text-xl font-semibold">Hosted – Basic</h3>
+            <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Hosted – Lernmodus' : 'Hosted – learning mode' }}</h3>
             <p class="mt-2 text-white/80">
-              {{ locale === 'de' ? 'Geplanter Rundum-Service: Kein Setup, Updates inklusive. Aktuell nur als Konzept.' : 'Planned full-service offering: zero setup, updates included. Currently concept only.' }}
+              {{
+                locale === 'de'
+                  ? 'Wir übernehmen die Grundkosten, damit du mit allen Basisfunktionen trainieren kannst. Für Live-ATC hinterlegst du deinen eigenen OpenAI API-Key – wir nutzen ihn nur für die Funkanfragen im Hintergrund.'
+                  : 'We cover the base costs so you can train with all fundamental features. For live ATC you provide your own OpenAI API key – we only use it for the background radio requests.'
+              }}
             </p>
             <div class="mt-5 text-3xl font-semibold">
-              <span>{{ yearly ? (locale === 'de' ? '≈4€' : '≈€4') : (locale === 'de' ? '≈4,50€' : '≈€4.50') }}</span>
-              <span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Monat*' : '/ month*' }}</span>
+              0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Beta' : '/ beta' }}</span>
             </div>
             <ul class="mt-5 space-y-2 text-white/80 text-sm">
-              <li>{{ locale === 'de' ? '✔ Fair-Use Audio-Minuten (Ausarbeitung)' : '✔ Fair-use audio minutes (work in progress)' }}</li>
-              <li>{{ locale === 'de' ? '✔ Lernpfad & Fortschritt (abhängig von Community-Feedback)' : '✔ Learning path & progress (depends on community feedback)' }}</li>
-              <li>{{ locale === 'de' ? '✔ Updates & Cloud-Scaling (Kostenmodell in Arbeit)' : '✔ Updates & cloud scaling (pricing model in progress)' }}</li>
+              <li>{{ locale === 'de' ? '✔ Lernmodule & Basisfunktionen inklusive' : '✔ Learning modules & core features included' }}</li>
+              <li>{{ locale === 'de' ? '✔ Kein Setup, Updates durch uns' : '✔ No setup, updates handled by us' }}</li>
+              <li>{{ locale === 'de' ? '✔ Live-ATC via deinen OpenAI API-Key' : '✔ Live ATC via your OpenAI API key' }}</li>
             </ul>
             <NuxtLink to="#cta" class="btn btn-primary w-full mt-6">
-              {{ locale === 'de' ? 'Interesse melden' : 'Register interest' }}
+              {{ locale === 'de' ? 'Warteliste' : 'Join waitlist' }}
             </NuxtLink>
-            <p class="mt-3 text-xs text-white/60">
-              {{ locale === 'de' ? '* Zielwert, finale Preise folgen nach Kostentest.' : '* Target value, final pricing after cost validation.' }}
-            </p>
           </div>
-          <!-- Hosted Pro -->
+          <!-- Hosted Teams -->
           <div class="card relative" data-aos="fade-up" data-aos-delay="200">
-            <div class="absolute -top-3 right-4 chip">{{ locale === 'de' ? 'Power‑User' : 'Power users' }}</div>
-            <h3 class="text-xl font-semibold">Hosted – Pro</h3>
+            <div class="absolute -top-3 right-4 chip">{{ locale === 'de' ? 'Teams' : 'Teams' }}</div>
+            <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Hosted – Community Server' : 'Hosted – community server' }}</h3>
             <p class="mt-2 text-white/80">
-              {{ locale === 'de' ? 'Konzept für größere Gruppen & virtuelle Airlines. Preise werden gemeinsam kalkuliert.' : 'Concept for larger groups and virtual airlines. Pricing will be calculated together.' }}
+              {{
+                locale === 'de'
+                  ? 'Für virtuelle Airlines und Gruppen, die gemeinsam üben möchten. Wir testen dedizierte Umgebungen – aktuell ebenfalls 0€ und mit eigenem API-Key.'
+                  : 'For virtual airlines and groups that want to practise together. We are testing dedicated environments – currently also €0 and powered by your own API key.'
+              }}
             </p>
             <div class="mt-5 text-3xl font-semibold">
-              <span>{{ yearly ? (locale === 'de' ? '≈12€' : '≈€12') : (locale === 'de' ? '≈14€' : '≈€14') }}</span>
-              <span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Monat*' : '/ month*' }}</span>
+              0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Beta' : '/ beta' }}</span>
             </div>
             <ul class="mt-5 space-y-2 text-white/80 text-sm">
-              <li>{{ locale === 'de' ? '✔ Höhere Limits (nach Bedarf)' : '✔ Higher limits (as needed)' }}</li>
-              <li>{{ locale === 'de' ? '✔ Team-Seats & Rollen (Diskussion offen)' : '✔ Team seats & roles (open for discussion)' }}</li>
-              <li>{{ locale === 'de' ? '✔ Priorisierter Support (Community + optional SLA)' : '✔ Prioritised support (community + optional SLA)' }}</li>
+              <li>{{ locale === 'de' ? '✔ Gemeinsame Sessions & Rollen in Planung' : '✔ Shared sessions & roles in planning' }}</li>
+              <li>{{ locale === 'de' ? '✔ Eigener OpenAI API-Key oder Self-Host fallback' : '✔ Use your own OpenAI API key or self-host fallback' }}</li>
+              <li>{{ locale === 'de' ? '✔ Feedback entscheidet über den weiteren Ausbau' : '✔ Feedback guides the next milestones' }}</li>
             </ul>
             <NuxtLink to="#cta" class="btn btn-ghost w-full mt-6">
               {{ locale === 'de' ? 'Kontakt aufnehmen' : 'Get in touch' }}
             </NuxtLink>
           </div>
+        </div>
+
+        <div class="mt-8 text-sm text-white/70 space-y-2" data-aos="fade-up" data-aos-delay="300">
+          <p v-if="locale === 'de'">
+            Wir dürfen VATSIM nur nutzen, solange wir damit kein Geld verdienen. Deswegen braucht Live-ATC im Moment deinen eigenen OpenAI API-Key, den wir ausschließlich für die entsprechenden Anfragen verwenden.
+          </p>
+          <p v-else>
+            We are only allowed to connect to VATSIM as long as we do not make money with it. That is why live ATC currently requires your own OpenAI API key, which we use solely for the related requests.
+          </p>
+          <p v-if="locale === 'de'">
+            Wir suchen aktiv nach einer einfachen Plug-and-Play-Lösung – sobald wir eine praktikable Variante gefunden haben, rollen wir sie aus.
+          </p>
+          <p v-else>
+            We are actively looking for a simple plug-and-play option – as soon as we find a viable approach, we will roll it out.
+          </p>
         </div>
       </div>
     </section>
@@ -1257,7 +1270,6 @@ interface RoadmapResponse {
   recentVotes7Days: number
 }
 
-const yearly = ref(true)
 const year = new Date().getFullYear()
 
 const waitlistForm = reactive({
