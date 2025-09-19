@@ -1,6 +1,7 @@
 // communicationsEngine composable
 import { ref, computed, readonly } from 'vue'
 import atcDecisionTree from "../data/atcDecisionTree";
+import { normalizeRadioPhrase } from './radioSpeech'
 
 // --- DecisionTree types (derived from ~/data/atcDecisionTree.json) ---
 type Role = 'pilot' | 'atc' | 'system'
@@ -140,50 +141,9 @@ export interface EngineLog {
     offSchema?: boolean
 }
 
-// NATO/ICAO normalizer trimmed for better performance
-const NATO_PHONETIC: Record<string, string> = {
-    A: 'Alpha', B: 'Bravo', C: 'Charlie', D: 'Delta', E: 'Echo', F: 'Foxtrot',
-    G: 'Golf', H: 'Hotel', I: 'India', J: 'Juliett', K: 'Kilo', L: 'Lima',
-    M: 'Mike', N: 'November', O: 'Oscar', P: 'Papa', Q: 'Quebec', R: 'Romeo',
-    S: 'Sierra', T: 'Tango', U: 'Uniform', V: 'Victor', W: 'Whiskey',
-    X: 'X-ray', Y: 'Yankee', Z: 'Zulu'
-}
-
-const ICAO_NUMBERS: Record<string, string> = {
-    '0': 'zero', '1': 'wun', '2': 'too', '3': 'tree', '4': 'fower',
-    '5': 'fife', '6': 'six', '7': 'seven', '8': 'eight', '9': 'niner'
-}
-
 export function normalizeATCText(text: string, context: Record<string, any>): string {
-    let normalized = renderTpl(text, context)
-
-    // Runway normalization
-    normalized = normalized.replace(/runway\s+(\d{1,2})([LRC]?)/gi, (_, num: string, suffix: string) => {
-        const n = num.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
-        const s = suffix === 'L' ? ' left' : suffix === 'R' ? ' right' : suffix === 'C' ? ' center' : ''
-        return `runway ${n}${s}`
-    })
-
-    // Flight Level
-    normalized = normalized.replace(/FL(\d{3})/gi, (_, lvl: string) => {
-        const n = lvl.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
-        return `flight level ${n}`
-    })
-
-    // Frequency normalization
-    normalized = normalized.replace(/(\d{3})\.(\d{1,3})/g, (_, a: string, b: string) => {
-        const A = a.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
-        const B = b.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
-        return `${A} decimal ${B}`
-    })
-
-    // Squawk codes
-    normalized = normalized.replace(/squawk\s+(\d{4})/gi, (_, code: string) => {
-        const n = code.split('').map(d => ICAO_NUMBERS[d] || d).join(' ')
-        return `squawk ${n}`
-    })
-
-    return normalized
+    const rendered = renderTpl(text, context)
+    return normalizeRadioPhrase(rendered)
 }
 
 function renderTpl(tpl: string, ctx: Record<string, any>): string {

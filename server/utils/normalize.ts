@@ -1,6 +1,7 @@
 // yarn add openai
 import OpenAI from "openai";
 import fs from "node:fs";
+import { normalizeRadioPhrase } from "../../shared/utils/radioSpeech";
 import { getServerRuntimeConfig } from "./runtimeConfig";
 
 const { openaiKey, openaiProject, llmModel, ttsModel } = getServerRuntimeConfig();
@@ -139,18 +140,6 @@ export function atcReplyPrompt(userText: string, state?: {
    Normalizer → TTS (wie zuvor)
    ========================= */
 
-const DIGIT: Record<string, string> = {
-    "0": "zero", "1": "wun", "2": "too", "3": "tree", "4": "fower",
-    "5": "fife", "6": "six", "7": "seven", "8": "eight", "9": "niner",
-};
-
-const NATO: Record<string, string> = {
-    A:"Alfa",B:"Bravo",C:"Charlie",D:"Delta",E:"Echo",F:"Foxtrot",G:"Golf",H:"Hotel",
-    I:"India",J:"Juliett",K:"Kilo",L:"Lima",M:"Mike",N:"November",O:"Oscar",P:"Papa",
-    Q:"Quebec",R:"Romeo",S:"Sierra",T:"Tango",U:"Uniform",V:"Victor",W:"Whiskey",
-    X:"X-ray",Y:"Yankee",Z:"Zulu"
-};
-
 // Airline-Telephony (erweiterbar)
 export const CALLSIGN_MAP: Record<string,string> = {
     DLH: "Lufthansa",
@@ -169,89 +158,16 @@ export const CALLSIGN_MAP: Record<string,string> = {
     EZY: "Easy",
 };
 
-const spellDigits = (s: string) =>
-    s.split("").map(ch => DIGIT[ch] ?? ch).join(" ");
-
-const toNato = (s: string) =>
-    s.toUpperCase().split("").map(ch => NATO[ch] ?? ch).join("-");
-
-const runwaySpeak = (rw: string) => {
-    const m = rw.match(/^(\d{2})([LCR])?$/i);
-    if (!m) return rw;
-    const num = spellDigits(m[1]);
-    const side = m[2]?.toUpperCase() === "L" ? "left"
-        : m[2]?.toUpperCase() === "C" ? "center"
-            : m[2]?.toUpperCase() === "R" ? "right" : "";
-    return `runway ${num}${side ? " " + side : ""}`;
-};
-
-const headingSpeak = (hdg: string) => `heading ${spellDigits(hdg.padStart(3, "0"))}`;
-const squawkSpeak = (code: string) => `squawk ${spellDigits(code)}`;
-
-const freqSpeak = (f: string) => {
-    const [a,b] = f.split(".");
-    const left = spellDigits(a);
-    const right = b ? spellDigits(b) : "";
-    return `${left}${b ? " decimal " + right : ""}`;
-};
-
-const altitudeSpeak = (ft: number) => {
-    if (!Number.isFinite(ft)) return `${ft} feet`;
-    const thousands = Math.floor(ft/1000);
-    const hundreds = Math.round((ft % 1000)/100)*100;
-    const parts: string[] = [];
-    if (thousands) parts.push(`${spellDigits(String(thousands))} thousand`);
-    if (hundreds) {
-        const h = hundreds === 900 ? "nine hundred"
-            : hundreds === 800 ? "eight hundred"
-                : hundreds === 700 ? "seven hundred"
-                    : hundreds === 600 ? "six hundred"
-                        : hundreds === 500 ? "five hundred"
-                            : hundreds === 400 ? "fower hundred"
-                                : hundreds === 300 ? "tree hundred"
-                                    : hundreds === 200 ? "too hundred"
-                                        : hundreds === 100 ? "wun hundred"
-                                            : spellDigits(String(hundreds));
-        parts.push(h);
-    }
-    return `${parts.join(" ")} feet`.trim();
-};
-
-const flightLevelSpeak = (fl: string) =>
-    `flight level ${spellDigits(fl.replace(/^0+/, ""))}`;
-
-const qnhSpeak = (q: string) => `QNH ${spellDigits(q)}`;
-
-const callsignSpeak = (raw: string, map: Record<string,string>) => {
-    const up = raw.toUpperCase();
-    const m = up.match(/^([A-Z]{2,3})(\d{1,4}[A-Z]?)$/);
-    if (!m) return raw;
-    const telephony = map[m[1]] ?? toNato(m[1]).replace(/-/g," ");
-    const suffix = spellDigits(m[2].replace(/[A-Z]$/, (l) => " " + (NATO[l] ?? l)));
-    return `${telephony} ${suffix}`;
-};
-
-const icaoAirportSpeak = (code: string) =>
-    /^[A-Z]{4}$/.test(code) ? toNato(code) : code;
-
 // Public Normalizer
 export function normalizeATC(
     text: string,
     opts?: { airlineMap?: Record<string,string>; }
 ) {
-    let out = text;
-
-    out = out.replace(/\b(\d{3})\.(\d{3})\b/g, (_,a,b)=> `${freqSpeak(`${a}.${b}`)}`);
-    out = out.replace(/\b(?:HDG|heading)\s*(\d{2,3})\b/gi, (_,h)=> headingSpeak(h));
-    out = out.replace(/\b(?:RWY|runway)\s*(\d{2}[LCR]?)\b/gi, (_,rw)=> runwaySpeak(rw));
-    out = out.replace(/\b(?:squawk|code)\s*(\d{4})\b/gi, (_,c)=> squawkSpeak(c));
-    out = out.replace(/\bFL\s*(\d{2,3})\b/gi, (_,fl)=> flightLevelSpeak(fl));
-    out = out.replace(/\b(\d{3,5})\s*(?:ft|feet)\b/gi, (_,ft)=> altitudeSpeak(Number(ft)));
-    out = out.replace(/\bQNH\s*(\d{3,4})\b/gi, (_,q)=> qnhSpeak(q));
-    out = out.replace(/\b([A-Z]{4})\b/g, (_,code)=> icaoAirportSpeak(code));
-    out = out.replace(/\b([A-Z]{2,3}\d{1,4}[A-Z]?)\b/g, (m)=> callsignSpeak(m, opts?.airlineMap ?? CALLSIGN_MAP));
-
-    return out.replace(/\s+/g," ").trim();
+    return normalizeRadioPhrase(text, {
+        airlineMap: opts?.airlineMap ?? CALLSIGN_MAP,
+        expandAirports: true,
+        expandCallsigns: true,
+    });
 }
 
 // TTS Wrapper (mp3)
