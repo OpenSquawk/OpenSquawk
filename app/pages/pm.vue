@@ -894,6 +894,9 @@ import { useRouter } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
+import { loadPizzicatoLite } from '../../shared/utils/pizzicatoLite'
+import type { PizzicatoLite } from '../../shared/utils/pizzicatoLite'
+import { createNoiseGenerators, getReadabilityProfile } from '../../shared/utils/radioEffects'
 
 // Core State
 const engine = useCommunicationsEngine()
@@ -1266,6 +1269,7 @@ const simulationStepCount = simulationPilotSteps.length
 const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 
 let audioContext: AudioContext | null = null
+let pizzicatoLite: PizzicatoLite | null = null
 let speechQueue: Promise<void> = Promise.resolve()
 
 const enqueueSpeech = (task: () => Promise<void>) => {
@@ -1341,102 +1345,93 @@ const ensureAudioContext = async (): Promise<AudioContext | null> => {
   return audioContext
 }
 
-const playAudioWithEffects = async (base64: string) => {
+const ensurePizzicato = async (ctx: AudioContext | null): Promise<PizzicatoLite | null> => {
+  if (!ctx) return null
+  if (!pizzicatoLite) {
+    pizzicatoLite = await loadPizzicatoLite()
+  }
+  return pizzicatoLite
+}
+
+
+const playAudioWithEffects = async (base64: string, mime = 'audio/wav') => {
   if (typeof window === 'undefined') return
 
-  if (!radioEffectsEnabled.value) {
-    await new Promise<void>((resolve) => {
-      const audio = new Audio(`data:audio/wav;base64,${base64}`)
+  const dataUrl = `data:${mime || 'audio/wav'};base64,${base64}`
+
+  const playWithoutEffects = () =>
+    new Promise<void>((resolve) => {
+      const audio = new Audio(dataUrl)
       audio.onended = () => resolve()
       audio.onerror = () => resolve()
       audio.play().catch(() => resolve())
     })
+
+  if (!radioEffectsEnabled.value) {
+    await playWithoutEffects()
     return
   }
 
   try {
     const ctx = await ensureAudioContext()
-    if (!ctx) throw new Error('AudioContext unavailable')
+    const pizzicato = await ensurePizzicato(ctx)
+    if (!ctx || !pizzicato) throw new Error('Audio engine unavailable')
 
-    const binary = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
-    const arrayBuffer = binary.buffer.slice(binary.byteOffset, binary.byteOffset + binary.byteLength)
-    const buffer = await ctx.decodeAudioData(arrayBuffer)
+    const sound = await pizzicato.createSoundFromBase64(ctx, base64)
+    const readability = Math.max(1, Math.min(5, signalStrength.value))
+    const profile = getReadabilityProfile(readability)
 
-    await new Promise<void>((resolve) => {
-      const source = ctx.createBufferSource()
-      source.buffer = buffer
+    const { Effects } = pizzicato
 
-      const highpass = ctx.createBiquadFilter()
-      highpass.type = 'highpass'
-      highpass.frequency.value = 320
-
-      const lowpass = ctx.createBiquadFilter()
-      lowpass.type = 'lowpass'
-      lowpass.frequency.value = 3100
-
-      const compressor = ctx.createDynamicsCompressor()
-      compressor.threshold.value = -28
-      compressor.knee.value = 30
-      compressor.ratio.value = 12
-      compressor.attack.value = 0.003
-      compressor.release.value = 0.25
-
-      const gainNode = ctx.createGain()
-      gainNode.gain.value = 0.9
-
-      source.connect(highpass)
-      highpass.connect(lowpass)
-      lowpass.connect(compressor)
-      compressor.connect(gainNode)
-      gainNode.connect(ctx.destination)
-
-      let noiseSource: AudioBufferSourceNode | null = null
-
-      if (buffer.duration > 0) {
-        const length = Math.ceil(buffer.duration * ctx.sampleRate)
-        const noiseBuffer = ctx.createBuffer(1, length, ctx.sampleRate)
-        const channel = noiseBuffer.getChannelData(0)
-        const strength = Math.max(1, Math.min(5, signalStrength.value))
-        const intensity = (6 - strength) / 6
-        const amplitude = 0.015 + intensity * 0.045
-        for (let i = 0; i < channel.length; i++) {
-          channel[i] = (Math.random() * 2 - 1) * amplitude
-        }
-        noiseSource = ctx.createBufferSource()
-        noiseSource.buffer = noiseBuffer
-        const bandPass = ctx.createBiquadFilter()
-        bandPass.type = 'bandpass'
-        bandPass.frequency.value = 1800
-        bandPass.Q.value = 1.2
-        const noiseGain = ctx.createGain()
-        noiseGain.gain.value = amplitude * 0.6
-        noiseSource.connect(bandPass)
-        bandPass.connect(noiseGain)
-        noiseGain.connect(ctx.destination)
-        noiseSource.start(0)
-      }
-
-      source.onended = () => {
-        if (noiseSource) {
-          try {
-            noiseSource.stop()
-          } catch (err) {
-            // ignore
-          }
-        }
-        resolve()
-      }
-
-      source.start(0)
+    const highpass = new Effects.HighPassFilter(ctx, {
+      frequency: profile.eq.highpass,
+      q: profile.eq.highpassQ
     })
+    const lowpass = new Effects.LowPassFilter(ctx, {
+      frequency: profile.eq.lowpass,
+      q: profile.eq.lowpassQ
+    })
+    sound.addEffect(highpass)
+    sound.addEffect(lowpass)
+
+    if (profile.eq.bandpass) {
+      sound.addEffect(
+        new Effects.BandPassFilter(ctx, {
+          frequency: profile.eq.bandpass.frequency,
+          q: profile.eq.bandpass.q
+        })
+      )
+    }
+
+    if (profile.presence) {
+      sound.addEffect(new Effects.PeakingFilter(ctx, profile.presence))
+    }
+
+    profile.distortions.forEach((amount) => {
+      sound.addEffect(new Effects.Distortion(ctx, { amount }))
+    })
+
+    sound.addEffect(new Effects.Compressor(ctx, profile.compressor))
+
+    if (profile.tremolos) {
+      profile.tremolos.forEach((tremolo) => {
+        sound.addEffect(new Effects.Tremolo(ctx, tremolo))
+      })
+    }
+
+    sound.setVolume(profile.gain)
+
+    const stopNoiseGenerators = createNoiseGenerators(ctx, sound.duration, profile, readability)
+
+    try {
+      await sound.play()
+    } finally {
+      stopNoiseGenerators.forEach((stop) => stop())
+      sound.clearEffects()
+    }
   } catch (err) {
     console.error('Failed to apply radio effect', err)
-    await new Promise<void>((resolve) => {
-      const audio = new Audio(`data:audio/wav;base64,${base64}`)
-      audio.onended = () => resolve()
-      audio.onerror = () => resolve()
-      audio.play().catch(() => resolve())
-    })
+    await playWithoutEffects()
   }
 }
 
@@ -1456,7 +1451,7 @@ const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = 
       if (options.updateLastTransmission !== false) {
         setLastTransmission(options.lastTransmissionLabel || `ATC: ${prepared.plain}`)
       }
-      await playAudioWithEffects(response.audio.base64)
+      await playAudioWithEffects(response.audio.base64, response.audio.mime)
     }
   } catch (err) {
     console.error('TTS failed:', err)
@@ -1499,7 +1494,7 @@ const speakPlainText = (text: string, options: SpeechOptions = {}) => {
         if (options.updateLastTransmission !== false) {
           setLastTransmission(options.lastTransmissionLabel || trimmed)
         }
-        await playAudioWithEffects(response.audio.base64)
+        await playAudioWithEffects(response.audio.base64, response.audio.mime)
       }
     } catch (err) {
       console.error('TTS failed:', err)
