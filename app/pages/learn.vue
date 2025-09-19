@@ -48,9 +48,63 @@
       <div class="container">
         <div class="panel hero-panel" :style="worldTiltStyle" @mousemove="tilt">
           <div class="hero-left">
-            <div class="eyebrow">ALPHA BUILD · TRAINING</div>
+            <div class="hero-header">
+              <div class="eyebrow">Season 1 · Ground School</div>
+              <div class="hero-pill">
+                <v-icon size="16">mdi-trophy</v-icon>
+                {{ currentBadge.name }}
+              </div>
+            </div>
             <h1 class="h1">ATC Learning Hub</h1>
-            <p class="muted">Guided paths · missions · XP · badges. Stored locally.</p>
+            <p class="muted hero-sub">
+              Missions, XP bursts and animated badges that actually react to your flying. Stored locally.
+            </p>
+
+            <div class="hero-highlight">
+              <div class="hero-orb" :style="{ '--progress': levelProgress + '%' }">
+                <div class="hero-orb-core">
+                  <span class="hero-orb-level">Lvl {{ level }}</span>
+                  <span class="hero-orb-progress">{{ levelProgress }}%</span>
+                </div>
+              </div>
+              <div class="hero-highlight-meta">
+                <span class="hero-tag">Next level</span>
+                <div class="hero-highlight-title">
+                  {{ xpToNextLevel }} XP to Level {{ nextLevel }}
+                </div>
+                <p class="muted small">
+                  Keep your streak alive with {{ dailyHint }} and mission clears.
+                </p>
+                <div class="hero-highlight-bar" role="progressbar" :aria-valuenow="levelProgress" aria-valuemin="0" aria-valuemax="100">
+                  <div class="hero-highlight-fill" :style="{ width: levelProgress + '%' }"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hero-metrics">
+              <div class="metric-card">
+                <div class="metric-icon"><v-icon size="20">mdi-headset</v-icon></div>
+                <div class="metric-main">
+                  <div class="metric-value">{{ finishedLessons }}/{{ totalLessons }}</div>
+                  <div class="metric-label">Lessons complete</div>
+                </div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-icon"><v-icon size="20">mdi-target-account</v-icon></div>
+                <div class="metric-main">
+                  <div class="metric-value">{{ missionCompletionPct }}%</div>
+                  <div class="metric-label">Mission progress</div>
+                </div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-icon"><v-icon size="20">mdi-star-shooting</v-icon></div>
+                <div class="metric-main">
+                  <div class="metric-value">{{ finishedLessons ? globalAccuracy + '%' : '—' }}</div>
+                  <div class="metric-label">Avg. best score</div>
+                </div>
+              </div>
+            </div>
+
             <div class="actions">
               <button class="btn primary" @click="panel='hub'">
                 <v-icon>mdi-play</v-icon>
@@ -65,21 +119,54 @@
                 Test
               </button>
             </div>
+
             <div class="season">
+              <div class="season-head">
+                <span>Season progress</span>
+                <span>{{ seasonPct }}%</span>
+              </div>
               <div class="bar">
                 <div class="fill" :style="{ width: seasonPct + '%' }"></div>
               </div>
-              <div class="meta"><span>Season 1 · Ground School</span><span>{{ seasonPct }}%</span></div>
             </div>
           </div>
 
           <div class="hero-right">
+            <div class="badge-stack">
+              <div class="badge-card current">
+                <div class="badge-chip">
+                  <v-icon size="16">mdi-shield-star</v-icon>
+                  Current badge
+                </div>
+                <div class="badge-name">{{ currentBadge.name }}</div>
+                <p class="muted small">{{ currentBadge.description }}</p>
+              </div>
+              <div v-if="nextBadge" class="badge-card next">
+                <div class="badge-chip accent">
+                  <v-icon size="16">mdi-star-plus</v-icon>
+                  Next badge
+                </div>
+                <div class="badge-name">{{ nextBadge.name }}</div>
+                <p class="muted small">{{ nextBadgeXpRemaining }} XP to unlock</p>
+                <div class="badge-progress" role="progressbar" :aria-valuenow="nextBadgeProgress" aria-valuemin="0" aria-valuemax="100">
+                  <div class="badge-progress-fill" :style="{ width: nextBadgeProgress + '%' }"></div>
+                </div>
+              </div>
+              <div v-else class="badge-card next complete">
+                <div class="badge-chip accent">
+                  <v-icon size="16">mdi-shield-check</v-icon>
+                  All badges unlocked
+                </div>
+                <p class="muted small">Future seasons will add more callsigns and flair.</p>
+              </div>
+            </div>
+
             <div class="rail-title">
               <v-icon size="18">mdi-calendar-star</v-icon>
               Daily Challenges
             </div>
             <div class="rail">
-              <div v-for="d in dailies" :key="d.id" class="card">
+              <div v-for="d in dailies" :key="d.id" class="card challenge-card">
                 <div class="card-head">
                   <span class="badge">{{ d.reward }} XP</span>
                   <v-icon size="18">mdi-lightning-bolt</v-icon>
@@ -115,20 +202,35 @@
                 <v-icon size="18">mdi-flag-checkered</v-icon>
                 {{ m.title }}
               </div>
-              <div class="muted">{{ doneCount(m.id) }}/{{ m.lessons.length }}</div>
+              <div class="tile-status" :class="tileStatusClass(m.id)">
+                <v-icon size="16">{{ moduleStatusIcon(m.id) }}</v-icon>
+                <span>{{ moduleStatusText(m.id) }}</span>
+              </div>
             </div>
             <div class="muted small">{{ m.subtitle }}</div>
             <div class="line">
               <div class="line-fill" :style="{ width: pct(m.id)+'%' }"></div>
             </div>
+            <div class="tile-progress-meta">
+              <span>{{ doneCount(m.id) }}/{{ m.lessons.length }} lessons</span>
+              <span>{{ moduleHasProgress(m.id) ? avgScore(m.id) + '%' : '—' }} avg</span>
+            </div>
             <div class="tile-actions">
-              <button class="btn primary" :disabled="!isModuleUnlocked(m.id)" @click="openModule(m.id)">
-                <v-icon size="18">mdi-play</v-icon>
-                Start
+              <button
+                  class="btn primary"
+                  :disabled="!isModuleUnlocked(m.id)"
+                  @click="handleModulePrimary(m.id)"
+              >
+                <v-icon size="18">{{ modulePrimaryIcon(m.id) }}</v-icon>
+                {{ modulePrimaryLabel(m.id) }}
               </button>
-              <button class="btn soft" @click="quickContinue(m.id)">
-                <v-icon size="18">mdi-skip-next</v-icon>
-                Continue
+              <button
+                  class="btn ghost"
+                  :disabled="!isModuleUnlocked(m.id)"
+                  @click="openModule(m.id)"
+              >
+                <v-icon size="18">{{ moduleSecondaryIcon(m.id) }}</v-icon>
+                {{ moduleSecondaryLabel(m.id) }}
               </button>
             </div>
           </div>
@@ -162,13 +264,14 @@
             :class="{ active: activeLesson && activeLesson.id===l.id, ok: bestScore(current.id,l.id)>=80 }"
             @click="selectLesson(l)"
         >
+          <span class="lesson-score" :class="lessonScoreClass(current.id, l.id)">
+            <v-icon size="14">{{ lessonScoreIcon(current.id, l.id) }}</v-icon>
+            {{ lessonScoreLabel(current.id, l.id) }}
+          </span>
           <div class="lesson-top">
             <div class="lesson-title">
               <v-icon size="18">mdi-headset</v-icon>
               {{ l.title }}
-            </div>
-              <div class="chip" :class="{ ok: bestScore(current.id,l.id)>=80 }">
-              {{ bestScore(current.id, l.id) ? bestScore(current.id, l.id) + '%' : 'new' }}
             </div>
           </div>
           <div class="muted small">{{ l.desc }}</div>
@@ -1856,10 +1959,68 @@ const defaultCfg = createDefaultLearnConfig()
 const cfg = ref<LearnConfig>({ ...defaultCfg })
 audioReveal.value = !cfg.value.audioChallenge
 
+const XP_PER_LEVEL = 300
 const xp = ref(0)
 const progress = ref<LearnProgress>({})
-const level = computed(() => 1 + Math.floor(xp.value / 300))
+const level = computed(() => 1 + Math.floor(xp.value / XP_PER_LEVEL))
+const nextLevel = computed(() => level.value + 1)
+const levelProgress = computed(() => Math.min(100, Math.round(((xp.value % XP_PER_LEVEL) / XP_PER_LEVEL) * 100)))
+const xpToNextLevel = computed(() => Math.max(0, level.value * XP_PER_LEVEL - xp.value))
 const seasonPct = computed(() => Math.min(100, Math.round((xp.value % 1000) / 10)))
+
+type BadgeTier = { id: string; name: string; xp: number; description: string }
+
+const badgeTrack: BadgeTier[] = [
+  { id: 'rookie', name: 'Runway Rookie', xp: 0, description: 'Complete your first guided mission.' },
+  { id: 'cadet', name: 'Clearance Cadet', xp: 120, description: 'Score three missions with ≥80%.' },
+  { id: 'navigator', name: 'Taxi Navigator', xp: 360, description: 'Keep the flow going with solid readbacks.' },
+  { id: 'tower', name: 'Tower Pro', xp: 720, description: 'Master departures with confident phraseology.' }
+]
+
+const currentBadge = computed(() => {
+  let unlocked = badgeTrack[0]
+  for (const badge of badgeTrack) {
+    if (xp.value >= badge.xp) {
+      unlocked = badge
+    }
+  }
+  return unlocked
+})
+
+const nextBadge = computed(() => badgeTrack.find(badge => badge.xp > xp.value) || null)
+
+const nextBadgeProgress = computed(() => {
+  const upcoming = nextBadge.value
+  if (!upcoming) return 100
+  const previous = badgeTrack.slice().reverse().find(badge => badge.xp <= xp.value) || badgeTrack[0]
+  const span = Math.max(1, upcoming.xp - previous.xp)
+  const gained = xp.value - previous.xp
+  return Math.min(100, Math.round((gained / span) * 100))
+})
+
+const nextBadgeXpRemaining = computed(() => {
+  const upcoming = nextBadge.value
+  if (!upcoming) return 0
+  return Math.max(0, upcoming.xp - xp.value)
+})
+
+const totalLessons = computed(() => modules.value.reduce((sum, module) => sum + module.lessons.length, 0))
+const finishedLessons = computed(() => modules.value.reduce((sum, module) => sum + doneCount(module.id), 0))
+const missionCompletionPct = computed(() => (totalLessons.value ? Math.round((finishedLessons.value / totalLessons.value) * 100) : 0))
+
+const globalAccuracy = computed(() => {
+  const scores: number[] = []
+  Object.values(progress.value || {}).forEach(module => {
+    Object.values(module || {}).forEach(entry => {
+      if (entry && typeof entry.best === 'number' && entry.best > 0) {
+        scores.push(entry.best)
+      }
+    })
+  })
+  if (!scores.length) return 0
+  const avg = scores.reduce((acc, value) => acc + value, 0) / scores.length
+  return Math.round(avg)
+})
 
 const audioContentHidden = computed(() => cfg.value.audioChallenge && !audioReveal.value)
 
@@ -2280,6 +2441,22 @@ function bestScore(modId: string, lesId: string) {
   return progress.value[modId]?.[lesId]?.best || 0
 }
 
+function moduleHasProgress(modId: string) {
+  const moduleProgress = progress.value[modId]
+  if (!moduleProgress) return false
+  return Object.values(moduleProgress).some(entry => {
+    if (!entry) return false
+    return Boolean(entry.done) || (typeof entry.best === 'number' && entry.best > 0)
+  })
+}
+
+function moduleCompleted(modId: string) {
+  const module = modules.value.find(item => item.id === modId)
+  if (!module) return false
+  if (!module.lessons.length) return false
+  return doneCount(modId) >= module.lessons.length
+}
+
 function doneCount(modId: string) {
   const module = modules.value.find(item => item.id === modId)
   if (!module) return 0
@@ -2302,11 +2479,81 @@ function avgScore(modId: string) {
   return Math.round(sum / (values.length || 1))
 }
 
+function handleModulePrimary(modId: string) {
+  quickContinue(modId)
+}
+
+function modulePrimaryLabel(modId: string) {
+  if (!moduleHasProgress(modId)) return 'Start'
+  return moduleCompleted(modId) ? 'Review' : 'Continue'
+}
+
+function modulePrimaryIcon(modId: string) {
+  if (!moduleHasProgress(modId)) return 'mdi-play'
+  return moduleCompleted(modId) ? 'mdi-refresh' : 'mdi-skip-next'
+}
+
+function moduleSecondaryLabel(modId: string) {
+  return moduleHasProgress(modId) ? 'Overview' : 'Preview'
+}
+
+function moduleSecondaryIcon(modId: string) {
+  return moduleHasProgress(modId) ? 'mdi-view-grid-outline' : 'mdi-information-outline'
+}
+
+function moduleStatusText(modId: string) {
+  if (!isModuleUnlocked(modId)) return 'Locked'
+  if (moduleCompleted(modId)) return 'Complete'
+  if (moduleHasProgress(modId)) return 'In progress'
+  return 'Ready'
+}
+
+function moduleStatusIcon(modId: string) {
+  if (!isModuleUnlocked(modId)) return 'mdi-lock'
+  if (moduleCompleted(modId)) return 'mdi-check-decagram'
+  if (moduleHasProgress(modId)) return 'mdi-progress-clock'
+  return 'mdi-play-circle'
+}
+
+function tileStatusClass(modId: string) {
+  if (!isModuleUnlocked(modId)) return 'is-locked'
+  if (moduleCompleted(modId)) return 'is-complete'
+  if (moduleHasProgress(modId)) return 'is-progress'
+  return 'is-ready'
+}
+
+function lessonScoreLabel(modId: string, lesId: string) {
+  const score = bestScore(modId, lesId)
+  return score ? `${score}%` : 'New'
+}
+
+function lessonScoreIcon(modId: string, lesId: string) {
+  const score = bestScore(modId, lesId)
+  if (!score) return 'mdi-star-four-points-outline'
+  if (score >= 80) return 'mdi-star-circle'
+  return 'mdi-progress-check'
+}
+
+function lessonScoreClass(modId: string, lesId: string) {
+  const score = bestScore(modId, lesId)
+  if (!score) return 'is-new'
+  if (score >= 80) return 'is-great'
+  return 'is-progress'
+}
+
 const dailies = ref([
   { id: 'd1', title: '3 readbacks ≥80%', sub: 'Reward: +50 XP', reward: 50 },
   { id: 'd2', title: 'Start 1 module', sub: 'Reward: +20 XP', reward: 20 },
   { id: 'd3', title: 'Play the target phrase', sub: 'Reward: +10 XP', reward: 10 }
 ])
+
+const activeDailies = computed(() => dailies.value.length)
+
+const dailyHint = computed(() => {
+  const count = activeDailies.value
+  if (!count) return 'fresh missions'
+  return `${count} daily${count === 1 ? '' : 's'}`
+})
 
 function startDaily(daily: { id: string; reward: number; title: string }) {
   xp.value += daily.reward
@@ -2711,34 +2958,232 @@ onMounted(() => {
 
 .hero-panel {
   display: grid;
-  grid-template-columns: 1.1fr .9fr;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
   gap: 20px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 6%, transparent);
-  padding: 20px;
-  transform-style: preserve-3d
+  padding: 24px;
+  transform-style: preserve-3d;
+  border-radius: 24px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .35)
+}
+
+.hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px
 }
 
 .hero-left .eyebrow {
   font-size: 12px;
-  letter-spacing: .16em;
+  letter-spacing: .18em;
+  color: var(--t3);
+  text-transform: uppercase
+}
+
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  box-shadow: 0 6px 20px rgba(34, 211, 238, .25)
+}
+
+.hero-sub {
+  max-width: 520px;
+  margin-top: 4px
+}
+
+.hero-highlight {
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent2) 10%, transparent));
+  padding: 18px;
+  border-radius: 20px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  position: relative;
+  overflow: hidden
+}
+
+.hero-highlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(160% 160% at 0% 100%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%);
+  opacity: .7;
+  pointer-events: none
+}
+
+.hero-orb {
+  --progress: 0%;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) var(--progress), color-mix(in srgb, var(--text) 10%, transparent) var(--progress));
+  position: relative;
+  display: grid;
+  place-items: center;
+  animation: orbFloat 9s ease-in-out infinite
+}
+
+.hero-orb::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bg) 82%, transparent)
+}
+
+.hero-orb-core {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center
+}
+
+.hero-orb-level {
+  font-weight: 700;
+  font-size: 16px;
+  text-transform: uppercase
+}
+
+.hero-orb-progress {
+  font-size: 11px;
+  letter-spacing: .18em;
   color: var(--t3)
+}
+
+.hero-highlight-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center
+}
+
+.hero-tag {
+  font-size: 11px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--t3)
+}
+
+.hero-highlight-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--t2)
+}
+
+.hero-highlight-bar {
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  overflow: hidden
+}
+
+.hero-highlight-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width .4s ease
+}
+
+.hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 18px
+}
+
+.metric-card {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  padding: 14px;
+  border-radius: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, .22);
+  animation: float 12s ease-in-out infinite
+}
+
+.metric-card:nth-child(2) {
+  animation-delay: 2s
+}
+
+.metric-card:nth-child(3) {
+  animation-delay: 4s
+}
+
+.metric-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent)
+}
+
+.metric-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px
+}
+
+.metric-value {
+  font-weight: 700;
+  font-size: 18px
+}
+
+.metric-label {
+  font-size: 12px;
+  color: var(--t3);
+  letter-spacing: .12em;
+  text-transform: uppercase
 }
 
 .actions {
   display: flex;
   gap: 10px;
-  margin-top: 12px
+  margin-top: 16px
 }
 
 .season {
-  margin-top: 14px
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px
+}
+
+.season-head {
+  display: flex;
+  justify-content: space-between;
+  color: var(--t3);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .14em
 }
 
 .bar {
   height: 8px;
   background: color-mix(in srgb, var(--text) 8%, transparent);
-  border: 1px solid var(--border)
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden
 }
 
 .fill {
@@ -2746,12 +3191,77 @@ onMounted(() => {
   background: linear-gradient(90deg, var(--accent), var(--accent2))
 }
 
-.meta {
+.hero-right {
   display: flex;
-  justify-content: space-between;
-  margin-top: 6px;
-  color: var(--t3);
-  font-size: 12px
+  flex-direction: column;
+  gap: 18px
+}
+
+.badge-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px
+}
+
+.badge-card {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .24);
+  animation: float 14s ease-in-out infinite
+}
+
+.badge-card.current {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 28%, transparent), color-mix(in srgb, var(--accent2) 18%, transparent));
+  color: var(--text)
+}
+
+.badge-card.next.complete {
+  opacity: .9
+}
+
+.badge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
+  background: color-mix(in srgb, var(--text) 12%, transparent);
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--t2)
+}
+
+.badge-chip.accent {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent)
+}
+
+.badge-name {
+  font-size: 22px;
+  font-weight: 600;
+  margin-top: 10px
+}
+
+.badge-progress {
+  margin-top: 14px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  overflow: hidden
+}
+
+.badge-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width .4s ease
 }
 
 .hero-right .rail-title {
@@ -2759,20 +3269,50 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 6px
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  font-size: 12px
 }
 
 .rail {
   display: flex;
-  gap: 10px;
-  overflow: auto
+  gap: 12px;
+  overflow: auto;
+  padding-bottom: 4px
 }
 
 .card {
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 6%, transparent);
-  padding: 12px;
-  min-width: 240px
+  padding: 14px;
+  min-width: 240px;
+  border-radius: 16px
+}
+
+.challenge-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform .3s ease, box-shadow .3s ease
+}
+
+.challenge-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(140% 140% at 0% 100%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%);
+  opacity: 0;
+  transition: opacity .3s ease;
+  pointer-events: none
+}
+
+.challenge-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, .28)
+}
+
+.challenge-card:hover::after {
+  opacity: 1
 }
 
 .card-head {
@@ -2783,9 +3323,12 @@ onMounted(() => {
 
 .badge {
   border: 1px solid var(--border);
-  padding: 2px 6px;
+  padding: 2px 8px;
   font-size: 12px;
-  color: var(--t2)
+  color: var(--t2);
+  border-radius: 999px;
+  letter-spacing: .08em;
+  text-transform: uppercase
 }
 
 .card-title {
@@ -2844,11 +3387,20 @@ onMounted(() => {
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 6%, transparent);
   display: flex;
-  flex-direction: column
+  flex-direction: column;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, .25);
+  transition: transform .25s ease, box-shadow .25s ease
 }
 
 .tile.locked {
   filter: saturate(.7) brightness(.9)
+}
+
+.tile:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .3)
 }
 
 .tile-media {
@@ -2858,7 +3410,10 @@ onMounted(() => {
 }
 
 .tile-body {
-  padding: 12px
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px
 }
 
 .tile-top {
@@ -2875,10 +3430,49 @@ onMounted(() => {
   gap: 6px
 }
 
+.tile-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  color: var(--t3)
+}
+
+.tile-status.is-ready {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent)
+}
+
+.tile-status.is-progress {
+  color: #fbbf24;
+  border-color: color-mix(in srgb, #fbbf24 40%, transparent);
+  background: color-mix(in srgb, #fbbf24 12%, transparent)
+}
+
+.tile-status.is-complete {
+  color: #22c55e;
+  border-color: color-mix(in srgb, #22c55e 40%, transparent);
+  background: color-mix(in srgb, #22c55e 14%, transparent)
+}
+
+.tile-status.is-locked {
+  color: var(--t3);
+  border-color: color-mix(in srgb, var(--text) 14%, transparent);
+  background: color-mix(in srgb, var(--text) 4%, transparent)
+}
+
 .line {
   height: 8px;
   border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--text) 8%, transparent)
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  border-radius: 999px;
+  overflow: hidden
 }
 
 .line-fill {
@@ -2886,10 +3480,19 @@ onMounted(() => {
   background: linear-gradient(90deg, var(--accent), var(--accent2))
 }
 
+.tile-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--t3);
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase
+}
+
 .tile-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 10px
+  flex-wrap: wrap;
+  gap: 10px
 }
 
 /* Play */
@@ -2933,19 +3536,65 @@ onMounted(() => {
 }
 
 .lesson {
+  position: relative;
   text-align: left;
   border: 1px solid var(--border);
-  padding: 12px;
+  padding: 28px 16px 16px;
   background: color-mix(in srgb, var(--text) 5%, transparent);
-  cursor: pointer
+  cursor: pointer;
+  border-radius: 16px;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, .18)
+}
+
+.lesson:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 26px rgba(0, 0, 0, .22)
 }
 
 .lesson.active {
-  outline: 1px solid color-mix(in srgb, var(--accent) 50%, transparent)
+  outline: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  box-shadow: 0 18px 32px rgba(34, 211, 238, .22)
 }
 
 .lesson.ok {
-  border-color: color-mix(in srgb, #4caf50 60%, transparent)
+  border-color: color-mix(in srgb, #22c55e 50%, transparent)
+}
+
+.lesson-score {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  color: var(--t3);
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  animation: badgePulse 8s ease-in-out infinite
+}
+
+.lesson-score.is-new {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent)
+}
+
+.lesson-score.is-progress {
+  color: #fbbf24;
+  border-color: color-mix(in srgb, #fbbf24 40%, transparent);
+  background: color-mix(in srgb, #fbbf24 14%, transparent)
+}
+
+.lesson-score.is-great {
+  color: #22c55e;
+  border-color: color-mix(in srgb, #22c55e 40%, transparent);
+  background: color-mix(in srgb, #22c55e 14%, transparent)
 }
 
 .tags {
@@ -3169,6 +3818,11 @@ onMounted(() => {
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 4%, transparent);
   border-radius: 12px;
+  position: sticky;
+  bottom: 20px;
+  z-index: 5;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, .28)
 }
 
 .lesson-actions-meta {
@@ -3319,6 +3973,33 @@ onMounted(() => {
   }
 }
 
+@keyframes orbFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, .25);
+  }
+  50% {
+    box-shadow: 0 0 18px 0 rgba(34, 211, 238, .35);
+  }
+}
+
 .settings {
   display: flex;
   flex-direction: column;
@@ -3362,6 +4043,33 @@ onMounted(() => {
 
   .target-text {
     font-size: 16px;
+  }
+
+  .lesson-actions {
+    position: static;
+    bottom: auto;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-orb,
+  .metric-card,
+  .badge-card,
+  .lesson-score {
+    animation: none !important;
+  }
+
+  .tile,
+  .lesson,
+  .challenge-card,
+  .hero-orb,
+  .metric-card,
+  .badge-card,
+  .hero-highlight-fill,
+  .badge-progress-fill {
+    transition: none !important;
   }
 }
 
