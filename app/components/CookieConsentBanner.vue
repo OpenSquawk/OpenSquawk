@@ -10,80 +10,53 @@
     >
       <section class="cookie-consent-panel">
         <header class="cookie-consent-header">
-          <h2 id="cookie-consent-title">{{ isGerman ? 'Cookies &amp; Analysen' : 'Cookies &amp; analytics' }}</h2>
+          <h2 id="cookie-consent-title">Cookies &amp; Analytics</h2>
           <p id="cookie-consent-description">
-            <template v-if="isGerman">
-              Wir verwenden notwendige Cookies, damit die Website zuverlässig funktioniert. Darüber hinaus würden wir gern optionale
-              Analyse-Cookies von Hotjar einsetzen, um das Nutzungserlebnis zu verbessern. Sie entscheiden, ob Sie diese zulassen – alle
-              Details finden Sie in unserer
-            </template>
-            <template v-else>
-              We use essential cookies to keep the site reliable. We would also like to use optional Hotjar analytics cookies to improve your
-              experience. You decide whether to allow them—see our
-            </template>
-            <a href="/datenschutz" target="_blank" rel="noopener">{{ isGerman ? 'Datenschutzerklärung' : 'privacy policy' }}</a>.
+            We use essential cookies to keep the site reliable. We would also like to enable optional Hotjar analytics cookies to
+            improve the experience. You decide whether to allow them—full details are available in our
+            <a href="/datenschutz" target="_blank" rel="noopener">privacy policy</a>.
           </p>
         </header>
 
         <div class="cookie-consent-options" role="list">
           <article class="cookie-option is-required" role="listitem">
             <div class="cookie-option-text">
-              <h3>{{ isGerman ? 'Notwendige Cookies' : 'Essential cookies' }}</h3>
-              <p>
-                {{
-                  isGerman
-                    ? 'Speichern Ihre Auswahl und sorgen für sichere Anmeldung sowie eine stabile Grundfunktionalität.'
-                    : 'Store your selection and enable secure sign-in plus a stable core experience.'
-                }}
-              </p>
+              <h3>Necessary cookies</h3>
+              <p>Store your preferences and keep sign-in secure while ensuring the core experience remains stable.</p>
             </div>
-            <span class="cookie-option-badge" aria-hidden="true">{{ isGerman ? 'Immer aktiv' : 'Always on' }}</span>
+            <span class="cookie-option-badge" aria-hidden="true">Always active</span>
           </article>
 
           <article class="cookie-option" role="listitem">
             <div class="cookie-option-text">
-              <h3>{{ isGerman ? 'Analyse (Hotjar)' : 'Analytics (Hotjar)' }}</h3>
-              <p>
-                {{
-                  isGerman
-                    ? 'Hilft uns, Nutzungsverhalten anonym auszuwerten und unsere Inhalte gezielt zu verbessern.'
-                    : 'Helps us analyse anonymised usage to improve content and product decisions.'
-                }}
-              </p>
+              <h3>Analytics (Hotjar)</h3>
+              <p>Helps us analyse anonymised usage patterns and improve our content in a focused way.</p>
             </div>
             <button
-                type="button"
-                class="cookie-toggle"
-                role="switch"
-                :aria-checked="analyticsSelection"
-                @click="toggleAnalytics"
+              type="button"
+              class="cookie-toggle"
+              role="switch"
+              :aria-checked="analyticsSelection"
+              @click="toggleAnalytics"
             >
               <span class="cookie-toggle-track" :class="{ 'is-active': analyticsSelection }">
                 <span class="cookie-toggle-thumb" />
               </span>
               <span class="sr-only">
-                {{
-                  isGerman
-                    ? `Analyse-Cookies ${analyticsSelection ? 'deaktivieren' : 'aktivieren'}`
-                    : `${analyticsSelection ? 'Disable' : 'Enable'} analytics cookies`
-                }}
+                {{ analyticsSelection ? 'Disable analytics cookies' : 'Enable analytics cookies' }}
               </span>
             </button>
           </article>
         </div>
 
         <p class="cookie-consent-note">
-          {{
-            isGerman
-              ? 'Optionales Tracking wird erst nach Ihrer Zustimmung geladen. Sie können Ihre Entscheidung jederzeit über „Cookie-Einstellungen“ unten links widerrufen.'
-              : 'Optional tracking only loads after you consent. You can revisit your choice at any time via “Cookie settings” in the lower left.'
-          }}
+          Optional tracking loads only after you agree. You can change your decision any time via "Cookie settings" in the lower left.
         </p>
 
         <div class="cookie-consent-actions">
-          <button type="button" class="cookie-button ghost" @click="handleRejectAll">{{ isGerman ? 'Nur notwendige' : 'Only necessary' }}</button>
-          <button type="button" class="cookie-button secondary" @click="handleSave">{{ isGerman ? 'Auswahl speichern' : 'Save selection' }}</button>
-          <button type="button" class="cookie-button primary" @click="handleAcceptAll">{{ isGerman ? 'Alle akzeptieren' : 'Accept all' }}</button>
+          <button type="button" class="cookie-button ghost" @click="handleRejectAll">Essential only</button>
+          <button type="button" class="cookie-button secondary" @click="handleSave">Save selection</button>
+          <button type="button" class="cookie-button primary" @click="handleAcceptAll">Accept all</button>
         </div>
       </section>
     </div>
@@ -91,22 +64,19 @@
 
   <transition name="cookie-manage">
     <button v-if="showManageButton" type="button" class="cookie-manage-button" @click="openManager">
-      {{ isGerman ? 'Cookie-Einstellungen' : 'Cookie settings' }}
+      Cookie settings
     </button>
   </transition>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { useState } from '#imports';
 
 const { hasConsent, analyticsEnabled, acceptAll, rejectAll, savePreferences } = useCookieConsent();
 
 const isDialogVisible = ref(!hasConsent.value);
 const isManuallyOpened = ref(false);
 const analyticsSelection = ref(analyticsEnabled.value);
-const locale = useState<'de' | 'en'>('landing-locale', () => 'de');
-const isGerman = computed(() => locale.value === 'de');
 
 watch(
   () => hasConsent.value,

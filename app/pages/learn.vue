@@ -10,7 +10,7 @@
           </button>
           <span class="brand">OpenSquawk</span>
           <span class="sep">|</span>
-          <span class="mode">Training</span>
+          <span class="mode">Training Hub</span>
         </div>
 
         <div class="hud-right">
@@ -20,20 +20,8 @@
           <!-- Quick ATC: Voice & Level -->
           <div class="chip inline">
             <v-icon size="16" class="text-accent">mdi-radio-handheld</v-icon>
-            <span class="ml-1">Level {{ cfg.radioLevel }}</span>
-            <input type="range" min="1" max="5" step="1" v-model.number="cfg.radioLevel" aria-label="Radio level"/>
-          </div>
-          <div class="chip inline">
-            <v-icon size="16" class="text-accent">mdi-speedometer</v-icon>
-            <span class="ml-1">Speed {{ cfg.audioSpeed.toFixed(1) }}x</span>
-            <input
-                type="range"
-                min="0.7"
-                max="1.3"
-                step="0.1"
-                v-model.number="cfg.audioSpeed"
-                aria-label="ATC audio speed"
-            />
+            <span class="ml-1">L {{ cfg.radioLevel }}</span>
+            <input type="range" min="1" max="5" step="1" v-model.number="cfg.radioLevel"/>
           </div>
 
           <button class="btn ghost" @click="panel='progress'">
@@ -61,12 +49,12 @@
         <div class="panel hero-panel" :style="worldTiltStyle" @mousemove="tilt">
           <div class="hero-left">
             <div class="eyebrow">ALPHA BUILD · TRAINING</div>
-            <h1 class="h1">ATC Training World</h1>
+            <h1 class="h1">ATC Learning Hub</h1>
             <p class="muted">Guided paths · missions · XP · badges. Stored locally.</p>
             <div class="actions">
               <button class="btn primary" @click="panel='hub'">
                 <v-icon>mdi-play</v-icon>
-                Start Training
+                Start training
               </button>
               <button class="btn ghost" @click="panel='progress'">
                 <v-icon>mdi-progress-check</v-icon>
@@ -110,7 +98,7 @@
     <main v-if="panel==='hub'" class="container" role="main">
       <div class="hub-head">
         <h2 class="h2">Mission Hub</h2>
-        <div class="muted">Start with the ICAO alphabet & numbers, then basics, ground, and beyond.</div>
+        <div class="muted">Start with the ICAO alphabet & numbers, then basics, ground, and more.</div>
       </div>
 
       <div class="tiles">
@@ -179,7 +167,7 @@
               <v-icon size="18">mdi-headset</v-icon>
               {{ l.title }}
             </div>
-            <div class="chip" :class="{ ok: bestScore(current.id,l.id)>=80 }">
+              <div class="chip" :class="{ ok: bestScore(current.id,l.id)>=80 }">
               {{ bestScore(current.id, l.id) ? bestScore(current.id, l.id) + '%' : 'new' }}
             </div>
           </div>
@@ -236,7 +224,7 @@
                   {{ targetPhrase }}
                 </div>
                 <div v-if="audioContentHidden" class="audio-note muted small">
-                  Audio Challenge active – listen first.
+                  Audio challenge active – listen first.
                 </div>
               </div>
               <div class="row wrap">
@@ -257,7 +245,7 @@
                     @click="revealAudioContent"
                 >
                   <v-icon size="16">mdi-eye</v-icon>
-                  Show
+                  Reveal text
                 </button>
                 <button class="btn ghost mini" type="button" @click="rollScenario(true)">
                   <v-icon size="16">mdi-dice-5</v-icon>
@@ -284,7 +272,7 @@
         </div>
 
         <div class="col">
-          <div class="label">Your Readback</div>
+          <div class="label">Your readback</div>
           <div class="panel readback-panel">
             <div class="cloze">
               <template v-for="(segment, idx) in activeLesson.readback" :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
@@ -306,7 +294,7 @@
                   <v-icon v-if="fieldPass(segment.key)" size="16" class="blank-status ok">mdi-check</v-icon>
                   <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert</v-icon>
                   <small v-if="result" class="blank-feedback">
-                    Expected: {{ fieldExpectedValue(segment.key) }}
+                    Soll: {{ fieldExpectedValue(segment.key) }}
                   </small>
                 </label>
               </template>
@@ -323,16 +311,7 @@
             </button>
             <button class="btn ghost" type="button" @click="fillSolution">
               <v-icon size="18">mdi-auto-fix</v-icon>
-              Autofill
-            </button>
-            <button
-                v-if="result"
-                class="btn soft"
-                type="button"
-                @click="goToNextLesson"
-            >
-              <v-icon size="18">mdi-arrow-right-bold</v-icon>
-              {{ nextLesson ? 'Next Lesson' : 'Back to Hub' }}
+              Auto-fill
             </button>
           </div>
           <div v-if="result" class="score">
@@ -354,7 +333,7 @@
 
     <!-- PROGRESS -->
     <section v-if="panel==='progress'" class="container" aria-label="Progress">
-      <h2 class="h2">Overall Progress</h2>
+      <h2 class="h2">Overall progress</h2>
       <div class="progress-grid">
         <div v-for="m in modules" :key="m.id" class="panel">
           <div class="row between">
@@ -374,21 +353,21 @@
     <!-- SETTINGS DIALOG -->
     <v-dialog v-model="showSettings" max-width="720">
       <div class="panel dialog">
-        <h3 class="h3">ATC Settings</h3>
+        <h3 class="h3">ATC settings</h3>
 
         <div class="settings">
           <div class="set-row">
             <div class="set-info">
-              <span>Browser-TTS (Web Speech)</span>
-              <small class="muted">Works offline, starts faster, and saves our API calls.</small>
+              <span>Browser TTS (Web Speech)</span>
+              <small class="muted">Runs offline, starts faster, and saves our API calls.</small>
             </div>
             <v-switch v-model="cfg.tts" color="cyan" hide-details inset/>
           </div>
 
           <div class="set-row">
             <div class="set-info">
-              <span>Audio Challenge</span>
-              <small class="muted">Hides target text & details until you reveal them manually.</small>
+              <span>Audio challenge</span>
+              <small class="muted">Hides target text & info until you reveal it manually.</small>
             </div>
             <v-switch v-model="cfg.audioChallenge" color="cyan" hide-details inset/>
           </div>
@@ -396,21 +375,6 @@
           <div class="set-row">
             <span>Radio level (1..5)</span>
             <v-slider v-model="cfg.radioLevel" :min="1" :max="5" :step="1" color="cyan" thumb-label/>
-          </div>
-
-          <div class="set-row">
-            <div class="set-info">
-              <span>ATC audio speed</span>
-              <small class="muted">Fine-tune the playback speed for ATC voice lines.</small>
-            </div>
-            <v-slider
-                v-model="cfg.audioSpeed"
-                :min="0.7"
-                :max="1.3"
-                :step="0.1"
-                color="cyan"
-                thumb-label
-            />
           </div>
 
           <div class="set-row">
@@ -704,7 +668,7 @@ const airportsData: AirportData[] = [
   },
   {
     icao: 'EDDM',
-    name: 'München',
+    name: 'Munich',
     city: 'Munich',
     runways: ['26R', '26L', '08R', '08L'],
     stands: ['211', '214', '302', 'N16', 'H45'],
@@ -1054,8 +1018,8 @@ const modules = ref<ModuleDef[]>([
         desc: 'Spell letters and digits clearly',
         keywords: ['Alphabet', 'Numbers', 'Normalize'],
         hints: [
-          'Spell each letter with the ICAO name (e.g. Delta, Lima, Hotel).',
-          'Digits on the radio: tree, fower, fife, niner.'
+          'Spell each letter with its ICAO name (e.g. Delta, Lima, Hotel).',
+          'Use ATC numbers: tree, fower, fife, niner.'
         ],
         fields: [
           {
@@ -1068,7 +1032,7 @@ const modules = ref<ModuleDef[]>([
           },
           {
             key: 'digits',
-            label: 'Digits',
+            label: 'Numbers',
             expected: scenario => scenario.flightNumberWords,
             placeholder: 'one two three',
             width: 'lg',
@@ -1076,7 +1040,7 @@ const modules = ref<ModuleDef[]>([
           }
         ],
         readback: [
-          { type: 'text', text: 'Callsign: ' },
+          { type: 'text', text: 'Call sign: ' },
           { type: 'field', key: 'letters', width: 'lg' },
           { type: 'text', text: ' · ' },
           { type: 'field', key: 'digits', width: 'md' }
@@ -1084,20 +1048,20 @@ const modules = ref<ModuleDef[]>([
         defaultFrequency: 'DEL',
         phrase: scenario => `${scenario.callsignNato} ${scenario.flightNumberWords}`,
         info: scenario => [
-          `Registration: ${scenario.callsign}`,
-          `Airline call: ${scenario.radioCall}`,
-          `ICAO: ${scenario.callsignNato}`,
+          `Callsign: ${scenario.callsign}`,
+          `Radio call: ${scenario.radioCall}`,
+          `ICAO spelling: ${scenario.callsignNato}`,
           `Flight number spoken: ${scenario.flightNumberWords}`
         ],
         generate: createBaseScenario
       },
       {
         id: 'atis',
-        title: 'Understand ATIS',
-        desc: 'Extract the identifier and core data from the ATIS',
+        title: 'Understand the ATIS',
+        desc: 'Extract the identifier and key data from the ATIS',
         keywords: ['ATIS', 'Weather'],
         hints: [
-          'Remember the ATIS designator as a single letter.',
+          'Remember the ATIS identifier as a single letter.',
           'Order: runway – wind – visibility – temperature – dew point – QNH.'
         ],
         fields: [
@@ -1180,19 +1144,19 @@ const modules = ref<ModuleDef[]>([
         defaultFrequency: 'ATIS',
         phrase: scenario => scenario.atisText,
         info: () => [
-          'Take note of the designator, runway, wind, visibility, temperature, dew point, and QNH.',
-          'Visibility: four digits or 9999 for ≥10 km · QNH as a four-digit number.'
+          'Note the identifier, runway, wind, visibility, temperature, dew point, and QNH.',
+          'Visibility: four digits or 9999 for ≥10 km; QNH as a four-digit value.'
         ],
         generate: createBaseScenario
       },
       {
         id: 'metar',
-        title: 'Decode METAR',
-        desc: 'Extract raw METAR values.',
+        title: 'Decode the METAR',
+        desc: 'Extract the raw METAR values',
         keywords: ['METAR', 'Weather'],
         hints: [
-          'Read METARs in blocks: wind – visibility – clouds – temperature – QNH.',
-          'The temperature block looks like 18/10, negative values start with M.'
+          'Read the METAR in blocks: wind – visibility – clouds – temperature – QNH.',
+          'The temperature block looks like 18/10; negative values start with M.'
         ],
         fields: [
           {
@@ -1256,8 +1220,8 @@ const modules = ref<ModuleDef[]>([
         desc: 'Report readability',
         keywords: ['Ground', 'Comms'],
         hints: [
-          'Reply with "Readability" plus the number.',
-          'Always end the check with your callsign.'
+          'Reply with "Readability" followed by the number.',
+          'Always finish the check with your call sign.'
         ],
         fields: [
           {
@@ -1291,7 +1255,7 @@ const modules = ref<ModuleDef[]>([
         phrase: scenario => `${scenario.airport.name} Ground, ${scenario.radioCall}, radio check on ${scenario.groundFreq}.`,
         info: scenario => [
           `Frequency: ${scenario.groundFreq} (${scenario.frequencyWords.GND})`,
-          `Expected answer: readability ${scenario.readability} (${scenario.readabilityWord})`
+          `Expected response: Readability ${scenario.readability} (${scenario.readabilityWord})`
         ],
         generate: createBaseScenario
       }
@@ -1300,16 +1264,16 @@ const modules = ref<ModuleDef[]>([
   {
     id: 'arc',
     title: 'ARC Decision Tree',
-    subtitle: 'From the clearance call to departure',
+    subtitle: 'From clearance call to departure',
     art: gradientArt(['#f97316', '#fb923c', '#0f172a']),
     lessons: [
       {
         id: 'clearance-contact',
         title: 'Delivery: Initial contact',
-        desc: 'Call clearance delivery',
+        desc: 'Contact clearance delivery',
         keywords: ['Delivery', 'Clearance'],
         hints: [
-          'Order: unit, callsign, ATIS, destination, stand, request.',
+          'Order: unit, call sign, ATIS, destination, stand, request.',
           'Say the ATIS as a single letter.'
         ],
         fields: [
@@ -1334,7 +1298,7 @@ const modules = ref<ModuleDef[]>([
           },
           {
             key: 'cd-stand',
-            label: 'Stand',
+            label: 'Stand/Gate',
             expected: scenario => scenario.stand,
             width: 'sm'
           }
@@ -1354,20 +1318,20 @@ const modules = ref<ModuleDef[]>([
         defaultFrequency: 'DEL',
         phrase: scenario => `${scenario.airport.city} Delivery, ${scenario.radioCall}, information ${scenario.atisCode}, IFR to ${scenario.destination.city}, stand ${scenario.stand}, request clearance.`,
         info: scenario => [
-          `ATIS ${scenario.atisCode}`,
+          `ATIS: ${scenario.atisCode}`,
           `Destination: ${scenario.destination.city} (${scenario.destination.icao})`,
-          `Stand: ${scenario.stand}`
+          `Stand/Gate: ${scenario.stand}`
         ],
         generate: createBaseScenario
       },
       {
         id: 'clearance-readback',
         title: 'Clearance Readback',
-        desc: 'Read back the clearance completely',
+        desc: 'Read back the clearance in full',
         keywords: ['Delivery', 'Readback'],
         hints: [
-          'Remember the sequence: destination – SID – runway – altitude – squawk.',
-          'Spell out the altitude and squawk digits clearly.'
+          'Remember the order: destination – SID – runway – altitude – squawk.',
+          'Speak altitude and squawk digits clearly.'
         ],
         fields: [
           {
@@ -1429,11 +1393,11 @@ const modules = ref<ModuleDef[]>([
       {
         id: 'pushback',
         title: 'Push & Start Readback',
-        desc: 'Confirm the pushback clearance',
+        desc: 'Acknowledge the pushback clearance',
         keywords: ['Ground', 'Pushback'],
         hints: [
-          'Repeat the runway direction and QNH, callsign at the end.',
-          'You may say QNH as a number or as "QNH xxxx".'
+          'Repeat the runway direction and QNH, call sign at the end.',
+          'QNH may be just the number or "QNH xxxx".'
         ],
         fields: [
           {
@@ -1473,7 +1437,7 @@ const modules = ref<ModuleDef[]>([
         defaultFrequency: 'GND',
         phrase: scenario => `${scenario.radioCall}, push and start approved, facing runway ${scenario.runway}. QNH ${scenario.qnh}.`,
         info: scenario => [
-          `Stand: ${scenario.stand}`,
+          `Stand/Gate: ${scenario.stand}`,
           `Ground: ${scenario.groundFreq} (${scenario.frequencyWords.GND})`
         ],
         generate: createBaseScenario
@@ -1481,11 +1445,11 @@ const modules = ref<ModuleDef[]>([
       {
         id: 'taxi',
         title: 'Taxi Readback',
-        desc: 'Read back the taxi clearance with the hold short instruction',
+        desc: 'Read back the taxi clearance with hold short',
         keywords: ['Ground', 'Taxi'],
         hints: [
-          'Repeat the route as given, including the hold short.',
-          'Finish with the callsign again.'
+          'Repeat the route exactly as received, including the hold short.',
+          'Finish with the call sign.'
         ],
         fields: [
           {
@@ -1542,11 +1506,11 @@ const modules = ref<ModuleDef[]>([
       {
         id: 'lineup',
         title: 'Line-up Clearance',
-        desc: 'Confirm line up and wait',
+        desc: 'Acknowledge line up and wait',
         keywords: ['Tower', 'Line Up'],
         hints: [
           'Repeat the runway, then say "line up and wait".',
-          'Place the callsign at the end.'
+          'Place the call sign at the end.'
         ],
         fields: [
           {
@@ -1578,7 +1542,7 @@ const modules = ref<ModuleDef[]>([
         phrase: scenario => `${scenario.radioCall}, line up and wait runway ${scenario.runway}.`,
         info: scenario => [
           `Tower: ${scenario.towerFreq} (${scenario.frequencyWords.TWR})`,
-          `Line up: runway ${scenario.runway}`
+          `Line-up: runway ${scenario.runway}`
         ],
         generate: createBaseScenario
       },
@@ -1588,8 +1552,8 @@ const modules = ref<ModuleDef[]>([
         desc: 'Acknowledge the takeoff clearance',
         keywords: ['Tower', 'Departure'],
         hints: [
-          'Order: runway – cleared for takeoff – callsign.',
-          'Wind call can be omitted if not stated.'
+          'Order: runway – cleared for takeoff – call sign.',
+          'Wind information can be omitted if it was not given.'
         ],
         fields: [
           {
@@ -1631,13 +1595,13 @@ const modules = ref<ModuleDef[]>([
         desc: 'Switch to departure',
         keywords: ['Departure', 'Handoff'],
         hints: [
-          'Repeat the frequency exactly, either as digits or spoken.',
-          'Add the callsign at the end.'
+          'Repeat the frequency exactly, either as digits or spoken form.',
+          'Append the call sign at the end.'
         ],
         fields: [
           {
             key: 'dep-freq',
-            label: 'Frequency',
+            label: 'Frequenz',
             expected: scenario => scenario.departureFreq,
             alternatives: scenario => [
               scenario.departureFreq,
@@ -1675,11 +1639,11 @@ const modules = ref<ModuleDef[]>([
       {
         id: 'departure-checkin',
         title: 'Departure Check-in',
-        desc: 'First call with departure',
+        desc: 'Initial call to departure',
         keywords: ['Departure', 'Check-in'],
         hints: [
-          'Address the unit, then state the callsign.',
-          'Repeat the altitude and SID exactly as given.'
+          'Address the unit first, then state the call sign.',
+          'Repeat the altitude and SID exactly as received.'
         ],
         fields: [
           {
@@ -1730,11 +1694,11 @@ const modules = ref<ModuleDef[]>([
       {
         id: 'climb-instruction',
         title: 'Climb & Direct',
-        desc: 'Read back the climb instruction completely',
+        desc: 'Read back the climb instruction in full',
         keywords: ['Departure', 'Climb'],
         hints: [
-          'Start with "Climb", then the altitude and any direct.',
-          'Repeat the callsign at the end.'
+          'Start with "Climb", then the altitude and any direct clearance.',
+          'Repeat the call sign at the end.'
         ],
         fields: [
           {
@@ -1788,13 +1752,13 @@ const modules = ref<ModuleDef[]>([
         desc: 'Acknowledge the handoff to center',
         keywords: ['Center', 'Handoff'],
         hints: [
-          'Repeat the frequency exactly (with or without the decimal).',
-          'Place the callsign at the end.'
+          'Repeat the frequency exactly (with or without the decimal point).',
+          'Place the call sign at the end.'
         ],
         fields: [
           {
             key: 'ctr-freq',
-            label: 'Frequency',
+            label: 'Frequenz',
             expected: scenario => scenario.centerFreq,
             alternatives: scenario => [
               scenario.centerFreq,
@@ -1970,7 +1934,6 @@ if (isClient) {
     resetAudioReveal()
   })
   watch(() => cfg.value.radioLevel, markConfigDirty)
-  watch(() => cfg.value.audioSpeed, markConfigDirty)
   watch(() => cfg.value.voice, markConfigDirty)
 }
 
@@ -2040,7 +2003,7 @@ function blankStateClass(key: string): string {
 }
 
 function fieldLabel(key: string): string {
-  return fieldMap.value[key]?.label ?? 'Feld'
+  return fieldMap.value[key]?.label ?? 'Field'
 }
 
 function fieldPlaceholder(key: string): string {
@@ -2066,12 +2029,6 @@ function fieldExpectedValue(key: string): string {
 
 const targetPhrase = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.phrase(scenario.value) : ''))
 const lessonInfo = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.info(scenario.value) : []))
-const nextLesson = computed(() => {
-  if (!current.value || !activeLesson.value) return null
-  const lessons = current.value.lessons
-  const index = lessons.findIndex(lesson => lesson.id === activeLesson.value?.id)
-  return index >= 0 && index < lessons.length - 1 ? lessons[index + 1] : null
-})
 
 watch(activeLesson, lesson => {
   if (lesson) {
@@ -2201,18 +2158,6 @@ function selectLesson(lesson: Lesson) {
   activeLesson.value = lesson
 }
 
-function goToNextLesson() {
-  stopAudio()
-  if (nextLesson.value) {
-    activeLesson.value = nextLesson.value
-    return
-  }
-  panel.value = 'hub'
-  activeLesson.value = null
-  current.value = null
-  result.value = null
-}
-
 function bestScore(modId: string, lesId: string) {
   return progress.value[modId]?.[lesId]?.best || 0
 }
@@ -2241,8 +2186,8 @@ function avgScore(modId: string) {
 
 const dailies = ref([
   { id: 'd1', title: '3 readbacks ≥80%', sub: 'Reward: +50 XP', reward: 50 },
-  { id: 'd2', title: 'Start one module', sub: 'Reward: +20 XP', reward: 20 },
-  { id: 'd3', title: 'Play a target phrase', sub: 'Reward: +10 XP', reward: 10 }
+  { id: 'd2', title: 'Start 1 module', sub: 'Reward: +20 XP', reward: 20 },
+  { id: 'd3', title: 'Play the target phrase', sub: 'Reward: +10 XP', reward: 10 }
 ])
 
 function startDaily(daily: { id: string; reward: number; title: string }) {
@@ -2335,8 +2280,7 @@ async function say(text: string) {
   if (!trimmed) return
 
   const rateBase = 0.9 + (cfg.value.radioLevel - 3) * 0.12
-  const rateAdjusted = rateBase * (cfg.value.audioSpeed || 1)
-  const normalizedRate = Math.min(1.6, Math.max(0.6, rateAdjusted))
+  const normalizedRate = Math.min(1.5, Math.max(0.6, rateBase))
 
   const hasBrowserTts = cfg.value.tts && typeof window !== 'undefined' && 'speechSynthesis' in window
 
