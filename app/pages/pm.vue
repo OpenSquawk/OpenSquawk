@@ -894,6 +894,8 @@ import { useRouter } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
+import { loadPizzicatoLite } from '../../shared/utils/pizzicatoLite'
+import type { PizzicatoLite } from '../../shared/utils/pizzicatoLite'
 
 // Core State
 const engine = useCommunicationsEngine()
@@ -1266,6 +1268,7 @@ const simulationStepCount = simulationPilotSteps.length
 const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 
 let audioContext: AudioContext | null = null
+let pizzicatoLite: PizzicatoLite | null = null
 let speechQueue: Promise<void> = Promise.resolve()
 
 const enqueueSpeech = (task: () => Promise<void>) => {
@@ -1341,102 +1344,257 @@ const ensureAudioContext = async (): Promise<AudioContext | null> => {
   return audioContext
 }
 
+const ensurePizzicato = async (ctx: AudioContext | null): Promise<PizzicatoLite | null> => {
+  if (!ctx) return null
+  if (!pizzicatoLite) {
+    pizzicatoLite = await loadPizzicatoLite()
+  }
+  return pizzicatoLite
+}
+
+type ReadabilityProfile = {
+  eq: {
+    highpass: number
+    highpassQ: number
+    lowpass: number
+    lowpassQ: number
+    bandpass?: { frequency: number; q: number }
+  }
+  presence?: { frequency: number; q: number; gain: number }
+  distortions: number[]
+  tremolos?: Array<{ depth: number; speed: number; type?: OscillatorType }>
+  gain: number
+  compressor: Partial<{ threshold: number; knee: number; ratio: number; attack: number; release: number }>
+  noise: { amplitude: number; bandFrequency: number; bandQ: number; crackle?: boolean }
+}
+
+const readabilityProfiles: Record<number, ReadabilityProfile> = {
+  1: {
+    eq: { highpass: 520, highpassQ: 1.1, lowpass: 1700, lowpassQ: 0.85, bandpass: { frequency: 1100, q: 2.6 } },
+    presence: { frequency: 1300, q: 2.1, gain: 4 },
+    distortions: [420, 260],
+    tremolos: [
+      { depth: 0.92, speed: 7.6, type: 'square' },
+      { depth: 0.38, speed: 5.1 }
+    ],
+    gain: 0.84,
+    compressor: { threshold: -32, ratio: 14, attack: 0.004, release: 0.3 },
+    noise: { amplitude: 0.12, bandFrequency: 1500, bandQ: 1.6, crackle: true }
+  },
+  2: {
+    eq: { highpass: 440, highpassQ: 0.95, lowpass: 2100, lowpassQ: 0.9, bandpass: { frequency: 1650, q: 1.9 } },
+    presence: { frequency: 1700, q: 1.2, gain: 2.5 },
+    distortions: [320],
+    tremolos: [{ depth: 0.24, speed: 5.2 }],
+    gain: 0.88,
+    compressor: { threshold: -30, ratio: 13, attack: 0.0035, release: 0.28 },
+    noise: { amplitude: 0.085, bandFrequency: 1800, bandQ: 1.4, crackle: true }
+  },
+  3: {
+    eq: { highpass: 360, highpassQ: 0.8, lowpass: 2600, lowpassQ: 0.9, bandpass: { frequency: 1850, q: 1.5 } },
+    presence: { frequency: 2100, q: 1.3, gain: 1.8 },
+    distortions: [220],
+    tremolos: [{ depth: 0.14, speed: 4.5 }],
+    gain: 0.9,
+    compressor: { threshold: -28, ratio: 12, attack: 0.003, release: 0.26 },
+    noise: { amplitude: 0.055, bandFrequency: 1900, bandQ: 1.2 }
+  },
+  4: {
+    eq: { highpass: 310, highpassQ: 0.7, lowpass: 3050, lowpassQ: 0.85, bandpass: { frequency: 2000, q: 1.2 } },
+    presence: { frequency: 2300, q: 1.4, gain: 1.4 },
+    distortions: [140],
+    tremolos: [{ depth: 0.08, speed: 3.6 }],
+    gain: 0.93,
+    compressor: { threshold: -27, ratio: 11, attack: 0.0028, release: 0.23 },
+    noise: { amplitude: 0.035, bandFrequency: 2000, bandQ: 1.1 }
+  },
+  5: {
+    eq: { highpass: 280, highpassQ: 0.65, lowpass: 3300, lowpassQ: 0.8, bandpass: { frequency: 2150, q: 1.1 } },
+    presence: { frequency: 2450, q: 1.5, gain: 1.1 },
+    distortions: [90],
+    tremolos: [{ depth: 0.05, speed: 3 }],
+    gain: 0.96,
+    compressor: { threshold: -26, ratio: 10, attack: 0.0025, release: 0.2 },
+    noise: { amplitude: 0.02, bandFrequency: 2100, bandQ: 1 }
+  }
+}
+
+const getReadabilityProfile = (level: number): ReadabilityProfile => {
+  const clamped = Math.max(1, Math.min(5, level))
+  return readabilityProfiles[clamped] || readabilityProfiles[3]
+}
+
+const createNoiseGenerators = (
+  ctx: AudioContext,
+  duration: number,
+  profile: ReadabilityProfile,
+  level: number
+): Array<() => void> => {
+  const stops: Array<() => void> = []
+  const bufferLength = Math.max(1, Math.ceil((duration + 0.2) * ctx.sampleRate))
+  const noiseBuffer = ctx.createBuffer(1, bufferLength, ctx.sampleRate)
+  const channel = noiseBuffer.getChannelData(0)
+  const amplitude = profile.noise.amplitude
+  const crackle = profile.noise.crackle
+
+  for (let i = 0; i < channel.length; i++) {
+    if (crackle && Math.random() < 0.002) {
+      const burstLength = Math.min(Math.floor(ctx.sampleRate * 0.02), channel.length - i)
+      for (let j = 0; j < burstLength; j++, i++) {
+        channel[i] = (Math.random() * 2 - 1) * amplitude * 3.2
+      }
+      i--
+      continue
+    }
+
+    channel[i] = (Math.random() * 2 - 1) * amplitude
+  }
+
+  const noiseSource = ctx.createBufferSource()
+  noiseSource.buffer = noiseBuffer
+
+  const bandPass = ctx.createBiquadFilter()
+  bandPass.type = 'bandpass'
+  bandPass.frequency.value = profile.noise.bandFrequency
+  bandPass.Q.value = profile.noise.bandQ
+
+  const noiseGain = ctx.createGain()
+  noiseGain.gain.value = amplitude
+
+  noiseSource.connect(bandPass)
+  bandPass.connect(noiseGain)
+  noiseGain.connect(ctx.destination)
+
+  try {
+    noiseSource.start()
+  } catch (err) {
+    console.warn('Noise source start failed', err)
+  }
+
+  stops.push(() => {
+    try {
+      noiseSource.stop()
+    } catch {
+      // ignore stop failure
+    }
+    noiseSource.disconnect()
+    bandPass.disconnect()
+    noiseGain.disconnect()
+  })
+
+  if (level <= 3) {
+    const hissBuffer = ctx.createBuffer(1, bufferLength, ctx.sampleRate)
+    const hissChannel = hissBuffer.getChannelData(0)
+    const hissAmplitude = amplitude * (level === 1 ? 0.9 : 0.6)
+    for (let i = 0; i < hissChannel.length; i++) {
+      hissChannel[i] = (Math.random() * 2 - 1) * hissAmplitude
+    }
+    const hissSource = ctx.createBufferSource()
+    hissSource.buffer = hissBuffer
+    const highPass = ctx.createBiquadFilter()
+    highPass.type = 'highpass'
+    highPass.frequency.value = 2800
+    const hissGain = ctx.createGain()
+    hissGain.gain.value = hissAmplitude * 0.6
+    hissSource.connect(highPass)
+    highPass.connect(hissGain)
+    hissGain.connect(ctx.destination)
+    try {
+      hissSource.start()
+    } catch (err) {
+      console.warn('Hiss source start failed', err)
+    }
+    stops.push(() => {
+      try {
+        hissSource.stop()
+      } catch {
+        // ignore
+      }
+      hissSource.disconnect()
+      highPass.disconnect()
+      hissGain.disconnect()
+    })
+  }
+
+  return stops
+}
+
 const playAudioWithEffects = async (base64: string) => {
   if (typeof window === 'undefined') return
 
-  if (!radioEffectsEnabled.value) {
-    await new Promise<void>((resolve) => {
+  const playWithoutEffects = () =>
+    new Promise<void>((resolve) => {
       const audio = new Audio(`data:audio/wav;base64,${base64}`)
       audio.onended = () => resolve()
       audio.onerror = () => resolve()
       audio.play().catch(() => resolve())
     })
+
+  if (!radioEffectsEnabled.value) {
+    await playWithoutEffects()
     return
   }
 
   try {
     const ctx = await ensureAudioContext()
-    if (!ctx) throw new Error('AudioContext unavailable')
+    const pizzicato = await ensurePizzicato(ctx)
+    if (!ctx || !pizzicato) throw new Error('Audio engine unavailable')
 
-    const binary = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
-    const arrayBuffer = binary.buffer.slice(binary.byteOffset, binary.byteOffset + binary.byteLength)
-    const buffer = await ctx.decodeAudioData(arrayBuffer)
+    const sound = await pizzicato.createSoundFromBase64(ctx, base64)
+    const readability = Math.max(1, Math.min(5, signalStrength.value))
+    const profile = getReadabilityProfile(readability)
 
-    await new Promise<void>((resolve) => {
-      const source = ctx.createBufferSource()
-      source.buffer = buffer
+    const { Effects } = pizzicato
 
-      const highpass = ctx.createBiquadFilter()
-      highpass.type = 'highpass'
-      highpass.frequency.value = 320
-
-      const lowpass = ctx.createBiquadFilter()
-      lowpass.type = 'lowpass'
-      lowpass.frequency.value = 3100
-
-      const compressor = ctx.createDynamicsCompressor()
-      compressor.threshold.value = -28
-      compressor.knee.value = 30
-      compressor.ratio.value = 12
-      compressor.attack.value = 0.003
-      compressor.release.value = 0.25
-
-      const gainNode = ctx.createGain()
-      gainNode.gain.value = 0.9
-
-      source.connect(highpass)
-      highpass.connect(lowpass)
-      lowpass.connect(compressor)
-      compressor.connect(gainNode)
-      gainNode.connect(ctx.destination)
-
-      let noiseSource: AudioBufferSourceNode | null = null
-
-      if (buffer.duration > 0) {
-        const length = Math.ceil(buffer.duration * ctx.sampleRate)
-        const noiseBuffer = ctx.createBuffer(1, length, ctx.sampleRate)
-        const channel = noiseBuffer.getChannelData(0)
-        const strength = Math.max(1, Math.min(5, signalStrength.value))
-        const intensity = (6 - strength) / 6
-        const amplitude = 0.015 + intensity * 0.045
-        for (let i = 0; i < channel.length; i++) {
-          channel[i] = (Math.random() * 2 - 1) * amplitude
-        }
-        noiseSource = ctx.createBufferSource()
-        noiseSource.buffer = noiseBuffer
-        const bandPass = ctx.createBiquadFilter()
-        bandPass.type = 'bandpass'
-        bandPass.frequency.value = 1800
-        bandPass.Q.value = 1.2
-        const noiseGain = ctx.createGain()
-        noiseGain.gain.value = amplitude * 0.6
-        noiseSource.connect(bandPass)
-        bandPass.connect(noiseGain)
-        noiseGain.connect(ctx.destination)
-        noiseSource.start(0)
-      }
-
-      source.onended = () => {
-        if (noiseSource) {
-          try {
-            noiseSource.stop()
-          } catch (err) {
-            // ignore
-          }
-        }
-        resolve()
-      }
-
-      source.start(0)
+    const highpass = new Effects.HighPassFilter(ctx, {
+      frequency: profile.eq.highpass,
+      q: profile.eq.highpassQ
     })
+    const lowpass = new Effects.LowPassFilter(ctx, {
+      frequency: profile.eq.lowpass,
+      q: profile.eq.lowpassQ
+    })
+    sound.addEffect(highpass)
+    sound.addEffect(lowpass)
+
+    if (profile.eq.bandpass) {
+      sound.addEffect(
+        new Effects.BandPassFilter(ctx, {
+          frequency: profile.eq.bandpass.frequency,
+          q: profile.eq.bandpass.q
+        })
+      )
+    }
+
+    if (profile.presence) {
+      sound.addEffect(new Effects.PeakingFilter(ctx, profile.presence))
+    }
+
+    profile.distortions.forEach((amount) => {
+      sound.addEffect(new Effects.Distortion(ctx, { amount }))
+    })
+
+    sound.addEffect(new Effects.Compressor(ctx, profile.compressor))
+
+    if (profile.tremolos) {
+      profile.tremolos.forEach((tremolo) => {
+        sound.addEffect(new Effects.Tremolo(ctx, tremolo))
+      })
+    }
+
+    sound.setVolume(profile.gain)
+
+    const stopNoiseGenerators = createNoiseGenerators(ctx, sound.duration, profile, readability)
+
+    try {
+      await sound.play()
+    } finally {
+      stopNoiseGenerators.forEach((stop) => stop())
+      sound.clearEffects()
+    }
   } catch (err) {
     console.error('Failed to apply radio effect', err)
-    await new Promise<void>((resolve) => {
-      const audio = new Audio(`data:audio/wav;base64,${base64}`)
-      audio.onended = () => resolve()
-      audio.onerror = () => resolve()
-      audio.play().catch(() => resolve())
-    })
+    await playWithoutEffects()
   }
 }
 
