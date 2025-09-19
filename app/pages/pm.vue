@@ -857,6 +857,24 @@
                 />
               </div>
 
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">
+                    Speech speed
+                  </label>
+                  <span class="text-xs font-mono text-white/60">{{ speechSpeedLabel }}</span>
+                </div>
+                <v-slider
+                    v-model="speechSpeed"
+                    :min="0.7"
+                    :max="1.3"
+                    :step="0.05"
+                    color="cyan"
+                    thumb-label
+                    hide-details
+                />
+              </div>
+
               <div class="grid gap-3 sm:grid-cols-3">
                 <v-switch
                     v-model="radioEffectsEnabled"
@@ -1013,6 +1031,7 @@ const isRecording = ref(false)
 const micPermission = ref(false)
 const swapAnimation = ref(false)
 const signalStrength = ref(4)
+const speechSpeed = ref(0.95)
 const radioCheckLoading = ref(false)
 const radioEffectsEnabled = ref(true)
 const readbackEnabled = ref(false)
@@ -1113,6 +1132,8 @@ const radioQuality = computed(() => {
   if (strength >= 2) return { color: 'orange', text: 'POOR' }
   return { color: 'error', text: 'WEAK' }
 })
+
+const speechSpeedLabel = computed(() => `${speechSpeed.value.toFixed(2)}x`)
 
 const completedPilotSteps = computed(() => simulationTrace.value.filter(entry => entry.kind === 'pilot').length)
 
@@ -1437,11 +1458,12 @@ const playAudioWithEffects = async (base64: string, mime = 'audio/wav') => {
 
 const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = {}) => {
   try {
+    const speed = options.speed ?? speechSpeed.value
     const response = await api.post('/api/atc/say', {
       text: options.useNormalizedForTTS === false ? prepared.plain : prepared.normalized,
       level: signalStrength.value,
       voice: options.voice || 'alloy',
-      speed: 0.95,
+      speed,
       moduleId: 'pilot-monitoring',
       lessonId: currentState.value?.id || 'general',
       tag: options.tag || 'controller-reply'
@@ -1475,7 +1497,7 @@ const speakPlainText = (text: string, options: SpeechOptions = {}) => {
     return Promise.resolve()
   }
 
-  const speed = options.speed ?? 0.95
+  const speed = options.speed ?? speechSpeed.value
   const lessonId = options.lessonId || currentState.value?.id || 'general'
 
   return enqueueSpeech(async () => {
