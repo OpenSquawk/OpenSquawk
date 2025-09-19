@@ -14,19 +14,6 @@
         </div>
 
         <div class="hud-right">
-          <button
-              v-if="primaryObjective"
-              type="button"
-              class="next-objective"
-              :aria-label="`Go to ${primaryObjective.title}`"
-              @click="goToPrimaryObjective"
-          >
-            <span class="next-header">
-              <span class="next-label">Next up</span>
-              <span class="next-status">{{ primaryObjective.status }}</span>
-            </span>
-            <span class="next-value">{{ primaryObjective.title }}</span>
-          </button>
 
           <!-- Quick ATC: Voice & Level -->
           <div class="chip inline">
@@ -71,7 +58,6 @@
                 <div class="hero-orb-core">
                   <span class="hero-orb-level">Lvl {{ level }}</span>
                   <span class="hero-orb-progress">{{ levelProgress }}%</span>
-                  <span class="hero-orb-caption">{{ xpToNextLevel }} XP to L{{ nextLevel }}</span>
                 </div>
               </div>
               <div class="hero-highlight-meta">
@@ -142,13 +128,6 @@
                   <div class="metric-label">Avg. best score</div>
                 </div>
               </div>
-            </div>
-
-            <div class="actions">
-              <button class="btn primary" type="button" @click="panel='hub'">
-                <v-icon>mdi-play</v-icon>
-                Mission hub
-              </button>
             </div>
 
             <div class="season" v-if="primaryObjective">
@@ -326,7 +305,7 @@
             </button>
           </div>
         </div>
-        
+
         <div v-if="activeLesson" class="module-detail">
           <div class="console">
             <div v-if="scenario" class="scenario-bar">
@@ -420,7 +399,7 @@
                   </div>
                 </div>
               </div>
-              
+
               <div class="col">
                 <div class="label">Your readback</div>
                 <div class="panel readback-panel">
@@ -479,7 +458,7 @@
                 </div>
               </div>
             </div>
-            
+
             <div v-if="current" class="lesson-actions">
               <div class="lesson-actions-meta">
                 <div v-if="nextLessonMeta" class="muted small">
@@ -3441,13 +3420,6 @@ onMounted(() => {
   font-size: 11px;
   letter-spacing: .18em;
   color: var(--t3)
-}
-
-.hero-orb-caption {
-  font-size: 11px;
-  letter-spacing: .08em;
-  color: var(--t3);
-  text-transform: uppercase;
 }
 
 .hero-highlight-meta {
