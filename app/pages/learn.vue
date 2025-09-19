@@ -14,11 +14,19 @@
         </div>
 
         <div class="hud-right">
-          <div v-if="primaryObjective" class="next-objective">
-            <span class="next-label">Next up</span>
+          <button
+              v-if="primaryObjective"
+              type="button"
+              class="next-objective"
+              :aria-label="`Go to ${primaryObjective.title}`"
+              @click="goToPrimaryObjective"
+          >
+            <span class="next-header">
+              <span class="next-label">Next up</span>
+              <span class="next-status">{{ primaryObjective.status }}</span>
+            </span>
             <span class="next-value">{{ primaryObjective.title }}</span>
-            <span class="next-status">{{ primaryObjective.status }}</span>
-          </div>
+          </button>
 
           <!-- Quick ATC: Voice & Level -->
           <div class="chip inline">
@@ -2474,6 +2482,18 @@ function resumeMissionObjective() {
   panel.value = 'hub'
 }
 
+function goToPrimaryObjective() {
+  const objective = primaryObjective.value
+  if (!objective) return
+
+  if (objective.moduleId) {
+    quickContinue(objective.moduleId)
+    return
+  }
+
+  panel.value = 'hub'
+}
+
 function selectLesson(lesson: Lesson) {
   activeLesson.value = lesson
 }
@@ -3059,16 +3079,41 @@ onMounted(() => {
 }
 
 .next-objective {
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
-  padding: 8px 12px;
+  padding: 5px 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 6%, transparent);
   min-width: 180px;
   max-width: 240px;
+  text-align: right;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.next-objective:hover,
+.next-objective:focus-visible {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  border-color: color-mix(in srgb, var(--text) 18%, transparent);
+  outline: none;
+}
+
+.next-objective:active {
+  transform: translateY(1px);
+}
+
+.next-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 100%;
 }
 
 .next-label {
@@ -3081,13 +3126,15 @@ onMounted(() => {
 .next-value {
   font-weight: 600;
   color: var(--t2);
-  text-align: right;
+  font-size: 14px;
+  line-height: 1.1;
 }
 
 .next-status {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--t3);
-  text-align: right;
+  letter-spacing: .06em;
+  text-transform: uppercase;
 }
 
 .icon-btn {
@@ -4056,6 +4103,11 @@ onMounted(() => {
 
   .next-objective {
     align-items: flex-start;
+    text-align: left;
+  }
+
+  .next-header {
+    justify-content: flex-start;
   }
 
   .next-value,
