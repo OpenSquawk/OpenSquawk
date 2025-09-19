@@ -1,5 +1,6 @@
 // server/utils/openai.ts
 import OpenAI from 'openai'
+import { spellIcaoDigits, toIcaoPhonetic } from '../../shared/utils/radioSpeech'
 import { getServerRuntimeConfig } from './runtimeConfig'
 
 let openaiClient: OpenAI | null = null
@@ -130,27 +131,6 @@ function sanitizeForQuickMatch(text: string): string {
     return text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 }
 
-const ICAO_LETTERS: Record<string, string> = {
-    A: 'Alpha', B: 'Bravo', C: 'Charlie', D: 'Delta', E: 'Echo', F: 'Foxtrot',
-    G: 'Golf', H: 'Hotel', I: 'India', J: 'Juliett', K: 'Kilo', L: 'Lima',
-    M: 'Mike', N: 'November', O: 'Oscar', P: 'Papa', Q: 'Quebec', R: 'Romeo',
-    S: 'Sierra', T: 'Tango', U: 'Uniform', V: 'Victor', W: 'Whiskey',
-    X: 'X-ray', Y: 'Yankee', Z: 'Zulu'
-}
-
-const ICAO_DIGITS: Record<string, string> = {
-    '0': 'zero', '1': 'wun', '2': 'too', '3': 'tree', '4': 'fower',
-    '5': 'fife', '6': 'six', '7': 'seven', '8': 'eight', '9': 'niner'
-}
-
-function toPhonetic(value: string): string {
-    return value
-        .toUpperCase()
-        .split('')
-        .map((ch) => ICAO_LETTERS[ch] || ICAO_DIGITS[ch] || ch)
-        .join(' ')
-}
-
 function buildSpokenVariants(key: string, value: string): string[] {
     const normalized = String(value ?? '').trim()
     if (!normalized) return []
@@ -173,20 +153,17 @@ function buildSpokenVariants(key: string, value: string): string[] {
     }
 
     if (/^[A-Z]{3,4}$/.test(normalized.toUpperCase())) {
-        variants.add(toPhonetic(normalized))
+        variants.add(toIcaoPhonetic(normalized))
     }
 
     if (/^\d{4}$/.test(normalized)) {
         variants.add(normalized.split('').join(' '))
-        variants.add(normalized.split('').map((d) => ICAO_DIGITS[d] || d).join(' '))
+        variants.add(spellIcaoDigits(normalized))
     }
 
     if (/^\d{1,2}[LCR]?$/i.test(normalized)) {
         const digits = normalized.match(/\d+/)?.[0] ?? ''
-        const spelledDigits = digits
-            .split('')
-            .map((d) => ICAO_DIGITS[d] || d)
-            .join(' ')
+        const spelledDigits = spellIcaoDigits(digits)
         const suffix = normalized.replace(/\d+/g, '').toUpperCase()
         const suffixWord = suffix === 'L' ? 'left' : suffix === 'R' ? 'right' : suffix === 'C' ? 'center' : ''
 
@@ -202,7 +179,7 @@ function buildSpokenVariants(key: string, value: string): string[] {
             const spaced = digits.split('').join(' ')
             variants.add(spaced)
             variants.add(digits)
-            variants.add(digits.split('').map((d) => ICAO_DIGITS[d] || d).join(' '))
+            variants.add(spellIcaoDigits(digits))
         }
     }
 
