@@ -65,7 +65,7 @@ function sanitizeConfig(input: Partial<LearnConfig> | undefined): LearnConfig | 
   }
 
   if (typeof input.audioSpeed === 'number' && Number.isFinite(input.audioSpeed)) {
-    const rounded = Math.round(input.audioSpeed * 10) / 10
+    const rounded = Math.round(input.audioSpeed * 20) / 20
     config.audioSpeed = Math.min(1.3, Math.max(0.7, rounded))
   }
 

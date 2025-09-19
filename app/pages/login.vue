@@ -219,7 +219,7 @@ async function submitLogin() {
   try {
     await auth.login({ ...loginForm })
     await auth.fetchUser()
-    router.push('/pm')
+    router.push('/learn')
   } catch (err: any) {
     const message = err?.data?.statusMessage || err?.message || 'Login failed'
     loginError.value = message
@@ -269,7 +269,7 @@ async function submitRegister() {
       acceptPrivacy: registerForm.acceptPrivacy,
     })
     await auth.fetchUser()
-    router.push('/pm')
+    router.push('/learn')
   } catch (err: any) {
     const message = err?.data?.statusMessage || err?.message || 'Registration failed'
     registerError.value = message
@@ -287,7 +287,7 @@ useHead({
 
 onMounted(() => {
   if (auth.isAuthenticated) {
-    router.push('/pm')
+    router.push('/learn')
   }
 })
 </script>

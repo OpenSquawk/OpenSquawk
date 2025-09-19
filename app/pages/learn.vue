@@ -493,10 +493,36 @@
           </div>
 
           <div class="set-row">
-            <span>Radio level (1..5)</span>
-            <v-slider hide-details v-model="cfg.radioLevel" :min="1" :max="5" :step="1" color="cyan" thumb-label/>
+            <div class="set-info">
+              <span>Radio level (1..5)</span>
+              <small class="muted">Simulate readability from barely readable to loud and clear.</small>
+            </div>
+            <v-slider
+              hide-details
+              v-model="cfg.radioLevel"
+              :min="1"
+              :max="5"
+              :step="1"
+              color="cyan"
+              thumb-label
+            />
           </div>
 
+          <div class="set-row">
+            <div class="set-info">
+              <span>ATC speaking speed</span>
+              <small class="muted">{{ audioSpeedDisplay }}× — slow practice to rapid live traffic.</small>
+            </div>
+            <v-slider
+              hide-details
+              v-model="cfg.audioSpeed"
+              :min="0.7"
+              :max="1.3"
+              :step="0.05"
+              color="cyan"
+              thumb-label
+            />
+          </div>
 
           <div class="set-row">
             <span>Test TTS</span>
@@ -717,6 +743,7 @@ const globalAccuracy = computed(() => {
 })
 
 const audioContentHidden = computed(() => cfg.value.audioChallenge && !audioReveal.value)
+const audioSpeedDisplay = computed(() => (cfg.value.audioSpeed ?? 1).toFixed(2))
 
 type LearnStateResponse = LearnState
 
@@ -831,6 +858,7 @@ if (isClient) {
       void playRadioNoise(level)
     }
   })
+  watch(() => cfg.value.audioSpeed, markConfigDirty)
   watch(() => cfg.value.voice, markConfigDirty)
 }
 
@@ -1633,7 +1661,7 @@ async function playRadioNoise(level: number) {
 
   const strength = Math.max(1, Math.min(5, level))
   const intensity = (6 - strength) / 5
-  const amplitude = 0.04 + intensity * 0.12
+  const amplitude = 0.025 + intensity * 0.15
 
   for (let i = 0; i < length; i++) {
     data[i] = (Math.random() * 2 - 1) * amplitude
@@ -1679,12 +1707,21 @@ async function playRadioNoise(level: number) {
   radioNoiseSource = source
 }
 
+function computeSpeechRate(): number {
+  const base =
+    typeof cfg.value.audioSpeed === 'number' && Number.isFinite(cfg.value.audioSpeed)
+      ? cfg.value.audioSpeed
+      : 1
+  const adjustment = (cfg.value.radioLevel - 3) * 0.05
+  const rate = base + adjustment
+  return Math.min(1.4, Math.max(0.7, Math.round(rate * 100) / 100))
+}
+
 async function say(text: string) {
   const trimmed = text?.trim()
   if (!trimmed) return
 
-  const rateBase = 0.9 + (cfg.value.radioLevel - 3) * 0.12
-  const normalizedRate = Math.min(1.5, Math.max(0.6, rateBase))
+  const normalizedRate = computeSpeechRate()
 
   const hasBrowserTts = cfg.value.tts && typeof window !== 'undefined' && 'speechSynthesis' in window
 
@@ -2655,12 +2692,12 @@ onMounted(() => {
   background: color-mix(in srgb, var(--text) 4%, transparent);
   box-shadow: 0 24px 48px rgba(2, 6, 23, .5);
   backdrop-filter: blur(18px);
-  overflow: hidden;
 }
 
 .module-overview {
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
   background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 14%, transparent) 0%, color-mix(in srgb, var(--text) 4%, transparent) 100%);
+  overflow: hidden;
 }
 
 .module-overview::before {
@@ -2676,6 +2713,9 @@ onMounted(() => {
 .module-detail {
   border-color: color-mix(in srgb, var(--text) 22%, transparent);
   background: linear-gradient(160deg, color-mix(in srgb, var(--text) 6%, transparent) 0%, color-mix(in srgb, var(--bg2) 70%, transparent) 100%);
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
 }
 
 .module-detail .console {
@@ -2767,7 +2807,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin-top: 16px
+  margin-top: 16px;
+  flex: 1 1 auto
 }
 
 .console-grid {
