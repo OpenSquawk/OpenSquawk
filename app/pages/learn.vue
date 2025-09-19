@@ -209,123 +209,145 @@
             </div>
           </div>
         </div>
-
-        <div class="col">
-          <div class="label">Briefing</div>
-          <div class="panel">
-            <div class="target-row">
-              <div class="target-main">
-                <div class="muted small">{{ activeLesson.desc }}</div>
-                <div
-                    class="target-text"
-                    :class="{ 'audio-blur': audioContentHidden }"
-                    :aria-hidden="audioContentHidden ? 'true' : 'false'"
-                >
-                  {{ targetPhrase }}
+        <div class="console-grid">
+          <div class="col">
+            <div class="label">Briefing</div>
+            <div class="panel">
+              <div class="target-row">
+                <div class="target-main">
+                  <div class="muted small">{{ activeLesson.desc }}</div>
+                  <div
+                      class="target-text"
+                      :class="{ 'audio-blur': audioContentHidden }"
+                      :aria-hidden="audioContentHidden ? 'true' : 'false'"
+                  >
+                    {{ targetPhrase }}
+                  </div>
+                  <div v-if="audioContentHidden" class="audio-note muted small">
+                    Audio challenge active – listen first.
+                  </div>
                 </div>
-                <div v-if="audioContentHidden" class="audio-note muted small">
-                  Audio challenge active – listen first.
+                <div class="target-actions">
+                  <button
+                      class="btn soft mini"
+                      type="button"
+                      :disabled="!targetPhrase || ttsLoading"
+                      :aria-busy="ttsLoading ? 'true' : 'false'"
+                      @click="speakTarget()"
+                  >
+                    <v-icon size="16" :class="{ spin: ttsLoading }">{{ ttsLoading ? 'mdi-loading' : 'mdi-volume-high' }}</v-icon>
+                    {{ sayButtonLabel }}
+                  </button>
+                  <button
+                      v-if="audioContentHidden"
+                      class="btn ghost mini"
+                      type="button"
+                      @click="revealAudioContent"
+                  >
+                    <v-icon size="16">mdi-eye</v-icon>
+                    Reveal text
+                  </button>
+                  <button class="btn ghost mini" type="button" @click="repeatLesson">
+                    <v-icon size="16">mdi-dice-5</v-icon>
+                    Roll
+                  </button>
                 </div>
               </div>
-              <div class="row wrap">
-                <button
-                    class="btn soft mini"
-                    type="button"
-                    :disabled="!targetPhrase || ttsLoading"
-                    :aria-busy="ttsLoading ? 'true' : 'false'"
-                    @click="say(targetPhrase)"
-                >
-                  <v-icon size="16" :class="{ spin: ttsLoading }">{{ ttsLoading ? 'mdi-loading' : 'mdi-volume-high' }}</v-icon>
-                  Say
-                </button>
-                <button
-                    v-if="audioContentHidden"
-                    class="btn ghost mini"
-                    type="button"
-                    @click="revealAudioContent"
-                >
-                  <v-icon size="16">mdi-eye</v-icon>
-                  Reveal text
-                </button>
-                <button class="btn ghost mini" type="button" @click="rollScenario(true)">
-                  <v-icon size="16">mdi-dice-5</v-icon>
-                  Roll
-                </button>
+            </div>
+            <div class="hints">
+              <div v-for="hint in activeLesson.hints" :key="hint" class="hint">
+                <v-icon size="16">mdi-lightbulb-on-outline</v-icon>
+                {{ hint }}
+              </div>
+              <div
+                  v-for="info in lessonInfo"
+                  :key="info"
+                  :class="['hint', 'secondary', { 'audio-blur': audioContentHidden }]"
+                  :aria-hidden="audioContentHidden ? 'true' : 'false'"
+              >
+                <v-icon size="16">mdi-information-outline</v-icon>
+                {{ info }}
               </div>
             </div>
           </div>
-          <div class="hints">
-            <div v-for="hint in activeLesson.hints" :key="hint" class="hint">
-              <v-icon size="16">mdi-lightbulb-on-outline</v-icon>
-              {{ hint }}
+
+          <div class="col">
+            <div class="label">Your readback</div>
+            <div class="panel readback-panel">
+              <div class="cloze">
+                <template v-for="(segment, idx) in activeLesson.readback" :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
+                  <span v-if="segment.type === 'text'">
+                    {{ typeof segment.text === 'function' && scenario ? segment.text(scenario) : segment.text }}
+                  </span>
+                  <label
+                      v-else
+                      class="blank"
+                      :class="[blankSizeClass(segment.key, segment.width), blankStateClass(segment.key)]"
+                  >
+                    <span class="sr-only">{{ fieldLabel(segment.key) }}</span>
+                    <input
+                        v-model="userAnswers[segment.key]"
+                        :aria-label="fieldLabel(segment.key)"
+                        :placeholder="fieldPlaceholder(segment.key)"
+                        :inputmode="fieldInputmode(segment.key)"
+                    />
+                    <v-icon v-if="fieldPass(segment.key)" size="16" class="blank-status ok">mdi-check</v-icon>
+                    <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert</v-icon>
+                    <small v-if="result" class="blank-feedback">
+                      Soll: {{ fieldExpectedValue(segment.key) }}
+                    </small>
+                  </label>
+                </template>
+              </div>
             </div>
-            <div
-                v-for="info in lessonInfo"
-                :key="info"
-                :class="['hint', 'secondary', { 'audio-blur': audioContentHidden }]"
-                :aria-hidden="audioContentHidden ? 'true' : 'false'"
-            >
-              <v-icon size="16">mdi-information-outline</v-icon>
-              {{ info }}
+            <div class="row wrap controls">
+              <button class="btn primary" type="button" :disabled="evaluating" @click="evaluate">
+                <v-icon size="18">mdi-check</v-icon>
+                Check
+              </button>
+              <button class="btn soft" type="button" @click="clearAnswers">
+                <v-icon size="18">mdi-eraser</v-icon>
+                Reset
+              </button>
+              <button class="btn ghost" type="button" @click="fillSolution">
+                <v-icon size="18">mdi-auto-fix</v-icon>
+                Auto-fill
+              </button>
+            </div>
+            <div v-if="result" class="score">
+              <div class="score-num">{{ result.score }}%</div>
+              <div class="muted small">
+                Fields correct: {{ result.hits }}/{{ activeLesson.fields.length }} · Similarity: {{ Math.round(result.sim * 100) }}%
+              </div>
+            </div>
+            <div v-if="result" class="field-checks">
+              <div v-for="field in result.fields" :key="field.key" class="field-check" :class="{ ok: field.pass }">
+                <div class="field-name">{{ field.label }}</div>
+                <div class="field-answer">{{ field.answer || '—' }}</div>
+                <div class="field-expected">Expected: {{ field.expected }}</div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="col">
-          <div class="label">Your readback</div>
-          <div class="panel readback-panel">
-            <div class="cloze">
-              <template v-for="(segment, idx) in activeLesson.readback" :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
-                <span v-if="segment.type === 'text'">
-                  {{ typeof segment.text === 'function' && scenario ? segment.text(scenario) : segment.text }}
-                </span>
-                <label
-                    v-else
-                    class="blank"
-                    :class="[blankSizeClass(segment.key, segment.width), blankStateClass(segment.key)]"
-                >
-                  <span class="sr-only">{{ fieldLabel(segment.key) }}</span>
-                  <input
-                      v-model="userAnswers[segment.key]"
-                      :aria-label="fieldLabel(segment.key)"
-                      :placeholder="fieldPlaceholder(segment.key)"
-                      :inputmode="fieldInputmode(segment.key)"
-                  />
-                  <v-icon v-if="fieldPass(segment.key)" size="16" class="blank-status ok">mdi-check</v-icon>
-                  <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert</v-icon>
-                  <small v-if="result" class="blank-feedback">
-                    Soll: {{ fieldExpectedValue(segment.key) }}
-                  </small>
-                </label>
-              </template>
+        <div v-if="current" class="lesson-actions">
+          <div class="lesson-actions-meta">
+            <div v-if="nextLessonMeta" class="muted small">
+              Next: {{ nextLessonMeta.lesson.title }} · Lesson {{ nextLessonMeta.position }} of {{ nextLessonMeta.total }}
+            </div>
+            <div v-else class="muted small">
+              Last lesson in this module.
             </div>
           </div>
-          <div class="row wrap controls">
-            <button class="btn primary" type="button" :disabled="evaluating" @click="evaluate">
-              <v-icon size="18">mdi-check</v-icon>
-              Check
+          <div class="lesson-actions-buttons">
+            <button class="btn soft" type="button" @click="repeatLesson">
+              <v-icon size="18">mdi-dice-5</v-icon>
+              New scenario
             </button>
-            <button class="btn soft" type="button" @click="clearAnswers">
-              <v-icon size="18">mdi-eraser</v-icon>
-              Reset
+            <button class="btn primary" type="button" :disabled="!nextLessonMeta" @click="goToNextLesson">
+              <v-icon size="18">mdi-arrow-right</v-icon>
+              Next lesson
             </button>
-            <button class="btn ghost" type="button" @click="fillSolution">
-              <v-icon size="18">mdi-auto-fix</v-icon>
-              Auto-fill
-            </button>
-          </div>
-          <div v-if="result" class="score">
-            <div class="score-num">{{ result.score }}%</div>
-            <div class="muted small">
-              Fields correct: {{ result.hits }}/{{ activeLesson.fields.length }} · Similarity: {{ Math.round(result.sim * 100) }}%
-            </div>
-          </div>
-          <div v-if="result" class="field-checks">
-            <div v-for="field in result.fields" :key="field.key" class="field-check" :class="{ ok: field.pass }">
-              <div class="field-name">{{ field.label }}</div>
-              <div class="field-answer">{{ field.answer || '—' }}</div>
-              <div class="field-expected">Expected: {{ field.expected }}</div>
-            </div>
           </div>
         </div>
       </div>
@@ -413,7 +435,7 @@
 
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useApi } from '~/composables/useApi'
 import { createDefaultLearnConfig } from '~~/shared/learn/config'
 import type { LearnConfig, LearnProgress, LearnState } from '~~/shared/learn/config'
@@ -1800,6 +1822,8 @@ const panel = ref<'hub' | 'module' | 'progress'>('hub')
 const current = ref<ModuleDef | null>(null)
 const activeLesson = ref<Lesson | null>(null)
 const scenario = ref<Scenario | null>(null)
+const hasSpokenTarget = ref(false)
+const pendingAutoSay = ref(false)
 const activeFrequency = ref<Frequency | null>(null)
 const userAnswers = reactive<Record<string, string>>({})
 const result = ref<ScoreResult | null>(null)
@@ -2029,6 +2053,20 @@ function fieldExpectedValue(key: string): string {
 
 const targetPhrase = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.phrase(scenario.value) : ''))
 const lessonInfo = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.info(scenario.value) : []))
+const sayButtonLabel = computed(() => (hasSpokenTarget.value ? 'Say again' : 'Say'))
+const nextLessonMeta = computed(() => {
+  if (!current.value || !activeLesson.value) return null
+  const lessons = current.value.lessons
+  const activeId = activeLesson.value.id
+  const idx = lessons.findIndex(lesson => lesson.id === activeId)
+  if (idx === -1 || idx >= lessons.length - 1) return null
+  const nextLesson = lessons[idx + 1]
+  return {
+    lesson: nextLesson,
+    position: idx + 2,
+    total: lessons.length
+  }
+})
 
 watch(activeLesson, lesson => {
   if (lesson) {
@@ -2038,8 +2076,53 @@ watch(activeLesson, lesson => {
   }
 })
 
+watch(scenario, newScenario => {
+  hasSpokenTarget.value = false
+  if (!newScenario) {
+    pendingAutoSay.value = false
+  }
+})
+
+function queueAutoSay() {
+  pendingAutoSay.value = true
+  void nextTick(() => {
+    attemptAutoSay()
+  })
+}
+
+function attemptAutoSay() {
+  if (!pendingAutoSay.value) return
+  const phrase = targetPhrase.value?.trim()
+  if (!phrase) {
+    pendingAutoSay.value = false
+    return
+  }
+  if (ttsLoading.value) return
+  pendingAutoSay.value = false
+  void speakTarget(true)
+}
+
+async function speakTarget(auto = false) {
+  const phrase = targetPhrase.value?.trim()
+  if (!phrase) return
+  if (ttsLoading.value) return
+  if (!auto) {
+    pendingAutoSay.value = false
+  }
+  hasSpokenTarget.value = true
+  await say(phrase)
+}
+
+watch(ttsLoading, loading => {
+  if (!loading) {
+    attemptAutoSay()
+  }
+})
+
 function rollScenario(clear = false) {
   if (!activeLesson.value) return
+  pendingAutoSay.value = false
+  stopAudio()
   const generated = activeLesson.value.generate()
   scenario.value = generated
   const defaultType = activeLesson.value.defaultFrequency
@@ -2049,6 +2132,17 @@ function rollScenario(clear = false) {
   if (clear) {
     result.value = null
   }
+  queueAutoSay()
+}
+
+function repeatLesson() {
+  rollScenario(true)
+}
+
+function goToNextLesson() {
+  const meta = nextLessonMeta.value
+  if (!meta) return
+  activeLesson.value = meta.lesson
 }
 
 function setActiveFrequency(freq: Frequency) {
@@ -2751,10 +2845,22 @@ onMounted(() => {
 }
 
 .console {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px
+}
+
+.console-grid {
   display: grid;
-  grid-template-columns: 1.1fr .9fr;
-  gap: 12px;
-  margin-top: 12px
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px
 }
 
 .col .label {
@@ -2768,14 +2874,22 @@ onMounted(() => {
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 6%, transparent);
   padding: 12px;
-  backdrop-filter: blur(10px)
+  backdrop-filter: blur(10px);
+  border-radius: 12px
 }
 
 .target-row {
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  gap: 12px;
   align-items: flex-start
+}
+
+.target-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px
 }
 
 .row {
@@ -2836,7 +2950,7 @@ onMounted(() => {
     grid-template-columns: 1fr
   }
 
-  .console {
+  .console-grid {
     grid-template-columns: 1fr
   }
 
@@ -2856,7 +2970,6 @@ onMounted(() => {
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 6%, transparent);
   border-radius: 12px;
-  margin-bottom: 12px;
 }
 
 .scenario-item {
@@ -2919,13 +3032,38 @@ onMounted(() => {
 .target-main {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .target-text {
   font-size: 18px;
   font-weight: 600;
   line-height: 1.4;
+}
+
+.lesson-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  border-radius: 12px;
+}
+
+.lesson-actions-meta {
+  flex: 1 1 220px;
+  color: var(--t3);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.lesson-actions-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .row.wrap {
