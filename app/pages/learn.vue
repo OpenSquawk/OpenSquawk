@@ -239,16 +239,16 @@
                   Audio Challenge active – listen first.
                 </div>
               </div>
-              <div class="row wrap">
+              <div class="target-actions">
                 <button
                     class="btn soft mini"
                     type="button"
                     :disabled="!targetPhrase || ttsLoading"
                     :aria-busy="ttsLoading ? 'true' : 'false'"
-                    @click="say(targetPhrase)"
+                    @click="handleSayTarget"
                 >
                   <v-icon size="16" :class="{ spin: ttsLoading }">{{ ttsLoading ? 'mdi-loading' : 'mdi-volume-high' }}</v-icon>
-                  Say
+                  {{ sayButtonLabel }}
                 </button>
                 <button
                     v-if="audioContentHidden"
@@ -325,15 +325,16 @@
               <v-icon size="18">mdi-auto-fix</v-icon>
               Autofill
             </button>
-            <button
-                v-if="result"
-                class="btn soft"
-                type="button"
-                @click="goToNextLesson"
-            >
-              <v-icon size="18">mdi-arrow-right-bold</v-icon>
-              {{ nextLesson ? 'Next Lesson' : 'Back to Hub' }}
-            </button>
+            <template v-if="result">
+              <button class="btn soft" type="button" @click="retryLesson">
+                <v-icon size="18">mdi-dice-5</v-icon>
+                Retry Lesson
+              </button>
+              <button class="btn soft" type="button" @click="goToNextLesson">
+                <v-icon size="18">mdi-arrow-right-bold</v-icon>
+                {{ nextLesson ? 'Next Lesson' : 'Back to Hub' }}
+              </button>
+            </template>
           </div>
           <div v-if="result" class="score">
             <div class="score-num">{{ result.score }}%</div>
@@ -449,7 +450,7 @@
 
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useApi } from '~/composables/useApi'
 import { createDefaultLearnConfig } from '~~/shared/learn/config'
 import type { LearnConfig, LearnProgress, LearnState } from '~~/shared/learn/config'
@@ -1844,7 +1845,10 @@ const ttsLoading = ref(false)
 const audioElement = ref<HTMLAudioElement | null>(null)
 const sayCache = new Map<string, string>()
 const pendingSayRequests = new Map<string, Promise<string>>()
+let pendingAutoSayStop: (() => void) | null = null
 const audioReveal = ref(true)
+const hasSpokenTarget = ref(false)
+const sayButtonLabel = computed(() => (hasSpokenTarget.value ? 'Say again' : 'Say'))
 
 const toast = ref({ show: false, text: '' })
 const showSettings = ref(false)
@@ -1982,6 +1986,10 @@ onBeforeUnmount(() => {
   if (dirtyState.xp || dirtyState.progress || dirtyState.config) {
     void persistLearnState(true)
   }
+  if (pendingAutoSayStop) {
+    pendingAutoSayStop()
+    pendingAutoSayStop = null
+  }
 })
 
 const fieldMap = computed<Record<string, LessonField>>(() => {
@@ -2073,6 +2081,16 @@ const nextLesson = computed(() => {
   return index >= 0 && index < lessons.length - 1 ? lessons[index + 1] : null
 })
 
+watch(() => scenario.value, () => {
+  hasSpokenTarget.value = false
+})
+
+watch(targetPhrase, (next, prev) => {
+  if (next !== prev) {
+    hasSpokenTarget.value = false
+  }
+})
+
 watch(activeLesson, lesson => {
   if (lesson) {
     rollScenario(true)
@@ -2089,9 +2107,44 @@ function rollScenario(clear = false) {
   activeFrequency.value = generated.frequencies.find(freq => freq.type === (defaultType || 'DEL')) || generated.frequencies[0] || null
   resetAnswers(true)
   resetAudioReveal()
+  hasSpokenTarget.value = false
+  void queueAutoSay()
   if (clear) {
     result.value = null
   }
+}
+
+async function handleSayTarget() {
+  const phrase = targetPhrase.value
+  const trimmed = phrase?.trim()
+  if (!trimmed) return
+  await say(trimmed)
+  if (targetPhrase.value === phrase) {
+    hasSpokenTarget.value = true
+  }
+}
+
+async function queueAutoSay() {
+  await nextTick()
+  if (pendingAutoSayStop) {
+    pendingAutoSayStop()
+    pendingAutoSayStop = null
+  }
+  if (ttsLoading.value) {
+    const stop = watch(
+      () => ttsLoading.value,
+      value => {
+        if (!value) {
+          stop()
+          pendingAutoSayStop = null
+          void handleSayTarget()
+        }
+      }
+    )
+    pendingAutoSayStop = stop
+    return
+  }
+  await handleSayTarget()
 }
 
 function setActiveFrequency(freq: Frequency) {
@@ -2199,6 +2252,11 @@ function quickContinue(id: string) {
 
 function selectLesson(lesson: Lesson) {
   activeLesson.value = lesson
+}
+
+function retryLesson() {
+  stopAudio()
+  rollScenario(true)
 }
 
 function goToNextLesson() {
@@ -2808,9 +2866,10 @@ onMounted(() => {
 
 .console {
   display: grid;
-  grid-template-columns: 1.1fr .9fr;
-  gap: 12px;
-  margin-top: 12px
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 12px;
+  align-items: start
 }
 
 .col .label {
@@ -2824,20 +2883,25 @@ onMounted(() => {
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 6%, transparent);
   padding: 12px;
-  backdrop-filter: blur(10px)
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px
 }
 
 .target-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  align-items: flex-start
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start
 }
 
 .row {
   display: flex;
   gap: 8px;
-  margin-top: 8px
+  margin-top: 8px;
+  align-items: center
 }
 
 .row.between {
@@ -2898,6 +2962,20 @@ onMounted(() => {
 
   .stats {
     display: none
+  }
+
+  .target-row {
+    grid-template-columns: 1fr
+  }
+
+  .target-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    min-width: 0
+  }
+
+  .target-actions .btn {
+    flex: 1 1 140px
   }
 }
 
@@ -2975,7 +3053,20 @@ onMounted(() => {
 .target-main {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+}
+
+.target-actions {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+  align-items: stretch;
+  min-width: 150px
+}
+
+.target-actions .btn {
+  width: 100%;
+  justify-content: center
 }
 
 .target-text {
@@ -2989,7 +3080,32 @@ onMounted(() => {
 }
 
 .controls {
+  margin-top: 16px;
+  gap: 12px;
+  align-items: center;
+}
+
+.controls .btn {
+  flex: none;
+  min-width: 120px;
+}
+
+.hints {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-top: 12px;
+}
+
+.hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--t2);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  border-radius: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
 }
 
 .readback-panel {
