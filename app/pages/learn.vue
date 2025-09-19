@@ -485,7 +485,7 @@
     </section>
 
     <!-- SETTINGS DIALOG -->
-    <v-dialog v-model="showSettings" max-width="720">
+    <v-dialog v-model="showSettings" max-width="720" content-class="learn-settings-dialog">
       <div class="panel dialog">
         <h3 class="h3">ATC settings</h3>
 
@@ -509,6 +509,24 @@
           <div class="set-row">
             <span>Radio level (1..5)</span>
             <v-slider v-model="cfg.radioLevel" :min="1" :max="5" :step="1" color="cyan" thumb-label/>
+          </div>
+
+          <div class="set-row set-row-slider">
+            <div class="set-info">
+              <span>Speech speed</span>
+              <small class="muted">Adjust ATC playback pace for guided drills.</small>
+            </div>
+            <div class="set-slider">
+              <span class="set-slider-value">{{ audioSpeedLabel }}</span>
+              <v-slider
+                  v-model.number="audioSpeedValue"
+                  :min="0.7"
+                  :max="1.3"
+                  :step="0.05"
+                  color="cyan"
+                  hide-details
+              />
+            </div>
           </div>
 
           <div class="set-row">
@@ -872,14 +890,6 @@ const airportsData: AirportData[] = [
 
 const atisLetters = 'ABCDEFGHJKLMNOPQRSTUVWXYZ'.split('')
 
-function gradientArt(colors: string[]): string {
-  const stops = colors
-    .map((color, idx) => `<stop offset="${Math.round((idx / Math.max(colors.length - 1, 1)) * 100)}%" stop-color="${color}"/>`)
-    .join('')
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">${stops}</linearGradient></defs><rect fill="url(#g)" width="400" height="240"/></svg>`
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
-}
-
 function choice<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)]
 }
@@ -1170,7 +1180,7 @@ const modules = ref<ModuleDef[]>([
     id: 'normalize',
     title: 'Normalize · Fundamentals',
     subtitle: 'Alphabet, ATIS, METAR & Radio Check',
-    art: gradientArt(['#0ea5e9', '#22d3ee', '#0f172a']),
+    art: '/img/learn/module-normalize.jpg',
     lessons: [
       {
         id: 'icao-alphabet',
@@ -1425,7 +1435,7 @@ const modules = ref<ModuleDef[]>([
     id: 'arc',
     title: 'ARC Decision Tree',
     subtitle: 'From clearance call to departure',
-    art: gradientArt(['#f97316', '#fb923c', '#0f172a']),
+    art: '/img/learn/module-arc.jpg',
     lessons: [
       {
         id: 'clearance-contact',
@@ -2052,6 +2062,22 @@ const globalAccuracy = computed(() => {
 
 const audioContentHidden = computed(() => cfg.value.audioChallenge && !audioReveal.value)
 
+const audioSpeedValue = computed({
+  get: () => {
+    const raw = Number(cfg.value.audioSpeed)
+    if (!Number.isFinite(raw)) return 1
+    return Math.min(1.3, Math.max(0.7, raw))
+  },
+  set: (value: number) => {
+    const numeric = Number(value)
+    const fallback = Number.isFinite(numeric) ? numeric : 1
+    const clamped = Math.min(1.3, Math.max(0.7, fallback))
+    cfg.value.audioSpeed = Math.round(clamped * 100) / 100
+  }
+})
+
+const audioSpeedLabel = computed(() => `${audioSpeedValue.value.toFixed(2)}x`)
+
 type LearnStateResponse = LearnState
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
@@ -2165,6 +2191,7 @@ if (isClient) {
       void playRadioNoise(level)
     }
   })
+  watch(() => cfg.value.audioSpeed, markConfigDirty)
   watch(() => cfg.value.voice, markConfigDirty)
 }
 
@@ -3018,7 +3045,8 @@ async function say(text: string) {
   if (!trimmed) return
 
   const rateBase = 0.9 + (cfg.value.radioLevel - 3) * 0.12
-  const normalizedRate = Math.min(1.5, Math.max(0.6, rateBase))
+  const speedMultiplier = audioSpeedValue.value
+  const normalizedRate = Math.min(1.5, Math.max(0.6, rateBase * speedMultiplier))
 
   const hasBrowserTts = cfg.value.tts && typeof window !== 'undefined' && 'speechSynthesis' in window
 
@@ -4543,6 +4571,33 @@ onMounted(() => {
   max-width: 70%;
 }
 
+.set-row-slider {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.set-slider {
+  flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.set-slider-value {
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--t3);
+  min-width: 56px;
+  text-align: right;
+}
+
+.set-slider :deep(.v-slider) {
+  flex: 1 1 auto;
+  max-width: 260px;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -4573,6 +4628,52 @@ onMounted(() => {
     bottom: auto;
     box-shadow: none;
     backdrop-filter: none;
+    transform: none;
+  }
+
+  .set-row-slider {
+    align-items: flex-start;
+  }
+
+  .set-slider {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .set-slider-value {
+    text-align: left;
+  }
+
+  .set-slider :deep(.v-slider) {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1024px) {
+  .lesson-actions {
+    position: fixed;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: 18px;
+    width: min(640px, calc(100vw - 48px));
+    z-index: 24;
+  }
+
+  .module-detail {
+    padding-bottom: 140px;
+  }
+
+  :deep(.learn-settings-dialog) {
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
+  :deep(.learn-settings-dialog .panel.dialog) {
+    width: min(640px, calc(100vw - 48px));
+    margin: 0 auto;
+    border-radius: 24px 24px 0 0;
   }
 }
 
