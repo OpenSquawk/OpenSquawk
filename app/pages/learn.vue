@@ -583,6 +583,9 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { useApi } from '~/composables/useApi'
 import { createDefaultLearnConfig } from '~~/shared/learn/config'
 import type { LearnConfig, LearnProgress, LearnState } from '~~/shared/learn/config'
+import { loadPizzicatoLite } from '~~/shared/utils/pizzicatoLite'
+import type { PizzicatoLite } from '~~/shared/utils/pizzicatoLite'
+import { createNoiseGenerators, getReadabilityProfile } from '~~/shared/utils/radioEffects'
 
 definePageMeta({ middleware: 'require-auth' })
 
@@ -1986,10 +1989,16 @@ const result = ref<ScoreResult | null>(null)
 const evaluating = ref(false)
 const ttsLoading = ref(false)
 const audioElement = ref<HTMLAudioElement | null>(null)
+let speechContext: AudioContext | null = null
+let pizzicatoLiteInstance: PizzicatoLite | null = null
+type RadioSoundInstance = Awaited<ReturnType<PizzicatoLite['createSoundFromBase64']>>
+let activeRadioSound: RadioSoundInstance | null = null
+let activeRadioCleanup: Array<() => void> = []
 let radioNoiseContext: AudioContext | null = null
 let radioNoiseSource: AudioBufferSourceNode | null = null
-const sayCache = new Map<string, string>()
-const pendingSayRequests = new Map<string, Promise<string>>()
+type CachedAudio = { base64: string; mime?: string }
+const sayCache = new Map<string, CachedAudio>()
+const pendingSayRequests = new Map<string, Promise<CachedAudio>>()
 const audioReveal = ref(true)
 
 const toast = ref({ show: false, text: '' })
@@ -2188,10 +2197,16 @@ onBeforeUnmount(() => {
   if (dirtyState.xp || dirtyState.progress || dirtyState.config) {
     void persistLearnState(true)
   }
+  stopAudio()
   stopRadioNoise()
   if (radioNoiseContext) {
     const ctx = radioNoiseContext
     radioNoiseContext = null
+    void ctx.close().catch(() => {})
+  }
+  if (speechContext) {
+    const ctx = speechContext
+    speechContext = null
     void ctx.close().catch(() => {})
   }
 })
@@ -2757,13 +2772,43 @@ function tilt(event: MouseEvent) {
   worldTiltStyle.value = { transform: `perspective(1200px) rotateX(${dy * -3}deg) rotateY(${dx * 3}deg)` }
 }
 
+async function ensureSpeechAudioContext(): Promise<AudioContext | null> {
+  if (!isClient) return null
+
+  const audioWindow = window as typeof window & { webkitAudioContext?: typeof AudioContext }
+  const AudioContextCtor = audioWindow.AudioContext || audioWindow.webkitAudioContext
+  if (!AudioContextCtor) return null
+
+  if (!speechContext || speechContext.state === 'closed') {
+    speechContext = new AudioContextCtor()
+  }
+
+  if (speechContext.state === 'suspended') {
+    try {
+      await speechContext.resume()
+    } catch (err) {
+      console.warn('Failed to resume speech audio context', err)
+    }
+  }
+
+  return speechContext
+}
+
+async function ensurePizzicato(ctx: AudioContext | null): Promise<PizzicatoLite | null> {
+  if (!ctx) return null
+  if (!pizzicatoLiteInstance) {
+    pizzicatoLiteInstance = await loadPizzicatoLite()
+  }
+  return pizzicatoLiteInstance
+}
+
 function buildSayCacheKey(text: string, rate: number): string {
   const voice = cfg.value.voice?.trim().toLowerCase() || 'default'
   const radioLevel = cfg.value.radioLevel
   return `${voice}|${radioLevel}|${rate.toFixed(2)}|${text}`
 }
 
-async function requestSayAudio(cacheKey: string, payload: Record<string, unknown>): Promise<string> {
+async function requestSayAudio(cacheKey: string, payload: Record<string, unknown>): Promise<CachedAudio> {
   const pending = pendingSayRequests.get(cacheKey)
   if (pending) {
     return pending
@@ -2775,38 +2820,125 @@ async function requestSayAudio(cacheKey: string, payload: Record<string, unknown
     if (!audioData?.base64) {
       throw new Error('Missing audio data')
     }
-    const mime = audioData.mime || 'audio/wav'
-    return `data:${mime};base64,${audioData.base64}`
+    return { base64: audioData.base64 as string, mime: audioData.mime || 'audio/wav' }
   })()
 
   pendingSayRequests.set(cacheKey, request)
 
   try {
-    const dataUrl = await request
-    sayCache.set(cacheKey, dataUrl)
-    return dataUrl
+    const audioPayload = await request
+    sayCache.set(cacheKey, audioPayload)
+    return audioPayload
   } finally {
     pendingSayRequests.delete(cacheKey)
   }
 }
 
-async function playAudioSource(source: string) {
-  const audio = new Audio(source)
-  audioElement.value = audio
-  audio.onended = () => {
-    if (audioElement.value === audio) {
-      audioElement.value = null
+async function playAudioSource(source: CachedAudio) {
+  if (!source?.base64) return
+
+  audioElement.value = null
+
+  const readability = Math.max(1, Math.min(5, cfg.value.radioLevel || 3))
+  const mime = source.mime || 'audio/wav'
+  const dataUrl = `data:${mime};base64,${source.base64}`
+
+  const playWithoutEffects = async () => {
+    const audio = new Audio(dataUrl)
+    audioElement.value = audio
+    audio.onended = () => {
+      if (audioElement.value === audio) {
+        audioElement.value = null
+      }
+    }
+    audio.onerror = () => {
+      if (audioElement.value === audio) {
+        audioElement.value = null
+      }
+    }
+    try {
+      await audio.play()
+    } catch (err) {
+      console.error('Audio playback failed', err)
     }
   }
-  audio.onerror = () => {
-    if (audioElement.value === audio) {
-      audioElement.value = null
-    }
-  }
+
   try {
-    await audio.play()
+    const ctx = await ensureSpeechAudioContext()
+    const pizzicato = await ensurePizzicato(ctx)
+    if (!ctx || !pizzicato) {
+      throw new Error('Audio engine unavailable')
+    }
+
+    const sound = await pizzicato.createSoundFromBase64(ctx, source.base64)
+    const profile = getReadabilityProfile(readability)
+    const { Effects } = pizzicato
+
+    const highpass = new Effects.HighPassFilter(ctx, {
+      frequency: profile.eq.highpass,
+      q: profile.eq.highpassQ
+    })
+    const lowpass = new Effects.LowPassFilter(ctx, {
+      frequency: profile.eq.lowpass,
+      q: profile.eq.lowpassQ
+    })
+
+    sound.addEffect(highpass)
+    sound.addEffect(lowpass)
+
+    if (profile.eq.bandpass) {
+      sound.addEffect(
+        new Effects.BandPassFilter(ctx, {
+          frequency: profile.eq.bandpass.frequency,
+          q: profile.eq.bandpass.q
+        })
+      )
+    }
+
+    if (profile.presence) {
+      sound.addEffect(new Effects.PeakingFilter(ctx, profile.presence))
+    }
+
+    profile.distortions.forEach(amount => {
+      sound.addEffect(new Effects.Distortion(ctx, { amount }))
+    })
+
+    sound.addEffect(new Effects.Compressor(ctx, profile.compressor))
+
+    if (profile.tremolos) {
+      profile.tremolos.forEach(tremolo => {
+        sound.addEffect(new Effects.Tremolo(ctx, tremolo))
+      })
+    }
+
+    sound.setVolume(profile.gain)
+
+    const noiseStops = createNoiseGenerators(ctx, sound.duration, profile, readability)
+
+    activeRadioSound = sound
+    activeRadioCleanup = noiseStops
+
+    try {
+      await sound.play()
+    } finally {
+      if (activeRadioSound === sound) {
+        activeRadioSound = null
+      }
+      if (activeRadioCleanup === noiseStops) {
+        activeRadioCleanup = []
+      }
+      noiseStops.forEach(stop => {
+        try {
+          stop()
+        } catch {
+          // ignore
+        }
+      })
+      sound.clearEffects()
+    }
   } catch (err) {
-    console.error('Audio playback failed', err)
+    console.error('Failed to apply radio effect', err)
+    await playWithoutEffects()
   }
 }
 
@@ -2947,11 +3079,11 @@ async function say(text: string) {
   ttsLoading.value = true
 
   try {
-    let dataUrl = sayCache.get(cacheKey)
-    if (!dataUrl) {
-      dataUrl = await requestSayAudio(cacheKey, payload)
+    let audioData = sayCache.get(cacheKey)
+    if (!audioData) {
+      audioData = await requestSayAudio(cacheKey, payload)
     }
-    await playAudioSource(dataUrl)
+    await playAudioSource(audioData)
   } catch (err) {
     console.error('TTS request failed', err)
   } finally {
@@ -2962,6 +3094,26 @@ async function say(text: string) {
 function stopAudio() {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.cancel()
+  }
+  if (activeRadioSound) {
+    const sound = activeRadioSound
+    activeRadioSound = null
+    try {
+      sound.stop()
+    } catch {
+      // ignore stop errors
+    }
+  }
+  if (activeRadioCleanup.length) {
+    const stops = activeRadioCleanup
+    activeRadioCleanup = []
+    stops.forEach(stop => {
+      try {
+        stop()
+      } catch {
+        // ignore cleanup errors
+      }
+    })
   }
   if (audioElement.value) {
     try {
