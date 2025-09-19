@@ -35,10 +35,10 @@
             ATC
           </button>
 
-          <button class="btn ghost" @click="resetAll" title="Reset">
-            <v-icon size="18">mdi-refresh</v-icon>
-            Reset
-          </button>
+          <NuxtLink class="btn ghost" to="/logout" title="Logout">
+            <v-icon size="18">mdi-logout</v-icon>
+            Logout
+          </NuxtLink>
         </div>
       </nav>
     </header>
@@ -416,6 +416,17 @@
                 Stop
               </button>
             </div>
+          </div>
+
+          <div class="set-row reset-row">
+            <div class="set-info">
+              <span>Reset training data</span>
+              <small class="muted">Clears XP, progress, and local settings on this device.</small>
+            </div>
+            <button class="btn ghost" type="button" @click="resetAll">
+              <v-icon size="18">mdi-refresh</v-icon>
+              Reset
+            </button>
           </div>
         </div>
 
@@ -1830,6 +1841,8 @@ const result = ref<ScoreResult | null>(null)
 const evaluating = ref(false)
 const ttsLoading = ref(false)
 const audioElement = ref<HTMLAudioElement | null>(null)
+let radioNoiseContext: AudioContext | null = null
+let radioNoiseSource: AudioBufferSourceNode | null = null
 const sayCache = new Map<string, string>()
 const pendingSayRequests = new Map<string, Promise<string>>()
 const audioReveal = ref(true)
@@ -1957,7 +1970,12 @@ if (isClient) {
     markConfigDirty()
     resetAudioReveal()
   })
-  watch(() => cfg.value.radioLevel, markConfigDirty)
+  watch(() => cfg.value.radioLevel, (level, previous) => {
+    markConfigDirty()
+    if (level !== previous) {
+      void playRadioNoise(level)
+    }
+  })
   watch(() => cfg.value.voice, markConfigDirty)
 }
 
@@ -1968,6 +1986,12 @@ onBeforeUnmount(() => {
   }
   if (dirtyState.xp || dirtyState.progress || dirtyState.config) {
     void persistLearnState(true)
+  }
+  stopRadioNoise()
+  if (radioNoiseContext) {
+    const ctx = radioNoiseContext
+    radioNoiseContext = null
+    void ctx.close().catch(() => {})
   }
 })
 
@@ -2369,6 +2393,98 @@ async function playAudioSource(source: string) {
   }
 }
 
+function stopRadioNoise() {
+  if (!radioNoiseSource) return
+  try {
+    radioNoiseSource.stop()
+  } catch (err) {
+    // ignore stop errors
+  }
+  try {
+    radioNoiseSource.disconnect()
+  } catch (err) {
+    // ignore disconnect errors
+  }
+  radioNoiseSource = null
+}
+
+async function playRadioNoise(level: number) {
+  if (!isClient) return
+
+  const audioWindow = window as typeof window & { webkitAudioContext?: typeof AudioContext }
+  const AudioContextCtor = audioWindow.AudioContext || audioWindow.webkitAudioContext
+  if (!AudioContextCtor) return
+
+  if (!radioNoiseContext || radioNoiseContext.state === 'closed') {
+    radioNoiseContext = new AudioContextCtor()
+  }
+
+  const ctx = radioNoiseContext
+  if (!ctx) return
+
+  try {
+    if (ctx.state === 'suspended') {
+      await ctx.resume()
+    }
+  } catch (err) {
+    console.warn('Failed to resume radio noise context', err)
+  }
+
+  stopRadioNoise()
+
+  const duration = 0.4
+  const length = Math.max(1, Math.floor(ctx.sampleRate * duration))
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate)
+  const data = buffer.getChannelData(0)
+
+  const strength = Math.max(1, Math.min(5, level))
+  const intensity = (6 - strength) / 5
+  const amplitude = 0.04 + intensity * 0.12
+
+  for (let i = 0; i < length; i++) {
+    data[i] = (Math.random() * 2 - 1) * amplitude
+  }
+
+  const source = ctx.createBufferSource()
+  source.buffer = buffer
+
+  const highpass = ctx.createBiquadFilter()
+  highpass.type = 'highpass'
+  highpass.frequency.value = 320
+
+  const bandpass = ctx.createBiquadFilter()
+  bandpass.type = 'bandpass'
+  bandpass.frequency.value = 1800
+  bandpass.Q.value = 1.2
+
+  const lowpass = ctx.createBiquadFilter()
+  lowpass.type = 'lowpass'
+  lowpass.frequency.value = 3200
+
+  const gain = ctx.createGain()
+  const now = ctx.currentTime
+  const endTime = now + duration
+  gain.gain.setValueAtTime(amplitude, now)
+  gain.gain.exponentialRampToValueAtTime(0.0001, endTime)
+
+  source.connect(highpass)
+  highpass.connect(bandpass)
+  bandpass.connect(lowpass)
+  lowpass.connect(gain)
+  gain.connect(ctx.destination)
+
+  source.start(now)
+  source.stop(endTime)
+
+  source.onended = () => {
+    if (radioNoiseSource === source) {
+      radioNoiseSource = null
+    }
+  }
+
+  radioNoiseSource = source
+}
+
 async function say(text: string) {
   const trimmed = text?.trim()
   if (!trimmed) return
@@ -2569,7 +2685,8 @@ onMounted(() => {
   padding: 6px 10px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 6%, transparent);
-  font-size: 12px
+  font-size: 12px;
+  white-space: nowrap
 }
 
 .chip.inline {
@@ -2685,7 +2802,8 @@ onMounted(() => {
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 6%, transparent);
   color: var(--text);
-  font-weight: 600
+  font-weight: 600;
+  text-decoration: none
 }
 
 .btn:hover {
