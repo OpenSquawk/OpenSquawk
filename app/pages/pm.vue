@@ -1519,12 +1519,14 @@ const createNoiseGenerators = (
   return stops
 }
 
-const playAudioWithEffects = async (base64: string) => {
+const playAudioWithEffects = async (base64: string, mime = 'audio/wav') => {
   if (typeof window === 'undefined') return
+
+  const dataUrl = `data:${mime || 'audio/wav'};base64,${base64}`
 
   const playWithoutEffects = () =>
     new Promise<void>((resolve) => {
-      const audio = new Audio(`data:audio/wav;base64,${base64}`)
+      const audio = new Audio(dataUrl)
       audio.onended = () => resolve()
       audio.onerror = () => resolve()
       audio.play().catch(() => resolve())
@@ -1614,7 +1616,7 @@ const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = 
       if (options.updateLastTransmission !== false) {
         setLastTransmission(options.lastTransmissionLabel || `ATC: ${prepared.plain}`)
       }
-      await playAudioWithEffects(response.audio.base64)
+      await playAudioWithEffects(response.audio.base64, response.audio.mime)
     }
   } catch (err) {
     console.error('TTS failed:', err)
@@ -1657,7 +1659,7 @@ const speakPlainText = (text: string, options: SpeechOptions = {}) => {
         if (options.updateLastTransmission !== false) {
           setLastTransmission(options.lastTransmissionLabel || trimmed)
         }
-        await playAudioWithEffects(response.audio.base64)
+        await playAudioWithEffects(response.audio.base64, response.audio.mime)
       }
     } catch (err) {
       console.error('TTS failed:', err)
