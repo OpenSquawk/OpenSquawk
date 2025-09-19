@@ -23,7 +23,7 @@ export const LEARN_CONFIG_DEFAULTS: LearnConfig = {
   tts: false,
   radioLevel: 4,
   voice: '',
-  audioChallenge: false,
+  audioChallenge: true,
   audioSpeed: 1,
 }
 

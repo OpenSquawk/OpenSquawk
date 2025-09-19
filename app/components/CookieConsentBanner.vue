@@ -71,8 +71,10 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useRoute } from '#imports';
 
 const { hasConsent, analyticsEnabled, acceptAll, rejectAll, savePreferences } = useCookieConsent();
+const route = useRoute();
 
 const isDialogVisible = ref(!hasConsent.value);
 const isManuallyOpened = ref(false);
@@ -108,7 +110,9 @@ watch(
   }
 );
 
-const showManageButton = computed(() => hasConsent.value && !isDialogVisible.value);
+const restrictedRoute = computed(() => route.path.startsWith('/learn') || route.path.startsWith('/pm'));
+
+const showManageButton = computed(() => hasConsent.value && !isDialogVisible.value && !restrictedRoute.value);
 
 const closeDialog = () => {
   isDialogVisible.value = false;
