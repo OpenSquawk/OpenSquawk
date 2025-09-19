@@ -1152,7 +1152,7 @@ const modules = ref<ModuleDef[]>([
     id: 'normalize',
     title: 'Normalize · Fundamentals',
     subtitle: 'Alphabet, ATIS, METAR & Radio Check',
-    art: gradientArt(['#0ea5e9', '#22d3ee', '#0f172a']),
+    art: 'https://images.unsplash.com/photo-1488085061387-422e29b40080?q=80&w=1600&auto=format&fit=crop',
     lessons: [
       {
         id: 'icao-alphabet',
