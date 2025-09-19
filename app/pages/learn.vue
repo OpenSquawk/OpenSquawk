@@ -10,12 +10,15 @@
           </button>
           <span class="brand">OpenSquawk</span>
           <span class="sep">|</span>
-          <span class="mode">Training Hub</span>
+          <span class="mode">Pilot Voice Prep</span>
         </div>
 
         <div class="hud-right">
-          <span class="chip">Lvl {{ level }}</span>
-          <span class="chip">{{ xp }} XP</span>
+          <div v-if="primaryObjective" class="next-objective">
+            <span class="next-label">Next up</span>
+            <span class="next-value">{{ primaryObjective.title }}</span>
+            <span class="next-status">{{ primaryObjective.status }}</span>
+          </div>
 
           <!-- Quick ATC: Voice & Level -->
           <div class="chip inline">
@@ -23,11 +26,6 @@
             <span class="ml-1">L {{ cfg.radioLevel }}</span>
             <input type="range" min="1" max="5" step="1" v-model.number="cfg.radioLevel"/>
           </div>
-
-          <button class="btn ghost" @click="panel='progress'">
-            <v-icon size="18">mdi-chart-line</v-icon>
-            Progress
-          </button>
 
           <!-- ATC Einstellungen -->
           <button class="btn ghost" @click="showSettings=true" title="ATC settings">
@@ -55,9 +53,9 @@
                 {{ currentBadge.name }}
               </div>
             </div>
-            <h1 class="h1">ATC Learning Hub</h1>
+            <h1 class="h1">Pilot Comms Trainer</h1>
             <p class="muted hero-sub">
-              Missions, XP bursts and animated badges that actually react to your flying. Stored locally.
+              Build confident pilot readbacks with scenario-driven missions, instant scoring, and badges that react to your flying.
             </p>
 
             <div class="hero-highlight">
@@ -65,20 +63,53 @@
                 <div class="hero-orb-core">
                   <span class="hero-orb-level">Lvl {{ level }}</span>
                   <span class="hero-orb-progress">{{ levelProgress }}%</span>
+                  <span class="hero-orb-caption">{{ xpToNextLevel }} XP to L{{ nextLevel }}</span>
                 </div>
               </div>
               <div class="hero-highlight-meta">
-                <span class="hero-tag">Next level</span>
+                <span class="hero-tag">Next objective</span>
                 <div class="hero-highlight-title">
-                  {{ xpToNextLevel }} XP to Level {{ nextLevel }}
+                  {{ primaryObjective ? primaryObjective.title : 'Choose a mission to begin' }}
                 </div>
                 <p class="muted small">
-                  Keep your streak alive with {{ dailyHint }} and mission clears.
+                  {{
+                    primaryObjective
+                      ? primaryObjective.description
+                      : 'Open any mission below to start your first readback drills.'
+                  }}
                 </p>
-                <div class="hero-highlight-bar" role="progressbar" :aria-valuenow="levelProgress" aria-valuemin="0" aria-valuemax="100">
-                  <div class="hero-highlight-fill" :style="{ width: levelProgress + '%' }"></div>
+                <div
+                    v-if="primaryObjective"
+                    class="hero-highlight-bar"
+                    role="progressbar"
+                    :aria-valuenow="primaryObjectiveProgress"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                >
+                  <div class="hero-highlight-fill" :style="{ width: primaryObjectiveProgress + '%' }"></div>
+                </div>
+                <p v-if="primaryObjective" class="muted small">{{ primaryObjective.status }}</p>
+              </div>
+            </div>
+
+            <div v-if="missionObjective && !missionObjective.complete" class="objective-callout">
+              <div class="objective-body">
+                <div class="objective-title-row">
+                  <v-icon size="18">{{ missionObjective.icon }}</v-icon>
+                  <span class="objective-title">{{ missionObjective.title }}</span>
+                </div>
+                <p class="muted small">{{ missionObjective.description }}</p>
+                <div class="objective-progress">
+                  <div class="objective-progress-bar">
+                    <div class="objective-progress-fill" :style="{ width: objectiveProgressPct(missionObjective) + '%' }"></div>
+                  </div>
+                  <div class="objective-progress-meta">{{ missionObjective.status }}</div>
                 </div>
               </div>
+              <button class="btn primary" type="button" @click="resumeMissionObjective">
+                <v-icon size="18">mdi-play</v-icon>
+                Resume
+              </button>
             </div>
 
             <div class="hero-metrics">
@@ -106,27 +137,19 @@
             </div>
 
             <div class="actions">
-              <button class="btn primary" @click="panel='hub'">
+              <button class="btn primary" type="button" @click="panel='hub'">
                 <v-icon>mdi-play</v-icon>
-                Start training
-              </button>
-              <button class="btn ghost" @click="panel='progress'">
-                <v-icon>mdi-progress-check</v-icon>
-                Progress
-              </button>
-              <button class="btn ghost" @click="testBeep">
-                <v-icon>mdi-volume-high</v-icon>
-                Test
+                Mission hub
               </button>
             </div>
 
-            <div class="season">
+            <div class="season" v-if="primaryObjective">
               <div class="season-head">
-                <span>Season progress</span>
-                <span>{{ seasonPct }}%</span>
+                <span>Today's focus</span>
+                <span>{{ primaryObjective.status }}</span>
               </div>
               <div class="bar">
-                <div class="fill" :style="{ width: seasonPct + '%' }"></div>
+                <div class="fill" :style="{ width: primaryObjectiveProgress + '%' }"></div>
               </div>
             </div>
           </div>
@@ -162,18 +185,30 @@
             </div>
 
             <div class="rail-title">
-              <v-icon size="18">mdi-calendar-star</v-icon>
-              Daily Challenges
+              <v-icon size="18">mdi-target-account</v-icon>
+              Daily Focus
             </div>
             <div class="rail">
-              <div v-for="d in dailies" :key="d.id" class="card challenge-card">
+              <div
+                  v-for="objective in dailyObjectives"
+                  :key="objective.id"
+                  class="card challenge-card"
+                  :class="{ done: objective.complete }"
+              >
                 <div class="card-head">
-                  <span class="badge">{{ d.reward }} XP</span>
-                  <v-icon size="18">mdi-lightning-bolt</v-icon>
+                  <span class="badge" :class="{ complete: objective.complete }">
+                    {{ objectiveBadgeLabel(objective) }}
+                  </span>
+                  <v-icon size="18">{{ objective.icon }}</v-icon>
                 </div>
-                <div class="card-title">{{ d.title }}</div>
-                <div class="card-sub muted">{{ d.sub }}</div>
-                <button class="btn mini soft" @click="startDaily(d)">Accept</button>
+                <div class="card-title">{{ objective.title }}</div>
+                <div class="card-sub muted">{{ objective.description }}</div>
+                <div class="objective-progress">
+                  <div class="objective-progress-bar">
+                    <div class="objective-progress-fill" :style="{ width: objectiveProgressPct(objective) + '%' }"></div>
+                  </div>
+                  <div class="objective-progress-meta">{{ objective.status }}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -456,25 +491,6 @@
       </div>
     </section>
 
-    <!-- PROGRESS -->
-    <section v-if="panel==='progress'" class="container" aria-label="Progress">
-      <h2 class="h2">Overall progress</h2>
-      <div class="progress-grid">
-        <div v-for="m in modules" :key="m.id" class="panel">
-          <div class="row between">
-            <div class="strong">{{ m.title }}</div>
-            <div class="muted">{{ pct(m.id) }}%</div>
-          </div>
-          <div class="list">
-            <div v-for="l in m.lessons" :key="l.id" class="list-row">
-              <span>{{ l.title }}</span>
-              <span class="muted">{{ bestScore(m.id, l.id) ? bestScore(m.id, l.id) + '%' : '—' }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- SETTINGS DIALOG -->
     <v-dialog v-model="showSettings" max-width="720">
       <div class="panel dialog">
@@ -696,6 +712,18 @@ type ModuleDef = {
   subtitle: string
   art: string
   lessons: Lesson[]
+}
+
+type Objective = {
+  id: string
+  title: string
+  description: string
+  progress: number
+  goal: number
+  status: string
+  icon: string
+  complete: boolean
+  moduleId?: string
 }
 
 type FieldState = {
@@ -1932,7 +1960,7 @@ const modules = ref<ModuleDef[]>([
     ]
   }
 ])
-const panel = ref<'hub' | 'module' | 'progress'>('hub')
+const panel = ref<'hub' | 'module'>('hub')
 const current = ref<ModuleDef | null>(null)
 const activeLesson = ref<Lesson | null>(null)
 const scenario = ref<Scenario | null>(null)
@@ -1966,8 +1994,6 @@ const level = computed(() => 1 + Math.floor(xp.value / XP_PER_LEVEL))
 const nextLevel = computed(() => level.value + 1)
 const levelProgress = computed(() => Math.min(100, Math.round(((xp.value % XP_PER_LEVEL) / XP_PER_LEVEL) * 100)))
 const xpToNextLevel = computed(() => Math.max(0, level.value * XP_PER_LEVEL - xp.value))
-const seasonPct = computed(() => Math.min(100, Math.round((xp.value % 1000) / 10)))
-
 type BadgeTier = { id: string; name: string; xp: number; description: string }
 
 const badgeTrack: BadgeTier[] = [
@@ -2433,6 +2459,15 @@ function quickContinue(id: string) {
   activeLesson.value = next
 }
 
+function resumeMissionObjective() {
+  const objective = missionObjective.value
+  if (objective?.moduleId) {
+    quickContinue(objective.moduleId)
+    return
+  }
+  panel.value = 'hub'
+}
+
 function selectLesson(lesson: Lesson) {
   activeLesson.value = lesson
 }
@@ -2541,24 +2576,133 @@ function lessonScoreClass(modId: string, lesId: string) {
   return 'is-progress'
 }
 
-const dailies = ref([
-  { id: 'd1', title: '3 readbacks ≥80%', sub: 'Reward: +50 XP', reward: 50 },
-  { id: 'd2', title: 'Start 1 module', sub: 'Reward: +20 XP', reward: 20 },
-  { id: 'd3', title: 'Play the target phrase', sub: 'Reward: +10 XP', reward: 10 }
-])
-
-const activeDailies = computed(() => dailies.value.length)
-
-const dailyHint = computed(() => {
-  const count = activeDailies.value
-  if (!count) return 'fresh missions'
-  return `${count} daily${count === 1 ? '' : 's'}`
+const lessonsWithGreatScore = computed(() => {
+  let count = 0
+  Object.values(progress.value || {}).forEach(module => {
+    Object.values(module || {}).forEach(entry => {
+      if (entry && typeof entry.best === 'number' && entry.best >= 80) {
+        count += 1
+      }
+    })
+  })
+  return count
 })
 
-function startDaily(daily: { id: string; reward: number; title: string }) {
-  xp.value += daily.reward
-  toastNow(`Daily: ${daily.title} · +${daily.reward} XP`)
-  dailies.value = dailies.value.filter(item => item.id !== daily.id)
+const modulesStartedCount = computed(() => {
+  let count = 0
+  modules.value.forEach(module => {
+    const moduleProgress = progress.value[module.id]
+    if (!moduleProgress) return
+    const active = Object.values(moduleProgress).some(entry => {
+      if (!entry) return false
+      return Boolean(entry.done) || (typeof entry.best === 'number' && entry.best > 0)
+    })
+    if (active) count += 1
+  })
+  return count
+})
+
+const dailyObjectives = computed<Objective[]>(() => {
+  const readbacks = lessonsWithGreatScore.value
+  const started = modulesStartedCount.value > 0
+  const audioPlayed = hasSpokenTarget.value
+
+  return [
+    {
+      id: 'daily-readbacks',
+      title: '3 readbacks ≥80%',
+      description: 'Score at least 80% in three different lessons.',
+      progress: readbacks,
+      goal: 3,
+      status: readbacks >= 3 ? 'Goal reached' : `${Math.max(0, 3 - Math.min(readbacks, 3))} more ≥80%`,
+      icon: 'mdi-target-account',
+      complete: readbacks >= 3
+    },
+    {
+      id: 'daily-module',
+      title: 'Start 1 module',
+      description: 'Open a mission set and clear the first lesson.',
+      progress: started ? 1 : 0,
+      goal: 1,
+      status: started ? 'Module started' : 'Pick a module to open',
+      icon: 'mdi-flag-variant',
+      complete: started
+    },
+    {
+      id: 'daily-audio',
+      title: 'Play the target phrase',
+      description: 'Listen to the controller audio before responding.',
+      progress: audioPlayed ? 1 : 0,
+      goal: 1,
+      status: audioPlayed ? 'Played once today' : 'Play the controller audio',
+      icon: 'mdi-volume-high',
+      complete: audioPlayed
+    }
+  ]
+})
+
+const missionObjective = computed<Objective | null>(() => {
+  const nextModule = modules.value.find(module => !moduleCompleted(module.id))
+  if (!nextModule) return null
+  const total = nextModule.lessons.length || 1
+  const completed = Math.min(total, Math.max(0, doneCount(nextModule.id)))
+  const status = completed >= total ? 'Module complete' : `Lesson ${Math.min(completed + 1, total)} of ${total}`
+  return {
+    id: `module-${nextModule.id}`,
+    title: `Continue ${nextModule.title}`,
+    description: nextModule.subtitle,
+    progress: completed,
+    goal: total,
+    status,
+    icon: 'mdi-flag-checkered',
+    complete: completed >= total,
+    moduleId: nextModule.id
+  }
+})
+
+const badgeObjective = computed<Objective | null>(() => {
+  const upcoming = nextBadge.value
+  if (!upcoming) return null
+  const previous = badgeTrack.slice().reverse().find(badge => badge.xp <= xp.value) || badgeTrack[0]
+  const span = Math.max(1, upcoming.xp - previous.xp)
+  const gained = Math.max(0, xp.value - previous.xp)
+  return {
+    id: `badge-${upcoming.id}`,
+    title: `${upcoming.name} badge`,
+    description: upcoming.description,
+    progress: gained,
+    goal: span,
+    status: `${nextBadgeXpRemaining.value} XP to unlock`,
+    icon: 'mdi-shield-star',
+    complete: false
+  }
+})
+
+const objectiveList = computed(() => {
+  const list: Objective[] = []
+  if (missionObjective.value) list.push(missionObjective.value)
+  list.push(...dailyObjectives.value)
+  if (badgeObjective.value) list.push(badgeObjective.value)
+  return list
+})
+
+const primaryObjective = computed(() => objectiveList.value.find(objective => !objective.complete) || objectiveList.value[0] || null)
+
+const primaryObjectiveProgress = computed(() => (primaryObjective.value ? objectiveProgressPct(primaryObjective.value) : 0))
+
+function objectiveProgressPct(objective: Objective): number {
+  if (!objective.goal || objective.goal <= 0) {
+    return objective.complete ? 100 : 0
+  }
+  const clamped = Math.min(objective.goal, Math.max(0, objective.progress))
+  return Math.min(100, Math.round((clamped / objective.goal) * 100))
+}
+
+function objectiveBadgeLabel(objective: Objective): string {
+  if (objective.complete) return 'Completed'
+  if (!objective.goal || objective.goal <= 0) return 'In progress'
+  const clamped = Math.min(objective.goal, Math.max(0, Math.round(objective.progress)))
+  return `${clamped}/${objective.goal}`
 }
 
 function toastNow(text: string) {
@@ -2804,10 +2948,6 @@ function stopAudio() {
   }
 }
 
-function testBeep() {
-  void say('Frankfurt Ground, Lufthansa one two three, request taxi.')
-}
-
 onMounted(() => {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.getVoices()
@@ -2910,6 +3050,38 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   align-items: center
+}
+
+.next-objective {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  min-width: 180px;
+  max-width: 240px;
+}
+
+.next-label {
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.next-value {
+  font-weight: 600;
+  color: var(--t2);
+  text-align: right;
+}
+
+.next-status {
+  font-size: 12px;
+  color: var(--t3);
+  text-align: right;
 }
 
 .icon-btn {
@@ -3066,6 +3238,13 @@ onMounted(() => {
   color: var(--t3)
 }
 
+.hero-orb-caption {
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--t3);
+  text-transform: uppercase;
+}
+
 .hero-highlight-meta {
   display: flex;
   flex-direction: column;
@@ -3098,6 +3277,63 @@ onMounted(() => {
   height: 100%;
   background: linear-gradient(90deg, var(--accent), var(--accent2));
   transition: width .4s ease
+}
+
+.objective-callout {
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.objective-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.objective-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--t2);
+}
+
+.objective-title {
+  font-size: 16px;
+}
+
+.objective-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.objective-progress-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.objective-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width .3s ease;
+}
+
+.objective-progress-meta {
+  font-size: 12px;
+  color: var(--t3);
+  white-space: nowrap;
 }
 
 .hero-metrics {
@@ -3315,6 +3551,20 @@ onMounted(() => {
   opacity: 1
 }
 
+.challenge-card.done {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, .18);
+}
+
+.challenge-card.done::after {
+  opacity: .4;
+}
+
+.challenge-card.done:hover {
+  transform: none;
+}
+
 .card-head {
   display: flex;
   justify-content: space-between;
@@ -3329,6 +3579,11 @@ onMounted(() => {
   border-radius: 999px;
   letter-spacing: .08em;
   text-transform: uppercase
+}
+
+.badge.complete {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
 }
 
 .card-title {
@@ -3491,8 +3746,25 @@ onMounted(() => {
 
 .tile-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch
+}
+
+.tile-actions .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (min-width: 720px) {
+  .tile-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .tile-actions .btn {
+    flex: 1 1 50%;
+  }
 }
 
 /* Play */
@@ -3688,29 +3960,6 @@ onMounted(() => {
   font-weight: 700
 }
 
-/* Progress */
-.progress-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  margin-top: 10px
-}
-
-.list {
-  margin-top: 8px
-}
-
-.list-row {
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px dashed color-mix(in srgb, var(--text) 12%, transparent);
-  padding: 8px 0
-}
-
-.list-row:last-child {
-  border-bottom: 0
-}
-
 /* Responsive */
 @media (max-width: 980px) {
   .hero-panel {
@@ -3723,6 +3972,37 @@ onMounted(() => {
 
   .stats {
     display: none
+  }
+
+  .objective-callout {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .objective-callout .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .objective-progress {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .objective-progress-meta {
+    white-space: normal;
+  }
+
+  .next-objective {
+    align-items: flex-start;
+  }
+
+  .next-value,
+  .next-status {
+    text-align: left;
   }
 }
 
@@ -3855,6 +4135,8 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 6px;
   line-height: 1.6;
+  text-transform: uppercase;
+  letter-spacing: .06em;
 }
 
 .blank {
@@ -3877,6 +4159,11 @@ onMounted(() => {
   min-width: 60px;
   font-size: 14px;
   outline: none;
+  text-transform: uppercase;
+}
+
+.blank input::placeholder {
+  text-transform: uppercase;
 }
 
 .blank.size-xs { min-width: 70px; }
@@ -3912,6 +4199,8 @@ onMounted(() => {
   margin-top: 4px;
   font-size: 11px;
   color: var(--t3);
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .field-checks {
