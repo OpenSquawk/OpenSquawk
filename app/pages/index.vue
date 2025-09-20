@@ -722,61 +722,48 @@
           <!-- OSS -->
           <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="0">
             <div class="absolute -top-3 right-4 chip">Community</div>
-            <<<<<<< HEAD
-            <h3 class="text-xl font-semibold">{{
-                locale === 'de' ? 'Open‑Source (Self‑host)' : 'Open-source (self-host)'
-              }}</h3>
-            <p class="mt-2 text-white/80">
-              {{
-                locale === 'de'
-                    ? 'Volle Kontrolle über Infrastruktur und Daten. Selbst hosten bleibt immer eine Option.'
-                    : 'Full control over infrastructure and data. Self-hosting is always an option.'
-              }}
-            </p>
-            <div class="mt-5 text-3xl font-semibold">
-              0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ immer' : '/ forever' }}</span>
-              =======
-              <div class="flex flex-col flex-1">
-                <h3 class="text-xl font-semibold">
-                  {{ locale === 'de' ? 'Open‑Source (Self‑host)' : 'Open-source (self-host)' }}</h3>
-                <p class="mt-2 text-white/80">
-                  {{
-                    locale === 'de'
-                        ? 'Volle Kontrolle über Infrastruktur und Daten. Selbst hosten bleibt immer eine Option.'
-                        : 'Full control over infrastructure and data. Self-hosting is always an option.'
-                  }}
-                </p>
-                <div class="mt-5 text-3xl font-semibold">
-                  0€<span class="text-white/60 text-sm font-normal"> {{
-                    locale === 'de' ? '/ immer' : '/ forever'
-                  }}</span>
-                </div>
-                <ul class="mt-5 space-y-2 text-white/80 text-sm">
-                  <li>{{ locale === 'de' ? '✔ Voller Funktionsumfang' : '✔ Full feature set' }}</li>
-                  <li>✔ Plugins & SDK</li>
-                  <li>{{ locale === 'de' ? '✔ Community‑Support' : '✔ Community support' }}</li>
-                </ul>
-                >>>>>>> 2b6aa53 (Adjust pricing layout and waitlist copy)
+            <div class="flex flex-col flex-1">
+              <h3 class="text-xl font-semibold">
+                {{ locale === 'de' ? 'Open‑Source (Self‑host)' : 'Open-source (self-host)' }}
+              </h3>
+              <p class="mt-2 text-white/80">
+                {{
+                  locale === 'de'
+                      ? 'Volle Kontrolle über Infrastruktur und Daten. Selbst hosten bleibt immer eine Option.'
+                      : 'Full control over infrastructure and data. Self-hosting is always an option.'
+                }}
+              </p>
+              <div class="mt-5 text-3xl font-semibold">
+                0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ immer' : '/ forever' }}</span>
               </div>
-              <NuxtLink
-                  to="https://github.com/FaktorxMensch/OpenSquawk"
-                  external
-                  target="_blank"
-                  rel="noopener"
-                  class="btn btn-ghost w-full mt-6"
-              >
-                {{ locale === 'de' ? 'Repository ansehen' : 'View repository' }}
-              </NuxtLink>
+              <ul class="mt-5 space-y-2 text-white/80 text-sm">
+                <li>{{ locale === 'de' ? '✔ Voller Funktionsumfang' : '✔ Full feature set' }}</li>
+                <li>✔ Plugins & SDK</li>
+                <li>{{ locale === 'de' ? '✔ Community‑Support' : '✔ Community support' }}</li>
+              </ul>
             </div>
-            <!-- Hosted Community -->
-            <div class="card border-2 border-cyan-400/40 relative shadow-[0_0_40px_rgba(34,211,238,.25)]"
-                 data-aos="fade-up" data-aos-delay="100">
-              <div class="absolute -top-3 right-4 chip bg-cyan-500/30 border-cyan-400/50">
-                {{ locale === 'de' ? 'Empfohlen' : 'Recommended' }}
-              </div>
-              <h3 class="text-xl font-semibold">{{
-                  locale === 'de' ? 'Hosted – Lernmodus' : 'Hosted – learning mode'
-                }}</h3>
+            <NuxtLink
+                to="https://github.com/FaktorxMensch/OpenSquawk"
+                external
+                target="_blank"
+                rel="noopener"
+                class="btn btn-ghost w-full mt-6"
+            >
+              {{ locale === 'de' ? 'Repository ansehen' : 'View repository' }}
+            </NuxtLink>
+          </div>
+
+          <!-- Hosted Learning -->
+          <div
+              class="card border-2 border-cyan-400/40 relative flex flex-col h-full pricing-card shadow-[0_0_40px_rgba(34,211,238,.25)]"
+              data-aos="fade-up"
+              data-aos-delay="100"
+          >
+            <div class="absolute -top-3 right-4 chip bg-cyan-500/30 border-cyan-400/50">
+              {{ locale === 'de' ? 'Empfohlen' : 'Recommended' }}
+            </div>
+            <div class="flex flex-col flex-1">
+              <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Hosted – Lernmodus' : 'Hosted – learning mode' }}</h3>
               <p class="mt-2 text-white/80">
                 {{
                   locale === 'de'
@@ -799,10 +786,14 @@
                 </li>
               </ul>
             </div>
-            <div class="card relative" data-aos="fade-up" data-aos-delay="200">
-              <div class="absolute -top-3 right-4 chip">{{ locale === 'de' ? 'Teams' : 'Teams' }}</div>
+          </div>
+
+          <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="200">
+            <div class="absolute -top-3 right-4 chip">{{ locale === 'de' ? 'Teams' : 'Teams' }}</div>
+            <div class="flex flex-col flex-1">
               <h3 class="text-xl font-semibold">
-                {{ locale === 'de' ? 'Hosted – Community Server' : 'Hosted – community server' }}</h3>
+                {{ locale === 'de' ? 'Hosted – Community Server' : 'Hosted – community server' }}
+              </h3>
               <p class="mt-2 text-white/80">
                 {{
                   locale === 'de'
@@ -828,41 +819,11 @@
                 </li>
               </ul>
             </div>
-            <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="200">
-              <div class="absolute -top-3 right-4 chip">{{ locale === 'de' ? 'Teams' : 'Teams' }}</div>
-              <div class="flex flex-col flex-1">
-                <h3 class="text-xl font-semibold">
-                  {{ locale === 'de' ? 'Hosted – Community Server' : 'Hosted – community server' }}</h3>
-                <p class="mt-2 text-white/80">
-                  {{
-                    locale === 'de'
-                        ? 'Für virtuelle Airlines und Gruppen, die gemeinsam üben möchten. Wir testen dedizierte Umgebungen – aktuell ebenfalls 0€ und mit eigenem API-Key.'
-                        : 'For virtual airlines and groups that want to practise together. We are testing dedicated environments – currently also €0 and powered by your own API key.'
-                  }}
-                </p>
-                <div class="mt-5 text-3xl font-semibold">
-                  0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Beta' : '/ beta' }}</span>
-                </div>
-                <ul class="mt-5 space-y-2 text-white/80 text-sm">
-                  <li>{{
-                      locale === 'de' ? '✔ Gemeinsame Sessions & Rollen in Planung' : '✔ Shared sessions & roles in planning'
-                    }}
-                  </li>
-                  <li>{{
-                      locale === 'de' ? '✔ Eigener OpenAI API-Key oder Self-Host fallback' : '✔ Use your own OpenAI API key or self-host fallback'
-                    }}
-                  </li>
-                  <li>{{
-                      locale === 'de' ? '✔ Feedback entscheidet über den weiteren Ausbau' : '✔ Feedback guides the next milestones'
-                    }}
-                  </li>
-                </ul>
-              </div>
-              <NuxtLink to="#cta" class="btn btn-ghost w-full mt-6">
-                {{ locale === 'de' ? 'Kontakt aufnehmen' : 'Get in touch' }}
-              </NuxtLink>
-            </div>
+            <NuxtLink to="#cta" class="btn btn-ghost w-full mt-6">
+              {{ locale === 'de' ? 'Kontakt aufnehmen' : 'Get in touch' }}
+            </NuxtLink>
           </div>
+        </div>
 
           <div class="mt-8 text-sm text-white/70 space-y-2" data-aos="fade-up" data-aos-delay="300">
             <p v-if="locale === 'de'">
