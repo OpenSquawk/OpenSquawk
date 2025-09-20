@@ -31,7 +31,7 @@
         <div
           v-for="node in preparedNodes"
           :key="node.id"
-          class="absolute rounded-2xl border backdrop-blur transition-all duration-150"
+          class="group absolute rounded-2xl border backdrop-blur transition-all duration-150"
           :class="[
             node.selected ? 'ring-2 ring-cyan-400 shadow-xl shadow-cyan-500/20' : 'shadow-lg shadow-black/40',
             node.dimmed ? 'opacity-30' : 'opacity-100',
@@ -41,6 +41,12 @@
           @pointerdown.stop="(event) => onNodePointerDown(event, node)"
           @dblclick.prevent="() => emit('select', node.id)"
         >
+          <button class="node-add node-add--top" @click.stop="emit('add-before', node.id)">
+            <v-icon icon="mdi-plus" size="16" />
+          </button>
+          <button class="node-add node-add--bottom" @click.stop="emit('add-after', node.id)">
+            <v-icon icon="mdi-plus" size="16" />
+          </button>
           <span class="node-connector node-connector--input" />
           <span class="node-connector node-connector--output" />
           <div class="flex h-full flex-col">
@@ -97,11 +103,44 @@
         <v-icon icon="mdi-crosshairs-gps" size="18" />
       </button>
     </div>
+    <div
+      ref="minimapRef"
+      class="pointer-events-auto absolute bottom-4 right-4 rounded-xl border border-white/10 bg-black/40 p-3 shadow-lg"
+      @click="onMinimapClick"
+    >
+      <svg :width="minimapSize.width" :height="minimapSize.height" class="text-white/70">
+        <g>
+          <rect
+            v-for="node in preparedNodes"
+            :key="node.id"
+            :x="(node.layout.x - minimapBounds.minX) * minimapScale"
+            :y="(node.layout.y - minimapBounds.minY) * minimapScale"
+            :width="Math.max(6, node.width * minimapScale)"
+            :height="Math.max(6, node.height * minimapScale)"
+            :fill="node.selected ? '#22d3ee' : 'rgba(148, 163, 184, 0.45)'"
+            :opacity="node.selected ? 0.9 : 0.5"
+            rx="4"
+            ry="4"
+          />
+        </g>
+        <rect
+          :x="viewportRect.x"
+          :y="viewportRect.y"
+          :width="viewportRect.width"
+          :height="viewportRect.height"
+          fill="rgba(34, 211, 238, 0.12)"
+          stroke="#22d3ee"
+          stroke-width="1.2"
+          rx="6"
+          ry="6"
+        />
+      </svg>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type {
   DecisionNodeModel,
   DecisionNodeTransition,
@@ -160,6 +199,9 @@ const props = withDefaults(
 const emit = defineEmits<{
   (event: 'select', stateId: string): void
   (event: 'navigate', stateId: string): void
+  (event: 'add-before', stateId: string): void
+  (event: 'add-after', stateId: string): void
+  (event: 'node-drag-start', stateId: string): void
   (event: 'node-move', payload: { stateId: string; x: number; y: number }): void
   (event: 'node-drop', payload: { stateId: string; x: number; y: number }): void
   (event: 'update:pan', value: CanvasPan): void
@@ -169,6 +211,14 @@ const emit = defineEmits<{
 const canvasRef = ref<HTMLDivElement | null>(null)
 const currentPan = ref<CanvasPan>({ ...props.pan })
 const currentZoom = ref(props.zoom)
+const viewportSize = ref({ width: 0, height: 0 })
+const minimapRef = ref<HTMLDivElement | null>(null)
+
+const MINIMAP_WIDTH = 220
+const MINIMAP_HEIGHT = 160
+const MINIMAP_PADDING = 200
+
+let resizeObserver: ResizeObserver | null = null
 
 watch(
   () => props.pan,
@@ -185,9 +235,74 @@ watch(
   }
 )
 
+onMounted(() => {
+  if (!canvasRef.value) return
+  resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      viewportSize.value = {
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      }
+    }
+  })
+  resizeObserver.observe(canvasRef.value)
+  const rect = canvasRef.value.getBoundingClientRect()
+  viewportSize.value = { width: rect.width, height: rect.height }
+})
+
 const transformStyle = computed(() => ({
   transform: `translate(${currentPan.value.x}px, ${currentPan.value.y}px) scale(${currentZoom.value})`,
 }))
+
+const minimapBounds = computed(() => {
+  if (!preparedNodes.value.length) {
+    return { minX: 0, minY: 0, width: MINIMAP_WIDTH, height: MINIMAP_HEIGHT }
+  }
+  const minX = Math.min(...preparedNodes.value.map((node) => node.layout.x))
+  const minY = Math.min(...preparedNodes.value.map((node) => node.layout.y))
+  const maxX = Math.max(...preparedNodes.value.map((node) => node.layout.x + node.width))
+  const maxY = Math.max(...preparedNodes.value.map((node) => node.layout.y + node.height))
+  const width = Math.max(1, maxX - minX + MINIMAP_PADDING * 2)
+  const height = Math.max(1, maxY - minY + MINIMAP_PADDING * 2)
+  return {
+    minX: minX - MINIMAP_PADDING,
+    minY: minY - MINIMAP_PADDING,
+    width,
+    height,
+  }
+})
+
+const minimapScale = computed(() => {
+  const bounds = minimapBounds.value
+  const scaleX = MINIMAP_WIDTH / bounds.width
+  const scaleY = MINIMAP_HEIGHT / bounds.height
+  return Math.min(scaleX, scaleY)
+})
+
+const minimapSize = computed(() => {
+  const bounds = minimapBounds.value
+  const scale = minimapScale.value
+  return {
+    width: Math.max(80, bounds.width * scale),
+    height: Math.max(60, bounds.height * scale),
+  }
+})
+
+const viewportRect = computed(() => {
+  const bounds = minimapBounds.value
+  const scale = minimapScale.value
+  const zoom = currentZoom.value || 1
+  const viewWidth = viewportSize.value.width / zoom
+  const viewHeight = viewportSize.value.height / zoom
+  const worldX = (-currentPan.value.x) / zoom
+  const worldY = (-currentPan.value.y) / zoom
+  return {
+    x: (worldX - bounds.minX) * scale,
+    y: (worldY - bounds.minY) * scale,
+    width: Math.max(12, viewWidth * scale),
+    height: Math.max(12, viewHeight * scale),
+  }
+})
 
 const preparedNodes = computed(() =>
   props.nodes.map((node) => {
@@ -300,6 +415,26 @@ const gridStyle = computed(() => ({
   transformOrigin: '0 0',
   opacity: 0.5,
 }))
+
+function focusNode(stateId: string) {
+  const node = preparedNodes.value.find((entry) => entry.id === stateId)
+  if (!node) return
+  const width = viewportSize.value.width || canvasBounds.value.width
+  const height = viewportSize.value.height || canvasBounds.value.height
+  const zoomX = width / (node.width + 160)
+  const zoomY = height / (node.height + 200)
+  const targetZoom = Math.min(2.5, Math.max(0.4, Math.min(zoomX, zoomY)))
+  currentZoom.value = targetZoom
+  const centerX = node.layout.x + node.width / 2
+  const centerY = node.layout.y + node.height / 2
+  const panX = width / 2 - centerX * targetZoom
+  const panY = height / 2 - centerY * targetZoom
+  currentPan.value = { x: panX, y: panY }
+  emit('update:zoom', targetZoom)
+  emit('update:pan', { x: panX, y: panY })
+}
+
+defineExpose({ focusNode })
 
 function transitionClass(transition: DecisionNodeTransition) {
   switch (transition.type) {
@@ -510,6 +645,7 @@ let dragState: DragState | null = null
 function onNodePointerDown(event: PointerEvent, node: ReturnType<typeof preparedNodes.value[number]>) {
   if (event.button !== 0) return
   emit('select', node.id)
+  emit('node-drag-start', node.id)
   const rect = canvasRef.value?.getBoundingClientRect()
   if (!rect) return
   const canvasX = (event.clientX - rect.left - currentPan.value.x) / currentZoom.value
@@ -580,6 +716,23 @@ function resetView() {
   emit('update:pan', { x: 0, y: 0 })
 }
 
+function onMinimapClick(event: MouseEvent) {
+  const container = minimapRef.value
+  if (!container) return
+  const rect = container.getBoundingClientRect()
+  const offsetX = event.clientX - rect.left
+  const offsetY = event.clientY - rect.top
+  const bounds = minimapBounds.value
+  const scale = minimapScale.value || 1
+  const worldX = offsetX / scale + bounds.minX
+  const worldY = offsetY / scale + bounds.minY
+  const zoom = currentZoom.value || 1
+  const panX = viewportSize.value.width / 2 - worldX * zoom
+  const panY = viewportSize.value.height / 2 - worldY * zoom
+  currentPan.value = { x: panX, y: panY }
+  emit('update:pan', { x: panX, y: panY })
+}
+
 function onWheel(event: WheelEvent) {
   const rect = canvasRef.value?.getBoundingClientRect()
   if (!rect) return
@@ -613,12 +766,33 @@ function nodeStyle(node: ReturnType<typeof preparedNodes.value[number]>) {
 onBeforeUnmount(() => {
   window.removeEventListener('pointermove', onNodePointerMove)
   window.removeEventListener('pointermove', onPanPointerMove)
+  resizeObserver?.disconnect()
 })
 </script>
 
 <style scoped>
 .control-btn {
   @apply pointer-events-auto flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-black/40 text-white/80 transition hover:border-cyan-400 hover:text-cyan-200;
+}
+
+.node-add {
+  @apply pointer-events-auto absolute z-10 flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white opacity-0 transition;
+}
+
+.group:hover .node-add {
+  @apply opacity-100;
+}
+
+.node-add--top {
+  top: -18px;
+  left: 50%;
+  transform: translate(-50%, 0);
+}
+
+.node-add--bottom {
+  bottom: -18px;
+  left: 50%;
+  transform: translate(-50%, 0);
 }
 
 .node-connector {
