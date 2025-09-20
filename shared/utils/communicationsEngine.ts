@@ -1,71 +1,25 @@
 // communicationsEngine composable
 import { ref, computed, readonly } from 'vue'
-import atcDecisionTree from "../data/atcDecisionTree";
+import type {
+    RuntimeDecisionTree,
+    RuntimeDecisionState,
+    RuntimeDecisionAutoTransition,
+    DecisionNodeAutoTrigger,
+} from '../types/decision'
 import { normalizeRadioPhrase } from './radioSpeech'
 
-// --- DecisionTree types (derived from ~/data/atcDecisionTree.json) ---
+// --- DecisionTree runtime types ---
 type Role = 'pilot' | 'atc' | 'system'
-type Phase =
-    | 'Preflight' | 'Clearance' | 'PushStart' | 'TaxiOut' | 'Departure'
-    | 'Climb' | 'Enroute' | 'Descent' | 'Approach' | 'Landing'
-    | 'TaxiIn' | 'Postflight' | 'Interrupt' | 'LostComms' | 'Missed'
+type Phase = string
 
-interface DTNext { to: string; when?: string }
-interface DTHandoff { to: string; freq: string }
-interface DTActionSet { set?: string; to?: any; if?: string }
-
-interface DTState {
-    id?: string
-    role: Role
-    phase: Phase
-    say_tpl?: string
-    utterance_tpl?: string
-    else_say_tpl?: string
-    next?: DTNext[]
-    ok_next?: DTNext[]
-    bad_next?: DTNext[]
-    timer_next?: { after_s: number; to: string }[]
-    handoff?: DTHandoff
-    condition?: string
-    guard?: string
-    trigger?: string
-    auto?: 'check_readback' | 'monitor' | 'end' | 'pop_stack_or_route_by_intent'
-    readback_required?: string[]
-    actions?: (DTActionSet | string)[]
-    frequency?: string // Shortcut for accessing frequencies
-    frequencyName?: string // Frequency label (DEL, GND, TWR, etc.)
-}
-
-interface DecisionTree {
-    schema_version: string
-    name: string
-    description: string
-    start_state: string
-    end_states: string[]
-    variables: Record<string, any>
-    flags: {
-        in_air: boolean
-        emergency_active: boolean
-        current_unit: string
-        stack: string[]
-        off_schema_count: number // Counter for off-schema responses
-        radio_checks_done: number // Counter for radio checks
-    }
-    policies: {
-        timeouts: {
-            pilot_readback_timeout_s: number
-            controller_ack_timeout_s: number
-            no_reply_retry_after_s: number
-            no_reply_max_retries: number
-            lost_comms_detect_after_s: number
-        }
-        no_reply_sequence: { after_s: number; controller_say_tpl: string }[]
-        interrupts_allowed_when: Record<string, string>
-    }
-    hooks: Record<string, boolean | string>
-    roles: Role[]
-    phases: Phase[]
-    states: Record<string, DTState>
+interface EngineFlags {
+    in_air: boolean
+    emergency_active: boolean
+    current_unit: string
+    stack: string[]
+    off_schema_count: number
+    radio_checks_done: number
+    [key: string]: any
 }
 
 // Flight phases and communication steps for better integration
@@ -141,6 +95,17 @@ export interface EngineLog {
     offSchema?: boolean
 }
 
+type TelemetryState = {
+    altitude_ft: number
+    speed_kts: number
+    groundspeed_kts: number
+    vertical_speed_fpm: number
+    latitude_deg: number
+    longitude_deg: number
+    heading_deg: number
+    [key: string]: number
+}
+
 export function normalizeATCText(text: string, context: Record<string, any>): string {
     const rendered = renderTpl(text, context)
     return normalizeRadioPhrase(rendered)
@@ -156,21 +121,34 @@ function renderTpl(tpl: string, ctx: Record<string, any>): string {
 }
 
 export default function useCommunicationsEngine() {
-    const tree = ref<DecisionTree>({
-        ...atcDecisionTree as DecisionTree,
-        flags: {
-            ...atcDecisionTree.flags,
-            off_schema_count: 0,
-            radio_checks_done: 0
-        }
+    const tree = ref<RuntimeDecisionTree | null>(null)
+    const ready = ref(false)
+
+    const states = computed<Record<string, RuntimeDecisionState>>(() => tree.value?.states ?? {})
+
+    const variables = ref<Record<string, any>>({})
+    const flags = ref<EngineFlags>({
+        in_air: false,
+        emergency_active: false,
+        current_unit: 'DEL',
+        stack: [],
+        off_schema_count: 0,
+        radio_checks_done: 0,
+    })
+    const currentStateId = ref<string>('')
+    const communicationLog = ref<EngineLog[]>([])
+
+    const telemetry = ref<TelemetryState>({
+        altitude_ft: 0,
+        speed_kts: 0,
+        groundspeed_kts: 0,
+        vertical_speed_fpm: 0,
+        latitude_deg: 0,
+        longitude_deg: 0,
+        heading_deg: 0,
     })
 
-    const states = computed<Record<string, DTState>>(() => tree.value.states)
-
-    const variables = ref<Record<string, any>>({ ...tree.value.variables })
-    const flags = ref({ ...tree.value.flags })
-    const currentStateId = ref<string>(tree.value.start_state)
-    const communicationLog = ref<EngineLog[]>([])
+    const autoExecutionHistory = new Map<string, Set<string>>()
 
     // Flight context used for pm_alt.vue integration
     const flightContext = ref<FlightContext>({
@@ -196,24 +174,221 @@ export default function useCommunicationsEngine() {
         phase: 'clearance'
     })
 
-    const currentState = computed<DTState>(() => {
-        const s = states.value[currentStateId.value] || states.value[tree.value.start_state]
-        return { ...s, id: currentStateId.value }
+    const currentState = computed<RuntimeDecisionState & { id: string } | null>(() => {
+        const stateMap = states.value
+        const fallbackId = tree.value?.start_state
+        const id = currentStateId.value || fallbackId
+        if (!id) return null
+        const base = stateMap[id]
+        return base ? { ...base, id } : null
     })
 
     const nextCandidates = computed<string[]>(() => {
         const s = currentState.value
-        const nxt = [
+        if (!s) return []
+        const entries = [
             ...(s.next ?? []),
             ...(s.ok_next ?? []),
             ...(s.bad_next ?? []),
-            ...(s.timer_next?.map(t => ({ to: t.to })) ?? [])
-        ].map(x => x.to)
-        return Array.from(new Set(nxt))
+            ...(s.timer_next?.map(t => ({ to: t.to })) ?? []),
+        ]
+        return Array.from(
+            new Set(
+                entries
+                    .map(entry => entry?.to)
+                    .filter((id): id is string => typeof id === 'string' && id.length)
+            )
+        )
     })
 
+    const isReady = computed(() => ready.value)
+
+    function ensureTree(): RuntimeDecisionTree {
+        if (!tree.value) {
+            throw new Error('Decision tree not loaded')
+        }
+        return tree.value
+    }
+
+    function resetAutoHistory(stateId: string) {
+        autoExecutionHistory.set(stateId, new Set())
+    }
+
+    function markAutoExecuted(stateId: string, transitionId: string) {
+        if (!autoExecutionHistory.has(stateId)) {
+            autoExecutionHistory.set(stateId, new Set())
+        }
+        autoExecutionHistory.get(stateId)!.add(transitionId)
+    }
+
+    function hasAutoExecuted(stateId: string, transitionId: string): boolean {
+        const set = autoExecutionHistory.get(stateId)
+        return set ? set.has(transitionId) : false
+    }
+
+    function resetEngineFromTree(treeData: RuntimeDecisionTree) {
+        tree.value = treeData
+        variables.value = { ...treeData.variables }
+        const baseFlags = (treeData.flags && typeof treeData.flags === 'object') ? { ...treeData.flags } : {}
+        const stack = Array.isArray(baseFlags.stack) ? [...baseFlags.stack] : []
+        flags.value = {
+            in_air: Boolean(baseFlags.in_air),
+            emergency_active: Boolean(baseFlags.emergency_active),
+            current_unit: typeof baseFlags.current_unit === 'string' ? baseFlags.current_unit : 'DEL',
+            stack,
+            off_schema_count: 0,
+            radio_checks_done: 0,
+            ...baseFlags,
+        }
+        if (!Array.isArray(flags.value.stack)) {
+            flags.value.stack = []
+        }
+        currentStateId.value = treeData.start_state
+        communicationLog.value = []
+        telemetry.value = {
+            altitude_ft: Number(baseFlags.altitude_ft) || 0,
+            speed_kts: Number(baseFlags.speed_kts) || 0,
+            groundspeed_kts: Number(baseFlags.groundspeed_kts) || 0,
+            vertical_speed_fpm: Number(baseFlags.vertical_speed_fpm) || 0,
+            latitude_deg: Number(baseFlags.latitude_deg) || 0,
+            longitude_deg: Number(baseFlags.longitude_deg) || 0,
+            heading_deg: Number(baseFlags.heading_deg) || 0,
+        }
+        autoExecutionHistory.clear()
+        resetAutoHistory(currentStateId.value)
+        flightContext.value.phase = 'clearance'
+        ready.value = true
+        evaluateAutoTransitions()
+    }
+
+    function loadRuntimeTree(data: RuntimeDecisionTree) {
+        resetEngineFromTree(data)
+    }
+
+    async function fetchRuntimeTree(slug = 'icao_atc_decision_tree') {
+        ready.value = false
+        const fetcher: any = (globalThis as any).$fetch
+        if (typeof fetcher !== 'function') {
+            throw new Error('Universal fetch is not available in this context')
+        }
+        const data = await fetcher<RuntimeDecisionTree>(`/api/decision-flows/${slug}/runtime`)
+        resetEngineFromTree(data)
+    }
+
+    function normalizeComparableValue(value: any): any {
+        if (typeof value === 'number') return value
+        if (typeof value === 'boolean') return value
+        if (typeof value === 'string') {
+            const trimmed = value.trim()
+            const numeric = Number(trimmed)
+            if (!Number.isNaN(numeric)) return numeric
+            if (trimmed.toLowerCase() === 'true') return true
+            if (trimmed.toLowerCase() === 'false') return false
+            return trimmed.toLowerCase()
+        }
+        return value
+    }
+
+    function parseComparisonValue(raw: any): any {
+        if (typeof raw === 'number' || typeof raw === 'boolean') return raw
+        if (typeof raw !== 'string') return raw
+        const trimmed = raw.trim()
+        if (!trimmed.length) return trimmed
+        if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith('\'') && trimmed.endsWith('\''))) {
+            return trimmed.slice(1, -1)
+        }
+        const numeric = Number(trimmed)
+        if (!Number.isNaN(numeric)) return numeric
+        if (trimmed.toLowerCase() === 'true') return true
+        if (trimmed.toLowerCase() === 'false') return false
+        return trimmed
+    }
+
+    function compareValues(left: any, operator: string, right: any): boolean {
+        const leftValue = normalizeComparableValue(left)
+        const rightValue = normalizeComparableValue(parseComparisonValue(right))
+        switch (operator) {
+            case '>':
+                return typeof leftValue === 'number' && typeof rightValue === 'number' ? leftValue > rightValue : false
+            case '>=':
+                return typeof leftValue === 'number' && typeof rightValue === 'number' ? leftValue >= rightValue : false
+            case '<':
+                return typeof leftValue === 'number' && typeof rightValue === 'number' ? leftValue < rightValue : false
+            case '<=':
+                return typeof leftValue === 'number' && typeof rightValue === 'number' ? leftValue <= rightValue : false
+            case '===':
+            case '==':
+                return leftValue === rightValue
+            case '!==':
+            case '!=':
+                return leftValue !== rightValue
+            default:
+                return false
+        }
+    }
+
+    function getValueByPath(path: string): any {
+        if (!path || typeof path !== 'string') return undefined
+        const segments = path.split('.').map(part => part.trim()).filter(Boolean)
+        if (!segments.length) return undefined
+        let sourceKey = segments[0]
+        let current: any
+        if (sourceKey === 'variables') {
+            current = variables.value
+            segments.shift()
+        } else if (sourceKey === 'flags') {
+            current = flags.value
+            segments.shift()
+        } else if (sourceKey === 'telemetry') {
+            current = telemetry.value
+            segments.shift()
+        } else {
+            current = variables.value
+        }
+        for (const segment of segments) {
+            if (current == null) return undefined
+            current = current[segment]
+        }
+        return current
+    }
+
+    function evaluateSimpleCondition(condition: string): boolean {
+        const expr = condition.trim()
+        if (!expr) return true
+        const pattern = /^(variables|flags|telemetry)\.([A-Za-z0-9_.]+)\s*(===|==|!==|!=|>=|<=|>|<)\s*(.+)$/
+        const match = expr.match(pattern)
+        if (match) {
+            const [, source, path, operator, rawValue] = match
+            const fullPath = `${source}.${path}`
+            const left = getValueByPath(fullPath)
+            return compareValues(left, operator, rawValue)
+        }
+        // Allow shorthand without namespace (defaults to variables)
+        const fallbackPattern = /^([A-Za-z0-9_.]+)\s*(===|==|!==|!=|>=|<=|>|<)\s*(.+)$/
+        const fallback = expr.match(fallbackPattern)
+        if (fallback) {
+            const [, path, operator, rawValue] = fallback
+            const left = getValueByPath(path)
+            return compareValues(left, operator, rawValue)
+        }
+        return false
+    }
+
+    function evaluateConditionExpression(expression?: string): boolean {
+        if (!expression || !expression.trim()) return true
+        const expr = expression.trim()
+        if (expr.includes('||')) {
+            return expr.split('||').some(part => evaluateConditionExpression(part.trim()))
+        }
+        if (expr.includes('&&')) {
+            return expr.split('&&').every(part => evaluateConditionExpression(part.trim()))
+        }
+        return evaluateSimpleCondition(expr)
+    }
+
     const activeFrequency = computed<string | undefined>(() => {
-        switch (flags.value.current_unit) {
+        const unit = typeof flags.value.current_unit === 'string' ? flags.value.current_unit.toUpperCase() : 'DEL'
+        switch (unit) {
             case 'DEL': return variables.value.delivery_freq
             case 'GROUND': return variables.value.ground_freq
             case 'TOWER': return variables.value.tower_freq
@@ -240,6 +415,7 @@ export default function useCommunicationsEngine() {
     })
 
     function initializeFlight(fpl: any) {
+        const runtime = ensureTree()
         // Set variables
         variables.value = {
             ...variables.value,
@@ -289,8 +465,9 @@ export default function useCommunicationsEngine() {
             radio_checks_done: 0
         }
 
-        currentStateId.value = tree.value.start_state
+        currentStateId.value = runtime.start_state
         communicationLog.value = []
+        resetAutoHistory(currentStateId.value)
     }
 
     function updateFrequencyVariables(update: Partial<Record<FrequencyVariableKey, string>>) {
@@ -312,33 +489,57 @@ export default function useCommunicationsEngine() {
     }
 
     function buildLLMContext(pilotTranscript: string) {
+        const runtime = ensureTree()
         const s = currentState.value
+        if (!s) {
+            throw new Error('Decision state unavailable')
+        }
+        const candidates = nextCandidates.value
+            .map(id => ({ id, state: states.value[id] }))
+            .filter(candidate => candidate.state)
+
         return {
             state_id: s.id,
-            state: s,
-            candidates: nextCandidates.value.map(id => ({ id, state: states.value[id] })),
-            variables: variables.value,
-            flags: flags.value,
-            pilot_utterance: pilotTranscript
+            state: { ...s },
+            candidates,
+            variables: { ...variables.value },
+            flags: { ...flags.value },
+            pilot_utterance: pilotTranscript,
+            tree: runtime.name,
         }
     }
 
     function applyLLMDecision(decision: any) {
-        // Apply updates
-        if (decision.updates) Object.assign(variables.value, decision.updates)
-        if (decision.flags) Object.assign(flags.value, decision.flags)
+        if (!decision || typeof decision !== 'object') {
+            return
+        }
 
-        // Track off-schema responses and radio checks
+        if (decision.updates && typeof decision.updates === 'object') {
+            Object.assign(variables.value, decision.updates)
+        }
+
+        if (decision.flags && typeof decision.flags === 'object') {
+            Object.assign(flags.value, decision.flags)
+        }
+
+        if (decision.telemetry && typeof decision.telemetry === 'object') {
+            updateTelemetry(decision.telemetry)
+        }
+
+        if (Array.isArray(decision.stack)) {
+            flags.value.stack = decision.stack.slice()
+        }
+
         if (decision.off_schema) {
             flags.value.off_schema_count++
             console.log(`[Engine] Off-schema response #${flags.value.off_schema_count}`)
         }
+
         if (decision.radio_check) {
             flags.value.radio_checks_done++
             console.log(`[Engine] Radio check #${flags.value.radio_checks_done}`)
         }
 
-        // Controller response
         if (decision.controller_say_tpl) {
             speak('atc', decision.controller_say_tpl, currentStateId.value, {
                 radioCheck: decision.radio_check,
@@ -346,13 +547,28 @@ export default function useCommunicationsEngine() {
             })
         }
 
-        // State transition (only when not a radio check)
+        const resumeFlow = decision.resume_previous === true
+        const nextState = typeof decision.next_state === 'string'
+            ? decision.next_state
+            : typeof decision.nextState === 'string'
+                ? decision.nextState
+                : null
+
+        if (resumeFlow) {
+            resumePriorFlow()
+        } else if (!decision.radio_check && nextState) {
+            moveTo(nextState)
+        }
+
         if (!decision.radio_check) {
-            moveTo(decision.next_state)
+            queueMicrotask(() => evaluateAutoTransitions())
         }
     }
 
     function processPilotTransmission(transcript: string): string | null {
+        if (!ready.value) {
+            return null
+        }
         // Log pilot input
         speak('pilot', transcript, currentStateId.value)
 
@@ -384,7 +600,90 @@ export default function useCommunicationsEngine() {
         return processPilotTransmission(transcript)
     }
 
+    function resolveTelemetryValue(parameter: string) {
+        const value = (telemetry.value as any)[parameter]
+        if (value !== undefined) return value
+        return (variables.value as any)[parameter]
+    }
+
+    function updateTelemetry(update: Partial<TelemetryState> | null | undefined) {
+        if (!update || typeof update !== 'object') {
+            return
+        }
+        const next: TelemetryState = { ...telemetry.value }
+        for (const [key, raw] of Object.entries(update)) {
+            if (raw === undefined || raw === null) continue
+            const current = telemetry.value[key]
+            if (typeof current === 'number') {
+                const numeric = typeof raw === 'number' ? raw : Number(raw)
+                if (!Number.isNaN(numeric)) {
+                    next[key] = numeric
+                    continue
+                }
+            }
+            const fallback = typeof raw === 'number' ? raw : Number(raw)
+            next[key] = Number.isNaN(fallback) ? current : fallback
+        }
+        telemetry.value = next
+        queueMicrotask(() => evaluateAutoTransitions())
+    }
+
+    function evaluateAutoTrigger(trigger: DecisionNodeAutoTrigger | null | undefined): boolean {
+        if (!trigger) return false
+        if (trigger.type === 'expression') {
+            return evaluateConditionExpression(trigger.expression)
+        }
+        if (trigger.type === 'telemetry') {
+            if (!trigger.parameter || !trigger.operator) return false
+            const left = resolveTelemetryValue(trigger.parameter)
+            return compareValues(left, trigger.operator, trigger.value)
+        }
+        if (trigger.type === 'variable') {
+            const target = trigger.variable ? getValueByPath(trigger.variable) : undefined
+            if (trigger.operator) {
+                return compareValues(target, trigger.operator, trigger.value)
+            }
+            return Boolean(target)
+        }
+        return false
+    }
+
+    function evaluateAutoTransitions(loopGuard = 0) {
+        if (!ready.value || loopGuard > 8) return
+        const state = currentState.value
+        if (!state || !state.auto_transitions?.length) return
+
+        for (const transition of state.auto_transitions) {
+            if (!transition || !transition.trigger) continue
+            if (transition.trigger.once !== false && hasAutoExecuted(state.id, transition.id)) {
+                continue
+            }
+            if (transition.condition && !evaluateConditionExpression(transition.condition)) {
+                continue
+            }
+            if (transition.guard && !evaluateConditionExpression(transition.guard)) {
+                continue
+            }
+            if (!evaluateAutoTrigger(transition.trigger)) {
+                continue
+            }
+            markAutoExecuted(state.id, transition.id)
+            const delay = transition.trigger.delayMs ?? 0
+            if (delay > 0) {
+                setTimeout(() => {
+                    moveTo(transition.to)
+                    evaluateAutoTransitions(loopGuard + 1)
+                }, delay)
+            } else {
+                moveTo(transition.to)
+                evaluateAutoTransitions(loopGuard + 1)
+            }
+            return
+        }
+    }
+
     function moveTo(stateId: string) {
+        ensureTree()
         if (!states.value[stateId]) {
             console.warn(`[Engine] Unknown state: ${stateId}`)
             return
@@ -395,13 +694,17 @@ export default function useCommunicationsEngine() {
         }
 
         currentStateId.value = stateId
+        resetAutoHistory(stateId)
         const s = currentState.value
+        if (!s) return
 
         // Execute actions
         for (const act of s.actions ?? []) {
             if (typeof act === 'string') continue
             if (act.if && !safeEvalBoolean(act.if)) continue
-            if (act.set) setByPath({ variables: variables.value, flags: flags.value }, act.set, act.to)
+            if (act.set) {
+                setByPath({ variables: variables.value, flags: flags.value, telemetry: telemetry.value }, act.set, act.to)
+            }
         }
 
         // Handoff
@@ -419,6 +722,7 @@ export default function useCommunicationsEngine() {
 
         // Update flight context phase
         updateFlightPhase(s.phase)
+        queueMicrotask(() => evaluateAutoTransitions())
     }
 
     function updateFlightPhase(phase: Phase) {
@@ -475,11 +779,12 @@ export default function useCommunicationsEngine() {
             ...flags.value,
             variables: variables.value,
             flags: flags.value,
+            telemetry: telemetry.value,
         }
     }
 
     function exposeCtxFlat() {
-        return { ...variables.value, ...flags.value }
+        return { ...variables.value, ...flags.value, ...telemetry.value }
     }
 
     function unitFromHandoff(to: string) {
@@ -523,26 +828,18 @@ export default function useCommunicationsEngine() {
     }
 
     function safeEvalBoolean(expr?: string): boolean {
-        if (!expr) return true
-        const m = expr.match(/^(variables|flags)\.([A-Za-z0-9_]+)\s*===\s*(true|false|'[^']*'|"[^"]*"|\d+)$/)
-        if (!m) return false
-        const bag = m[1] === 'variables' ? variables.value : flags.value as any
-        const key = m[2]
-        const rhsRaw = m[3]
-        let rhs: any = rhsRaw
-        if (rhsRaw === 'true') rhs = true
-        else if (rhsRaw === 'false') rhs = false
-        else if (/^\d+$/.test(rhsRaw)) rhs = Number(rhsRaw)
-        else rhs = rhsRaw.replace(/^['"]|['"]$/g, '')
-        return bag?.[key] === rhs
+        return evaluateConditionExpression(expr)
     }
 
     function setByPath(root: Record<string, any>, path: string, val: any) {
-        const parts = path.split('.')
+        const parts = path.split('.').map(part => part.trim()).filter(Boolean)
+        if (!parts.length) return
         let cur = root
         for (let i = 0; i < parts.length - 1; i++) {
             const p = parts[i]
-            if (!(p in cur)) cur[p] = {}
+            if (!(p in cur) || typeof cur[p] !== 'object') {
+                cur[p] = {}
+            }
             cur = cur[p]
         }
         cur[parts[parts.length - 1]] = val
@@ -554,6 +851,7 @@ export default function useCommunicationsEngine() {
         currentStateId: readonly(currentStateId),
         variables: readonly(variables),
         flags: readonly(flags),
+        telemetry: readonly(telemetry),
         nextCandidates,
         activeFrequency,
         communicationLog: readonly(communicationLog),
@@ -566,6 +864,9 @@ export default function useCommunicationsEngine() {
         // Lifecycle
         initializeFlight,
         updateFrequencyVariables,
+        loadRuntimeTree,
+        fetchRuntimeTree,
+        isReady,
 
         // Communication
         processPilotTransmission,
@@ -580,6 +881,7 @@ export default function useCommunicationsEngine() {
         // Utilities
         normalizeATCText,
         renderATCMessage,
-        getStateDetails
+        getStateDetails,
+        updateTelemetry,
     }
 }

@@ -955,6 +955,8 @@ const {
   currentStep,
   initializeFlight,
   updateFrequencyVariables,
+  fetchRuntimeTree,
+  isReady: engineReady,
   processPilotTransmission,
   buildLLMContext,
   applyLLMDecision,
@@ -1067,6 +1069,14 @@ onMounted(async () => {
         console.error('Session initialisation failed', err)
         router.push('/login')
       })
+    }
+
+    try {
+      await fetchRuntimeTree()
+    } catch (err) {
+      console.error('Failed to load decision tree runtime', err)
+      error.value = 'Decision engine konnte nicht initialisiert werden.'
+      return
     }
 
     if (typeof window !== 'undefined') {
@@ -1606,6 +1616,17 @@ const loadFlightPlans = async () => {
 }
 
 const startMonitoring = async (flightPlan: any) => {
+  try {
+    if (!engineReady.value) {
+      await fetchRuntimeTree()
+    }
+  } catch (err) {
+    console.error('Failed to prepare decision engine', err)
+    error.value = 'Entscheidungsbaum konnte nicht geladen werden.'
+    return
+  }
+
+  error.value = ''
   selectedPlan.value = flightPlan
   initializeFlight(flightPlan)
   currentScreen.value = 'monitor'
