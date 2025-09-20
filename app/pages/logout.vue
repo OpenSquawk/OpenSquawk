@@ -5,7 +5,7 @@
         <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">OpenSquawk</p>
         <h1 class="text-3xl font-semibold">Du wirst abgemeldet…</h1>
         <p class="text-sm text-white/70">
-          Wir melden dich vom Alpha-Dienst ab und leiten dich gleich weiter.
+          Wir melden dich ab und leiten dich gleich weiter.
         </p>
       </div>
       <v-progress-circular indeterminate size="40" width="3" color="cyan" />
@@ -17,7 +17,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useHead } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 
 const router = useRouter()
