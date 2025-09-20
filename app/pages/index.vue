@@ -619,7 +619,8 @@
             </div>
           </div>
           <div class="card" data-aos="fade-left">
-            <nuxt-img src="/img/landing/runway.jpeg" alt="Runway" class="rounded-lg w-full object-cover"/>
+            <!-- 5 -->
+            <img src="/img/landing/path.jpeg" alt="Runway" class="rounded-lg w-full object-cover"/>
           </div>
         </div>
       </div>
