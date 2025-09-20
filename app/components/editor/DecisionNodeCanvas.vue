@@ -20,8 +20,8 @@
               :stroke="edge.color"
               :stroke-width="edge.highlighted ? 3 : 1.75"
               :stroke-dasharray="edge.dashed ? '6 6' : undefined"
-              stroke-linecap="'round'"
-              stroke-linejoin="'round'"
+              stroke-linecap="round"
+              stroke-linejoin="round"
               class="transition-all duration-150"
               opacity="0.9"
             />
@@ -238,8 +238,16 @@ interface EdgeDefinition {
   highlighted: boolean
 }
 
+interface NodePosition {
+  x: number
+  y: number
+  width: number
+  height: number
+  highlighted?: boolean
+}
+
 const edges = computed<EdgeDefinition[]>(() => {
-  const positions = new Map(
+  const positions = new Map<string, NodePosition>(
     preparedNodes.value.map((node) => [
       node.id,
       {
@@ -261,7 +269,9 @@ const edges = computed<EdgeDefinition[]>(() => {
     for (const transition of node.model.transitions || []) {
       const target = positions.get(transition.target)
       if (!target) continue
-      const path = computeEdgePath(source, target)
+      const path = computeEdgePath(source, target, {
+        selfLoop: transition.target === node.id,
+      })
       const color = transitionColor(transition)
       const dashed = Boolean(transition.autoTrigger || transition.type === 'auto')
       const highlighted = node.selected || source.highlighted
@@ -330,16 +340,128 @@ function transitionColor(transition: DecisionNodeTransition) {
   }
 }
 
-function computeEdgePath(source: { x: number; y: number; width: number; height: number }, target: { x: number; y: number; width: number; height: number }) {
+type PathPoint = { x: number; y: number }
+
+function computeEdgePath(
+  source: NodePosition,
+  target: NodePosition,
+  options: { selfLoop?: boolean } = {}
+) {
+  if (options.selfLoop) {
+    return computeSelfLoopPath(source)
+  }
+
   const startX = source.x + source.width / 2
   const startY = source.y + source.height
   const endX = target.x + target.width / 2
   const endY = target.y
-  const deltaY = Math.max(80, Math.abs(endY - startY) / 1.5)
-  const control1Y = startY + deltaY
-  const control2Y = endY - deltaY
-  return `M ${startX} ${startY} C ${startX} ${control1Y}, ${endX} ${control2Y}, ${endX} ${endY}`
+
+  if (endY >= startY) {
+    const verticalDistance = endY - startY
+    const deltaY = Math.max(80, verticalDistance / 1.5)
+    const control1Y = startY + deltaY
+    const control2Y = endY - Math.min(deltaY, verticalDistance / 2)
+    return `M ${startX} ${startY} C ${startX} ${control1Y}, ${endX} ${control2Y}, ${endX} ${endY}`
+  }
+
+  const exitOffset = Math.max(24, Math.min(72, source.height * 0.25))
+  const horizontalGap = Math.abs(endX - startX)
+  const horizontalExtra = Math.max(180, horizontalGap * 0.6)
+  const outerRight = Math.max(source.x + source.width, target.x + target.width)
+  const outerLeft = Math.min(source.x, target.x)
+  const direction = endX >= startX ? 1 : -1
+  const sideX = direction === 1 ? outerRight + horizontalExtra : outerLeft - horizontalExtra
+  const dropY = startY + exitOffset
+  const topCandidate = Math.min(source.y, target.y) - 100
+  const topLimit = Math.min(startY - 60, endY - 60)
+  let loopTop = Math.min(topCandidate, topLimit)
+
+  if (!Number.isFinite(loopTop)) {
+    loopTop = topLimit
+  }
+  if (!Number.isFinite(loopTop)) {
+    loopTop = startY - 80
+  }
+  if (loopTop >= dropY - 20) {
+    loopTop = dropY - 60
+  }
+
+  const points: PathPoint[] = [
+    { x: startX, y: startY },
+    { x: startX, y: dropY },
+    { x: sideX, y: dropY },
+    { x: sideX, y: loopTop },
+    { x: endX, y: loopTop },
+    { x: endX, y: endY },
+  ]
+
+  return buildSmoothPath(points, 48)
 }
+
+function computeSelfLoopPath(node: NodePosition) {
+  const startX = node.x + node.width / 2
+  const startY = node.y + node.height
+  const exitOffset = Math.max(28, Math.min(72, node.height * 0.25))
+  const sideOffset = Math.max(200, node.width * 0.75)
+  const sideX = node.x + node.width + sideOffset
+  const loopTop = node.y - 120
+
+  const points: PathPoint[] = [
+    { x: startX, y: startY },
+    { x: startX, y: startY + exitOffset },
+    { x: sideX, y: startY + exitOffset },
+    { x: sideX, y: loopTop },
+    { x: startX, y: loopTop },
+    { x: startX, y: node.y },
+  ]
+
+  return buildSmoothPath(points, 44)
+}
+
+function buildSmoothPath(points: PathPoint[], radius = 32) {
+  if (points.length < 2) {
+    return ''
+  }
+
+  const commands: string[] = [`M ${points[0].x} ${points[0].y}`]
+
+  for (let i = 1; i < points.length; i += 1) {
+    const prev = points[i - 1]
+    const curr = points[i]
+    const next = points[i + 1]
+
+    if (!next) {
+      commands.push(`L ${curr.x} ${curr.y}`)
+      continue
+    }
+
+    const prevVectorX = curr.x - prev.x
+    const prevVectorY = curr.y - prev.y
+    const nextVectorX = next.x - curr.x
+    const nextVectorY = next.y - curr.y
+    const prevLength = Math.hypot(prevVectorX, prevVectorY)
+    const nextLength = Math.hypot(nextVectorX, nextVectorY)
+
+    if (prevLength === 0 || nextLength === 0) {
+      commands.push(`L ${curr.x} ${curr.y}`)
+      continue
+    }
+
+    const startOffset = Math.min(radius, prevLength / 2)
+    const endOffset = Math.min(radius, nextLength / 2)
+
+    const startX = curr.x - (prevVectorX / prevLength) * startOffset
+    const startY = curr.y - (prevVectorY / prevLength) * startOffset
+    const endX = curr.x + (nextVectorX / nextLength) * endOffset
+    const endY = curr.y + (nextVectorY / nextLength) * endOffset
+
+    commands.push(`L ${startX} ${startY}`)
+    commands.push(`Q ${curr.x} ${curr.y} ${endX} ${endY}`)
+  }
+
+  return commands.join(' ')
+}
+
 
 let panPointerId: number | null = null
 let panStart: CanvasPan = { x: 0, y: 0 }

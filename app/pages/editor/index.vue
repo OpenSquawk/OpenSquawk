@@ -6,127 +6,214 @@
         <v-app-bar
           flat
           density="comfortable"
-          color="rgba(11, 18, 36, 0.92)"
-          class="shrink-0 border-b border-white/10 backdrop-blur-md"
-          height="76"
+          color="rgba(7, 11, 21, 0.9)"
+          class="shrink-0 border-b border-white/10 backdrop-blur-xl"
+          height="64"
         >
-          <div class="flex w-full items-center gap-4 overflow-hidden px-1">
-            <div class="flex shrink-0 items-center gap-2">
-              <v-icon icon="mdi-radar" size="24" color="cyan" />
-              <div class="leading-tight">
-                <p class="text-[11px] uppercase tracking-[0.35em] text-cyan-300/70">OpenSquawk</p>
-                <p class="text-sm font-semibold text-white/90">Decision Flow Studio</p>
+          <div class="flex w-full flex-wrap items-center gap-4 px-3 lg:flex-nowrap lg:gap-6 lg:px-5">
+            <div class="flex shrink-0 items-center gap-4">
+              <div class="flex items-center gap-3">
+                <div
+                  class="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/40 bg-cyan-500/10"
+                >
+                  <v-icon icon="mdi-radar" size="22" color="cyan" />
+                </div>
+                <div class="min-w-0 leading-tight">
+                  <p class="text-[11px] uppercase tracking-[0.45em] text-cyan-200/70">OpenSquawk</p>
+                  <p class="text-sm font-semibold text-white/90">Decision Flow Studio</p>
+                </div>
+              </div>
+              <div class="hidden h-10 w-px bg-white/10 lg:block" />
+              <div class="flex min-w-0 items-center gap-2">
+                <v-autocomplete
+                  v-model="selectedFlowSlug"
+                  v-model:search="flowSearch"
+                  :items="filteredFlows"
+                  item-title="name"
+                  item-value="slug"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  clearable
+                  class="w-[220px] md:w-[260px]"
+                  prepend-inner-icon="mdi-file-tree"
+                  :loading="flowsLoading"
+                  label="Flow auswählen"
+                  :custom-filter="() => true"
+                  @update:model-value="(value) => value && selectFlow(value)"
+                >
+                  <template #item="{ props, item }">
+                    <v-list-item v-bind="props">
+                      <template #title>
+                        <div class="flex items-center justify-between gap-3">
+                          <span class="font-medium">{{ item?.raw?.name }}</span>
+                          <v-chip v-if="item?.raw?.nodeCount" size="x-small" color="cyan" variant="tonal">
+                            {{ item.raw.nodeCount }}
+                          </v-chip>
+                        </div>
+                      </template>
+                      <template #subtitle>
+                        <span class="text-xs text-white/60">Start: {{ item?.raw?.startState }}</span>
+                      </template>
+                    </v-list-item>
+                  </template>
+                </v-autocomplete>
+                <div class="flex shrink-0 items-center gap-1">
+                  <v-tooltip text="Neuen Flow anlegen">
+                    <template #activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        icon
+                        size="small"
+                        variant="text"
+                        color="cyan"
+                        class="rounded-lg border border-white/10 bg-white/5 text-white/80 hover:border-cyan-300"
+                        @click="openCreateFlow"
+                      >
+                        <v-icon icon="mdi-plus" />
+                      </v-btn>
+                    </template>
+                  </v-tooltip>
+                  <v-tooltip text="Legacy ATC Import">
+                    <template #activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        icon
+                        size="small"
+                        variant="text"
+                        color="purple"
+                        class="rounded-lg border border-white/10 bg-white/5 text-white/80 hover:border-purple-300"
+                        :loading="importLoading"
+                        @click="runImport"
+                      >
+                        <v-icon icon="mdi-database-import" />
+                      </v-btn>
+                    </template>
+                  </v-tooltip>
+                </div>
               </div>
             </div>
-            <v-divider vertical class="h-9 border-white/10" />
-            <div class="flex items-center gap-2 min-w-0">
-              <v-autocomplete
-                v-model="selectedFlowSlug"
-                v-model:search="flowSearch"
-                :items="filteredFlows"
-                item-title="name"
-                item-value="slug"
-                density="compact"
-                variant="outlined"
-                hide-details
-                clearable
-                class="w-[240px]"
-                prepend-inner-icon="mdi-file-tree"
-                :loading="flowsLoading"
-                label="Flow auswählen"
-                :custom-filter="() => true"
-                @update:model-value="(value) => value && selectFlow(value)"
-              >
-                <template #item="{ props, item }">
-                  <v-list-item v-bind="props">
-                    <template #title>
-                      <div class="flex items-center justify-between gap-3">
-                        <span class="font-medium">{{ item?.raw?.name }}</span>
-                        <v-chip v-if="item?.raw?.nodeCount" size="x-small" color="cyan" variant="tonal">
-                          {{ item.raw.nodeCount }}
-                        </v-chip>
-                      </div>
-                    </template>
-                    <template #subtitle>
-                      <span class="text-xs text-white/60">Start: {{ item?.raw?.startState }}</span>
-                    </template>
-                  </v-list-item>
-                </template>
-              </v-autocomplete>
-              <div class="flex shrink-0 items-center gap-1">
-                <v-tooltip text="Neuen Flow anlegen">
-                  <template #activator="{ props }">
-                    <v-btn v-bind="props" icon size="small" variant="text" color="cyan" @click="openCreateFlow">
-                      <v-icon icon="mdi-plus" />
-                    </v-btn>
-                  </template>
-                </v-tooltip>
-                <v-tooltip text="Legacy ATC Import">
-                  <template #activator="{ props }">
-                    <v-btn
-                      v-bind="props"
-                      icon
-                      size="small"
-                      variant="text"
-                      color="purple"
-                      :loading="importLoading"
-                      @click="runImport"
-                    >
-                      <v-icon icon="mdi-database-import" />
-                    </v-btn>
-                  </template>
-                </v-tooltip>
-              </div>
-            </div>
-            <v-divider vertical class="h-9 border-white/10" />
-            <div class="flex items-center gap-2 min-w-0">
+            <div class="flex min-w-0 flex-1 items-center gap-3">
               <v-text-field
                 v-model="nodeFilter.search"
                 density="compact"
-                variant="outlined"
+                variant="solo"
                 hide-details
+                clearable
                 prepend-inner-icon="mdi-magnify"
-                placeholder="Node suchen"
-                class="w-[200px]"
+                placeholder="Nodes durchsuchen"
+                class="max-w-[260px] rounded-xl bg-white/5 text-sm text-white/80"
               />
-              <v-select
-                v-model="nodeFilter.role"
-                :items="roleFilterOptions"
-                density="compact"
-                hide-details
-                variant="outlined"
-                class="w-[140px]"
-                label="Rolle"
-              />
-              <v-select
-                v-model="nodeFilter.phase"
-                :items="phaseFilterOptions"
-                density="compact"
-                hide-details
-                variant="outlined"
-                class="w-[160px]"
-                label="Phase"
-              />
-              <v-tooltip text="Nur Auto-Trigger anzeigen">
+              <v-menu v-model="filtersMenuOpen" transition="scale-transition" :close-on-content-click="false" offset-y>
                 <template #activator="{ props }">
-                  <v-btn
-                    v-bind="props"
-                    icon
-                    size="small"
-                    variant="text"
-                    :color="nodeFilter.autopOnly ? 'amber' : undefined"
-                    class="text-white/70 hover:text-white"
-                    @click="toggleAutopOnly"
+                  <v-badge
+                    :content="activeFilterCount"
+                    color="cyan"
+                    offset-x="6"
+                    offset-y="6"
+                    :model-value="activeFilterCount > 0"
                   >
-                    <v-icon icon="mdi-auto-fix" />
-                  </v-btn>
+                    <v-btn
+                      v-bind="props"
+                      size="small"
+                      variant="outlined"
+                      color="cyan"
+                      prepend-icon="mdi-tune"
+                      class="rounded-lg border-white/20 text-xs font-semibold uppercase tracking-[0.3em]"
+                    >
+                      Filter
+                    </v-btn>
+                  </v-badge>
                 </template>
-              </v-tooltip>
+                <v-card class="w-[320px] border border-white/10 bg-[#050910]/95 backdrop-blur">
+                  <v-card-title class="flex items-center justify-between text-sm font-semibold text-white/90">
+                    Node-Filter
+                    <v-chip v-if="activeFilterCount > 0" color="cyan" size="x-small" variant="flat">
+                      {{ activeFilterCount }}
+                    </v-chip>
+                  </v-card-title>
+                  <v-divider class="border-white/10" />
+                  <v-card-text class="space-y-4">
+                    <v-select
+                      v-model="nodeFilter.role"
+                      :items="roleFilterOptions"
+                      density="comfortable"
+                      hide-details
+                      label="Rolle"
+                      color="cyan"
+                    />
+                    <v-select
+                      v-model="nodeFilter.phase"
+                      :items="phaseFilterOptions"
+                      density="comfortable"
+                      hide-details
+                      label="Phase"
+                      color="cyan"
+                    />
+                    <v-switch
+                      v-model="nodeFilter.autopOnly"
+                      hide-details
+                      inset
+                      color="amber"
+                      class="text-sm text-white/70"
+                      label="Nur Auto-Trigger anzeigen"
+                    />
+                  </v-card-text>
+                  <v-divider class="border-white/10" />
+                  <v-card-actions class="justify-between">
+                    <v-btn variant="text" color="white" @click="resetNodeFilters">Zurücksetzen</v-btn>
+                    <v-btn color="cyan" variant="flat" @click="filtersMenuOpen = false">Fertig</v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-menu>
             </div>
-            <v-divider vertical class="h-9 border-white/10" />
-            <div class="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
-              <div class="flex shrink-0 items-center gap-2 text-xs uppercase tracking-widest text-white/60">
-                <span>Nodes</span>
+            <div class="flex shrink-0 items-center gap-3">
+              <div class="hidden min-w-0 text-right leading-tight sm:block">
+                <p class="text-[11px] uppercase tracking-[0.35em] text-white/40">Aktiver Flow</p>
+                <p class="truncate text-sm font-semibold text-white/90">
+                  {{ flowForm.name || 'Kein Flow ausgewählt' }}
+                </p>
+              </div>
+              <v-chip
+                v-if="flowDetail"
+                color="cyan"
+                size="small"
+                variant="tonal"
+                class="font-mono text-xs uppercase tracking-widest text-cyan-100"
+              >
+                {{ flowDetail.flow.slug }}
+              </v-chip>
+              <v-btn
+                color="cyan"
+                variant="flat"
+                size="small"
+                prepend-icon="mdi-content-save"
+                class="rounded-lg px-4 font-semibold tracking-wide"
+                :disabled="!flowDirty"
+                :loading="flowSaveLoading"
+                @click="saveFlow"
+              >
+                Speichern
+              </v-btn>
+              <v-btn
+                color="white"
+                variant="tonal"
+                size="small"
+                prepend-icon="mdi-auto-fix"
+                class="rounded-lg px-4 font-semibold tracking-wide text-white"
+                :disabled="!flowDetail"
+                @click="autoLayoutNodes"
+              >
+                Auto-Layout
+              </v-btn>
+            </div>
+          </div>
+        </v-app-bar>
+        <div class="border-b border-white/10 bg-[#070d1a]/70 px-4 py-2 backdrop-blur">
+          <div class="flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
+            <div class="flex flex-1 items-center gap-3">
+              <div class="flex shrink-0 items-center gap-2 text-[11px] uppercase tracking-[0.4em] text-white/40">
+                <span class="text-white/70">Nodes</span>
                 <v-chip v-if="flowDetail" size="x-small" color="cyan" variant="flat">
                   {{ nodeSelectorItems.length }}
                 </v-chip>
@@ -145,10 +232,7 @@
                     :value="node.id"
                     v-slot="{ isSelected, toggle }"
                   >
-                    <v-tooltip
-                      :text="`${node.id} — ${node.title || 'Ohne Titel'}`"
-                      location="bottom"
-                    >
+                    <v-tooltip :text="`${node.id} — ${node.title || 'Ohne Titel'}`" location="bottom">
                       <template #activator="{ props }">
                         <span class="inline-flex">
                           <v-badge
@@ -204,41 +288,23 @@
                 <p v-else class="truncate text-xs text-white/50">Kein Flow ausgewählt.</p>
               </div>
             </div>
-            <v-divider vertical class="h-9 border-white/10" />
-            <div class="flex shrink-0 items-center gap-3 pl-2 min-w-0">
-              <div class="min-w-0 text-right leading-tight">
-                <p class="text-[11px] uppercase tracking-wider text-white/50">Aktueller Flow</p>
-                <p class="truncate text-sm font-semibold">
-                  {{ flowForm.name || 'Kein Flow ausgewählt' }}
-                </p>
-              </div>
-              <v-chip v-if="flowDetail" color="cyan" size="small" variant="outlined">
-                {{ flowDetail.flow.slug }}
-              </v-chip>
-              <v-btn
-                color="cyan"
-                variant="flat"
+            <div
+              v-if="activeFilterBadges.length"
+              class="flex shrink-0 flex-wrap items-center gap-1 text-[11px] uppercase tracking-widest text-white/50 md:justify-end"
+            >
+              <v-chip
+                v-for="badge in activeFilterBadges"
+                :key="badge.label"
+                :color="badge.color"
                 size="small"
-                prepend-icon="mdi-content-save"
-                :disabled="!flowDirty"
-                :loading="flowSaveLoading"
-                @click="saveFlow"
-              >
-                Speichern
-              </v-btn>
-              <v-btn
-                color="cyan"
                 variant="tonal"
-                size="small"
-                prepend-icon="mdi-auto-fix"
-                @click="autoLayoutNodes"
-                :disabled="!flowDetail"
+                class="bg-opacity-20 text-white/80"
               >
-                Auto-Layout
-              </v-btn>
+                {{ badge.label }}
+              </v-chip>
             </div>
           </div>
-        </v-app-bar>
+        </div>
         <div
           v-if="flowsLoading || flowsError"
           class="border-b border-white/10 bg-[#0b1224]/75 px-4 py-2 backdrop-blur"
@@ -712,6 +778,30 @@ const nodeFilter = reactive({
   autopOnly: false,
 })
 
+const filtersMenuOpen = ref(false)
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (nodeFilter.role !== 'all') count += 1
+  if (nodeFilter.phase !== 'all') count += 1
+  if (nodeFilter.autopOnly) count += 1
+  return count
+})
+
+const activeFilterBadges = computed(() => {
+  const badges: { label: string; color: string }[] = []
+  if (nodeFilter.role !== 'all') {
+    badges.push({ label: `Rolle: ${nodeFilter.role}`, color: 'cyan' })
+  }
+  if (nodeFilter.phase !== 'all') {
+    badges.push({ label: `Phase: ${nodeFilter.phase}`, color: 'purple' })
+  }
+  if (nodeFilter.autopOnly) {
+    badges.push({ label: 'Auto-Trigger', color: 'amber' })
+  }
+  return badges
+})
+
 const selectedNodeId = ref<string | null>(null)
 const inspectorTab = ref<'general' | 'transitions' | 'llm' | 'metadata'>('general')
 const nodeForm = ref<DecisionNodeModel | null>(null)
@@ -1048,8 +1138,10 @@ async function runImport() {
   }
 }
 
-function toggleAutopOnly() {
-  nodeFilter.autopOnly = !nodeFilter.autopOnly
+function resetNodeFilters() {
+  nodeFilter.role = 'all'
+  nodeFilter.phase = 'all'
+  nodeFilter.autopOnly = false
 }
 
 function selectNode(stateId: string) {
