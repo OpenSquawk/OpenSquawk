@@ -723,24 +723,41 @@
           <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="0">
             <div class="absolute -top-3 right-4 chip">Community</div>
             <div class="flex flex-col flex-1">
-              <h3 class="text-xl font-semibold">
-                {{ locale === 'de' ? 'Open‑Source (Self‑host)' : 'Open-source (self-host)' }}
-              </h3>
-              <p class="mt-2 text-white/80">
-                {{
-                  locale === 'de'
-                      ? 'Volle Kontrolle über Infrastruktur und Daten. Selbst hosten bleibt immer eine Option.'
-                      : 'Full control over infrastructure and data. Self-hosting is always an option.'
-                }}
-              </p>
-              <div class="mt-5 text-3xl font-semibold">
-                0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ immer' : '/ forever' }}</span>
+              <div class="space-y-2">
+                <h3 class="text-xl font-semibold">
+                  {{ locale === 'de' ? 'Open‑Source (Self‑host)' : 'Open-source (self-host)' }}
+                </h3>
+                <p class="text-white/80">
+                  {{
+                    locale === 'de'
+                        ? 'Volle Kontrolle über Infrastruktur und Daten. Selbst hosten bleibt immer eine Option.'
+                        : 'Full control over infrastructure and data. Self-hosting is always an option.'
+                  }}
+                </p>
               </div>
-              <ul class="mt-5 space-y-2 text-white/80 text-sm">
-                <li>{{ locale === 'de' ? '✔ Voller Funktionsumfang' : '✔ Full feature set' }}</li>
-                <li>✔ Plugins & SDK</li>
-                <li>{{ locale === 'de' ? '✔ Community‑Support' : '✔ Community support' }}</li>
-              </ul>
+              <div class="mt-auto pt-6">
+                <div class="text-3xl font-semibold">
+                  0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ immer' : '/ forever' }}</span>
+                </div>
+                <ul class="mt-4 space-y-3 text-white/80 text-sm">
+                  <li class="flex items-start gap-3">
+                    <v-icon icon="mdi-check-circle" size="18" class="mt-[2px] text-emerald-400"/>
+                    <span>{{ locale === 'de' ? 'Volle Kontrolle & Funktionsumfang' : 'Full control & feature set' }}</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <v-icon icon="mdi-check-circle" size="18" class="mt-[2px] text-emerald-400"/>
+                    <span>Plugins & SDK</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <v-icon icon="mdi-check-circle" size="18" class="mt-[2px] text-emerald-400"/>
+                    <span>{{ locale === 'de' ? 'Community‑Support' : 'Community support' }}</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <v-icon icon="mdi-close-circle" size="18" class="mt-[2px] text-rose-400"/>
+                    <span class="text-white/60">{{ locale === 'de' ? 'Kein Managed Hosting & Updates durch uns' : 'No managed hosting & updates by us' }}</span>
+                  </li>
+                </ul>
+              </div>
             </div>
             <NuxtLink
                 to="https://github.com/FaktorxMensch/OpenSquawk"
@@ -763,61 +780,93 @@
               {{ locale === 'de' ? 'Empfohlen' : 'Recommended' }}
             </div>
             <div class="flex flex-col flex-1">
-              <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Hosted – Lernmodus' : 'Hosted – learning mode' }}</h3>
-              <p class="mt-2 text-white/80">
-                {{
-                  locale === 'de'
-                      ? 'Wir übernehmen die Grundkosten, damit du mit allen Basisfunktionen trainieren kannst. Für Live-ATC hinterlegst du deinen eigenen OpenAI API-Key – wir nutzen ihn nur für die Funkanfragen im Hintergrund.'
-                      : 'We cover the base costs so you can train with all fundamental features. For live ATC you provide your own OpenAI API key – we only use it for the background radio requests.'
-                }}
-              </p>
-              <div class="mt-5 text-3xl font-semibold">
-                0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Beta' : '/ beta' }}</span>
+              <div class="space-y-2">
+                <h3 class="text-xl font-semibold">{{ locale === 'de' ? 'Hosted – Lernmodus' : 'Hosted – learning mode' }}</h3>
+                <p class="text-white/80">
+                  {{
+                    locale === 'de'
+                        ? 'Wir übernehmen die Grundkosten, damit du mit allen Basisfunktionen trainieren kannst. Für Live-ATC hinterlegst du deinen eigenen OpenAI API-Key – wir nutzen ihn nur für die Funkanfragen im Hintergrund.'
+                        : 'We cover the base costs so you can train with all fundamental features. For live ATC you provide your own OpenAI API key – we only use it for the background radio requests.'
+                  }}
+                </p>
               </div>
-              <ul class="mt-5 space-y-2 text-white/80 text-sm">
-                <li>{{
-                    locale === 'de' ? '✔ Lernmodule & Basisfunktionen inklusive' : '✔ Learning modules & core features included'
-                  }}
-                </li>
-                <li>{{ locale === 'de' ? '✔ Kein Setup, Updates durch uns' : '✔ No setup, updates handled by us' }}</li>
-                <li>{{
-                    locale === 'de' ? '✔ Live-ATC via deinen OpenAI API-Key' : '✔ Live ATC via your OpenAI API key'
-                  }}
-                </li>
-              </ul>
+              <div class="mt-auto pt-6">
+                <div class="text-3xl font-semibold">
+                  0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Beta' : '/ beta' }}</span>
+                </div>
+                <ul class="mt-4 space-y-3 text-white/80 text-sm">
+                  <li class="flex items-start gap-3">
+                    <v-icon icon="mdi-check-circle" size="18" class="mt-[2px] text-emerald-400"/>
+                    <span>{{
+                        locale === 'de' ? 'Lernmodule & Basisfunktionen inklusive' : 'Learning modules & core features included'
+                      }}</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <v-icon icon="mdi-check-circle" size="18" class="mt-[2px] text-emerald-400"/>
+                    <span>{{ locale === 'de' ? 'Kein Setup, Updates durch uns' : 'No setup, updates handled by us' }}</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <v-icon icon="mdi-check-circle" size="18" class="mt-[2px] text-emerald-400"/>
+                    <span>{{
+                        locale === 'de' ? 'Live-ATC via deinen OpenAI API-Key' : 'Live ATC via your OpenAI API key'
+                      }}</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <v-icon icon="mdi-close-circle" size="18" class="mt-[2px] text-rose-400"/>
+                    <span class="text-white/60">{{ locale === 'de' ? 'Keine gemeinsamen Team-Server' : 'No shared team servers' }}</span>
+                  </li>
+                </ul>
+              </div>
             </div>
+            <NuxtLink to="#cta" class="btn btn-primary w-full mt-6">
+              {{ locale === 'de' ? 'Auf die Warteliste' : 'Join the waitlist' }}
+            </NuxtLink>
           </div>
 
           <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="200">
             <div class="absolute -top-3 right-4 chip">{{ locale === 'de' ? 'Teams' : 'Teams' }}</div>
             <div class="flex flex-col flex-1">
-              <h3 class="text-xl font-semibold">
-                {{ locale === 'de' ? 'Hosted – Community Server' : 'Hosted – community server' }}
-              </h3>
-              <p class="mt-2 text-white/80">
-                {{
-                  locale === 'de'
-                      ? 'Für virtuelle Airlines und Gruppen, die gemeinsam üben möchten. Wir testen dedizierte Umgebungen – aktuell ebenfalls 0€ und mit eigenem API-Key.'
-                      : 'For virtual airlines and groups that want to practise together. We are testing dedicated environments – currently also €0 and powered by your own API key.'
-                }}
-              </p>
-              <div class="mt-5 text-3xl font-semibold">
-                0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Beta' : '/ beta' }}</span>
+              <div class="space-y-2">
+                <h3 class="text-xl font-semibold">
+                  {{ locale === 'de' ? 'Hosted – Community Server' : 'Hosted – community server' }}
+                </h3>
+                <p class="text-white/80">
+                  {{
+                    locale === 'de'
+                        ? 'Für virtuelle Airlines und Gruppen, die gemeinsam üben möchten. Wir testen dedizierte Umgebungen – aktuell ebenfalls 0€ und mit eigenem API-Key.'
+                        : 'For virtual airlines and groups that want to practise together. We are testing dedicated environments – currently also €0 and powered by your own API key.'
+                  }}
+                </p>
               </div>
-              <ul class="mt-5 space-y-2 text-white/80 text-sm">
-                <li>{{
-                    locale === 'de' ? '✔ Gemeinsame Sessions & Rollen in Planung' : '✔ Shared sessions & roles in planning'
-                  }}
-                </li>
-                <li>{{
-                    locale === 'de' ? '✔ Eigener OpenAI API-Key oder Self-Host fallback' : '✔ Use your own OpenAI API key or self-host fallback'
-                  }}
-                </li>
-                <li>{{
-                    locale === 'de' ? '✔ Feedback entscheidet über den weiteren Ausbau' : '✔ Feedback guides the next milestones'
-                  }}
-                </li>
-              </ul>
+              <div class="mt-auto pt-6">
+                <div class="text-3xl font-semibold">
+                  0€<span class="text-white/60 text-sm font-normal"> {{ locale === 'de' ? '/ Beta' : '/ beta' }}</span>
+                </div>
+                <ul class="mt-4 space-y-3 text-white/80 text-sm">
+                  <li class="flex items-start gap-3">
+                    <v-icon icon="mdi-check-circle" size="18" class="mt-[2px] text-emerald-400"/>
+                    <span>{{
+                        locale === 'de' ? 'Gemeinsame Sessions & Rollen in Planung' : 'Shared sessions & roles in planning'
+                      }}</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <v-icon icon="mdi-check-circle" size="18" class="mt-[2px] text-emerald-400"/>
+                    <span>{{
+                        locale === 'de' ? 'Eigener OpenAI API-Key oder Self-Host fallback' : 'Use your own OpenAI API key or self-host fallback'
+                      }}</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <v-icon icon="mdi-check-circle" size="18" class="mt-[2px] text-emerald-400"/>
+                    <span>{{
+                        locale === 'de' ? 'Feedback entscheidet über den weiteren Ausbau' : 'Feedback guides the next milestones'
+                      }}</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <v-icon icon="mdi-check-circle" size="18" class="mt-[2px] text-emerald-400"/>
+                    <span>{{ locale === 'de' ? 'Managed Hosting & Updates durch uns' : 'Managed hosting & updates handled by us' }}</span>
+                  </li>
+                </ul>
+              </div>
             </div>
             <NuxtLink to="#cta" class="btn btn-ghost w-full mt-6">
               {{ locale === 'de' ? 'Kontakt aufnehmen' : 'Get in touch' }}
