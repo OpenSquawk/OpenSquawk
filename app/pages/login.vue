@@ -1,13 +1,14 @@
 <template>
-  <div class="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#050713] via-[#080d1f] to-[#010208] text-white">
-    <div class="absolute inset-0 -z-10 opacity-60">
-      <div class="pointer-events-none absolute -left-20 top-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
-      <div class="pointer-events-none absolute bottom-0 right-[-6rem] h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl" />
+  <div class="relative flex min-h-screen max-h-screen flex-col overflow-hidden bg-gradient-to-br from-[#050713] via-[#080d1f] to-[#010208] text-white">
+    <div class="pointer-events-none absolute inset-0 -z-10 opacity-70">
+      <div class="orb orb-one" />
+      <div class="orb orb-two" />
+      <div class="orb orb-three" />
     </div>
 
-    <div class="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-10 px-6 py-12 sm:px-10 lg:flex-row lg:items-center lg:py-16">
-      <div class="relative hidden overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:flex lg:h-[680px] lg:w-[50%]">
-        <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway" class="absolute inset-0 h-full w-full object-cover" />
+    <div class="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden px-5 py-8 sm:px-8 lg:flex-row lg:items-stretch lg:py-12 lg:pl-0 min-h-0">
+      <div class="relative hidden h-full min-h-0 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:flex lg:w-[48%]">
+        <img src="/img/landing/runway.jpeg?a" alt="Guiding lights on a runway" class="absolute inset-0 h-full w-full object-cover" />
         <div class="absolute inset-0 bg-gradient-to-t from-[#050816]/95 via-[#050816]/40 to-transparent" />
         <div class="relative z-10 flex h-full flex-col justify-between p-10">
           <div>
@@ -34,24 +35,24 @@
         </div>
       </div>
 
-      <div class="flex w-full flex-1 flex-col justify-center">
-        <div class="relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:hidden">
-          <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway" class="h-56 w-full object-cover" />
-          <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent p-6">
-            <p class="text-xs uppercase tracking-[0.3em] text-white/50">Alpha Access</p>
-            <p class="mt-2 text-lg font-semibold">Experience the cockpit from anywhere</p>
+      <div class="flex w-full flex-1 flex-col min-h-0 lg:pl-8">
+        <div class="flex flex-1 flex-col overflow-y-auto rounded-[28px] border border-white/10 bg-[#0b1020]/85 p-6 shadow-2xl backdrop-blur md:p-8 lg:pr-4 min-h-0">
+          <div class="floating-card relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:hidden">
+            <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway" class="h-56 w-full object-cover" />
+            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent p-6">
+              <p class="text-xs uppercase tracking-[0.3em] text-white/50">Alpha Access</p>
+              <p class="mt-2 text-lg font-semibold">Experience the cockpit from anywhere</p>
+            </div>
           </div>
-        </div>
 
-        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0b1020]/80 p-8 shadow-2xl backdrop-blur">
-          <div class="mb-8 flex items-center justify-between gap-3 text-sm text-white/60">
+          <div class="flex items-center justify-between gap-3 text-sm text-white/60">
             <NuxtLink to="/" class="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 font-medium text-white/70 transition hover:bg-white/10 hover:text-white">
               <v-icon icon="mdi-arrow-left" size="18" /> Back to landing page
             </NuxtLink>
             <span class="hidden text-xs uppercase tracking-[0.3em] text-white/30 sm:block">Restricted Area</span>
           </div>
 
-          <div class="space-y-3">
+          <div class="mt-6 space-y-3">
             <p class="text-[11px] uppercase tracking-[0.4em] text-cyan-300/80">OpenSquawk Members</p>
             <h2 class="text-3xl font-semibold sm:text-4xl">Access your account</h2>
             <p class="max-w-xl text-white/60">
@@ -59,11 +60,11 @@
             </p>
           </div>
 
-          <div class="mt-8 rounded-full bg-white/5 p-1 text-sm font-medium text-white/60 shadow-inner">
-            <div class="flex gap-1">
+          <div class="mt-6 rounded-full bg-white/5 p-1 text-sm font-medium text-white/60 shadow-inner">
+            <div class="grid grid-cols-2 gap-1">
               <button
                   type="button"
-                  class="flex-1 rounded-full px-4 py-2 transition"
+                  class="rounded-full px-4 py-2 transition"
                   :class="mode === 'login' ? 'bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-500/30' : 'hover:text-white/80'"
                   @click="mode = 'login'"
               >
@@ -71,7 +72,7 @@
               </button>
               <button
                   type="button"
-                  class="flex-1 rounded-full px-4 py-2 transition"
+                  class="rounded-full px-4 py-2 transition"
                   :class="mode === 'register' ? 'bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-500/30' : 'hover:text-white/80'"
                   @click="mode = 'register'"
               >
@@ -109,12 +110,12 @@
               </div>
             </div>
 
-            <button type="submit" class="btn btn-primary w-full rounded-2xl py-3 text-base font-semibold shadow-lg shadow-cyan-500/20" :disabled="loginLoading">
-              <span v-if="loginLoading" class="flex items-center justify-center gap-2">
+            <button type="submit" class="btn btn-primary btn-fancy w-full" :disabled="loginLoading">
+              <span v-if="loginLoading" class="relative z-10 flex items-center justify-center gap-2">
                 <v-progress-circular indeterminate size="16" width="2" color="white" />
                 Signing you in…
               </span>
-              <span v-else>Login</span>
+              <span v-else class="relative z-10">Login</span>
             </button>
 
             <p v-if="loginError" class="text-sm text-red-300">{{ loginError }}</p>
@@ -190,38 +191,51 @@
               </label>
             </div>
 
-            <button type="submit" class="btn btn-primary w-full rounded-2xl py-3 text-base font-semibold shadow-lg shadow-cyan-500/20" :disabled="registerLoading || !canRegister">
-              <span v-if="registerLoading" class="flex items-center justify-center gap-2">
+            <button type="submit" class="btn btn-primary btn-fancy w-full" :disabled="registerLoading || !canRegister">
+              <span v-if="registerLoading" class="relative z-10 flex items-center justify-center gap-2">
                 <v-progress-circular indeterminate size="16" width="2" color="white" />
                 Registering…
               </span>
-              <span v-else>Create account</span>
+              <span v-else class="relative z-10">Create account</span>
             </button>
 
             <p v-if="registerError" class="text-sm text-red-300">{{ registerError }}</p>
           </form>
 
-          <div class="mt-10 space-y-5">
-            <div class="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <h3 class="text-lg font-semibold">How to get access</h3>
-              <ol class="mt-4 space-y-4 text-sm text-white/70">
-                <li class="flex gap-4">
-                  <span class="step-badge">1</span>
-                  <span>Join the <NuxtLink to="/#cta" class="text-cyan-300 underline decoration-dotted underline-offset-4">waitlist</NuxtLink>.</span>
-                </li>
-                <li class="flex gap-4">
-                  <span class="step-badge">2</span>
-                  <span>Receive your invite by email or get a code from an active member.</span>
-                </li>
-                <li class="flex gap-4">
-                  <span class="step-badge">3</span>
-                  <span>Register here, accept the terms & privacy policy and start flying.</span>
-                </li>
-              </ol>
-            </div>
-            <div class="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-5 text-sm text-cyan-100">
-              Tip: After 14 days of active use you can generate up to two invitation codes yourself and share them with friends.
-            </div>
+          <div class="mt-10 space-y-4">
+            <button
+                type="button"
+                class="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-left text-sm font-medium text-white/80 transition hover:border-cyan-400/40 hover:bg-white/10"
+                :aria-expanded="showAccessDetails"
+                aria-controls="access-instructions"
+                @click="showAccessDetails = !showAccessDetails"
+            >
+              <span>How to get access</span>
+              <v-icon :icon="showAccessDetails ? 'mdi-chevron-up' : 'mdi-chevron-down'" size="20" />
+            </button>
+            <Transition name="collapse">
+              <div v-show="showAccessDetails" id="access-instructions" class="space-y-4 overflow-hidden">
+                <div class="rounded-2xl border border-white/10 bg-white/5 p-6">
+                  <ol class="space-y-4 text-sm text-white/70">
+                    <li class="flex gap-4">
+                      <span class="step-badge">1</span>
+                      <span>Join the <NuxtLink to="/#cta" class="text-cyan-300 underline decoration-dotted underline-offset-4">waitlist</NuxtLink>.</span>
+                    </li>
+                    <li class="flex gap-4">
+                      <span class="step-badge">2</span>
+                      <span>Receive your invite by email or get a code from an active member.</span>
+                    </li>
+                    <li class="flex gap-4">
+                      <span class="step-badge">3</span>
+                      <span>Register here, accept the terms &amp; privacy policy and start flying.</span>
+                    </li>
+                  </ol>
+                </div>
+                <div class="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-5 text-sm text-cyan-100">
+                  Tip: After 14 days of active use you can generate up to two invitation codes yourself and share them with friends.
+                </div>
+              </div>
+            </Transition>
           </div>
         </div>
       </div>
@@ -244,6 +258,7 @@ const auth = useAuthStore()
 const api = useApi()
 
 const mode = ref<Mode>('login')
+const showAccessDetails = ref(false)
 
 const redirectTarget = computed(() => {
   const redirectParam = route.query.redirect
@@ -393,5 +408,103 @@ onMounted(() => {
 .step-badge {
   @apply flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500/10 text-sm font-semibold text-cyan-200;
 }
-</style>
 
+.btn-fancy {
+  @apply relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 text-base font-semibold text-slate-950 shadow-lg shadow-cyan-500/30 transition focus:outline-none focus:ring-2 focus:ring-cyan-300/70 focus:ring-offset-2 focus:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-70;
+}
+
+.btn-fancy::before {
+  content: '';
+  position: absolute;
+  inset: -120% 0 auto 0;
+  height: 200%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 45%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.35) 55%, transparent 100%);
+  transform: translateX(-100%);
+  animation: shimmer 4s infinite;
+  opacity: 0.85;
+}
+
+.btn-fancy:disabled::before {
+  opacity: 0.4;
+}
+
+.orb {
+  @apply absolute rounded-full blur-3xl;
+  animation: orbFloat 16s ease-in-out infinite;
+}
+
+.orb-one {
+  @apply -left-20 top-16 h-72 w-72 bg-cyan-500/25;
+}
+
+.orb-two {
+  @apply bottom-[-6rem] right-[-5rem] h-96 w-96 bg-indigo-500/20;
+  animation-delay: 2s;
+}
+
+.orb-three {
+  @apply -top-20 right-1/3 h-64 w-64 bg-sky-500/10;
+  animation-delay: 4s;
+}
+
+.floating-card {
+  animation: cardFloat 10s ease-in-out infinite;
+}
+
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: max-height 0.35s ease, opacity 0.35s ease, transform 0.35s ease;
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.collapse-enter-to,
+.collapse-leave-from {
+  max-height: 500px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes orbFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(12px, -14px, 0) scale(1.1);
+  }
+}
+
+@keyframes cardFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -12px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-fancy::before,
+  .orb,
+  .floating-card {
+    animation: none !important;
+  }
+}
+</style>
