@@ -1,72 +1,16 @@
 // communicationsEngine composable
 import { ref, computed, readonly } from 'vue'
-import atcDecisionTree from "../data/atcDecisionTree";
 import { normalizeRadioPhrase } from './radioSpeech'
+import { useAuthStore } from '~/stores/auth'
+import type {
+    DecisionTreeRecord,
+    DecisionTreeState,
+    AutoTransition,
+    TelemetryKey,
+} from '../../types/decision-tree'
 
-// --- DecisionTree types (derived from ~/data/atcDecisionTree.json) ---
-type Role = 'pilot' | 'atc' | 'system'
-type Phase =
-    | 'Preflight' | 'Clearance' | 'PushStart' | 'TaxiOut' | 'Departure'
-    | 'Climb' | 'Enroute' | 'Descent' | 'Approach' | 'Landing'
-    | 'TaxiIn' | 'Postflight' | 'Interrupt' | 'LostComms' | 'Missed'
-
-interface DTNext { to: string; when?: string }
-interface DTHandoff { to: string; freq: string }
-interface DTActionSet { set?: string; to?: any; if?: string }
-
-interface DTState {
-    id?: string
-    role: Role
-    phase: Phase
-    say_tpl?: string
-    utterance_tpl?: string
-    else_say_tpl?: string
-    next?: DTNext[]
-    ok_next?: DTNext[]
-    bad_next?: DTNext[]
-    timer_next?: { after_s: number; to: string }[]
-    handoff?: DTHandoff
-    condition?: string
-    guard?: string
-    trigger?: string
-    auto?: 'check_readback' | 'monitor' | 'end' | 'pop_stack_or_route_by_intent'
-    readback_required?: string[]
-    actions?: (DTActionSet | string)[]
-    frequency?: string // Shortcut for accessing frequencies
-    frequencyName?: string // Frequency label (DEL, GND, TWR, etc.)
-}
-
-interface DecisionTree {
-    schema_version: string
-    name: string
-    description: string
-    start_state: string
-    end_states: string[]
-    variables: Record<string, any>
-    flags: {
-        in_air: boolean
-        emergency_active: boolean
-        current_unit: string
-        stack: string[]
-        off_schema_count: number // Counter for off-schema responses
-        radio_checks_done: number // Counter for radio checks
-    }
-    policies: {
-        timeouts: {
-            pilot_readback_timeout_s: number
-            controller_ack_timeout_s: number
-            no_reply_retry_after_s: number
-            no_reply_max_retries: number
-            lost_comms_detect_after_s: number
-        }
-        no_reply_sequence: { after_s: number; controller_say_tpl: string }[]
-        interrupts_allowed_when: Record<string, string>
-    }
-    hooks: Record<string, boolean | string>
-    roles: Role[]
-    phases: Phase[]
-    states: Record<string, DTState>
-}
+type Role = DecisionTreeState['role']
+type Phase = DecisionTreeState['phase']
 
 // Flight phases and communication steps for better integration
 export const FLIGHT_PHASES = [
@@ -101,6 +45,76 @@ type FrequencyVariableKey = 'atis_freq'
     | 'departure_freq'
     | 'approach_freq'
     | 'handoff_freq'
+
+export interface FlightTelemetry {
+    altitude_ft?: number
+    speed_kt?: number
+    vertical_speed_fpm?: number
+    latitude?: number
+    longitude?: number
+}
+
+const DEFAULT_TREE: DecisionTreeRecord = {
+    schema_version: '0.0',
+    name: 'loading',
+    description: 'Loading ATC decision tree…',
+    start_state: 'GEN_NO_REPLY',
+    end_states: [],
+    variables: {},
+    flags: {
+        in_air: false,
+        emergency_active: false,
+        current_unit: 'DEL',
+        stack: [],
+    },
+    policies: {
+        timeouts: {
+            pilot_readback_timeout_s: 8,
+            controller_ack_timeout_s: 6,
+            no_reply_retry_after_s: 5,
+            no_reply_max_retries: 2,
+            lost_comms_detect_after_s: 90,
+        },
+        no_reply_sequence: [],
+        interrupts_allowed_when: {},
+    },
+    hooks: {},
+    roles: ['pilot', 'atc', 'system'],
+    phases: [],
+    states: {},
+}
+
+const MAX_AUTO_CHAIN = 10
+type AutoTrigger = 'state-entry' | 'telemetry-update' | 'decision-applied'
+
+function createInitialFlags(base: Record<string, any>): Record<string, any> {
+    const stack = Array.isArray(base?.stack) ? [...base.stack] : []
+    return {
+        ...base,
+        stack,
+        in_air: Boolean(base?.in_air),
+        emergency_active: Boolean(base?.emergency_active),
+        current_unit: base?.current_unit || 'DEL',
+        off_schema_count: 0,
+        radio_checks_done: 0,
+    }
+}
+
+function cloneStates(states: Record<string, DecisionTreeState>): Record<string, DecisionTreeState> {
+    const result: Record<string, DecisionTreeState> = {}
+    Object.entries(states || {}).forEach(([id, state]) => {
+        result[id] = {
+            ...state,
+            readback_required: Array.isArray(state.readback_required) ? [...state.readback_required] : [],
+            next: Array.isArray(state.next) ? [...state.next] : [],
+            ok_next: Array.isArray(state.ok_next) ? [...state.ok_next] : [],
+            bad_next: Array.isArray(state.bad_next) ? [...state.bad_next] : [],
+            timer_next: Array.isArray(state.timer_next) ? [...state.timer_next] : [],
+            auto_transitions: Array.isArray(state.auto_transitions) ? [...state.auto_transitions] : [],
+        }
+    })
+    return result
+}
 
 // --- Load ATC decision tree ---
 export interface FlightContext {
@@ -156,20 +170,22 @@ function renderTpl(tpl: string, ctx: Record<string, any>): string {
 }
 
 export default function useCommunicationsEngine() {
-    const tree = ref<DecisionTree>({
-        ...atcDecisionTree as DecisionTree,
-        flags: {
-            ...atcDecisionTree.flags,
-            off_schema_count: 0,
-            radio_checks_done: 0
-        }
+    const auth = useAuthStore()
+
+    const tree = ref<DecisionTreeRecord>({
+        ...DEFAULT_TREE,
+        states: cloneStates(DEFAULT_TREE.states),
     })
+    const treeReady = ref(false)
+    const treeLoading = ref(false)
+    const treeError = ref<string | null>(null)
 
-    const states = computed<Record<string, DTState>>(() => tree.value.states)
+    const states = computed<Record<string, DecisionTreeState>>(() => tree.value.states || {})
 
-    const variables = ref<Record<string, any>>({ ...tree.value.variables })
-    const flags = ref({ ...tree.value.flags })
-    const currentStateId = ref<string>(tree.value.start_state)
+    const variables = ref<Record<string, any>>({ ...DEFAULT_TREE.variables })
+    const flags = ref<Record<string, any>>(createInitialFlags(DEFAULT_TREE.flags))
+    const telemetry = ref<FlightTelemetry>({})
+    const currentStateId = ref<string>(DEFAULT_TREE.start_state)
     const communicationLog = ref<EngineLog[]>([])
 
     // Flight context used for pm_alt.vue integration
@@ -196,8 +212,9 @@ export default function useCommunicationsEngine() {
         phase: 'clearance'
     })
 
-    const currentState = computed<DTState>(() => {
-        const s = states.value[currentStateId.value] || states.value[tree.value.start_state]
+    const currentState = computed<DecisionTreeState & { id: string }>(() => {
+        const fallback = states.value[tree.value.start_state]
+        const s = states.value[currentStateId.value] || fallback || { role: 'system', phase: 'Preflight' }
         return { ...s, id: currentStateId.value }
     })
 
@@ -239,10 +256,87 @@ export default function useCommunicationsEngine() {
         return null
     })
 
-    function initializeFlight(fpl: any) {
-        // Set variables
+    function applyTree(record: DecisionTreeRecord) {
+        tree.value = {
+            ...record,
+            states: cloneStates(record.states),
+        }
+        variables.value = { ...record.variables }
+        flags.value = createInitialFlags(record.flags)
+        currentStateId.value = record.start_state
+        treeReady.value = true
+        treeError.value = null
+    }
+
+    async function loadDecisionTree(force = false) {
+        if (treeLoading.value) {
+            return
+        }
+        if (treeReady.value && !force) {
+            return
+        }
+        treeLoading.value = true
+        treeError.value = null
+
+        try {
+            if (!auth.initialized) {
+                await auth.fetchUser().catch(() => null)
+            }
+
+            const headers: Record<string, string> = { Accept: 'application/json' }
+            if (auth.accessToken) {
+                headers.Authorization = `Bearer ${auth.accessToken}`
+            }
+
+            let response = await fetch('/api/atc/tree', {
+                method: 'GET',
+                headers,
+            })
+
+            if (response.status === 401) {
+                const refreshed = await auth.tryRefresh?.()
+                if (refreshed && auth.accessToken) {
+                    headers.Authorization = `Bearer ${auth.accessToken}`
+                    response = await fetch('/api/atc/tree', {
+                        method: 'GET',
+                        headers,
+                    })
+                }
+            }
+
+            if (!response.ok) {
+                throw new Error(`Failed to load decision tree (${response.status})`)
+            }
+
+            const payload = await response.json()
+            if (!payload?.tree) {
+                throw new Error('Decision tree payload missing')
+            }
+
+            applyTree(payload.tree as DecisionTreeRecord)
+        } catch (err: any) {
+            console.error('Failed to load ATC decision tree', err)
+            treeError.value = err?.message || 'Failed to load decision tree'
+        } finally {
+            treeLoading.value = false
+        }
+    }
+
+    async function ensureTreeLoaded() {
+        if (!treeReady.value) {
+            await loadDecisionTree()
+        }
+    }
+
+    if (typeof window !== 'undefined') {
+        ensureTreeLoaded()
+    }
+
+    async function initializeFlight(fpl: any) {
+        await ensureTreeLoaded()
+
         variables.value = {
-            ...variables.value,
+            ...tree.value.variables,
             callsign: fpl.callsign || fpl.callsign,
             acf_type: fpl.aircraft?.split('/')[0] || 'A320',
             dep: fpl.dep || fpl.departure || 'EDDF',
@@ -273,24 +367,113 @@ export default function useCommunicationsEngine() {
             time_now: new Date().toISOString()
         }
 
-        // Update flight context
         Object.assign(flightContext.value, {
             ...variables.value,
             phase: 'clearance'
         })
 
-        flags.value = {
-            ...flags.value,
-            in_air: false,
-            emergency_active: false,
-            current_unit: 'DEL',
-            stack: [],
-            off_schema_count: 0,
-            radio_checks_done: 0
-        }
+        flags.value = createInitialFlags(tree.value.flags)
+        flags.value.in_air = false
+        flags.value.emergency_active = false
+        flags.value.current_unit = 'DEL'
+        flags.value.stack = []
+        flags.value.off_schema_count = 0
+        flags.value.radio_checks_done = 0
+
+        telemetry.value = {}
 
         currentStateId.value = tree.value.start_state
         communicationLog.value = []
+
+        runAutoTransitions('state-entry')
+    }
+
+    function evaluateExpressionCondition(expression?: string): boolean {
+        const trimmed = (expression || '').trim()
+        if (!trimmed) return false
+        try {
+            const fn = new Function('variables', 'flags', 'telemetry', `return (${trimmed})`)
+            return Boolean(fn(variables.value, flags.value, telemetry.value))
+        } catch (err) {
+            console.warn('Failed to evaluate auto transition expression', trimmed, err)
+            return false
+        }
+    }
+
+    function evaluateTelemetryCondition(auto: AutoTransition): boolean {
+        if (!auto.telemetryKey || !auto.comparator) {
+            return false
+        }
+        const value = telemetry.value[auto.telemetryKey as keyof FlightTelemetry]
+        if (value === undefined || value === null) {
+            return false
+        }
+        const numericValue = Number(value)
+        const target = Number(auto.value ?? 0)
+        switch (auto.comparator) {
+            case '>':
+                return numericValue > target
+            case '>=':
+                return numericValue >= target
+            case '<':
+                return numericValue < target
+            case '<=':
+                return numericValue <= target
+            case '!==':
+                return numericValue !== target
+            case '===':
+                return numericValue === target
+            default:
+                return false
+        }
+    }
+
+    function checkAutoCondition(auto: AutoTransition): boolean {
+        if (auto.enabled === false) {
+            return false
+        }
+        if (auto.conditionType === 'telemetry') {
+            return evaluateTelemetryCondition(auto)
+        }
+        if (auto.expression) {
+            return evaluateExpressionCondition(auto.expression)
+        }
+        return false
+    }
+
+    function runAutoTransitions(initialTrigger: AutoTrigger) {
+        let trigger: AutoTrigger = initialTrigger
+        let depth = 0
+        const visited = new Set<string>()
+
+        while (depth < MAX_AUTO_CHAIN) {
+            const stateId = currentStateId.value
+            const state = currentState.value
+            const transitions = Array.isArray(state.auto_transitions) ? [...state.auto_transitions] : []
+            transitions.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
+
+            let applied = false
+            for (const auto of transitions) {
+                if (auto.enabled === false) continue
+                if (!auto.to || auto.to === stateId) continue
+                const runOn = auto.runOn && auto.runOn.length ? auto.runOn : ['state-entry']
+                if (!runOn.includes(trigger)) continue
+                const key = `${stateId}:${auto.id || auto.to}`
+                if (visited.has(key)) continue
+                if (!checkAutoCondition(auto)) continue
+
+                visited.add(key)
+                moveTo(auto.to, { skipAuto: true })
+                trigger = 'state-entry'
+                depth += 1
+                applied = true
+                break
+            }
+
+            if (!applied) {
+                break
+            }
+        }
     }
 
     function updateFrequencyVariables(update: Partial<Record<FrequencyVariableKey, string>>) {
@@ -309,6 +492,22 @@ export default function useCommunicationsEngine() {
         }
 
         Object.assign(flightContext.value, Object.fromEntries(sanitizedEntries))
+    }
+
+    function updateTelemetry(update: Partial<FlightTelemetry>) {
+        if (!update) return
+
+        const cleanedEntries = Object.entries(update).filter(([, value]) => value !== undefined && value !== null)
+        if (!cleanedEntries.length) return
+
+        const nextTelemetry: FlightTelemetry = { ...telemetry.value }
+        for (const [key, value] of cleanedEntries) {
+            const numeric = typeof value === 'string' ? Number(value) : value
+            ;(nextTelemetry as any)[key] = numeric
+        }
+
+        telemetry.value = nextTelemetry
+        runAutoTransitions('telemetry-update')
     }
 
     function buildLLMContext(pilotTranscript: string) {
@@ -350,6 +549,8 @@ export default function useCommunicationsEngine() {
         if (!decision.radio_check) {
             moveTo(decision.next_state)
         }
+
+        runAutoTransitions('decision-applied')
     }
 
     function processPilotTransmission(transcript: string): string | null {
@@ -384,7 +585,7 @@ export default function useCommunicationsEngine() {
         return processPilotTransmission(transcript)
     }
 
-    function moveTo(stateId: string) {
+    function moveTo(stateId: string, options: { skipAuto?: boolean } = {}) {
         if (!states.value[stateId]) {
             console.warn(`[Engine] Unknown state: ${stateId}`)
             return
@@ -419,6 +620,10 @@ export default function useCommunicationsEngine() {
 
         // Update flight context phase
         updateFlightPhase(s.phase)
+
+        if (!options.skipAuto) {
+            runAutoTransitions('state-entry')
+        }
     }
 
     function updateFlightPhase(phase: Phase) {
@@ -554,6 +759,10 @@ export default function useCommunicationsEngine() {
         currentStateId: readonly(currentStateId),
         variables: readonly(variables),
         flags: readonly(flags),
+        telemetry: readonly(telemetry),
+        treeLoading: readonly(treeLoading),
+        treeReady: readonly(treeReady),
+        treeError: readonly(treeError),
         nextCandidates,
         activeFrequency,
         communicationLog: readonly(communicationLog),
@@ -566,6 +775,9 @@ export default function useCommunicationsEngine() {
         // Lifecycle
         initializeFlight,
         updateFrequencyVariables,
+        updateTelemetry,
+        loadTree: loadDecisionTree,
+        ensureTreeLoaded,
 
         // Communication
         processPilotTransmission,

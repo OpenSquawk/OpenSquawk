@@ -961,7 +961,8 @@ const {
   moveTo: forceMove,
   normalizeATCText,
   renderATCMessage,
-  getStateDetails
+  getStateDetails,
+  ensureTreeLoaded
 } = engine
 
 const lastTransmission = ref('')
@@ -1068,6 +1069,8 @@ onMounted(async () => {
         router.push('/login')
       })
     }
+
+    await ensureTreeLoaded()
 
     if (typeof window !== 'undefined') {
       const storedVatsimId = window.localStorage.getItem(STORAGE_KEYS.vatsimId)
@@ -1607,7 +1610,7 @@ const loadFlightPlans = async () => {
 
 const startMonitoring = async (flightPlan: any) => {
   selectedPlan.value = flightPlan
-  initializeFlight(flightPlan)
+  await initializeFlight(flightPlan)
   currentScreen.value = 'monitor'
   persistSelectedPlan(flightPlan)
 
@@ -1620,7 +1623,7 @@ const startMonitoring = async (flightPlan: any) => {
   await fetchAirportFrequencies(flightPlan.dep || flightPlan.departure)
 }
 
-const startDemoFlight = () => {
+const startDemoFlight = async () => {
   const demoFlight = {
     callsign: 'DLH39A',
     aircraft: 'A320/L',
@@ -1629,7 +1632,7 @@ const startDemoFlight = () => {
     altitude: '36000',
     assignedsquawk: '1234'
   }
-  void startMonitoring(demoFlight)
+  await startMonitoring(demoFlight)
 }
 
 const backToSetup = () => {
@@ -2134,7 +2137,7 @@ const runFullSimulation = async () => {
       payload: { timestamp: new Date().toISOString(), steps: simulationStepCount }
     })
 
-    startDemoFlight()
+    await startDemoFlight()
     await nextTick()
     clearLog()
     recordedAtcStates.clear()
