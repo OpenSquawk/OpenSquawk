@@ -28,8 +28,6 @@ const learnProfileSchema = new mongoose.Schema<LearnProfileDocument>(
   },
 )
 
-learnProfileSchema.index({ user: 1 }, { unique: true })
-
 export const LearnProfile =
   (mongoose.models.LearnProfile as mongoose.Model<LearnProfileDocument> | undefined) ||
   mongoose.model<LearnProfileDocument>('LearnProfile', learnProfileSchema)
