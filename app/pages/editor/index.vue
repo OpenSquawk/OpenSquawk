@@ -1,4 +1,5 @@
 <template>
+  <v-app>
   <div class="min-h-screen bg-[#050910] text-white">
     <div class="flex h-screen overflow-hidden">
       <main class="flex flex-1 flex-col">
@@ -516,6 +517,7 @@
       </v-card>
     </v-dialog>
   </div>
+  </v-app>
 </template>
 
 <script setup lang="ts">
