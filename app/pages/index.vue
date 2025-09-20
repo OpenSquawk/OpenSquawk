@@ -96,45 +96,47 @@
 
     <!-- HERO -->
     <section class="gradient-hero relative overflow-hidden">
-      <div class="absolute inset-0 pointer-events-none">
+      <div class="hero-overlay absolute inset-0 pointer-events-none">
         <div class="absolute -top-24 right-0 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-3xl"/>
       </div>
 
-      <div class="container-outer pt-14 pb-10 sm:pt-20 sm:pb-16 md:pt-24 md:pb-20 lg:mt-12">
-        <div class="max-w-2xl" data-aos="fade-up">
-          <span class="chip mb-4">Alpha · Open-Source AI ATC</span>
-          <h1 class="text-3xl sm:text-5xl md:text-6xl font-semibold leading-tight">
-            OpenSquawk<br/>
-            <span class="text-cyan-400">Open-source, low-cost AI ATC</span>
-          </h1>
-          <p class="mt-4 sm:mt-6 text-white/80 text-base sm:text-lg">
-            We are building an open, affordable AI air traffic control for flight simulators – community-driven, with
-            self-hosted and hosted options in planning.
-          </p>
-          <ul class="mt-6 space-y-2 text-white/70 text-sm sm:text-base">
-            <li class="flex items-start gap-2">
-              <v-icon icon="mdi-account-group" size="18" class="mt-[3px] text-cyan-300"/>
-              <span>Community roadmap sets the priorities. Features only ship when they truly help you.</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <v-icon icon="mdi-airplane" size="18" class="mt-[3px] text-cyan-300"/>
-              <span><strong>Simulator support</strong>: MSFS first, X-Plane next – all with VATSIM-ready training in mind.</span>
-            </li>
-          </ul>
-          <p class="mt-2 text-sm text-white/70">
-            We are looking for collaborators (Node/Nuxt, ATC SMEs, testers, infra/cost benchmarking). Reach out via
-            <a class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
-          </p>
-          <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
-            <NuxtLink to="#cta" class="btn btn-primary text-base">
-              Join the waitlist
-            </NuxtLink>
-            <NuxtLink to="/news" class="btn btn-ghost text-base">
-              Read news
-            </NuxtLink>
+      <div class="container-outer relative z-10 pt-14 pb-10 sm:pt-20 sm:pb-16 md:pt-24 md:pb-20 lg:mt-12">
+        <div class="hero-grid grid gap-10 xl:gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-center">
+          <div class="hero-copy max-w-2xl" data-aos="fade-up">
+            <span class="chip mb-4">Alpha · Open-Source AI ATC</span>
+            <h1 class="text-3xl sm:text-5xl md:text-6xl font-semibold leading-tight">
+              OpenSquawk<br/>
+              <span class="text-cyan-400">Open-source, low-cost AI ATC</span>
+            </h1>
+            <p class="mt-4 sm:mt-6 text-white/80 text-base sm:text-lg">
+              We are building an open, affordable AI air traffic control for flight simulators – community-driven, with
+              self-hosted and hosted options in planning.
+            </p>
+            <ul class="mt-6 space-y-2 text-white/70 text-sm sm:text-base">
+              <li class="flex items-start gap-2">
+                <v-icon icon="mdi-account-group" size="18" class="mt-[3px] text-cyan-300"/>
+                <span>Community roadmap sets the priorities. Features only ship when they truly help you.</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <v-icon icon="mdi-airplane" size="18" class="mt-[3px] text-cyan-300"/>
+                <span><strong>Simulator support</strong>: MSFS first, X-Plane next – all with VATSIM-ready training in mind.</span>
+              </li>
+            </ul>
+            <p class="mt-2 text-sm text-white/70">
+              We are looking for collaborators (Node/Nuxt, ATC SMEs, testers, infra/cost benchmarking). Reach out via
+              <a class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
+            </p>
+            <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
+              <NuxtLink to="#cta" class="btn btn-primary text-base">
+                Join the waitlist
+              </NuxtLink>
+              <NuxtLink to="/news" class="btn btn-ghost text-base">
+                Read news
+              </NuxtLink>
+            </div>
           </div>
-          <div class="mt-8 sm:mt-10 max-w-xl" data-aos="fade-up" data-aos-delay="120">
-            <form class="rounded-2xl border border-white/10 bg-black/30 p-4 sm:p-5 space-y-4"
+          <div class="hero-form w-full max-w-xl lg:justify-self-end" data-aos="fade-left" data-aos-delay="140">
+            <form class="rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-5 space-y-4"
                   @submit.prevent="submitUpdates">
               <div class="space-y-1">
                 <h3 class="text-lg font-semibold">
@@ -191,15 +193,6 @@
                 No spam – only relevant product updates. Unsubscribe any time.
               </p>
             </form>
-          </div>
-        </div>
-        <div class="hidden mt-10 md:mt-16" data-aos="zoom-in" data-aos-delay="100">
-          <div class="card relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/5 to-transparent"></div>
-            <!--            <img src="/img/simulator.jpg" alt="Cockpit" class="rounded-xl w-full object-cover" />-->
-            <div class="absolute bottom-3 right-3 text-xs text-white/70 bg-black/40 px-2 py-1 rounded">
-              Placeholder image
-            </div>
           </div>
         </div>
       </div>
@@ -1700,6 +1693,21 @@ onMounted(async () => {
   background: radial-gradient(1200px 600px at 10% -10%, rgba(6, 182, 212, .35), transparent),
   radial-gradient(900px 480px at 100% 10%, rgba(59, 130, 246, .25), transparent),
   linear-gradient(180deg, #0b1020 0%, #0b1020 60%, #0a0f1c 100%);
+}
+
+.gradient-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('/img/learn/modules/img3.jpeg') center/cover no-repeat;
+  opacity: 0.25;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero-overlay {
+  background: linear-gradient(90deg, rgba(11, 16, 32, 0.95) 0%, rgba(11, 16, 32, 0.78) 45%, rgba(11, 16, 32, 0.35) 100%);
+  z-index: 1;
 }
 
 .glass {
