@@ -492,7 +492,9 @@ onMounted(() => {
 }
 
 .mode-toggle__btn--active {
-  @apply relative;
+  @apply relative text-slate-950;
+  background-image: linear-gradient(135deg, #22d3ee 0%, #0ea5e9 45%, #2563eb 100%);
+  box-shadow: 0 18px 45px rgba(14, 165, 233, 0.35), 0 0 30px rgba(37, 99, 235, 0.28);
 }
 
 .mode-toggle__btn--inactive {
