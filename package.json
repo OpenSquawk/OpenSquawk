@@ -9,7 +9,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "start": "node .output/server/index.mjs",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "import:decision": "tsx --tsconfig tsconfig.scripts.json scripts/import-decision-tree.ts"
   },
   "dependencies": {
     "@nuxt/image": "1.11.0",
@@ -34,6 +35,7 @@
   },
   "packageManager": "yarn@4.9.4",
   "devDependencies": {
-    "@types/fluent-ffmpeg": "^2"
+    "@types/fluent-ffmpeg": "^2",
+    "tsx": "^4.15.1"
   }
 }
