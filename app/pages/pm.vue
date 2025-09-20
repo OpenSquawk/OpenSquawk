@@ -356,7 +356,7 @@
         <v-card class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-3">
             <h3 class="text-lg font-semibold">Quick Actions</h3>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="flex flex-col gap-2">
               <v-btn
                   color="orange"
                   variant="flat"
