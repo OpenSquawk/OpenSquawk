@@ -7,7 +7,7 @@ import { User } from '../models/User'
 
 const scrypt = promisify(_scrypt) as (password: string | Buffer, salt: string | Buffer, keylen: number) => Promise<Buffer>
 
-const ACCESS_TOKEN_TTL_SECONDS = 60 * 15
+const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 24
 const REFRESH_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7
 const REFRESH_COOKIE_NAME = 'os_refresh_token'
 const PASSWORD_SALT_BYTES = 16
