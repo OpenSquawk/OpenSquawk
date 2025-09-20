@@ -571,30 +571,49 @@
           <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="0">
             <div class="absolute -top-3 right-4 chip">Community</div>
             <div class="flex flex-col flex-1">
-              <h3 class="text-xl font-semibold">
-                Open-source (self-host)
-              </h3>
-              <p class="mt-2 text-white/80">
-                Full control over infrastructure and data. Self-hosting is always an option.
-              </p>
-              <div class="mt-5 text-3xl font-semibold">
-                0€<span class="text-white/60 text-sm font-normal"> / forever</span>
+              <div class="flex flex-col flex-1">
+                <h3 class="text-xl font-semibold">
+                  Open-source (self-host)
+                </h3>
+                <p class="mt-2 text-white/80 flex-1">
+                  Full control over infrastructure and data. Self-hosting is always an option.
+                </p>
+                <div class="mt-5 text-3xl font-semibold">
+                  0€<span class="text-white/60 text-sm font-normal"> / forever</span>
+                </div>
+                <ul class="mt-5 space-y-3 text-sm">
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Full feature set &amp; customization</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Plugin SDK &amp; API access</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Community support &amp; docs</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/60">
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <span>Managed hosting &amp; updates included</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/60">
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <span>Guided multi-user environments</span>
+                  </li>
+                </ul>
               </div>
-              <ul class="mt-5 space-y-2 text-white/80 text-sm">
-                <li>✔ Full feature set</li>
-                <li>✔ Plugins & SDK</li>
-                <li>✔ Community support</li>
-              </ul>
+              <NuxtLink
+                  to="https://github.com/FaktorxMensch/OpenSquawk"
+                  external
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn-ghost w-full mt-6"
+              >
+                View repository
+              </NuxtLink>
             </div>
-            <NuxtLink
-                to="https://github.com/FaktorxMensch/OpenSquawk"
-                external
-                target="_blank"
-                rel="noopener"
-                class="btn btn-ghost w-full mt-6"
-            >
-              View repository
-            </NuxtLink>
           </div>
 
           <!-- Hosted Learning -->
@@ -607,47 +626,83 @@
               Recommended
             </div>
             <div class="flex flex-col flex-1">
-              <h3 class="text-xl font-semibold">Hosted – learning mode</h3>
-              <p class="mt-2 text-white/80">
-                We cover the base costs so you can train with all fundamental features. For live ATC you provide your own OpenAI API key – we only use it for the background radio requests.
-              </p>
-              <div class="mt-5 text-3xl font-semibold">
-                0€<span class="text-white/60 text-sm font-normal"> / beta</span>
+              <div class="flex flex-col flex-1">
+                <h3 class="text-xl font-semibold">Hosted – learning mode</h3>
+                <p class="mt-2 text-white/80 flex-1">
+                  We cover the base costs so you can train with all fundamental features. For live ATC you provide your own OpenAI API key – we only use it for the background radio requests.
+                </p>
+                <div class="mt-5 text-3xl font-semibold">
+                  0€<span class="text-white/60 text-sm font-normal"> / beta</span>
+                </div>
+                <ul class="mt-5 space-y-3 text-sm">
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Learning modules &amp; core features included</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Managed updates handled by us</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Zero setup – ready to train</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/60">
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <span>Shared team environments</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/60">
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <span>Live ATC usage covered by us</span>
+                  </li>
+                </ul>
               </div>
-              <ul class="mt-5 space-y-2 text-white/80 text-sm">
-                <li>✔ Learning modules & core features included
-                </li>
-                <li>✔ No setup, updates handled by us</li>
-                <li>✔ Live ATC via your OpenAI API key
-                </li>
-              </ul>
+              <NuxtLink to="#cta" class="btn btn-primary w-full mt-6">
+                Join the waitlist
+              </NuxtLink>
             </div>
           </div>
 
           <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="200">
             <div class="absolute -top-3 right-4 chip">Teams</div>
             <div class="flex flex-col flex-1">
-              <h3 class="text-xl font-semibold">
-                Hosted – community server
-              </h3>
-              <p class="mt-2 text-white/80">
-                For virtual airlines and groups that want to practise together. We are testing dedicated environments – currently also €0 and powered by your own API key.
-              </p>
-              <div class="mt-5 text-3xl font-semibold">
-                0€<span class="text-white/60 text-sm font-normal"> / beta</span>
+              <div class="flex flex-col flex-1">
+                <h3 class="text-xl font-semibold">
+                  Hosted – community server
+                </h3>
+                <p class="mt-2 text-white/80 flex-1">
+                  For virtual airlines and groups that want to practise together. We are testing dedicated environments – currently also €0 and powered by your own API key.
+                </p>
+                <div class="mt-5 text-3xl font-semibold">
+                  0€<span class="text-white/60 text-sm font-normal"> / beta</span>
+                </div>
+                <ul class="mt-5 space-y-3 text-sm">
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Shared sessions &amp; multi-role practise</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Managed environment &amp; updates</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Roadmap shaped by team feedback</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/60">
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <span>Live ATC usage covered by us</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/60">
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <span>Full infrastructure control</span>
+                  </li>
+                </ul>
               </div>
-              <ul class="mt-5 space-y-2 text-white/80 text-sm">
-                <li>✔ Shared sessions & roles in planning
-                </li>
-                <li>✔ Use your own OpenAI API key or self-host fallback
-                </li>
-                <li>✔ Feedback guides the next milestones
-                </li>
-              </ul>
+              <NuxtLink to="#cta" class="btn btn-ghost w-full mt-6">
+                Get in touch
+              </NuxtLink>
             </div>
-            <NuxtLink to="#cta" class="btn btn-ghost w-full mt-6">
-              Get in touch
-            </NuxtLink>
           </div>
         </div>
 
