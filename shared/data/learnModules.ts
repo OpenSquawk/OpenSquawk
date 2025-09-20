@@ -269,7 +269,7 @@ export const learnModules: ModuleDef[] = [
     id: 'arc',
     title: 'ARC Decision Tree',
     subtitle: 'From clearance call to departure',
-    art: '/img/learn/modules/img2.jpeg',
+    art: '/img/learn/modules/img3.jpeg',
     lessons: [
       {
         id: 'clearance-contact',
