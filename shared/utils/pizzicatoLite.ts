@@ -53,6 +53,7 @@ class PizzicatoSound {
   private sourceNode: AudioBufferSourceNode | null = null
   private effects: EffectNode[] = []
   private isPlaying = false
+  private playbackRate = 1
 
   constructor(context: AudioContext, buffer: AudioBuffer) {
     this.context = context
@@ -79,6 +80,18 @@ class PizzicatoSound {
     this.outputNode.gain.value = clamp(value, 0, 2)
   }
 
+  setPlaybackRate(value: number) {
+    const clamped = clamp(value, 0.25, 4)
+    this.playbackRate = clamped
+    if (this.sourceNode) {
+      try {
+        this.sourceNode.playbackRate.value = clamped
+      } catch {
+        // ignore rate assignment errors
+      }
+    }
+  }
+
   async play(): Promise<void> {
     if (this.isPlaying) {
       this.stop()
@@ -86,6 +99,7 @@ class PizzicatoSound {
 
     const source = this.context.createBufferSource()
     source.buffer = this.buffer
+    source.playbackRate.value = this.playbackRate
 
     const connectedNodes: AudioNode[] = []
 
