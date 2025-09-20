@@ -29,6 +29,7 @@ type RecentTransmission = {
   id: string
   role: string
   channel: string
+  type?: string
   direction: string
   text: string
   normalized?: string
@@ -81,6 +82,7 @@ function mapTransmission(doc: any): RecentTransmission {
     id: String(doc._id),
     role: doc.role,
     channel: doc.channel,
+    type: doc.type || doc.channel || undefined,
     direction: doc.direction,
     text: doc.text,
     normalized: doc.normalized || undefined,
@@ -136,7 +138,14 @@ export default defineEventHandler(async (event) => {
     }),
     TransmissionLog.countDocuments(),
     TransmissionLog.countDocuments({ createdAt: { $gte: dayAgo } }),
-    TransmissionLog.aggregate([{ $group: { _id: '$channel', count: { $sum: 1 } } }]),
+    TransmissionLog.aggregate([
+      {
+        $group: {
+          _id: { $ifNull: ['$type', '$channel'] },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
     TransmissionLog.aggregate([{ $group: { _id: '$role', count: { $sum: 1 } } }]),
     User.find().sort({ createdAt: -1 }).limit(5),
     InvitationCode.find()

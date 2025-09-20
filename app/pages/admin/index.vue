@@ -184,7 +184,9 @@
                       >
                         <div class="flex items-center justify-between text-xs text-white/40 uppercase tracking-[0.2em]">
                           <span class="flex items-center gap-2">
-                            <v-chip size="x-small" color="cyan" variant="outlined">{{ log.channel }}</v-chip>
+                            <v-chip size="x-small" color="cyan" variant="outlined">
+                              {{ log.type || log.channel }}
+                            </v-chip>
                             <span>{{ log.direction }}</span>
                           </span>
                           <span>{{ formatRelative(log.createdAt) }}</span>
@@ -627,9 +629,9 @@
                   hide-details
                 />
                 <v-select
-                  v-model="logChannel"
-                  :items="logChannelOptions"
-                  label="Channel"
+                  v-model="logType"
+                  :items="logTypeOptions"
+                  label="Type"
                   density="comfortable"
                   variant="outlined"
                   color="cyan"
@@ -697,7 +699,9 @@
                   <v-card-text class="space-y-3">
                     <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                       <div class="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/40">
-                        <v-chip size="x-small" color="cyan" variant="outlined">{{ entry.channel }}</v-chip>
+                        <v-chip size="x-small" color="cyan" variant="outlined">
+                          {{ getTransmissionType(entry) }}
+                        </v-chip>
                         <v-chip size="x-small" color="cyan" variant="tonal">{{ entry.direction }}</v-chip>
                         <v-chip size="x-small" color="cyan" variant="text">{{ entry.role }}</v-chip>
                         <span v-if="entry.user">User: {{ entry.user.email }}</span>
@@ -968,7 +972,7 @@
                             </div>
                           </template>
                         </template>
-                        <div v-if="entry.channel === 'say'" class="space-y-2">
+                        <div v-if="isTransmissionType(entry, 'say')" class="space-y-2">
                           <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Say endpoint invocation</p>
                           <div class="grid gap-3 md:grid-cols-2">
                             <div class="rounded-lg border border-white/10 bg-black/30 p-3">
@@ -1132,6 +1136,7 @@ interface OverviewTransmission {
   id: string
   role: string
   channel: string
+  type?: string
   direction: string
   text: string
   normalized?: string
@@ -1249,6 +1254,7 @@ interface TransmissionMetadata {
   speed?: number
   tag?: string | null
   radioQuality?: string
+  pilotUtterance?: string
   [key: string]: any
 }
 
@@ -1264,7 +1270,8 @@ interface LlmUsageSummary {
 interface TransmissionEntry {
   id: string
   role: string
-  channel: string
+  channel: 'ptt' | 'say' | 'decide' | 'text'
+  type?: 'ptt' | 'say' | 'decide' | string
   direction: string
   text: string
   normalized?: string
@@ -1392,15 +1399,15 @@ const logPagination = reactive({ total: 0, page: 1, pages: 1, pageSize: 15 })
 const logLoading = ref(false)
 const logError = ref('')
 const logSearch = ref('')
-const logChannel = ref<'all' | 'ptt' | 'say' | 'text'>('all')
+const logType = ref<'all' | 'ptt' | 'say' | 'decide'>('all')
 const logDirection = ref<'all' | 'incoming' | 'outgoing'>('all')
 const logRole = ref<'all' | 'pilot' | 'atc'>('all')
 const logTimeframe = ref<'24h' | '7d' | '30d' | 'all'>('24h')
-const logChannelOptions = [
-  { title: 'All channels', value: 'all' },
+const logTypeOptions = [
+  { title: 'All types', value: 'all' },
   { title: 'PTT', value: 'ptt' },
   { title: 'Say', value: 'say' },
-  { title: 'Text', value: 'text' },
+  { title: 'Decide', value: 'decide' },
 ]
 const logDirectionOptions = [
   { title: 'All directions', value: 'all' },
@@ -1505,6 +1512,14 @@ function describeTransition(transition: any) {
   if (transition.condition) details.push(`cond: ${transition.condition}`)
 
   return details.length ? `${destination} (${details.join(', ')})` : destination
+}
+
+function getTransmissionType(entry: TransmissionEntry) {
+  return entry.type || entry.channel
+}
+
+function isTransmissionType(entry: TransmissionEntry, type: 'ptt' | 'say' | 'decide') {
+  return getTransmissionType(entry) === type
 }
 
 function buildLlmUsage(entry: TransmissionEntry): LlmUsageSummary | null {
@@ -1733,7 +1748,7 @@ function computeLogQuery() {
     pageSize: logPagination.pageSize,
   }
   if (logSearch.value.trim()) query.search = logSearch.value.trim()
-  if (logChannel.value !== 'all') query.channel = logChannel.value
+  if (logType.value !== 'all') query.type = logType.value
   if (logDirection.value !== 'all') query.direction = logDirection.value
   if (logRole.value !== 'all') query.role = logRole.value
   const since = computeSince(logTimeframe.value)
@@ -1824,7 +1839,7 @@ watch(invitationStatus, () => fetchInvitations(true))
 watch(invitationChannel, () => fetchInvitations(true))
 watch(waitlistSubscription, () => fetchWaitlist(true))
 watch(waitlistStatus, () => fetchWaitlist(true))
-watch(logChannel, () => fetchLogs(true))
+watch(logType, () => fetchLogs(true))
 watch(logDirection, () => fetchLogs(true))
 watch(logRole, () => fetchLogs(true))
 watch(logTimeframe, () => fetchLogs(true))

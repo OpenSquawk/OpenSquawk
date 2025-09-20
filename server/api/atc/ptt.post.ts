@@ -236,6 +236,7 @@ export default defineEventHandler(async (event) => {
                 user: user?._id,
                 role: "pilot",
                 channel: "ptt",
+                type: "ptt",
                 direction: "incoming",
                 text: transcribedText,
                 metadata: {

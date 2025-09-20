@@ -5,7 +5,8 @@ const { Schema } = mongoose
 export interface TransmissionLogDocument extends mongoose.Document {
   user?: mongoose.Types.ObjectId
   role: string
-  channel: 'ptt' | 'say' | 'text'
+  channel: 'ptt' | 'say' | 'text' | 'decide'
+  type?: 'ptt' | 'say' | 'decide'
   direction: 'incoming' | 'outgoing'
   text: string
   normalized?: string
@@ -16,7 +17,8 @@ export interface TransmissionLogDocument extends mongoose.Document {
 const transmissionSchema = new mongoose.Schema<TransmissionLogDocument>({
   user: { type: Schema.Types.ObjectId, ref: 'User' },
   role: { type: String, required: true },
-  channel: { type: String, enum: ['ptt', 'say', 'text'], required: true },
+  channel: { type: String, enum: ['ptt', 'say', 'text', 'decide'], required: true },
+  type: { type: String, enum: ['ptt', 'say', 'decide'], default: null },
   direction: { type: String, enum: ['incoming', 'outgoing'], required: true },
   text: { type: String, required: true },
   normalized: { type: String },

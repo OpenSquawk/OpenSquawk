@@ -223,6 +223,7 @@ export default defineEventHandler(async (event) => {
                 user: user._id,
                 role: "atc",
                 channel: "say",
+                type: "say",
                 direction: "outgoing",
                 text: raw,
                 normalized,

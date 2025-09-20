@@ -3,7 +3,7 @@ import type { FilterQuery } from 'mongoose'
 import { requireAdmin } from '../../../utils/auth'
 import { TransmissionLog, type TransmissionLogDocument } from '../../../models/TransmissionLog'
 
-const CHANNELS = new Set(['ptt', 'say', 'text'])
+const TRANSMISSION_TYPES = new Set(['ptt', 'say', 'decide', 'text'])
 const DIRECTIONS = new Set(['incoming', 'outgoing'])
 const ROLES = new Set(['pilot', 'atc'])
 
@@ -11,6 +11,7 @@ type TransmissionListItem = {
   id: string
   role: string
   channel: string
+  type?: string
   direction: string
   text: string
   normalized?: string
@@ -28,6 +29,7 @@ function mapTransmission(doc: any): TransmissionListItem {
     id: String(doc._id),
     role: doc.role,
     channel: doc.channel,
+    type: doc.type || doc.channel || undefined,
     direction: doc.direction,
     text: doc.text,
     normalized: doc.normalized || undefined,
@@ -49,7 +51,9 @@ export default defineEventHandler(async (event) => {
 
   const query = getQuery(event)
   const search = typeof query.search === 'string' ? query.search.trim() : ''
-  const channel = typeof query.channel === 'string' ? query.channel.trim() : ''
+  const typeParam = typeof query.type === 'string' ? query.type.trim() : ''
+  const channelParam = typeof query.channel === 'string' ? query.channel.trim() : ''
+  const requestedType = typeParam || channelParam
   const direction = typeof query.direction === 'string' ? query.direction.trim() : ''
   const role = typeof query.role === 'string' ? query.role.trim() : ''
   const sinceRaw = typeof query.since === 'string' ? query.since.trim() : ''
@@ -67,11 +71,16 @@ export default defineEventHandler(async (event) => {
     andConditions.push({ $or: [{ text: regex }, { normalized: regex }] })
   }
 
-  if (channel) {
-    if (!CHANNELS.has(channel)) {
-      throw createError({ statusCode: 400, statusMessage: 'Unknown channel' })
+  if (requestedType) {
+    if (!TRANSMISSION_TYPES.has(requestedType)) {
+      throw createError({ statusCode: 400, statusMessage: 'Unknown transmission type' })
     }
-    filter.channel = channel as TransmissionLogDocument['channel']
+    andConditions.push({
+      $or: [
+        { type: requestedType },
+        { $and: [{ type: { $exists: false } }, { channel: requestedType }] },
+      ],
+    } as FilterQuery<TransmissionLogDocument>)
   }
 
   if (direction) {
