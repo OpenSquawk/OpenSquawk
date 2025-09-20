@@ -169,7 +169,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
@@ -177,10 +177,30 @@ import { useApi } from '~/composables/useApi'
 type Mode = 'login' | 'register'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const api = useApi()
 
 const mode = ref<Mode>('login')
+
+const redirectTarget = computed(() => {
+  const redirectParam = route.query.redirect
+  const redirectValue = Array.isArray(redirectParam) ? redirectParam[0] : redirectParam
+  if (!redirectValue) return ''
+
+  let decoded = redirectValue
+  try {
+    decoded = decodeURIComponent(redirectValue)
+  } catch {
+    decoded = redirectValue
+  }
+
+  if (!decoded.startsWith('/') || decoded.startsWith('//') || decoded === '/login') {
+    return ''
+  }
+
+  return decoded
+})
 
 const loginForm = reactive({
   email: '',
@@ -219,7 +239,8 @@ async function submitLogin() {
   try {
     await auth.login({ ...loginForm })
     await auth.fetchUser()
-    router.push('/learn')
+    const target = redirectTarget.value || '/learn'
+    await router.replace(target)
   } catch (err: any) {
     const message = err?.data?.statusMessage || err?.message || 'Login failed'
     loginError.value = message
@@ -269,7 +290,8 @@ async function submitRegister() {
       acceptPrivacy: registerForm.acceptPrivacy,
     })
     await auth.fetchUser()
-    router.push('/learn')
+    const target = redirectTarget.value || '/learn'
+    await router.replace(target)
   } catch (err: any) {
     const message = err?.data?.statusMessage || err?.message || 'Registration failed'
     registerError.value = message
@@ -287,7 +309,8 @@ useHead({
 
 onMounted(() => {
   if (auth.isAuthenticated) {
-    router.push('/learn')
+    const target = redirectTarget.value || '/learn'
+    router.replace(target)
   }
 })
 </script>
