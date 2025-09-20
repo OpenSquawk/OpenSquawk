@@ -1,9 +1,9 @@
 // communicationsEngine composable
-import { ref, computed, readonly } from 'vue'
-import atcDecisionTree from "../data/atcDecisionTree";
+import { ref, computed, readonly, watch, nextTick } from 'vue'
+import { useNuxtApp, useState } from '#app'
+import type { AtcDecisionTree, AtcDecisionState, AtcAutopilotCondition } from '../types/atc'
 import { normalizeRadioPhrase } from './radioSpeech'
 
-// --- DecisionTree types (derived from ~/data/atcDecisionTree.json) ---
 type Role = 'pilot' | 'atc' | 'system'
 type Phase =
     | 'Preflight' | 'Clearance' | 'PushStart' | 'TaxiOut' | 'Departure'
@@ -14,59 +14,7 @@ interface DTNext { to: string; when?: string }
 interface DTHandoff { to: string; freq: string }
 interface DTActionSet { set?: string; to?: any; if?: string }
 
-interface DTState {
-    id?: string
-    role: Role
-    phase: Phase
-    say_tpl?: string
-    utterance_tpl?: string
-    else_say_tpl?: string
-    next?: DTNext[]
-    ok_next?: DTNext[]
-    bad_next?: DTNext[]
-    timer_next?: { after_s: number; to: string }[]
-    handoff?: DTHandoff
-    condition?: string
-    guard?: string
-    trigger?: string
-    auto?: 'check_readback' | 'monitor' | 'end' | 'pop_stack_or_route_by_intent'
-    readback_required?: string[]
-    actions?: (DTActionSet | string)[]
-    frequency?: string // Shortcut for accessing frequencies
-    frequencyName?: string // Frequency label (DEL, GND, TWR, etc.)
-}
-
-interface DecisionTree {
-    schema_version: string
-    name: string
-    description: string
-    start_state: string
-    end_states: string[]
-    variables: Record<string, any>
-    flags: {
-        in_air: boolean
-        emergency_active: boolean
-        current_unit: string
-        stack: string[]
-        off_schema_count: number // Counter for off-schema responses
-        radio_checks_done: number // Counter for radio checks
-    }
-    policies: {
-        timeouts: {
-            pilot_readback_timeout_s: number
-            controller_ack_timeout_s: number
-            no_reply_retry_after_s: number
-            no_reply_max_retries: number
-            lost_comms_detect_after_s: number
-        }
-        no_reply_sequence: { after_s: number; controller_say_tpl: string }[]
-        interrupts_allowed_when: Record<string, string>
-    }
-    hooks: Record<string, boolean | string>
-    roles: Role[]
-    phases: Phase[]
-    states: Record<string, DTState>
-}
+type DTState = AtcDecisionState
 
 // Flight phases and communication steps for better integration
 export const FLIGHT_PHASES = [
@@ -155,24 +103,29 @@ function renderTpl(tpl: string, ctx: Record<string, any>): string {
     })
 }
 
-export default function useCommunicationsEngine() {
-    const tree = ref<DecisionTree>({
-        ...atcDecisionTree as DecisionTree,
-        flags: {
-            ...atcDecisionTree.flags,
-            off_schema_count: 0,
-            radio_checks_done: 0
-        }
-    })
+export default function useCommunicationsEngine(flowName = 'icao_atc_decision_tree') {
+    const nuxtApp = useNuxtApp()
+    const sharedTree = useState<AtcDecisionTree | null>(`atc-tree-${flowName}`, () => null)
+    const sharedReady = useState<boolean>(`atc-tree-ready-${flowName}`, () => false)
+    const sharedError = useState<string | null>(`atc-tree-error-${flowName}`, () => null)
+    const sharedPromise = useState<Promise<void> | null>(`atc-tree-promise-${flowName}`, () => null)
 
-    const states = computed<Record<string, DTState>>(() => tree.value.states)
+    const tree = ref<AtcDecisionTree | null>(sharedTree.value)
+    const ready = ref<boolean>(Boolean(sharedReady.value && sharedTree.value))
+    const loading = ref<boolean>(false)
+    const loadError = ref<string | null>(sharedError.value || null)
+    const llmActive = ref<boolean>(false)
 
-    const variables = ref<Record<string, any>>({ ...tree.value.variables })
-    const flags = ref({ ...tree.value.flags })
-    const currentStateId = ref<string>(tree.value.start_state)
+    const variables = ref<Record<string, any>>({})
+    const flags = ref<Record<string, any>>({})
+    const previousVariables = ref<Record<string, any>>({})
+    const previousFlags = ref<Record<string, any>>({})
+    const currentStateId = ref<string>(tree.value?.start_state || '')
     const communicationLog = ref<EngineLog[]>([])
+    const lastPilotTransmissionAt = ref<number>(0)
+    const lastControllerTransmissionAt = ref<number>(0)
+    const autoHoldMap = new Map<string, number>()
 
-    // Flight context used for pm_alt.vue integration
     const flightContext = ref<FlightContext>({
         callsign: '',
         aircraft: 'A320',
@@ -196,23 +149,35 @@ export default function useCommunicationsEngine() {
         phase: 'clearance'
     })
 
+    const states = computed<Record<string, DTState>>(() => tree.value?.states || {})
+
     const currentState = computed<DTState>(() => {
-        const s = states.value[currentStateId.value] || states.value[tree.value.start_state]
-        return { ...s, id: currentStateId.value }
+        const stateMap = states.value
+        const desiredId = currentStateId.value || tree.value?.start_state
+        if (desiredId && stateMap[desiredId]) {
+            return stateMap[desiredId]
+        }
+        const fallback = tree.value?.start_state && stateMap[tree.value.start_state]
+        if (fallback) {
+            return fallback
+        }
+        return { id: desiredId || '', role: 'system', phase: 'Interrupt' } as DTState
     })
 
     const nextCandidates = computed<string[]>(() => {
-        const s = currentState.value
-        const nxt = [
-            ...(s.next ?? []),
-            ...(s.ok_next ?? []),
-            ...(s.bad_next ?? []),
-            ...(s.timer_next?.map(t => ({ to: t.to })) ?? [])
-        ].map(x => x.to)
-        return Array.from(new Set(nxt))
+        if (!ready.value) return []
+        const candidateIds = new Set<string>()
+        const add = (items?: { to: string }[]) => items?.forEach(item => item?.to && candidateIds.add(item.to))
+        const state = currentState.value
+        add(state.next)
+        add(state.ok_next)
+        add(state.bad_next)
+        state.timer_next?.forEach(t => t?.to && candidateIds.add(t.to))
+        return Array.from(candidateIds)
     })
 
     const activeFrequency = computed<string | undefined>(() => {
+        if (!ready.value) return undefined
         switch (flags.value.current_unit) {
             case 'DEL': return variables.value.delivery_freq
             case 'GROUND': return variables.value.ground_freq
@@ -224,23 +189,126 @@ export default function useCommunicationsEngine() {
         }
     })
 
-    // Current step for pm_alt.vue integration
     const currentStep = computed(() => {
+        if (!ready.value) return null
         const phase = flightContext.value.phase
         const step = COMMUNICATION_STEPS.find(s => s.phase === phase)
-        if (step) {
-            return {
-                ...step,
-                pilot: renderTpl(step.pilot, { ...variables.value, ...flags.value }),
-                atc: step.atc ? renderTpl(step.atc, { ...variables.value, ...flags.value }) : undefined,
-                pilotResponse: step.pilotResponse ? renderTpl(step.pilotResponse, { ...variables.value, ...flags.value }) : undefined
-            }
+        if (!step) return null
+        return {
+            ...step,
+            pilot: renderTpl(step.pilot, { ...variables.value, ...flags.value }),
+            atc: step.atc ? renderTpl(step.atc, { ...variables.value, ...flags.value }) : undefined,
+            pilotResponse: step.pilotResponse ? renderTpl(step.pilotResponse, { ...variables.value, ...flags.value }) : undefined
         }
-        return null
     })
 
+    function cloneDeep<T>(value: T): T {
+        return JSON.parse(JSON.stringify(value ?? {}))
+    }
+
+    function updateSnapshots() {
+        previousVariables.value = cloneDeep(variables.value)
+        previousFlags.value = cloneDeep(flags.value)
+    }
+
+    function initializeFromTree(treeData: AtcDecisionTree) {
+        tree.value = treeData
+        ready.value = true
+        loading.value = false
+        loadError.value = null
+        variables.value = { ...treeData.variables }
+        const baseFlags = {
+            ...treeData.flags,
+            off_schema_count: Number(treeData.flags?.off_schema_count ?? 0),
+            radio_checks_done: Number(treeData.flags?.radio_checks_done ?? 0),
+            stack: Array.isArray(treeData.flags?.stack) ? [...treeData.flags.stack] : []
+        }
+        flags.value = baseFlags
+        currentStateId.value = treeData.start_state
+        communicationLog.value = []
+        autoHoldMap.clear()
+        updateSnapshots()
+    }
+
+    async function ensureTreeLoaded(force = false): Promise<void> {
+        if (!force && tree.value && sharedReady.value) {
+            if (!ready.value) {
+                initializeFromTree(tree.value)
+            }
+            return
+        }
+
+        if (!force && sharedPromise.value) {
+            loading.value = true
+            try {
+                await sharedPromise.value
+                if (sharedTree.value) {
+                    initializeFromTree(sharedTree.value)
+                }
+            } catch (err: any) {
+                loadError.value = err?.message || 'Failed to load decision tree'
+                throw err
+            } finally {
+                loading.value = false
+            }
+            return
+        }
+
+        loading.value = true
+        loadError.value = null
+        const promise = (async () => {
+            try {
+                const fetched = await nuxtApp.$fetch<AtcDecisionTree>('/api/atc/decision-tree', {
+                    query: { flow: flowName }
+                })
+                sharedTree.value = fetched
+                sharedReady.value = true
+                sharedError.value = null
+                initializeFromTree(fetched)
+            } catch (err: any) {
+                const message = err?.message || 'Failed to load decision tree'
+                loadError.value = message
+                sharedError.value = message
+                ready.value = false
+                throw err
+            } finally {
+                loading.value = false
+                sharedPromise.value = null
+            }
+        })()
+        sharedPromise.value = promise
+        await promise
+    }
+
+    if (sharedTree.value && sharedReady.value) {
+        initializeFromTree(sharedTree.value)
+    }
+
+    const whenReady = ready.value && tree.value ? Promise.resolve() : ensureTreeLoaded()
+
+    watch(variables, () => {
+        if (!ready.value) {
+            previousVariables.value = cloneDeep(variables.value)
+            return
+        }
+        evaluateAutoTransitions('variables')
+        previousVariables.value = cloneDeep(variables.value)
+    }, { deep: true })
+
+    watch(flags, () => {
+        if (!ready.value) {
+            previousFlags.value = cloneDeep(flags.value)
+            return
+        }
+        evaluateAutoTransitions('flags')
+        previousFlags.value = cloneDeep(flags.value)
+    }, { deep: true })
+
     function initializeFlight(fpl: any) {
-        // Set variables
+        if (!ready.value || !tree.value) {
+            throw new Error('Decision tree not loaded')
+        }
+
         variables.value = {
             ...variables.value,
             callsign: fpl.callsign || fpl.callsign,
@@ -273,7 +341,6 @@ export default function useCommunicationsEngine() {
             time_now: new Date().toISOString()
         }
 
-        // Update flight context
         Object.assign(flightContext.value, {
             ...variables.value,
             phase: 'clearance'
@@ -291,6 +358,9 @@ export default function useCommunicationsEngine() {
 
         currentStateId.value = tree.value.start_state
         communicationLog.value = []
+        autoHoldMap.clear()
+        updateSnapshots()
+        nextTick(() => evaluateAutoTransitions('state-change'))
     }
 
     function updateFrequencyVariables(update: Partial<Record<FrequencyVariableKey, string>>) {
@@ -312,6 +382,9 @@ export default function useCommunicationsEngine() {
     }
 
     function buildLLMContext(pilotTranscript: string) {
+        if (!ready.value) {
+            throw new Error('Decision tree not loaded')
+        }
         const s = currentState.value
         return {
             state_id: s.id,
@@ -324,11 +397,11 @@ export default function useCommunicationsEngine() {
     }
 
     function applyLLMDecision(decision: any) {
-        // Apply updates
+        llmActive.value = false
+
         if (decision.updates) Object.assign(variables.value, decision.updates)
         if (decision.flags) Object.assign(flags.value, decision.flags)
 
-        // Track off-schema responses and radio checks
         if (decision.off_schema) {
             flags.value.off_schema_count++
             console.log(`[Engine] Off-schema response #${flags.value.off_schema_count}`)
@@ -338,7 +411,6 @@ export default function useCommunicationsEngine() {
             console.log(`[Engine] Radio check #${flags.value.radio_checks_done}`)
         }
 
-        // Controller response
         if (decision.controller_say_tpl) {
             speak('atc', decision.controller_say_tpl, currentStateId.value, {
                 radioCheck: decision.radio_check,
@@ -346,17 +418,17 @@ export default function useCommunicationsEngine() {
             })
         }
 
-        // State transition (only when not a radio check)
         if (!decision.radio_check) {
             moveTo(decision.next_state)
         }
+
+        evaluateAutoTransitions('llm')
     }
 
     function processPilotTransmission(transcript: string): string | null {
-        // Log pilot input
+        lastPilotTransmissionAt.value = Date.now()
         speak('pilot', transcript, currentStateId.value)
 
-        // Radio check detection (fallback if the LLM misses it)
         const t = transcript.toLowerCase()
         if (t.includes('radio check') || (t.includes('read') && t.includes('check'))) {
             const callsign = variables.value.callsign || ''
@@ -370,14 +442,13 @@ export default function useCommunicationsEngine() {
             return response
         }
 
-        // Emergency Interrupts
         if (flags.value.in_air && /^(mayday|pan\s*pan)/.test(t)) {
             const intId = t.startsWith('mayday') ? 'INT_MAYDAY' : 'INT_PANPAN'
             moveTo(intId)
             return null
         }
 
-        return null // Let the LLM decide
+        return null
     }
 
     function processUserTransmission(transcript: string): string | null {
@@ -385,6 +456,7 @@ export default function useCommunicationsEngine() {
     }
 
     function moveTo(stateId: string) {
+        if (!ready.value) return
         if (!states.value[stateId]) {
             console.warn(`[Engine] Unknown state: ${stateId}`)
             return
@@ -397,14 +469,12 @@ export default function useCommunicationsEngine() {
         currentStateId.value = stateId
         const s = currentState.value
 
-        // Execute actions
         for (const act of s.actions ?? []) {
             if (typeof act === 'string') continue
             if (act.if && !safeEvalBoolean(act.if)) continue
             if (act.set) setByPath({ variables: variables.value, flags: flags.value }, act.set, act.to)
         }
 
-        // Handoff
         if (s.handoff?.to) {
             flags.value.current_unit = unitFromHandoff(s.handoff.to)
             if (s.handoff.freq) {
@@ -412,13 +482,14 @@ export default function useCommunicationsEngine() {
             }
         }
 
-        // Auto-Say
         if (s.say_tpl) {
-            speak(s.role, s.say_tpl, s.id!)
+            speak(s.role as Role, s.say_tpl, s.id)
         }
 
-        // Update flight context phase
-        updateFlightPhase(s.phase)
+        updateFlightPhase(s.phase as Phase)
+        autoHoldMap.clear()
+        updateSnapshots()
+        nextTick(() => evaluateAutoTransitions('state-change'))
     }
 
     function updateFlightPhase(phase: Phase) {
@@ -452,6 +523,13 @@ export default function useCommunicationsEngine() {
 
     function speak(speaker: Role, tpl: string, stateId: string, options: { radioCheck?: boolean, offSchema?: boolean } = {}) {
         const msg = renderTpl(tpl, exposeCtx())
+        const now = Date.now()
+        if (speaker === 'pilot') {
+            lastPilotTransmissionAt.value = now
+        } else if (speaker === 'atc') {
+            lastControllerTransmissionAt.value = now
+        }
+
         const entry: EngineLog = {
             timestamp: new Date(),
             frequency: activeFrequency.value,
@@ -548,8 +626,201 @@ export default function useCommunicationsEngine() {
         cur[parts[parts.length - 1]] = val
     }
 
+    function readRuntimeValue(path: string) {
+        if (!path) return undefined
+        const segments = path.split('.').filter(Boolean)
+        if (!segments.length) return undefined
+        let root: any
+        const first = segments[0]
+        if (first === 'variables') {
+            root = variables.value
+            segments.shift()
+        } else if (first === 'flags') {
+            root = flags.value
+            segments.shift()
+        } else if (first in variables.value) {
+            root = variables.value
+        } else if (first in flags.value) {
+            root = flags.value
+        } else {
+            root = variables.value
+        }
+        return segments.reduce((acc, key) => (acc != null ? acc[key] : undefined), root)
+    }
+
+    function readPreviousValue(path: string) {
+        if (!path) return undefined
+        const segments = path.split('.').filter(Boolean)
+        if (!segments.length) return undefined
+        let root: any
+        const first = segments[0]
+        if (first === 'variables') {
+            root = previousVariables.value
+            segments.shift()
+        } else if (first === 'flags') {
+            root = previousFlags.value
+            segments.shift()
+        } else if (first in previousVariables.value) {
+            root = previousVariables.value
+        } else if (first in previousFlags.value) {
+            root = previousFlags.value
+        } else {
+            root = previousVariables.value
+        }
+        return segments.reduce((acc, key) => (acc != null ? acc[key] : undefined), root)
+    }
+
+    function toNumber(value: any): number | null {
+        if (typeof value === 'number' && Number.isFinite(value)) return value
+        if (typeof value === 'string' && value.trim().length) {
+            const parsed = Number(value)
+            if (!Number.isNaN(parsed)) return parsed
+        }
+        return null
+    }
+
+    function evaluateCondition(expression?: string) {
+        if (!expression || !expression.trim()) return true
+        try {
+            const fn = new Function('variables', 'flags', 'context', `return (${expression})`)
+            return Boolean(fn(variables.value, flags.value, exposeCtx()))
+        } catch (err) {
+            console.warn('[Engine] Failed to evaluate condition', expression, err)
+            return false
+        }
+    }
+
+    function evaluateThreshold(auto: AtcAutopilotCondition) {
+        if (!auto.variable) return false
+        const current = readRuntimeValue(auto.variable)
+        const previous = readPreviousValue(auto.variable)
+        const operator = auto.operator || '>'
+        const currentNum = toNumber(current)
+        const valueNum = toNumber(auto.value)
+        const prevNum = toNumber(previous)
+
+        switch (operator) {
+            case '>':
+                return currentNum !== null && valueNum !== null && currentNum > valueNum
+            case '>=':
+                return currentNum !== null && valueNum !== null && currentNum >= valueNum
+            case '<':
+                return currentNum !== null && valueNum !== null && currentNum < valueNum
+            case '<=':
+                return currentNum !== null && valueNum !== null && currentNum <= valueNum
+            case '==':
+                return current == auto.value
+            case '!=':
+                return current != auto.value
+            case 'rises_above':
+                return currentNum !== null && valueNum !== null && prevNum !== null && prevNum <= valueNum && currentNum > valueNum
+            case 'drops_below':
+                return currentNum !== null && valueNum !== null && prevNum !== null && prevNum >= valueNum && currentNum < valueNum
+            case 'changes':
+                return current !== previous
+            default:
+                return false
+        }
+    }
+
+    function evaluateDelta(auto: AtcAutopilotCondition) {
+        if (!auto.variable) return false
+        const currentNum = toNumber(readRuntimeValue(auto.variable))
+        const prevNum = toNumber(readPreviousValue(auto.variable))
+        const target = toNumber(auto.value) ?? 0
+        if (currentNum === null || prevNum === null) return false
+        if (auto.operator === 'increase') {
+            return currentNum - prevNum >= target
+        }
+        if (auto.operator === 'decrease') {
+            return prevNum - currentNum >= target
+        }
+        return Math.abs(currentNum - prevNum) >= target
+    }
+
+    function shouldTriggerAuto(id: string, auto: AtcAutopilotCondition, now: number) {
+        if (auto.allowDuringLLM === false && llmActive.value) return false
+        if (auto.allowDuringPilotSpeech === false && now - lastPilotTransmissionAt.value < 1200) return false
+        if (auto.allowDuringControllerSpeech === false && now - lastControllerTransmissionAt.value < 1200) return false
+
+        let passes = false
+        if (auto.mode === 'threshold' && auto.variable) {
+            passes = evaluateThreshold(auto)
+        } else if (auto.mode === 'delta' && auto.variable) {
+            passes = evaluateDelta(auto)
+        } else if (auto.expression) {
+            passes = evaluateCondition(auto.expression)
+        }
+
+        if (!passes) {
+            autoHoldMap.delete(id)
+            return false
+        }
+
+        if (auto.holdForMs && auto.holdForMs > 0) {
+            const start = autoHoldMap.get(id)
+            if (!start) {
+                autoHoldMap.set(id, now)
+                return false
+            }
+            if (now - start < auto.holdForMs) {
+                return false
+            }
+        }
+
+        autoHoldMap.delete(id)
+        return true
+    }
+
+    function applyAutoTransition(transition: { id: string; to: string; auto?: AtcAutopilotCondition }) {
+        const auto = transition.auto
+        if (auto?.updates && typeof auto.updates === 'object') {
+            Object.assign(variables.value, auto.updates)
+        }
+        if (auto?.flags && typeof auto.flags === 'object') {
+            Object.assign(flags.value, auto.flags)
+        }
+        if (auto?.controllerSayTpl) {
+            speak('atc', auto.controllerSayTpl, currentStateId.value)
+        }
+        moveTo(transition.to)
+    }
+
+    function evaluateAutoTransitions(reason: 'variables' | 'flags' | 'state-change' | 'llm' = 'variables') {
+        if (!ready.value) return
+        const state = currentState.value
+        if (!Array.isArray(state.auto_next) || !state.auto_next.length) return
+
+        const sorted = [...state.auto_next].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
+        const now = Date.now()
+
+        for (const candidate of sorted) {
+            if (!candidate || !candidate.to) continue
+            if (candidate.when && !evaluateCondition(candidate.when)) {
+                autoHoldMap.delete(candidate.id)
+                continue
+            }
+            const auto = candidate.auto
+            if (!auto) continue
+            if (!shouldTriggerAuto(candidate.id, auto, now)) {
+                continue
+            }
+            applyAutoTransition(candidate)
+            break
+        }
+    }
+
+    function markLLMActivity(active: boolean) {
+        llmActive.value = active
+    }
+
     return {
-        // State
+        ready: readonly(ready),
+        loading: readonly(loading),
+        loadError: readonly(loadError),
+        whenReady,
+        reloadTree: () => ensureTreeLoaded(true),
+        markLLMActivity,
         currentState: computed(() => currentState.value),
         currentStateId: readonly(currentStateId),
         variables: readonly(variables),
@@ -558,26 +829,16 @@ export default function useCommunicationsEngine() {
         activeFrequency,
         communicationLog: readonly(communicationLog),
         clearCommunicationLog: () => { communicationLog.value = [] },
-
-        // pm_alt.vue integration
         flightContext: readonly(flightContext),
         currentStep,
-
-        // Lifecycle
         initializeFlight,
         updateFrequencyVariables,
-
-        // Communication
         processPilotTransmission,
         processUserTransmission,
         buildLLMContext,
         applyLLMDecision,
-
-        // Flow Control
         moveTo,
         resumePriorFlow,
-
-        // Utilities
         normalizeATCText,
         renderATCMessage,
         getStateDetails

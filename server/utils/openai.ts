@@ -86,13 +86,6 @@ export interface LLMDecisionResult {
 
 type ReadbackStatus = 'ok' | 'missing' | 'incorrect' | 'uncertain'
 
-const READBACK_REQUIREMENTS: Record<string, string[]> = {
-    CD_READBACK_CHECK: ['dest', 'sid', 'runway', 'initial_altitude_ft', 'squawk'],
-    GRD_TAXI_READBACK_CHECK: ['runway', 'taxi_route', 'hold_short'],
-    TWR_TAKEOFF_READBACK_CHECK: ['runway', 'cleared_takeoff'],
-    GRD_TAXI_IN_READBACK_CHECK: ['gate', 'taxi_route']
-}
-
 const READBACK_JSON_SCHEMA = {
     name: 'readback_check',
     schema: {
@@ -254,7 +247,7 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
         'star', 'approach_type', 'remarks', 'acf_type'
     ]
 
-    const readbackKeys = READBACK_REQUIREMENTS[input.state_id] || input.state.readback_required || []
+    const readbackKeys = Array.isArray(input.state?.readback_required) ? input.state.readback_required : []
 
     const stateSummary = {
         id: input.state_id,
@@ -272,7 +265,7 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
     // Relevante Candidate-Daten mit Template-Variablen
     const candidates = input.candidates.map(c => {
         const templateVars = extractTemplateVariables(c.state.say_tpl)
-        const candidateReadback = READBACK_REQUIREMENTS[c.id] || c.state.readback_required || []
+        const candidateReadback = Array.isArray(c.state?.readback_required) ? c.state.readback_required : []
         const requiresResponse =
             c.state.role === 'atc' ||
             Boolean(c.state.say_tpl) ||
@@ -338,7 +331,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
     }
 
     async function handleReadbackCheck(): Promise<LLMDecisionResult> {
-        const requiredKeys = READBACK_REQUIREMENTS[input.state_id] || input.state.readback_required || []
+        const requiredKeys = Array.isArray(input.state?.readback_required) ? input.state.readback_required : []
         const expectedItems = requiredKeys.reduce<Array<{
             key: string;
             value: string;

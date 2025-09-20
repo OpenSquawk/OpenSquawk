@@ -918,6 +918,9 @@ import { createNoiseGenerators, getReadabilityProfile } from '../../shared/utils
 
 // Core State
 const engine = useCommunicationsEngine()
+await engine.whenReady.catch((err) => {
+  console.error('Failed to load ATC decision tree', err)
+})
 const auth = useAuthStore()
 const api = useApi()
 const router = useRouter()
@@ -961,7 +964,8 @@ const {
   moveTo: forceMove,
   normalizeATCText,
   renderATCMessage,
-  getStateDetails
+  getStateDetails,
+  markLLMActivity
 } = engine
 
 const lastTransmission = ref('')
@@ -1566,6 +1570,7 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   const ctx = buildLLMContext(transcript)
 
   try {
+    markLLMActivity(true)
     const decision = await api.post('/api/llm/decide', ctx)
 
     applyLLMDecision(decision)
@@ -1576,6 +1581,8 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   } catch (e) {
     console.error('LLM decision failed', e)
     setLastTransmission(`${prefix}: ${transcript} (LLM failed)`)
+  } finally {
+    markLLMActivity(false)
   }
 }
 
@@ -1606,6 +1613,7 @@ const loadFlightPlans = async () => {
 }
 
 const startMonitoring = async (flightPlan: any) => {
+  await engine.whenReady
   selectedPlan.value = flightPlan
   initializeFlight(flightPlan)
   currentScreen.value = 'monitor'
