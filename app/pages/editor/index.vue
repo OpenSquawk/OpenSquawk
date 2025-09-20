@@ -1,172 +1,256 @@
 <template>
   <div class="min-h-screen bg-[#050910] text-white">
     <div class="flex h-screen overflow-hidden">
-      <aside class="flex w-80 shrink-0 flex-col border-r border-white/10 bg-white/5/60 backdrop-blur">
-        <div class="border-b border-white/10 p-4 space-y-4">
-          <div>
-            <p class="text-xs uppercase tracking-[0.35em] text-cyan-300/70">OpenSquawk</p>
-            <h1 class="text-xl font-semibold">Decision Flow Studio</h1>
-            <p class="text-xs text-white/60">Node-RED style editor für ATC Flows</p>
-          </div>
-          <v-text-field
-            v-model="flowSearch"
-            label="Flows durchsuchen"
-            density="comfortable"
-            variant="solo"
-            flat
-            hide-details
-            prepend-inner-icon="mdi-magnify"
-            class="text-sm"
-          />
-          <div class="flex flex-wrap gap-2">
-            <v-btn color="cyan" variant="flat" size="small" prepend-icon="mdi-plus" @click="openCreateFlow">
-              Neuer Flow
-            </v-btn>
-            <v-btn
-              color="purple"
-              variant="outlined"
-              size="small"
-              prepend-icon="mdi-database-import"
-              :loading="importLoading"
-              @click="runImport"
-            >
-              ATC Import
-            </v-btn>
-          </div>
-          <v-alert
-            v-if="flowsError"
-            type="warning"
-            density="compact"
-            class="bg-amber-500/10 text-amber-200"
-            border="start"
-          >
-            {{ flowsError }}
-          </v-alert>
-        </div>
-        <div class="flex-1 overflow-y-auto">
-          <div v-if="flowsLoading" class="flex h-48 items-center justify-center text-white/60">
-            <v-progress-circular indeterminate color="cyan" class="mr-3" />
-            Lädt Entscheidungs-Flows…
-          </div>
-          <div v-else class="divide-y divide-white/10">
-            <button
-              v-for="flow in filteredFlows"
-              :key="flow.slug"
-              class="flex w-full flex-col items-start gap-2 px-4 py-3 text-left transition hover:bg-white/10"
-              :class="{
-                'bg-cyan-500/10 border-l-4 border-cyan-400': flow.slug === selectedFlowSlug,
-              }"
-              @click="selectFlow(flow.slug)"
-            >
-              <div class="flex w-full items-center justify-between">
-                <span class="text-sm font-semibold">{{ flow.name }}</span>
-                <v-chip size="x-small" color="cyan" variant="outlined">{{ flow.nodeCount }}</v-chip>
+      <main class="flex flex-1 flex-col">
+        <v-app-bar
+          flat
+          density="comfortable"
+          color="rgba(11, 18, 36, 0.92)"
+          class="border-b border-white/10 backdrop-blur-md shrink-0"
+          :extended="true"
+          height="72"
+          extension-height="92"
+        >
+          <div class="flex flex-1 items-center gap-3 overflow-hidden">
+            <div class="flex shrink-0 items-center gap-2">
+              <v-icon icon="mdi-radar" size="24" color="cyan" />
+              <div class="leading-tight">
+                <p class="text-[11px] uppercase tracking-[0.35em] text-cyan-300/70">OpenSquawk</p>
+                <p class="text-sm font-semibold text-white/90">Decision Flow Studio</p>
               </div>
-              <p class="text-xs text-white/50">{{ flow.startState }}</p>
-              <p class="text-[11px] text-white/40">Aktualisiert {{ formatRelative(flow.updatedAt) }}</p>
-            </button>
-          </div>
-        </div>
-        <div class="border-t border-white/10 p-4 space-y-3">
-          <div class="flex items-center justify-between">
-            <h2 class="text-sm font-semibold uppercase tracking-widest text-white/70">Nodes</h2>
-            <v-chip v-if="flowDetail" size="x-small" color="cyan" variant="flat">
-              {{ flowDetail.nodes.length }}
-            </v-chip>
-          </div>
-          <v-text-field
-            v-model="nodeFilter.search"
-            label="Node suchen"
-            density="comfortable"
-            variant="solo"
-            flat
-            hide-details
-            prepend-inner-icon="mdi-magnify"
-          />
-          <div class="grid grid-cols-2 gap-2">
+            </div>
+            <v-autocomplete
+              v-model="selectedFlowSlug"
+              v-model:search="flowSearch"
+              :items="filteredFlows"
+              item-title="name"
+              item-value="slug"
+              density="compact"
+              variant="outlined"
+              hide-details
+              clearable
+              class="min-w-[220px] max-w-[320px]"
+              prepend-inner-icon="mdi-file-tree"
+              :loading="flowsLoading"
+              label="Flow auswählen"
+              :custom-filter="() => true"
+              @update:model-value="(value) => value && selectFlow(value)"
+            >
+              <template #item="{ props, item }">
+                <v-list-item v-bind="props">
+                  <template #title>
+                    <div class="flex items-center justify-between gap-3">
+                      <span class="font-medium">{{ item?.raw?.name }}</span>
+                      <v-chip v-if="item?.raw?.nodeCount" size="x-small" color="cyan" variant="tonal">
+                        {{ item.raw.nodeCount }}
+                      </v-chip>
+                    </div>
+                  </template>
+                  <template #subtitle>
+                    <span class="text-xs text-white/60">Start: {{ item?.raw?.startState }}</span>
+                  </template>
+                </v-list-item>
+              </template>
+            </v-autocomplete>
+            <v-tooltip text="Neuen Flow anlegen">
+              <template #activator="{ props }">
+                <v-btn v-bind="props" icon variant="text" color="cyan" @click="openCreateFlow">
+                  <v-icon icon="mdi-plus" />
+                </v-btn>
+              </template>
+            </v-tooltip>
+            <v-tooltip text="Legacy ATC Import">
+              <template #activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  icon
+                  variant="text"
+                  color="purple"
+                  :loading="importLoading"
+                  @click="runImport"
+                >
+                  <v-icon icon="mdi-database-import" />
+                </v-btn>
+              </template>
+            </v-tooltip>
+            <v-divider vertical class="mx-1 h-8 border-white/10" />
+            <v-text-field
+              v-model="nodeFilter.search"
+              density="compact"
+              variant="outlined"
+              hide-details
+              prepend-inner-icon="mdi-magnify"
+              placeholder="Node suchen"
+              class="max-w-[220px]"
+            />
             <v-select
               v-model="nodeFilter.role"
               :items="roleFilterOptions"
-              label="Rolle"
               density="compact"
-              variant="solo"
-              flat
               hide-details
+              variant="outlined"
+              class="w-[140px]"
+              label="Rolle"
             />
             <v-select
               v-model="nodeFilter.phase"
               :items="phaseFilterOptions"
-              label="Phase"
               density="compact"
-              variant="solo"
-              flat
               hide-details
+              variant="outlined"
+              class="w-[150px]"
+              label="Phase"
             />
-          </div>
-          <v-switch
-            v-model="nodeFilter.autopOnly"
-            inset
-            density="comfortable"
-            color="cyan"
-            hide-details
-            label="Nur Auto-Trigger"
-          />
-          <div class="max-h-[40vh] overflow-y-auto space-y-2 pr-1">
-            <button
-              v-for="node in sidebarNodes"
-              :key="node.id"
-              class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-cyan-400"
-              :class="{ 'border-cyan-400 bg-cyan-500/10': node.id === selectedNodeId }"
-              @click="selectNode(node.id)"
-            >
-              <div class="flex items-center justify-between text-xs text-white/50">
-                <span class="font-mono text-white/80">{{ node.id }}</span>
-                <span>{{ node.phase }}</span>
+            <v-tooltip text="Nur Auto-Trigger anzeigen">
+              <template #activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  icon
+                  variant="text"
+                  :color="nodeFilter.autopOnly ? 'amber' : undefined"
+                  class="text-white/70 hover:text-white"
+                  @click="toggleAutopOnly"
+                >
+                  <v-icon icon="mdi-auto-fix" />
+                </v-btn>
+              </template>
+            </v-tooltip>
+            <v-spacer />
+            <div class="flex min-w-0 items-center gap-3">
+              <div class="min-w-0">
+                <p class="text-[11px] uppercase tracking-wider text-white/50">Aktueller Flow</p>
+                <p class="truncate text-sm font-semibold">
+                  {{ flowForm.name || 'Kein Flow ausgewählt' }}
+                </p>
               </div>
-              <p class="text-sm font-semibold text-white/90">{{ node.title || 'Untitled' }}</p>
-              <p class="line-clamp-2 text-xs text-white/50">{{ node.summary }}</p>
-              <div class="flex flex-wrap gap-1 pt-1 text-[10px] text-white/40">
-                <span>{{ node.role }}</span>
-                <span v-if="node.autopCount > 0" class="text-amber-300">{{ node.autopCount }}× auto</span>
-              </div>
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <main class="flex flex-1 flex-col">
-        <header class="flex items-center justify-between gap-6 border-b border-white/10 bg-white/5/80 px-6 py-4 backdrop-blur">
-          <div class="flex flex-col gap-1">
-            <div class="flex items-center gap-3">
-              <h2 class="text-2xl font-semibold">{{ flowForm.name || 'Kein Flow ausgewählt' }}</h2>
-              <v-chip v-if="flowDetail" color="cyan" size="small" variant="outlined">{{ flowDetail.flow.slug }}</v-chip>
+              <v-chip v-if="flowDetail" color="cyan" size="small" variant="outlined">
+                {{ flowDetail.flow.slug }}
+              </v-chip>
+              <v-btn
+                color="cyan"
+                variant="flat"
+                size="small"
+                prepend-icon="mdi-content-save"
+                :disabled="!flowDirty"
+                :loading="flowSaveLoading"
+                @click="saveFlow"
+              >
+                Speichern
+              </v-btn>
+              <v-btn
+                color="cyan"
+                variant="tonal"
+                size="small"
+                prepend-icon="mdi-auto-fix"
+                @click="autoLayoutNodes"
+                :disabled="!flowDetail"
+              >
+                Auto-Layout
+              </v-btn>
             </div>
-            <p class="text-xs text-white/60">
-              {{ flowDetail ? 'Start: ' + flowDetail.flow.startState : 'Wähle einen Flow aus der Liste' }}
-            </p>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <v-btn
-              color="cyan"
-              variant="flat"
-              prepend-icon="mdi-content-save"
-              :disabled="!flowDirty"
-              :loading="flowSaveLoading"
-              @click="saveFlow"
-            >
-              Flow speichern
-            </v-btn>
-            <v-btn
-              color="cyan"
-              variant="tonal"
-              prepend-icon="mdi-auto-fix"
-              @click="autoLayoutNodes"
-              :disabled="!flowDetail"
-            >
-              Auto-Layout
-            </v-btn>
-          </div>
-        </header>
+          <template #extension>
+            <div class="w-full space-y-2 px-3 pb-3 pt-2">
+              <v-progress-linear
+                v-if="flowsLoading"
+                indeterminate
+                color="cyan"
+                class="bg-white/10"
+                height="3"
+                rounded
+              />
+              <v-alert
+                v-if="flowsError"
+                type="warning"
+                density="comfortable"
+                class="bg-amber-500/10 text-amber-200"
+                border="start"
+              >
+                {{ flowsError }}
+              </v-alert>
+              <div class="flex items-center gap-3 overflow-hidden">
+                <div class="flex shrink-0 items-center gap-2 text-xs uppercase tracking-widest text-white/60">
+                  <span>Nodes</span>
+                  <v-chip v-if="flowDetail" size="x-small" color="cyan" variant="flat">
+                    {{ nodeSelectorItems.length }}
+                  </v-chip>
+                </div>
+                <div class="flex-1 overflow-hidden">
+                  <v-slide-group
+                    v-if="flowDetail"
+                    v-model="selectedNodeId"
+                    show-arrows
+                    center-active
+                    class="max-w-full"
+                  >
+                    <v-slide-group-item
+                      v-for="node in nodeSelectorItems"
+                      :key="node.id"
+                      :value="node.id"
+                      v-slot="{ isSelected, toggle }"
+                    >
+                      <v-tooltip
+                        :text="`${node.id} — ${node.title || 'Ohne Titel'}`"
+                        location="bottom"
+                      >
+                        <template #activator="{ props }">
+                          <span class="inline-flex">
+                            <v-badge
+                              v-if="node.autopCount > 0"
+                              :content="node.autopCount"
+                              color="amber"
+                              floating
+                              offset-x="8"
+                              offset-y="8"
+                              class="text-[10px]"
+                            >
+                              <v-btn
+                                v-bind="props"
+                                icon
+                                variant="text"
+                                :class="[
+                                  'h-9 w-9 rounded-xl transition-all',
+                                  isSelected
+                                    ? 'bg-cyan-500/20 text-cyan-100'
+                                    : 'text-white/70 hover:text-white',
+                                ]"
+                                @click="toggle(); selectNode(node.id)"
+                              >
+                                <v-icon
+                                  :icon="node.icon || roleIcons[node.role] || 'mdi-shape-outline'"
+                                  :color="isSelected ? roleColors[node.role] || 'cyan' : undefined"
+                                />
+                              </v-btn>
+                            </v-badge>
+                            <v-btn
+                              v-else
+                              v-bind="props"
+                              icon
+                              variant="text"
+                              :class="[
+                                'h-9 w-9 rounded-xl transition-all',
+                                isSelected
+                                  ? 'bg-cyan-500/20 text-cyan-100'
+                                  : 'text-white/70 hover:text-white',
+                              ]"
+                              @click="toggle(); selectNode(node.id)"
+                            >
+                              <v-icon
+                                :icon="node.icon || roleIcons[node.role] || 'mdi-shape-outline'"
+                                :color="isSelected ? roleColors[node.role] || 'cyan' : undefined"
+                              />
+                            </v-btn>
+                          </span>
+                        </template>
+                      </v-tooltip>
+                    </v-slide-group-item>
+                  </v-slide-group>
+                  <p v-else class="text-xs text-white/50">Kein Flow ausgewählt.</p>
+                </div>
+              </div>
+            </div>
+          </template>
+        </v-app-bar>
         <div class="flex flex-1 overflow-hidden">
           <section class="relative flex-1 overflow-hidden bg-[#070d1a]">
             <DecisionNodeCanvas
@@ -557,6 +641,12 @@ const roleColors: Record<string, string> = {
   system: '#a855f7',
 }
 
+const roleIcons: Record<string, string> = {
+  pilot: 'mdi-account',
+  atc: 'mdi-radar',
+  system: 'mdi-robot',
+}
+
 const telemetryParameters = [
   'altitude_ft',
   'speed_kts',
@@ -626,39 +716,6 @@ const createFlowLoading = ref(false)
 
 const snackbar = reactive({ show: false, color: 'cyan', text: '' })
 
-const formatRelative = (iso: string) => {
-  const target = new Date(iso)
-  if (Number.isNaN(target.getTime())) return iso
-  const diffMs = target.getTime() - Date.now()
-  const diffSeconds = Math.round(diffMs / 1000)
-  const rtf = new Intl.RelativeTimeFormat('de', { numeric: 'auto' })
-  const divisions = [
-    { amount: 60, unit: 'second' },
-    { amount: 60, unit: 'minute' },
-    { amount: 24, unit: 'hour' },
-    { amount: 7, unit: 'day' },
-    { amount: 4.34524, unit: 'week' },
-    { amount: 12, unit: 'month' },
-    { amount: Number.POSITIVE_INFINITY, unit: 'year' },
-  ] as const
-
-  let duration = diffSeconds
-  let unit: Intl.RelativeTimeFormatUnit = 'second'
-
-  for (const division of divisions) {
-    if (Math.abs(duration) < division.amount) {
-      unit = division.unit as Intl.RelativeTimeFormatUnit
-      break
-    }
-    duration /= division.amount
-  }
-
-  if (Number.isFinite(duration)) {
-    return rtf.format(Math.round(duration), unit)
-  }
-  return target.toLocaleString('de-DE')
-}
-
 const filteredFlows = computed(() => {
   const query = flowSearch.value.trim().toLowerCase()
   if (!query) return flows.value
@@ -679,7 +736,7 @@ const phaseFilterOptions = computed(() => {
   return Array.from(phases)
 })
 
-const sidebarNodes = computed(() => {
+const nodeSelectorItems = computed(() => {
   if (!flowDetail.value) return []
   const query = nodeFilter.search.trim().toLowerCase()
   const role = nodeFilter.role
@@ -696,6 +753,7 @@ const sidebarNodes = computed(() => {
         summary: node.summary,
         phase: node.phase,
         role: node.role,
+        icon: node.layout?.icon,
         autopCount,
         matchesSearch:
           !query ||
@@ -708,6 +766,7 @@ const sidebarNodes = computed(() => {
       }
     })
     .filter((node) => node.matchesSearch && node.matchesRole && node.matchesPhase && node.matchesAuto)
+    .map(({ matchesSearch, matchesRole, matchesPhase, matchesAuto, ...rest }) => rest)
 })
 
 const canvasNodes = computed<CanvasNodeView[]>(() => {
@@ -978,6 +1037,10 @@ async function runImport() {
   }
 }
 
+function toggleAutopOnly() {
+  nodeFilter.autopOnly = !nodeFilter.autopOnly
+}
+
 function selectNode(stateId: string) {
   selectedNodeId.value = stateId
   inspectorTab.value = 'general'
@@ -1093,52 +1156,128 @@ async function deleteNode() {
 
 function autoLayoutNodes() {
   if (!flowDetail.value) return
-  const phaseColumns = new Map<string, number>()
-  const phases = flowForm.phases.length ? flowForm.phases : ['General']
-  phases.forEach((phase, index) => phaseColumns.set(phase, index))
-  const phaseRows = new Map<string, number>()
-  for (const node of flowDetail.value.nodes) {
-    const phase = phaseColumns.has(node.phase) ? node.phase : phases[0]
-    if (!phaseColumns.has(node.phase)) {
-      phaseColumns.set(node.phase, phaseColumns.size)
+  const nodes = flowDetail.value.nodes
+  if (!nodes.length) return
+
+  const nodeMap = new Map(nodes.map((node) => [node.stateId, node]))
+  const adjacency = new Map<string, string[]>()
+  for (const node of nodes) {
+    const targets = (node.transitions || [])
+      .map((transition) => transition.target)
+      .filter((target) => nodeMap.has(target))
+    adjacency.set(node.stateId, Array.from(new Set(targets)))
+  }
+
+  const startStateCandidate = flowDetail.value.flow.startState
+  const startState = startStateCandidate && nodeMap.has(startStateCandidate)
+    ? startStateCandidate
+    : nodes[0]?.stateId
+
+  const queue: string[] = []
+  const depths = new Map<string, number>()
+  const seen = new Set<string>()
+
+  if (startState) {
+    queue.push(startState)
+    depths.set(startState, 0)
+    seen.add(startState)
+  }
+
+  while (queue.length > 0) {
+    const current = queue.shift()!
+    const depth = depths.get(current) ?? 0
+    const neighbours = adjacency.get(current) ?? []
+    for (const target of neighbours) {
+      const nextDepth = depth + 1
+      const existing = depths.get(target)
+      if (existing === undefined || nextDepth < existing) {
+        depths.set(target, nextDepth)
+      }
+      if (!seen.has(target)) {
+        queue.push(target)
+        seen.add(target)
+      }
     }
-    const column = phaseColumns.get(node.phase) ?? 0
-    const row = phaseRows.get(node.phase) ?? 0
-    node.layout = {
-      x: column * 360,
-      y: row * 220,
-      color: node.layout?.color,
+  }
+
+  let maxDepth = depths.size ? Math.max(...Array.from(depths.values())) : -1
+  const remaining = nodes
+    .map((node) => node.stateId)
+    .filter((stateId) => !depths.has(stateId))
+    .sort((a, b) => a.localeCompare(b))
+
+  for (const stateId of remaining) {
+    maxDepth += 1
+    depths.set(stateId, maxDepth)
+  }
+
+  const levels = new Map<number, DecisionNodeModel[]>()
+  for (const node of nodes) {
+    const depth = depths.get(node.stateId) ?? 0
+    if (!levels.has(depth)) {
+      levels.set(depth, [])
     }
-    phaseRows.set(node.phase, row + 1)
-    if (nodeForm.value && nodeForm.value.stateId === node.stateId) {
-      nodeForm.value.layout = cloneNode(node.layout)
+    levels.get(depth)!.push(node)
+  }
+
+  const sortedDepths = Array.from(levels.keys()).sort((a, b) => a - b)
+  let maxLevelWidth = 1
+  for (const depth of sortedDepths) {
+    const group = levels.get(depth)!
+    group.sort((a, b) => a.stateId.localeCompare(b.stateId))
+    if (group.length > maxLevelWidth) {
+      maxLevelWidth = group.length
     }
-    void api.request(`/api/editor/flows/${flowDetail.value.flow.slug}/nodes/${node.stateId}/layout`, {
-      method: 'PATCH',
-      body: node.layout,
+  }
+
+  const BASE_X = 160
+  const BASE_Y = 80
+  const COLUMN_SPACING = 340
+  const ROW_SPACING = 240
+
+  for (const depth of sortedDepths) {
+    const group = levels.get(depth)!
+    const offsetX = BASE_X + ((maxLevelWidth - group.length) * COLUMN_SPACING) / 2
+    group.forEach((node, index) => {
+      const x = Math.round(offsetX + index * COLUMN_SPACING)
+      const y = Math.round(BASE_Y + depth * ROW_SPACING)
+      const layout: DecisionNodeLayout = { ...(node.layout || {}), x, y }
+      node.layout = layout
+      if (nodeForm.value?.stateId === node.stateId) {
+        nodeForm.value.layout = cloneNode(layout)
+      }
+      void api.request(`/api/editor/flows/${flowDetail.value.flow.slug}/nodes/${node.stateId}/layout`, {
+        method: 'PATCH',
+        body: layout,
+      })
     })
   }
+
   showSnack('Auto-Layout angewendet.')
 }
 
 function onNodeMove(payload: { stateId: string; x: number; y: number }) {
   if (!flowDetail.value) return
+  const x = Math.max(0, Math.round(payload.x))
+  const y = Math.max(0, Math.round(payload.y))
   const target = flowDetail.value.nodes.find((node) => node.stateId === payload.stateId)
   if (target) {
-    target.layout = { ...(target.layout || { x: 0, y: 0 }), x: Math.round(payload.x), y: Math.round(payload.y) }
+    target.layout = { ...(target.layout || { x: 0, y: 0 }), x, y }
   }
   if (nodeForm.value?.stateId === payload.stateId) {
-    nodeForm.value.layout = { ...(nodeForm.value.layout || { x: 0, y: 0 }), x: Math.round(payload.x), y: Math.round(payload.y) }
+    nodeForm.value.layout = { ...(nodeForm.value.layout || { x: 0, y: 0 }), x, y }
   }
 }
 
 async function onNodeDrop(payload: { stateId: string; x: number; y: number }) {
   if (!flowDetail.value) return
-  onNodeMove(payload)
+  const x = Math.max(0, Math.round(payload.x))
+  const y = Math.max(0, Math.round(payload.y))
+  onNodeMove({ ...payload, x, y })
   try {
     await api.request(`/api/editor/flows/${flowDetail.value.flow.slug}/nodes/${payload.stateId}/layout`, {
       method: 'PATCH',
-      body: { x: Math.round(payload.x), y: Math.round(payload.y) },
+      body: { x, y },
     })
   } catch (error) {
     console.error('Failed to persist node layout', error)

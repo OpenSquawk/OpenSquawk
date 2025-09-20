@@ -104,6 +104,10 @@ import type {
 
 const NODE_WIDTH = 280
 const NODE_HEIGHT = 160
+const WORKSPACE_PADDING = 800
+const MIN_WORKSPACE_WIDTH = 4000
+const MIN_WORKSPACE_HEIGHT = 2800
+const DRAG_MARGIN = 200
 
 interface CanvasNodePreviewTransition {
   key: string
@@ -202,9 +206,20 @@ const preparedNodes = computed(() =>
 )
 
 const canvasBounds = computed(() => {
-  const maxX = Math.max(...preparedNodes.value.map((node) => node.layout.x + node.width), NODE_WIDTH * 3)
-  const maxY = Math.max(...preparedNodes.value.map((node) => node.layout.y + node.height), NODE_HEIGHT * 2)
-  return { width: maxX + 600, height: maxY + 400 }
+  const defaultWidth = MIN_WORKSPACE_WIDTH - WORKSPACE_PADDING
+  const defaultHeight = MIN_WORKSPACE_HEIGHT - WORKSPACE_PADDING
+  const maxX = Math.max(
+    ...preparedNodes.value.map((node) => node.layout.x + node.width),
+    defaultWidth
+  )
+  const maxY = Math.max(
+    ...preparedNodes.value.map((node) => node.layout.y + node.height),
+    defaultHeight
+  )
+  return {
+    width: Math.max(maxX + WORKSPACE_PADDING, MIN_WORKSPACE_WIDTH),
+    height: Math.max(maxY + WORKSPACE_PADDING, MIN_WORKSPACE_HEIGHT),
+  }
 })
 
 interface EdgeDefinition {
@@ -358,6 +373,8 @@ interface DragState {
   nodeId: string
   offsetX: number
   offsetY: number
+  width: number
+  height: number
 }
 
 let dragState: DragState | null = null
@@ -373,6 +390,8 @@ function onNodePointerDown(event: PointerEvent, node: ReturnType<typeof prepared
     nodeId: node.id,
     offsetX: canvasX - node.layout.x,
     offsetY: canvasY - node.layout.y,
+    width: node.width,
+    height: node.height,
   }
   window.addEventListener('pointermove', onNodePointerMove)
   window.addEventListener('pointerup', onNodePointerUp, { once: true })
@@ -386,7 +405,11 @@ function onNodePointerMove(event: PointerEvent) {
   const canvasY = (event.clientY - rect.top - currentPan.value.y) / currentZoom.value
   const x = canvasX - dragState.offsetX
   const y = canvasY - dragState.offsetY
-  emit('node-move', { stateId: dragState.nodeId, x, y })
+  const clamped = clampToWorkspace(x, y, {
+    width: dragState.width,
+    height: dragState.height,
+  })
+  emit('node-move', { stateId: dragState.nodeId, x: clamped.x, y: clamped.y })
 }
 
 function onNodePointerUp(event: PointerEvent) {
@@ -397,10 +420,23 @@ function onNodePointerUp(event: PointerEvent) {
     const canvasY = (event.clientY - rect.top - currentPan.value.y) / currentZoom.value
     const x = canvasX - dragState.offsetX
     const y = canvasY - dragState.offsetY
-    emit('node-drop', { stateId: dragState.nodeId, x, y })
+    const clamped = clampToWorkspace(x, y, {
+      width: dragState.width,
+      height: dragState.height,
+    })
+    emit('node-drop', { stateId: dragState.nodeId, x: clamped.x, y: clamped.y })
   }
   dragState = null
   window.removeEventListener('pointermove', onNodePointerMove)
+}
+
+function clampToWorkspace(x: number, y: number, size: { width: number; height: number }) {
+  const maxX = Math.max(0, canvasBounds.value.width - size.width - DRAG_MARGIN)
+  const maxY = Math.max(0, canvasBounds.value.height - size.height - DRAG_MARGIN)
+  return {
+    x: Math.min(Math.max(0, x), maxX),
+    y: Math.min(Math.max(0, y), maxY),
+  }
 }
 
 function adjustZoom(multiplier: number) {
