@@ -4,6 +4,15 @@
     <div class="pointer-events-none absolute inset-0 -z-20">
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.22),_transparent_65%)]"/>
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_rgba(129,140,248,0.16),_transparent_70%)]"/>
+      <div class="radar" aria-hidden="true">
+        <span class="radar__ring radar__ring--outer"></span>
+        <span class="radar__ring radar__ring--inner"></span>
+        <span class="radar__sweep"></span>
+        <span class="radar__pulse radar__pulse--1"></span>
+        <span class="radar__pulse radar__pulse--2"></span>
+        <span class="radar__pulse radar__pulse--3"></span>
+        <span class="radar__center"></span>
+      </div>
     </div>
 
     <div class="pointer-events-none absolute inset-0 -z-10 opacity-70">
@@ -515,6 +524,107 @@ onMounted(() => {
   transform: translateY(0);
 }
 
+.radar {
+  position: absolute;
+  right: clamp(2rem, 12vw, 9rem);
+  top: clamp(4rem, 20vh, 11rem);
+  width: clamp(18rem, 32vw, 26rem);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(56, 189, 248, 0.22) 0%, rgba(12, 74, 110, 0.12) 52%, rgba(8, 25, 53, 0) 70%);
+  mix-blend-mode: screen;
+  opacity: 0.55;
+  filter: drop-shadow(0 32px 90px rgba(56, 189, 248, 0.22));
+}
+
+.radar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(2, 6, 23, 0) 58%, rgba(8, 47, 73, 0.18) 75%, transparent 84%);
+  z-index: 0;
+}
+
+.radar__ring,
+.radar__pulse,
+.radar__sweep,
+.radar__center {
+  position: absolute;
+  border-radius: 9999px;
+}
+
+.radar__ring--outer {
+  inset: 12%;
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  box-shadow: inset 0 0 30px rgba(14, 165, 233, 0.08);
+  z-index: 1;
+}
+
+.radar__ring--inner {
+  inset: 30%;
+  border: 1px solid rgba(125, 211, 252, 0.25);
+  z-index: 2;
+}
+
+.radar__pulse {
+  inset: 24%;
+  border: 1px solid rgba(125, 211, 252, 0.45);
+  opacity: 0;
+  transform: scale(0.45);
+  animation: radarPulse 7s ease-out infinite;
+  will-change: transform, opacity;
+  mix-blend-mode: screen;
+  z-index: 3;
+}
+
+.radar__pulse--2 {
+  animation-delay: 2.3s;
+}
+
+.radar__pulse--3 {
+  animation-delay: 4.6s;
+}
+
+.radar__sweep {
+  inset: -45%;
+  background: conic-gradient(from 0deg, rgba(34, 211, 238, 0.42) 0deg, rgba(56, 189, 248, 0.25) 40deg, rgba(15, 23, 42, 0) 75deg, transparent 100%);
+  animation: radarSweep 5.5s linear infinite;
+  transform-origin: 50% 50%;
+  opacity: 0.65;
+  filter: blur(1px);
+  z-index: 2;
+}
+
+.radar__center {
+  inset: 46%;
+  background: radial-gradient(circle, rgba(165, 243, 252, 0.95) 0%, rgba(56, 189, 248, 0.4) 65%, transparent 100%);
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.45);
+  animation: radarHeartbeat 2.8s ease-in-out infinite;
+  will-change: transform, opacity;
+  z-index: 4;
+}
+
+@media (max-width: 1024px) {
+  .radar {
+    left: 50%;
+    right: auto;
+    top: -4rem;
+    transform: translateX(-50%);
+    width: clamp(18rem, 70vw, 24rem);
+    opacity: 0.4;
+  }
+}
+
+@media (max-width: 640px) {
+  .radar {
+    top: -6rem;
+    width: clamp(16rem, 80vw, 22rem);
+    opacity: 0.28;
+  }
+}
+
 .orb {
   @apply absolute rounded-full blur-3xl;
   animation: orbFloat 16s ease-in-out infinite;
@@ -590,6 +700,40 @@ onMounted(() => {
   transform: translateY(0);
 }
 
+@keyframes radarPulse {
+  0% {
+    transform: scale(0.45);
+    opacity: 0.7;
+  }
+  55% {
+    opacity: 0.25;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+@keyframes radarSweep {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes radarHeartbeat {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
 @keyframes orbFloat {
   0%, 100% {
     transform: translate3d(0, 0, 0) scale(1);
@@ -611,12 +755,23 @@ onMounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .orb,
   .floating-card,
-  .mode-toggle__glow {
+  .mode-toggle__glow,
+  .radar__pulse,
+  .radar__sweep,
+  .radar__center {
     animation: none !important;
   }
 
   .mode-toggle__glow {
     transition: none;
+  }
+
+  .radar__pulse {
+    opacity: 0.25;
+  }
+
+  .radar__sweep {
+    opacity: 0.4;
   }
 }
 </style>
