@@ -27,3 +27,4 @@ logs
 
 storage
 storage/**
+.yarn-state.gz
