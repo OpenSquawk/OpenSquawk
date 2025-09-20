@@ -159,6 +159,7 @@ export default defineEventHandler(async (event) => {
         let audioBuffer: Buffer;
         let modelUsed: string;
         let actualMime = mime;
+        let ttsProvider: 'openai' | 'speaches' | 'piper' = 'openai';
 
         if (useSpeaches) {
             // Speaches (prefer compact: MP3, otherwise FLAC/WAV/PCM)
@@ -171,12 +172,14 @@ export default defineEventHandler(async (event) => {
             modelUsed = model;
             // Server returns the correct format according to response_format
             actualMime = fmtToMime(fmt);
+            ttsProvider = 'speaches';
         } else if (usePiper) {
             // Local Piper
             audioBuffer = await piperTTS(normalized, voice, runtimeConfig.piperPort);
             modelUsed = "piper-local";
             // Piper returns WAV
             actualMime = "audio/wav";
+            ttsProvider = 'piper';
         } else {
             // OpenAI (fallback)
             const tts = await normalize.audio.speech.create({
@@ -189,6 +192,7 @@ export default defineEventHandler(async (event) => {
             audioBuffer = Buffer.from(await tts.arrayBuffer());
             modelUsed = TTS_MODEL;
             actualMime = "audio/wav";
+            ttsProvider = 'openai';
         }
 
         // Optional persistence
@@ -208,7 +212,8 @@ export default defineEventHandler(async (event) => {
             lessonId: body?.lessonId || null,
             files: { audio: fileOut },
             model: modelUsed,
-            format: actualMime
+            format: actualMime,
+            ttsProvider
         };
 
         // await writeFile(fileJson, JSON.stringify(meta, null, 2), "utf-8");
@@ -229,6 +234,12 @@ export default defineEventHandler(async (event) => {
                     lessonId: body?.lessonId || null,
                     tag: body?.tag || null,
                     radioQuality: radioQuality.description,
+                    tts: {
+                        provider: ttsProvider,
+                        model: modelUsed,
+                        format: actualMime,
+                        extension: ext
+                    }
                 }
             })
         } catch (logError) {
