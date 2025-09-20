@@ -73,7 +73,7 @@ const statusCode = computed(() => {
 });
 
 const is404 = computed(() => statusCode.value === 404);
-const displayCode = computed(() => (is404.value ? '4040' : statusCode.value.toString()));
+const displayCode = computed(() => (is404.value ? '0404' : statusCode.value.toString()));
 const statusMessage = computed(
   () =>
     props.error?.message ||
