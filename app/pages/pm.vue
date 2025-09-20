@@ -898,6 +898,31 @@
                     hide-details
                 />
               </div>
+
+              <div class="border border-white/10 rounded-lg p-3 space-y-2 bg-white/5">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs uppercase tracking-[0.3em] text-white/40">Decision flow</span>
+                  <v-btn
+                      size="x-small"
+                      color="cyan"
+                      variant="text"
+                      :loading="decisionTreePending"
+                      :disabled="decisionTreePending"
+                      @click="refreshDecisionTree()"
+                  >
+                    Reload
+                  </v-btn>
+                </div>
+                <p v-if="decisionTreeLoading" class="text-xs text-white/60">
+                  Loading latest tree…
+                </p>
+                <p v-else-if="decisionTreeErrorMessage" class="text-xs text-red-400">
+                  {{ decisionTreeErrorMessage }}
+                </p>
+                <p v-else class="text-xs text-white/50">
+                  {{ engineReady ? 'Active version' : 'Pending' }} • {{ loadedDecisionTreeVersion || '—' }}
+                </p>
+              </div>
             </div>
           </v-card-text>
         </v-card>
@@ -918,6 +943,42 @@ import { createNoiseGenerators, getReadabilityProfile } from '../../shared/utils
 
 // Core State
 const engine = useCommunicationsEngine()
+const engineReady = engine.ready
+const {
+  data: decisionTreeDto,
+  pending: decisionTreePending,
+  refresh: refreshDecisionTree,
+  error: decisionTreeError,
+} = await useAsyncData('decision-tree-icao-atc', () =>
+  $fetch('/api/decision-trees/icao_atc'),
+)
+
+const loadedDecisionTreeVersion = ref<string | null>(null)
+
+if (decisionTreeDto.value) {
+  engine.loadTree(decisionTreeDto.value)
+  loadedDecisionTreeVersion.value = decisionTreeDto.value.updatedAt
+}
+
+watch(decisionTreeDto, (dto) => {
+  if (!dto) return
+  if (dto.updatedAt === loadedDecisionTreeVersion.value) return
+  engine.loadTree(dto)
+  loadedDecisionTreeVersion.value = dto.updatedAt
+})
+
+const decisionTreeLoading = computed(() => decisionTreePending.value && !engineReady.value)
+const decisionTreeErrorMessage = computed(() => {
+  const err = decisionTreeError.value
+  if (!err) return ''
+  return err.message || 'Decision tree could not be loaded.'
+})
+
+watch(decisionTreeError, (err) => {
+  if (err) {
+    console.error('Failed to load ATC decision tree', err)
+  }
+})
 const auth = useAuthStore()
 const api = useApi()
 const router = useRouter()

@@ -34,6 +34,7 @@
   },
   "packageManager": "yarn@4.9.4",
   "devDependencies": {
-    "@types/fluent-ffmpeg": "^2"
+    "@types/fluent-ffmpeg": "^2",
+    "tsx": "^4.7.1"
   }
 }
