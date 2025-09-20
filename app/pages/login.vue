@@ -36,210 +36,214 @@
       </div>
 
       <div class="flex w-full flex-1 flex-col min-h-0 lg:pl-8">
-        <div class="flex flex-1 flex-col overflow-y-auto rounded-[28px] border border-white/10 bg-[#0b1020]/85 p-6 shadow-2xl backdrop-blur md:p-8 lg:pr-4 min-h-0">
-          <div class="floating-card relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:hidden">
-            <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway" class="h-56 w-full object-cover" />
-            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent p-6">
-              <p class="text-xs uppercase tracking-[0.3em] text-white/50">Alpha Access</p>
-              <p class="mt-2 text-lg font-semibold">Experience the cockpit from anywhere</p>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between gap-3 text-sm text-white/60">
-            <NuxtLink to="/" class="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 font-medium text-white/70 transition hover:bg-white/10 hover:text-white">
-              <v-icon icon="mdi-arrow-left" size="18" /> Back to landing page
-            </NuxtLink>
-            <span class="hidden text-xs uppercase tracking-[0.3em] text-white/30 sm:block">Restricted Area</span>
-          </div>
-
-          <div class="mt-6 space-y-3">
-            <p class="text-[11px] uppercase tracking-[0.4em] text-cyan-300/80">OpenSquawk Members</p>
-            <h2 class="text-3xl font-semibold sm:text-4xl">Access your account</h2>
-            <p class="max-w-xl text-white/60">
-              Use your credentials to sign in or redeem an invitation code. After onboarding, you can invite colleagues once you have been active for two weeks.
-            </p>
-          </div>
-
-          <div class="mt-6">
-            <div class="mode-toggle" :data-mode="mode" role="group" aria-label="Switch between login and register">
-              <span class="mode-toggle__glow" aria-hidden="true" />
-              <button
-                  type="button"
-                  class="mode-toggle__btn"
-                  :data-active="mode === 'login'"
-                  :aria-pressed="mode === 'login'"
-                  @click="mode = 'login'"
-              >
-                <span class="mode-toggle__btn-inner">
-                  <v-icon icon="mdi-login" size="18" class="text-current" />
-                  <span>Login</span>
-                </span>
-              </button>
-              <button
-                  type="button"
-                  class="mode-toggle__btn"
-                  :data-active="mode === 'register'"
-                  :aria-pressed="mode === 'register'"
-                  @click="mode = 'register'"
-              >
-                <span class="mode-toggle__btn-inner">
-                  <v-icon icon="mdi-account-plus-outline" size="18" class="text-current" />
-                  <span>Register</span>
-                </span>
-              </button>
-            </div>
-          </div>
-
-          <form v-if="mode === 'login'" class="mt-8 space-y-6" @submit.prevent="submitLogin">
-            <div class="space-y-5">
-              <div>
-                <label class="field-label">Email</label>
-                <input
-                    v-model.trim="loginForm.email"
-                    type="email"
-                    required
-                    autocomplete="email"
-                    class="field-input"
-                />
-              </div>
-              <div>
-                <label class="field-label">Password</label>
-                <input
-                    v-model="loginForm.password"
-                    type="password"
-                    required
-                    autocomplete="current-password"
-                    class="field-input"
-                />
-              </div>
-              <div class="text-right text-sm">
-                <NuxtLink to="/forgot-password" class="text-cyan-300 underline decoration-dotted underline-offset-4 transition hover:text-cyan-100">
-                  Forgot your password?
-                </NuxtLink>
+        <div class="flex flex-1 flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#0b1020]/85 shadow-2xl backdrop-blur">
+          <div class="flex-1 overflow-y-auto px-6 pt-6 pb-10 md:px-8 lg:pr-4">
+            <div class="floating-card relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:hidden">
+              <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway" class="h-56 w-full object-cover" />
+              <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent p-6">
+                <p class="text-xs uppercase tracking-[0.3em] text-white/50">Alpha Access</p>
+                <p class="mt-2 text-lg font-semibold">Experience the cockpit from anywhere</p>
               </div>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-fancy w-full" :disabled="loginLoading">
-              <span v-if="loginLoading" class="relative z-10 flex items-center justify-center gap-2">
-                <v-progress-circular indeterminate size="16" width="2" color="white" />
-                Signing you in…
-              </span>
-              <span v-else class="relative z-10">Login</span>
-            </button>
+            <div class="flex items-center justify-between gap-3 text-sm text-white/60">
+              <NuxtLink to="/" class="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 font-medium text-white/70 transition hover:bg-white/10 hover:text-white">
+                <v-icon icon="mdi-arrow-left" size="18" /> Back to landing page
+              </NuxtLink>
+              <span class="hidden text-xs uppercase tracking-[0.3em] text-white/30 sm:block">Restricted Area</span>
+            </div>
 
-            <p v-if="loginError" class="text-sm text-red-300">{{ loginError }}</p>
-          </form>
+            <div class="mt-6 space-y-3">
+              <p class="text-[11px] uppercase tracking-[0.4em] text-cyan-300/80">OpenSquawk Members</p>
+              <h2 class="text-3xl font-semibold sm:text-4xl">Access your account</h2>
+              <p class="max-w-xl text-white/60">
+                Use your credentials to sign in or redeem an invitation code. After onboarding, you can invite colleagues once you have been active for two weeks.
+              </p>
+            </div>
 
-          <form v-else class="mt-8 space-y-6" @submit.prevent="submitRegister">
-            <div class="space-y-5">
-              <div>
-                <label class="field-label">Name</label>
-                <input
-                    v-model.trim="registerForm.name"
-                    type="text"
-                    autocomplete="name"
-                    placeholder="First Last"
-                    class="field-input"
-                />
+            <div class="mt-6">
+              <div class="mode-toggle" :data-mode="mode" role="group" aria-label="Switch between login and register">
+                <span class="mode-toggle__glow" aria-hidden="true" />
+                <button
+                    type="button"
+                    class="mode-toggle__btn"
+                    :data-active="mode === 'login'"
+                    :aria-pressed="mode === 'login'"
+                    @click="mode = 'login'"
+                >
+                  <span class="mode-toggle__btn-inner">
+                    <v-icon icon="mdi-login" size="18" class="text-current" />
+                    <span>Login</span>
+                  </span>
+                </button>
+                <button
+                    type="button"
+                    class="mode-toggle__btn"
+                    :data-active="mode === 'register'"
+                    :aria-pressed="mode === 'register'"
+                    @click="mode = 'register'"
+                >
+                  <span class="mode-toggle__btn-inner">
+                    <v-icon icon="mdi-account-plus-outline" size="18" class="text-current" />
+                    <span>Register</span>
+                  </span>
+                </button>
               </div>
-              <div>
-                <label class="field-label">Email</label>
-                <input
-                    v-model.trim="registerForm.email"
-                    type="email"
-                    required
-                    autocomplete="email"
-                    class="field-input"
-                />
-              </div>
-              <div>
-                <label class="field-label">Password</label>
-                <input
-                    v-model="registerForm.password"
-                    type="password"
-                    required
-                    minlength="8"
-                    autocomplete="new-password"
-                    class="field-input"
-                />
-                <p class="mt-2 text-xs text-white/50">At least 8 characters, ideally include a number and special character.</p>
-              </div>
-              <div>
-                <div class="flex items-center justify-between">
-                  <label class="field-label">Invitation code</label>
-                  <button
-                      type="button"
-                      class="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-300/80 transition hover:text-cyan-100 disabled:cursor-not-allowed disabled:text-white/30"
-                      @click="checkInvitationCode"
-                      :disabled="!registerForm.invitationCode"
-                  >
-                    Check code
-                  </button>
+            </div>
+
+            <form v-if="mode === 'login'" class="mt-8 space-y-6" @submit.prevent="submitLogin">
+              <div class="space-y-5">
+                <div>
+                  <label class="field-label">Email</label>
+                  <input
+                      v-model.trim="loginForm.email"
+                      type="email"
+                      required
+                      autocomplete="email"
+                      class="field-input"
+                  />
                 </div>
-                <input
-                    v-model.trim="registerForm.invitationCode"
-                    type="text"
-                    required
-                    class="field-input tracking-[0.6em] uppercase"
-                    placeholder="e.g. ABCD1234"
-                />
-                <p v-if="invitationStatus === 'valid'" class="mt-2 text-xs font-medium text-green-300">Code is valid.</p>
-                <p v-else-if="invitationStatus === 'invalid'" class="mt-2 text-xs font-medium text-red-300">This invitation code is invalid or already used.</p>
-                <p v-else-if="invitationStatus === 'checking'" class="mt-2 text-xs font-medium text-white/60">Checking invitation code…</p>
+                <div>
+                  <label class="field-label">Password</label>
+                  <input
+                      v-model="loginForm.password"
+                      type="password"
+                      required
+                      autocomplete="current-password"
+                      class="field-input"
+                  />
+                </div>
+                <div class="text-right text-sm">
+                  <NuxtLink to="/forgot-password" class="text-cyan-300 underline decoration-dotted underline-offset-4 transition hover:text-cyan-100">
+                    Forgot your password?
+                  </NuxtLink>
+                </div>
               </div>
-            </div>
 
-            <div class="space-y-3 text-xs text-white/60">
-              <label class="flex items-start gap-3">
-                <input type="checkbox" v-model="registerForm.acceptTerms" class="mt-1" required />
-                <span>I accept the <NuxtLink to="/agb" class="text-cyan-300 underline decoration-dotted underline-offset-4">Terms of Service</NuxtLink>.</span>
-              </label>
-              <label class="flex items-start gap-3">
-                <input type="checkbox" v-model="registerForm.acceptPrivacy" class="mt-1" required />
-                <span>I have read the <NuxtLink to="/datenschutz" class="text-cyan-300 underline decoration-dotted underline-offset-4">privacy policy</NuxtLink> and consent to data processing.</span>
-              </label>
-            </div>
+              <button type="submit" class="btn btn-primary btn-fancy w-full" :disabled="loginLoading">
+                <span v-if="loginLoading" class="relative z-10 flex items-center justify-center gap-2">
+                  <v-progress-circular indeterminate size="16" width="2" color="white" />
+                  Signing you in…
+                </span>
+                <span v-else class="relative z-10">Login</span>
+              </button>
 
-            <button type="submit" class="btn btn-primary btn-fancy w-full" :disabled="registerLoading || !canRegister">
-              <span v-if="registerLoading" class="relative z-10 flex items-center justify-center gap-2">
-                <v-progress-circular indeterminate size="16" width="2" color="white" />
-                Registering…
-              </span>
-              <span v-else class="relative z-10">Create account</span>
-            </button>
+              <p v-if="loginError" class="text-sm text-red-300">{{ loginError }}</p>
+            </form>
 
-            <p v-if="registerError" class="text-sm text-red-300">{{ registerError }}</p>
-          </form>
+            <form v-else class="mt-8 space-y-6" @submit.prevent="submitRegister">
+              <div class="space-y-5">
+                <div>
+                  <label class="field-label">Name</label>
+                  <input
+                      v-model.trim="registerForm.name"
+                      type="text"
+                      autocomplete="name"
+                      placeholder="First Last"
+                      class="field-input"
+                  />
+                </div>
+                <div>
+                  <label class="field-label">Email</label>
+                  <input
+                      v-model.trim="registerForm.email"
+                      type="email"
+                      required
+                      autocomplete="email"
+                      class="field-input"
+                  />
+                </div>
+                <div>
+                  <label class="field-label">Password</label>
+                  <input
+                      v-model="registerForm.password"
+                      type="password"
+                      required
+                      minlength="8"
+                      autocomplete="new-password"
+                      class="field-input"
+                  />
+                  <p class="mt-2 text-xs text-white/50">At least 8 characters, ideally include a number and special character.</p>
+                </div>
+                <div>
+                  <div class="flex items-center justify-between">
+                    <label class="field-label">Invitation code</label>
+                    <button
+                        type="button"
+                        class="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-300/80 transition hover:text-cyan-100 disabled:cursor-not-allowed disabled:text-white/30"
+                        @click="checkInvitationCode"
+                        :disabled="!registerForm.invitationCode"
+                    >
+                      Check code
+                    </button>
+                  </div>
+                  <input
+                      v-model.trim="registerForm.invitationCode"
+                      type="text"
+                      required
+                      class="field-input tracking-[0.6em] uppercase"
+                      placeholder="e.g. ABCD1234"
+                  />
+                  <p v-if="invitationStatus === 'valid'" class="mt-2 text-xs font-medium text-green-300">Code is valid.</p>
+                  <p v-else-if="invitationStatus === 'invalid'" class="mt-2 text-xs font-medium text-red-300">This invitation code is invalid or already used.</p>
+                  <p v-else-if="invitationStatus === 'checking'" class="mt-2 text-xs font-medium text-white/60">Checking invitation code…</p>
+                </div>
+              </div>
 
-          <div class="mt-10 space-y-4">
+              <div class="space-y-3 text-xs text-white/60">
+                <label class="flex items-start gap-3">
+                  <input type="checkbox" v-model="registerForm.acceptTerms" class="mt-1" required />
+                  <span>I accept the <NuxtLink to="/agb" class="text-cyan-300 underline decoration-dotted underline-offset-4">Terms of Service</NuxtLink>.</span>
+                </label>
+                <label class="flex items-start gap-3">
+                  <input type="checkbox" v-model="registerForm.acceptPrivacy" class="mt-1" required />
+                  <span>I have read the <NuxtLink to="/datenschutz" class="text-cyan-300 underline decoration-dotted underline-offset-4">privacy policy</NuxtLink> and consent to data processing.</span>
+                </label>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-fancy w-full" :disabled="registerLoading || !canRegister">
+                <span v-if="registerLoading" class="relative z-10 flex items-center justify-center gap-2">
+                  <v-progress-circular indeterminate size="16" width="2" color="white" />
+                  Registering…
+                </span>
+                <span v-else class="relative z-10">Create account</span>
+              </button>
+
+              <p v-if="registerError" class="text-sm text-red-300">{{ registerError }}</p>
+            </form>
+          </div>
+          <div class="card-footer border-t border-white/10">
             <button
                 type="button"
-                class="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-left text-sm font-medium text-white/80 transition hover:border-cyan-400/40 hover:bg-white/10"
+                class="card-footer__toggle"
+                :class="showAccessDetails ? 'bg-white/10 text-white' : ''"
                 :aria-expanded="showAccessDetails"
                 aria-controls="access-instructions"
                 @click="showAccessDetails = !showAccessDetails"
             >
               <span>How to get access</span>
-              <v-icon :icon="showAccessDetails ? 'mdi-chevron-up' : 'mdi-chevron-down'" size="20" />
+              <v-icon
+                  icon="mdi-chevron-down"
+                  size="20"
+                  :class="['transition-transform duration-300', showAccessDetails ? 'rotate-180' : '']"
+              />
             </button>
             <Transition name="collapse">
-              <div v-show="showAccessDetails" id="access-instructions" class="space-y-4 overflow-hidden">
-                <div class="rounded-2xl border border-white/10 bg-white/5 p-6">
-                  <ol class="space-y-4 text-sm text-white/70">
-                    <li class="flex gap-4">
-                      <span class="step-badge">1</span>
-                      <span>Join the <NuxtLink to="/#cta" class="text-cyan-300 underline decoration-dotted underline-offset-4">waitlist</NuxtLink>.</span>
-                    </li>
-                    <li class="flex gap-4">
-                      <span class="step-badge">2</span>
-                      <span>Receive your invite by email or get a code from an active member.</span>
-                    </li>
-                    <li class="flex gap-4">
-                      <span class="step-badge">3</span>
-                      <span>Register here, accept the terms &amp; privacy policy and start flying.</span>
-                    </li>
-                  </ol>
-                </div>
+              <div v-show="showAccessDetails" id="access-instructions" class="card-footer__panel">
+                <ol class="space-y-4 text-sm text-white/70">
+                  <li class="flex gap-4">
+                    <span class="step-badge">1</span>
+                    <span>Join the <NuxtLink to="/#cta" class="text-cyan-300 underline decoration-dotted underline-offset-4">waitlist</NuxtLink>.</span>
+                  </li>
+                  <li class="flex gap-4">
+                    <span class="step-badge">2</span>
+                    <span>Receive your invite by email or get a code from an active member.</span>
+                  </li>
+                  <li class="flex gap-4">
+                    <span class="step-badge">3</span>
+                    <span>Register here, accept the terms &amp; privacy policy and start flying.</span>
+                  </li>
+                </ol>
                 <div class="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-5 text-sm text-cyan-100">
                   Tip: After 14 days of active use you can generate up to two invitation codes yourself and share them with friends.
                 </div>
@@ -511,6 +515,39 @@ onMounted(() => {
 
 .floating-card {
   animation: cardFloat 10s ease-in-out infinite;
+}
+
+.card-footer {
+  background: linear-gradient(180deg, rgba(12, 20, 42, 0.35) 0%, rgba(4, 7, 19, 0.82) 100%);
+  box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.12);
+}
+
+.card-footer__toggle {
+  @apply flex w-full items-center justify-between gap-3 px-6 py-4 text-left text-sm font-medium text-white/80 transition duration-300 ease-out;
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.card-footer__toggle:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.card-footer__toggle:focus-visible {
+  @apply outline-none ring-2 ring-cyan-300/70 ring-offset-2 ring-offset-transparent;
+}
+
+.card-footer__panel {
+  @apply relative space-y-4 overflow-hidden border-t border-white/10 px-6 pb-6 pt-5 text-sm text-white/70;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(10, 16, 32, 0.58) 100%);
+}
+
+.card-footer__panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0) 0%, rgba(56, 189, 248, 0.45) 50%, rgba(56, 189, 248, 0) 100%);
+  opacity: 0.5;
 }
 
 .collapse-enter-active,
