@@ -1,31 +1,45 @@
 // server/utils/openai.ts
 import OpenAI from 'openai'
-import { spellIcaoDigits, toIcaoPhonetic } from '../../shared/utils/radioSpeech'
-import type { LLMDecision, LLMDecisionInput } from '../../shared/types/llm'
-import { getServerRuntimeConfig } from './runtimeConfig'
+import {spellIcaoDigits, toIcaoPhonetic} from '../../shared/utils/radioSpeech'
+import type {LLMDecision, LLMDecisionInput} from '../../shared/types/llm'
+import {getServerRuntimeConfig} from './runtimeConfig'
 
 let openaiClient: OpenAI | null = null
 let cachedModel: string | null = null
 
+import https from 'node:https'
+
+const httpsAgent = new https.Agent({
+    keepAlive: true,
+    maxSockets: 50,        // bei Bedarf anpassen
+    maxFreeSockets: 10,
+    timeout: 0             // keine Socket-Idle-Timeouts durch Node
+})
+
 function ensureOpenAI(): OpenAI {
     if (!openaiClient) {
-        const { openaiKey, openaiProject, llmModel } = getServerRuntimeConfig()
+        const {openaiKey, openaiProject, llmModel} = getServerRuntimeConfig()
         if (!openaiKey) {
             throw new Error('OPENAI_API_KEY is missing. Please set the key before using AI features.')
         }
-        const clientOptions: ConstructorParameters<typeof OpenAI>[0] = { apiKey: openaiKey }
+        const clientOptions: ConstructorParameters<typeof OpenAI>[0] = {apiKey: openaiKey,
+            defaultHeaders: { 'Connection': 'keep-alive' },
+            defaultHttpAgent: httpsAgent
+        }
         if (openaiProject) {
             clientOptions.project = openaiProject
         }
+        console.log("using connection opened client")
         openaiClient = new OpenAI(clientOptions)
         cachedModel = llmModel
     }
+    console.log("returning existing openai client")
     return openaiClient
 }
 
 function getModel(): string {
     if (!cachedModel) {
-        const { llmModel } = getServerRuntimeConfig()
+        const {llmModel} = getServerRuntimeConfig()
         cachedModel = llmModel
     }
     return cachedModel
@@ -91,12 +105,12 @@ const READBACK_JSON_SCHEMA = {
             },
             missing: {
                 type: 'array',
-                items: { type: 'string' },
+                items: {type: 'string'},
                 default: []
             },
             incorrect: {
                 type: 'array',
-                items: { type: 'string' },
+                items: {type: 'string'},
                 default: []
             },
             confidence: {
@@ -314,18 +328,22 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
 export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisionResult> {
     const pilotUtterance = (input.pilot_utterance || '').trim()
     const pilotText = pilotUtterance.toLowerCase()
-    const trace: LLMDecisionTrace = { calls: [] }
+    const trace: LLMDecisionTrace = {calls: []}
 
     const finalize = (decision: LLMDecision): LLMDecisionResult => {
         if (!trace.calls.length && !trace.fallback) {
-            return { decision }
+            return {decision}
         }
-        return { decision, trace }
+        return {decision, trace}
     }
 
     async function handleReadbackCheck(): Promise<LLMDecisionResult> {
         const requiredKeys = READBACK_REQUIREMENTS[input.state_id] || input.state.readback_required || []
-        const expectedItems = requiredKeys.reduce<Array<{ key: string; value: string; spoken_variants: string[] }>>((acc, key) => {
+        const expectedItems = requiredKeys.reduce<Array<{
+            key: string;
+            value: string;
+            spoken_variants: string[]
+        }>>((acc, key) => {
             const value = resolveReadbackValue(key, input)
             if (!value) {
                 return acc
@@ -349,7 +367,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         const defaultNext = fallbackNextState(input)
 
         if (!expectedItems.length) {
-            return finalize({ next_state: okNext ?? defaultNext })
+            return finalize({next_state: okNext ?? defaultNext})
         }
 
         const sanitizedPilot = sanitizeForQuickMatch(pilotUtterance)
@@ -359,7 +377,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         })
 
         if (heuristicsOk && okNext) {
-            return finalize({ next_state: okNext })
+            return finalize({next_state: okNext})
         }
 
         const payload = {
@@ -372,7 +390,10 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
 
         const requestBody = {
             model: getModel(),
-            response_format: { type: 'json_schema', json_schema: READBACK_JSON_SCHEMA },
+            response_format: {type: 'json_schema', json_schema: READBACK_JSON_SCHEMA},
+            reasoning_effort: 'low',
+            n: 1,
+            verbosity: 'low',
             messages: [
                 {
                     role: 'system',
@@ -383,7 +404,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
                         'Treat reasonable phonetic variations as correct.'
                     ].join(' ')
                 },
-                { role: 'user', content: JSON.stringify(payload) }
+                {role: 'user', content: JSON.stringify(payload)}
             ]
         }
 
@@ -405,26 +426,26 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             const status: ReadbackStatus = parsed.status || 'uncertain'
 
             if (status === 'ok') {
-                return finalize({ next_state: okNext ?? defaultNext })
+                return finalize({next_state: okNext ?? defaultNext})
             }
 
             if ((status === 'missing' || status === 'incorrect') && badNext) {
-                return finalize({ next_state: badNext })
+                return finalize({next_state: badNext})
             }
 
             if (status === 'uncertain' && okNext) {
-                return finalize({ next_state: okNext })
+                return finalize({next_state: okNext})
             }
 
-            return finalize({ next_state: badNext ?? defaultNext })
+            return finalize({next_state: badNext ?? defaultNext})
         } catch (err) {
             callTrace.error = err instanceof Error ? err.message : String(err)
             trace.calls.push(callTrace)
             if (!trace.fallback) {
-                trace.fallback = { used: true, reason: callTrace.error, selected: 'readback-check-fallback' }
+                trace.fallback = {used: true, reason: callTrace.error, selected: 'readback-check-fallback'}
             }
             console.warn('[ATC] Readback check failed, using fallback:', err)
-            return finalize({ next_state: okNext ?? defaultNext })
+            return finalize({next_state: okNext ?? defaultNext})
         }
     }
 
@@ -438,7 +459,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             || input.candidates.find(c => c.state?.role === 'system')
 
         if (interruptCandidate) {
-            return finalize({ next_state: interruptCandidate.id })
+            return finalize({next_state: interruptCandidate.id})
         }
     }
 
@@ -454,10 +475,10 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
 
     // Emergency ohne LLM
     if (pilotText.startsWith('mayday') && input.flags.in_air) {
-        return finalize({ next_state: 'INT_MAYDAY' })
+        return finalize({next_state: 'INT_MAYDAY'})
     }
     if (pilotText.startsWith('pan pan') && input.flags.in_air) {
-        return finalize({ next_state: 'INT_PANPAN' })
+        return finalize({next_state: 'INT_PANPAN'})
     }
 
     const optimizedInput = optimizeInputForLLM(input)
@@ -469,7 +490,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
 
     // If no ATC states are available, perform a simple transition without a response
     if (atcCandidates.length === 0 && input.candidates.length > 0) {
-        return finalize({ next_state: input.candidates[0].id })
+        return finalize({next_state: input.candidates[0].id})
     }
 
     // Compact yet informative prompt — includes variable info for intelligent responses
@@ -500,10 +521,10 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
 
     const body = {
         model: getModel(),
-        response_format: { type: 'json_object' },
+        response_format: {type: 'json_object'},
         messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user }
+            {role: 'system', content: system},
+            {role: 'user', content: user}
         ]
     }
 
@@ -539,7 +560,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         const errorMessage = e instanceof Error ? e.message : String(e)
         callTrace.error = errorMessage
         trace.calls.push(callTrace)
-        const fallbackInfo = { used: true, reason: errorMessage } as NonNullable<LLMDecisionTrace['fallback']>
+        const fallbackInfo = {used: true, reason: errorMessage} as NonNullable<LLMDecisionTrace['fallback']>
         trace.fallback = fallbackInfo
         console.error('LLM JSON parse error, using smart fallback:', e)
 
