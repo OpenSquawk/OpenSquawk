@@ -1542,7 +1542,7 @@ const roadmapImportanceShortLabel = (value: number) => {
     1: 'No',
     2: 'Meh',
     3: 'Later',
-    4: 'Important',
+    4: 'Now',
     5: 'Top',
   }
   return labels[value] || ''
