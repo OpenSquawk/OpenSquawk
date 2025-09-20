@@ -2011,7 +2011,7 @@ const swapFrequencies = () => {
 }
 
 const formatTime = (date: Date): string => {
-  return date.toLocaleTimeString('de-DE', {
+  return date.toLocaleTimeString('en-US', {
     hour12: false,
     hour: '2-digit',
     minute: '2-digit',

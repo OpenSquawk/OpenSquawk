@@ -16,10 +16,10 @@ export const LLM_MODEL = llmModel;
 export const TTS_MODEL = ttsModel;
 
 /* =========================
-   LLM PROMPTS (überarbeitet)
+   LLM PROMPTS (refined)
    =========================
-   Ziel: LLM liefert kompakte, maschinenfreundliche ICAO-Zeile, die unser Normalizer→TTS perfekt erweitert.
-   WICHTIG: Zahlen/Marker exakt im unten definierten Output-Format, keine ausgeschriebenen Wörter.
+   Goal: the LLM returns a compact, machine-friendly ICAO line that our normalizer → TTS can expand perfectly.
+   IMPORTANT: Use the exact output format defined below; do not spell out numbers.
 */
 
 export const ATC_OUTPUT_SPEC = `
@@ -43,9 +43,9 @@ OUTPUT RULES (STRICT):
 - Use standard order for the phase (e.g., taxi: destination RWY first, then route, then hold short).
 `.trim();
 
-/** System-Prompt: legt Rolle/Regeln fest */
+/** System prompt: defines the role and rules */
 export function atcSystemPrompt(opts?: {
-    regionHint?: "EUR" | "US" | "INTL"; // nur als Soft-Hinweis, default INTL
+    regionHint?: "EUR" | "US" | "INTL"; // soft hint only, defaults to INTL
 }) {
     const region = opts?.regionHint ?? "INTL";
     return [
@@ -56,7 +56,7 @@ export function atcSystemPrompt(opts?: {
     ].join("\n\n");
 }
 
-/** Seed-ATC ohne Pilot-Input (rückwärtskompatible Signatur, aber reicherer Prompt) */
+/** Seed ATC without pilot input (backward-compatible signature, but richer prompt) */
 export function atcSeedPrompt(s: {
     airport: string;           // e.g., "EDDF"
     aircraft: string;          // e.g., "A320"
@@ -66,11 +66,11 @@ export function atcSeedPrompt(s: {
     sid?: string;              // e.g., "MARUN 7F"
     squawk?: string;           // "4723"
     freq?: string;             // "121.800"
-    runway?: string;           // "25R" (optional: falls bekannt)
+    runway?: string;           // "25R" (optional if known)
     phase?: "clearance" | "taxi" | "lineup" | "departure" | "handoff" | "approach" | "landing";
-    notes?: string;            // z.B. "TWY N closed between N2–N4"
+    notes?: string;            // e.g. "TWY N closed between N2–N4"
 }) {
-    // Default-Phase: clearance
+    // Default phase: clearance
     const phase = s.phase || "clearance";
     const ctx = [
         `Airport ${s.airport}`,
@@ -106,12 +106,12 @@ export function atcSeedPrompt(s: {
     ].join("\n");
 }
 
-/** Pilot→ATC (rückwärtskompatibler Name, aber mit robustem Rahmen) */
+/** Pilot → ATC (same legacy name, but with a sturdier framework) */
 export function atcReplyPrompt(userText: string, state?: {
     airport?: string; runway?: string; sid?: string; dep?: string;
     lastSquawk?: string; lastFreq?: string; lastQNH?: string;
     phase?: "clearance" | "taxi" | "lineup" | "departure" | "handoff" | "approach" | "landing";
-    constraints?: string; // z.B. "TWY N closed", "no intersection deps on 25C"
+    constraints?: string; // e.g. "TWY N closed", "no intersection deps on 25C"
 }) {
     const ctx = [
         state?.airport ? `Airport ${state.airport}` : null,
@@ -137,10 +137,10 @@ export function atcReplyPrompt(userText: string, state?: {
 }
 
 /* =========================
-   Normalizer → TTS (wie zuvor)
+   Normalizer → TTS (unchanged)
    ========================= */
 
-// Airline-Telephony (erweiterbar)
+// Airline telephony (extensible)
 export const CALLSIGN_MAP: Record<string,string> = {
     DLH: "Lufthansa",
     EWG: "Eurowings",
@@ -185,16 +185,16 @@ export async function speakATC(text: string, filePath = "atc.mp3") {
 }
 
 /* =========================
-   Beispiele
+   Examples
    =========================
 
-— Seed (Clearance):
+— Seed (clearance):
 const sys = atcSystemPrompt();
 const usr = atcSeedPrompt({
   airport: "EDDF", aircraft: "A320", type: "IFR", stand: "V155",
   dep: "EHAM", sid: "MARUN 7F", runway: "25R", freq: "121.800"
 });
-// → LLM antwortet z.B.:
+// → The LLM might respond:
 // "DLH359, cleared to EHAM via MARUN 7F, initial 5000 ft, squawk 4723. QNH 1013."
 
 — Taxi:
@@ -205,12 +205,12 @@ const usrTaxi = atcSeedPrompt({
 });
 // → "DLH359, taxi to RWY 25R via A3 A N2, hold short."
 
-— Pilot→ATC:
+— Pilot → ATC:
 const usrReply = atcReplyPrompt(
   "DLH359 ready for departure RWY 25R",
   { airport: "EDDF", runway: "25R", phase: "lineup", lastFreq: "121.800" }
 );
 // → "DLH359, line up and wait RWY 25R."
 
-Nach dem LLM-Output: `speakATC(llmText)` ruft Normalizer→TTS.
+After receiving the LLM output, call `speakATC(llmText)` to trigger normalizer → TTS.
 */

@@ -12,16 +12,16 @@ export interface PasswordValidationResult {
 export function validatePasswordStrength(password: string): PasswordValidationResult {
   const trimmed = password.trim()
   if (trimmed.length < 10) {
-    return { valid: false, message: 'Passwort muss mindestens 10 Zeichen lang sein.' }
+    return { valid: false, message: 'Password must be at least 10 characters long.' }
   }
   if (/\s/.test(trimmed)) {
-    return { valid: false, message: 'Passwort darf keine Leerzeichen enthalten.' }
+    return { valid: false, message: 'Password cannot contain spaces.' }
   }
   if (!/[A-Za-zÄÖÜäöüß]/.test(trimmed) || !/[0-9]/.test(trimmed)) {
-    return { valid: false, message: 'Bitte Buchstaben und Zahlen kombinieren.' }
+    return { valid: false, message: 'Please use both letters and numbers.' }
   }
   if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(trimmed)) {
-    return { valid: false, message: 'Mindestens ein Sonderzeichen erhöht die Sicherheit.' }
+    return { valid: false, message: 'Include at least one special character for better security.' }
   }
   return { valid: true }
 }
