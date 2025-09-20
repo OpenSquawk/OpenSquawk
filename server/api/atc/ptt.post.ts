@@ -88,6 +88,19 @@ async function convertToWav(inputPath: string, outputPath: string) {
     ]);
 }
 
+function safeClone<T>(value: T): T | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    try {
+        return JSON.parse(JSON.stringify(value));
+    } catch (err) {
+        console.warn("Failed to clone value for transmission metadata", err);
+        return undefined;
+    }
+}
+
 export default defineEventHandler(async (event) => {
     const body = await readBody<PTTRequest>(event);
 
@@ -161,6 +174,64 @@ export default defineEventHandler(async (event) => {
 
         try {
             const user = await getUserFromEvent(event)
+
+            const llmCallCount = decisionResult?.trace?.calls?.length || 0;
+            const fallbackUsed = Boolean(decisionResult?.trace?.fallback?.used);
+
+            let llmStrategy: 'manual' | 'openai' | 'heuristic' | 'fallback' = 'manual';
+            if (shouldAutoDecide) {
+                if (llmCallCount > 0) {
+                    llmStrategy = 'openai';
+                } else if (fallbackUsed) {
+                    llmStrategy = 'fallback';
+                } else {
+                    llmStrategy = 'heuristic';
+                }
+            }
+
+            const llmUsage = {
+                autoDecide: shouldAutoDecide,
+                openaiUsed: llmStrategy === 'openai',
+                callCount: llmCallCount,
+                fallbackUsed,
+                strategy: llmStrategy,
+                reason:
+                    llmStrategy === 'manual'
+                        ? 'Automatic decision disabled in request.'
+                        : llmStrategy === 'openai'
+                            ? `Decision derived from OpenAI with ${llmCallCount} call(s).`
+                            : llmStrategy === 'fallback'
+                                ? (decisionResult?.trace?.fallback?.reason || 'Fallback triggered after OpenAI failure.')
+                                : 'Decision resolved locally without calling OpenAI.'
+            };
+
+            const contextState = safeClone(body.context.state);
+            if (contextState && typeof contextState === 'object' && contextState !== null) {
+                const stateRecord = contextState as Record<string, any>;
+                if (!('id' in stateRecord)) {
+                    stateRecord.id = body.context.state_id;
+                }
+            }
+
+            const contextCandidates = Array.isArray(body.context.candidates)
+                ? body.context.candidates.map(candidate => {
+                      const candidateState = safeClone(candidate.state);
+                      if (candidateState && typeof candidateState === 'object' && candidateState !== null) {
+                          const candidateRecord = candidateState as Record<string, any>;
+                          if (!('id' in candidateRecord)) {
+                              candidateRecord.id = candidate.id;
+                          }
+                      }
+
+                      return {
+                          id: candidate.id,
+                          state: candidateState
+                      };
+                  })
+                : undefined;
+
+            const selectedCandidate = contextCandidates?.find(c => c.id === decision?.next_state);
+
             await TransmissionLog.create({
                 user: user?._id,
                 role: "pilot",
@@ -173,6 +244,15 @@ export default defineEventHandler(async (event) => {
                     decision,
                     decisionTrace: decisionResult?.trace,
                     autoDecide: shouldAutoDecide,
+                    llm: llmUsage,
+                    context: {
+                        stateId: body.context.state_id,
+                        state: contextState,
+                        candidates: contextCandidates,
+                        selectedCandidate,
+                        variables: safeClone(body.context.variables),
+                        flags: safeClone(body.context.flags)
+                    }
                 },
             })
         } catch (logError) {
