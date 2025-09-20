@@ -4,7 +4,12 @@
     <div class="pointer-events-none absolute inset-0 -z-20">
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.22),_transparent_65%)]"/>
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_rgba(129,140,248,0.16),_transparent_70%)]"/>
+    </div>
+
+    <div class="pointer-events-none absolute inset-0 radar-layer">
       <div class="radar" aria-hidden="true">
+        <span class="radar__halo"></span>
+        <span class="radar__grid"></span>
         <span class="radar__ring radar__ring--outer"></span>
         <span class="radar__ring radar__ring--inner"></span>
         <span class="radar__sweep"></span>
@@ -524,104 +529,157 @@ onMounted(() => {
   transform: translateY(0);
 }
 
+.radar-layer {
+  z-index: -1;
+}
+
 .radar {
   position: absolute;
-  right: clamp(2rem, 12vw, 9rem);
-  top: clamp(4rem, 20vh, 11rem);
-  width: clamp(18rem, 32vw, 26rem);
+  right: clamp(1.75rem, 10vw, 9rem);
+  top: clamp(3.5rem, 21vh, 11rem);
+  width: clamp(18rem, 34vw, 27rem);
   aspect-ratio: 1;
   border-radius: 9999px;
   overflow: hidden;
   pointer-events: none;
-  background: radial-gradient(circle at center, rgba(56, 189, 248, 0.22) 0%, rgba(12, 74, 110, 0.12) 52%, rgba(8, 25, 53, 0) 70%);
-  mix-blend-mode: screen;
-  opacity: 0.55;
-  filter: drop-shadow(0 32px 90px rgba(56, 189, 248, 0.22));
+  isolation: isolate;
+  background:
+    radial-gradient(circle at center, rgba(5, 12, 30, 0.78) 0%, rgba(4, 10, 24, 0.82) 55%, rgba(5, 12, 30, 0) 85%),
+    radial-gradient(circle at 28% 30%, rgba(14, 165, 233, 0.38) 0%, rgba(14, 165, 233, 0) 45%);
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  box-shadow: inset 0 0 85px rgba(56, 189, 248, 0.28), 0 32px 95px rgba(12, 74, 110, 0.32);
+  filter: drop-shadow(0 40px 110px rgba(56, 189, 248, 0.28));
 }
 
 .radar::after {
   content: '';
   position: absolute;
-  inset: 0;
-  background: radial-gradient(circle, rgba(2, 6, 23, 0) 58%, rgba(8, 47, 73, 0.18) 75%, transparent 84%);
-  z-index: 0;
+  inset: -30%;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgba(12, 74, 110, 0.25) 0%, rgba(8, 25, 53, 0) 60%);
+  opacity: 0.45;
+  mix-blend-mode: screen;
+  filter: blur(18px);
 }
 
+.radar__halo,
+.radar__grid,
 .radar__ring,
 .radar__pulse,
 .radar__sweep,
 .radar__center {
   position: absolute;
   border-radius: 9999px;
+  pointer-events: none;
 }
 
-.radar__ring--outer {
-  inset: 12%;
-  border: 1px solid rgba(34, 211, 238, 0.25);
-  box-shadow: inset 0 0 30px rgba(14, 165, 233, 0.08);
+.radar__halo {
+  inset: -28%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.32) 0%, rgba(2, 6, 23, 0) 68%);
+  mix-blend-mode: screen;
+  filter: blur(12px);
+  animation: radarHalo 8s ease-in-out infinite;
+  opacity: 0.45;
+  transform-origin: center;
+  z-index: 0;
+}
+
+.radar__grid {
+  inset: 0;
+  background:
+    repeating-radial-gradient(circle at center, rgba(165, 243, 252, 0.22) 0px, rgba(165, 243, 252, 0.22) 1px, transparent 1px, transparent 28px),
+    linear-gradient(transparent 49%, rgba(125, 211, 252, 0.32) 50%, transparent 51%),
+    linear-gradient(90deg, transparent 49%, rgba(125, 211, 252, 0.32) 50%, transparent 51%);
+  opacity: 0.4;
+  mix-blend-mode: screen;
+  animation: radarGridRotate 26s linear infinite;
+  transform-origin: center;
   z-index: 1;
 }
 
-.radar__ring--inner {
-  inset: 30%;
-  border: 1px solid rgba(125, 211, 252, 0.25);
+.radar__ring--outer {
+  inset: 11%;
+  border: 1px solid rgba(165, 243, 252, 0.42);
+  box-shadow: inset 0 0 55px rgba(14, 165, 233, 0.2);
+  opacity: 0.85;
   z-index: 2;
 }
 
-.radar__pulse {
-  inset: 24%;
-  border: 1px solid rgba(125, 211, 252, 0.45);
-  opacity: 0;
-  transform: scale(0.45);
-  animation: radarPulse 7s ease-out infinite;
-  will-change: transform, opacity;
-  mix-blend-mode: screen;
+.radar__ring--inner {
+  inset: 31%;
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  box-shadow: 0 0 22px rgba(125, 211, 252, 0.4);
+  opacity: 0.9;
   z-index: 3;
 }
 
+.radar__sweep {
+  inset: -40%;
+  background: conic-gradient(from -45deg, rgba(165, 243, 252, 0.82) 0deg, rgba(56, 189, 248, 0.6) 38deg, rgba(14, 116, 144, 0.2) 68deg, rgba(15, 23, 42, 0) 96deg, transparent 360deg);
+  mix-blend-mode: screen;
+  animation: radarSweep 4.8s linear infinite;
+  transform-origin: center;
+  filter: blur(0.5px);
+  opacity: 0.95;
+  z-index: 4;
+}
+
+.radar__sweep::after {
+  content: '';
+  position: absolute;
+  inset: 32% 46% 32% 4%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.55) 0%, rgba(165, 243, 252, 0) 100%);
+  border-radius: 9999px;
+  filter: blur(2px);
+  opacity: 0.8;
+}
+
+.radar__pulse {
+  inset: 23%;
+  border: 1px solid rgba(165, 243, 252, 0.55);
+  background: radial-gradient(circle, rgba(125, 211, 252, 0.3) 0%, rgba(125, 211, 252, 0.12) 45%, transparent 70%);
+  box-shadow: 0 0 40px rgba(125, 211, 252, 0.35);
+  transform: scale(0.4);
+  opacity: 0;
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+  animation: radarPulse 5.8s ease-out infinite;
+  z-index: 5;
+}
+
 .radar__pulse--2 {
-  animation-delay: 2.3s;
+  animation-delay: 1.9s;
 }
 
 .radar__pulse--3 {
-  animation-delay: 4.6s;
-}
-
-.radar__sweep {
-  inset: -45%;
-  background: conic-gradient(from 0deg, rgba(34, 211, 238, 0.42) 0deg, rgba(56, 189, 248, 0.25) 40deg, rgba(15, 23, 42, 0) 75deg, transparent 100%);
-  animation: radarSweep 5.5s linear infinite;
-  transform-origin: 50% 50%;
-  opacity: 0.65;
-  filter: blur(1px);
-  z-index: 2;
+  animation-delay: 3.8s;
 }
 
 .radar__center {
-  inset: 46%;
-  background: radial-gradient(circle, rgba(165, 243, 252, 0.95) 0%, rgba(56, 189, 248, 0.4) 65%, transparent 100%);
-  box-shadow: 0 0 25px rgba(56, 189, 248, 0.45);
-  animation: radarHeartbeat 2.8s ease-in-out infinite;
+  inset: 45%;
+  background: radial-gradient(circle, rgba(165, 243, 252, 0.95) 0%, rgba(56, 189, 248, 0.45) 60%, transparent 100%);
+  box-shadow: 0 0 25px rgba(165, 243, 252, 0.65), 0 0 55px rgba(56, 189, 248, 0.35);
+  animation: radarHeartbeat 2.4s ease-in-out infinite;
   will-change: transform, opacity;
-  z-index: 4;
+  z-index: 6;
 }
 
 @media (max-width: 1024px) {
   .radar {
     left: 50%;
     right: auto;
-    top: -4rem;
+    top: -2rem;
     transform: translateX(-50%);
-    width: clamp(18rem, 70vw, 24rem);
-    opacity: 0.4;
+    width: clamp(18rem, 72vw, 26rem);
+    opacity: 0.85;
   }
 }
 
 @media (max-width: 640px) {
   .radar {
-    top: -6rem;
-    width: clamp(16rem, 80vw, 22rem);
-    opacity: 0.28;
+    top: -5.5rem;
+    width: clamp(16rem, 86vw, 22rem);
+    opacity: 0.78;
   }
 }
 
@@ -702,14 +760,14 @@ onMounted(() => {
 
 @keyframes radarPulse {
   0% {
-    transform: scale(0.45);
-    opacity: 0.7;
+    transform: scale(0.38);
+    opacity: 0.95;
   }
-  55% {
-    opacity: 0.25;
+  45% {
+    opacity: 0.55;
   }
   100% {
-    transform: scale(1.3);
+    transform: scale(1.6);
     opacity: 0;
   }
 }
@@ -726,11 +784,33 @@ onMounted(() => {
 @keyframes radarHeartbeat {
   0%, 100% {
     transform: scale(1);
-    opacity: 0.85;
+    opacity: 0.9;
+    box-shadow: 0 0 25px rgba(165, 243, 252, 0.6), 0 0 55px rgba(56, 189, 248, 0.35);
+  }
+  45% {
+    transform: scale(1.16);
+    opacity: 1;
+    box-shadow: 0 0 35px rgba(165, 243, 252, 0.75), 0 0 70px rgba(56, 189, 248, 0.45);
+  }
+}
+
+@keyframes radarHalo {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.42;
   }
   50% {
-    transform: scale(1.15);
-    opacity: 1;
+    transform: scale(1.12);
+    opacity: 0.68;
+  }
+}
+
+@keyframes radarGridRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
   }
 }
 
@@ -758,7 +838,9 @@ onMounted(() => {
   .mode-toggle__glow,
   .radar__pulse,
   .radar__sweep,
-  .radar__center {
+  .radar__center,
+  .radar__grid,
+  .radar__halo {
     animation: none !important;
   }
 
@@ -766,12 +848,18 @@ onMounted(() => {
     transition: none;
   }
 
+  .radar__grid,
+  .radar__halo {
+    transform: none !important;
+  }
+
   .radar__pulse {
-    opacity: 0.25;
+    opacity: 0.35;
+    transform: scale(1.05);
   }
 
   .radar__sweep {
-    opacity: 0.4;
+    opacity: 0.55;
   }
 }
 </style>
