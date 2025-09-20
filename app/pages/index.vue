@@ -23,8 +23,8 @@
           <NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink>
         </div>
         <div class="flex items-center gap-2">
-          <NuxtLink to="#cta" class="btn btn-primary text-sm">
-            Waitlist
+          <NuxtLink to="/login" class="btn btn-primary text-sm">
+            <v-icon icon="mdi-login" size="18"/> Login
           </NuxtLink>
           <NuxtLink
               to="https://github.com/FaktorxMensch/OpenSquawk"
