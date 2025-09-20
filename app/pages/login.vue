@@ -1,26 +1,32 @@
 <template>
-  <div class="relative flex min-h-screen max-h-screen flex-col overflow-hidden bg-gradient-to-br from-[#050713] via-[#080d1f] to-[#010208] text-white">
+  <div
+      class="relative flex min-h-screen max-h-screen flex-col overflow-hidden bg-gradient-to-br from-[#050713] via-[#080d1f] to-[#010208] text-white">
     <div class="pointer-events-none absolute inset-0 -z-20">
-      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.22),_transparent_65%)]" />
-      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_rgba(129,140,248,0.16),_transparent_70%)]" />
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.22),_transparent_65%)]"/>
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_rgba(129,140,248,0.16),_transparent_70%)]"/>
     </div>
 
     <div class="pointer-events-none absolute inset-0 -z-10 opacity-70">
-      <div class="orb orb-one" />
-      <div class="orb orb-two" />
-      <div class="orb orb-three" />
+      <div class="orb orb-one"/>
+      <div class="orb orb-two"/>
+      <div class="orb orb-three"/>
     </div>
 
-    <div class="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden px-5 py-8 sm:px-8 lg:flex-row lg:items-stretch lg:py-12 lg:pl-0 min-h-0">
-      <div class="relative hidden h-full min-h-0 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:flex lg:w-[48%]">
-        <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway" class="absolute inset-0 h-full w-full object-cover" />
-        <div class="absolute inset-0 bg-gradient-to-t from-[#050816]/95 via-[#050816]/40 to-transparent" />
+    <div
+        class="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden px-5 py-8 sm:px-8 lg:flex-row lg:items-stretch lg:py-12 lg:pl-0 min-h-0">
+      <div
+          class="relative hidden h-full min-h-0 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:flex lg:w-[48%]">
+        <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway"
+             class="absolute inset-0 h-full w-full object-cover"/>
+        <div class="absolute inset-0 bg-gradient-to-t from-[#050816]/95 via-[#050816]/40 to-transparent"/>
         <div class="relative z-10 flex h-full flex-col justify-between p-10">
           <div>
-            <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.3em] text-white/70">Alpha Access</span>
+            <span
+                class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.3em] text-white/70">Alpha Access</span>
             <h1 class="mt-6 text-3xl font-semibold sm:text-4xl">Welcome back to the cockpit</h1>
             <p class="mt-4 max-w-md text-white/70">
-              OpenSquawk delivers lightning-fast market audio with curated alerts and transcripts. Sign in to rejoin the flow, or use your invitation code to start listening live.
+              OpenSquawk delivers lightning-fast market audio with curated alerts and transcripts. Sign in to rejoin the
+              flow, or use your invitation code to start listening live.
             </p>
           </div>
           <div class="space-y-4 text-sm text-white/70">
@@ -41,19 +47,24 @@
       </div>
 
       <div class="flex w-full flex-1 flex-col min-h-0 lg:pl-8">
-        <div class="flex flex-1 flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#0b1020]/85 shadow-2xl backdrop-blur">
+        <div
+            class="flex flex-1 flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#0b1020]/85 shadow-2xl backdrop-blur">
           <div class="flex-1 overflow-y-auto px-6 pt-6 pb-10 md:px-8 lg:pr-4">
-            <div class="floating-card relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:hidden">
-              <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway" class="h-56 w-full object-cover" />
-              <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent p-6">
+            <div
+                class="floating-card relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:hidden">
+              <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway" class="h-56 w-full object-cover"/>
+              <div
+                  class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent p-6">
                 <p class="text-xs uppercase tracking-[0.3em] text-white/50">Alpha Access</p>
                 <p class="mt-2 text-lg font-semibold">Experience the cockpit from anywhere</p>
               </div>
             </div>
 
             <div class="flex items-center justify-between gap-3 text-sm text-white/60">
-              <NuxtLink to="/" class="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 font-medium text-white/70 transition hover:bg-white/10 hover:text-white">
-                <v-icon icon="mdi-arrow-left" size="18" /> Back to landing page
+              <NuxtLink to="/"
+                        class="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 font-medium text-white/70 transition hover:bg-white/10 hover:text-white">
+                <v-icon icon="mdi-arrow-left" size="18"/>
+                Back to landing page
               </NuxtLink>
               <span class="hidden text-xs uppercase tracking-[0.3em] text-white/30 sm:block">Restricted Area</span>
             </div>
@@ -62,13 +73,14 @@
               <p class="text-[11px] uppercase tracking-[0.4em] text-cyan-300/80">OpenSquawk Members</p>
               <h2 class="text-3xl font-semibold sm:text-4xl">Access your account</h2>
               <p class="max-w-xl text-white/60">
-                Use your credentials to sign in or redeem an invitation code. After onboarding, you can invite colleagues once you have been active for two weeks.
+                Use your credentials to sign in or redeem an invitation code. After onboarding, you can invite
+                colleagues once you have been active for two weeks.
               </p>
             </div>
 
             <div class="mt-6">
               <div class="mode-toggle" :data-mode="mode" role="group" aria-label="Switch between login and register">
-                <span class="mode-toggle__glow" aria-hidden="true" />
+                <span class="mode-toggle__glow" aria-hidden="true"/>
                 <button
                     type="button"
                     class="mode-toggle__btn"
@@ -77,7 +89,7 @@
                     @click="mode = 'login'"
                 >
                   <span class="mode-toggle__btn-inner">
-                    <v-icon icon="mdi-login" size="18" class="text-current" />
+                    <v-icon icon="mdi-login" size="18" class="text-current"/>
                     <span>Login</span>
                   </span>
                 </button>
@@ -89,7 +101,7 @@
                     @click="mode = 'register'"
                 >
                   <span class="mode-toggle__btn-inner">
-                    <v-icon icon="mdi-account-plus-outline" size="18" class="text-current" />
+                    <v-icon icon="mdi-account-plus-outline" size="18" class="text-current"/>
                     <span>Register</span>
                   </span>
                 </button>
@@ -119,7 +131,8 @@
                   />
                 </div>
                 <div class="text-right text-sm">
-                  <NuxtLink to="/forgot-password" class="text-cyan-300 underline decoration-dotted underline-offset-4 transition hover:text-cyan-100">
+                  <NuxtLink to="/forgot-password"
+                            class="text-cyan-300 underline decoration-dotted underline-offset-4 transition hover:text-cyan-100">
                     Forgot your password?
                   </NuxtLink>
                 </div>
@@ -127,7 +140,7 @@
 
               <button type="submit" class="btn btn-primary w-full" :disabled="loginLoading">
                 <span v-if="loginLoading" class="relative z-10 flex items-center justify-center gap-2">
-                  <v-progress-circular indeterminate size="16" width="2" color="white" />
+                  <v-progress-circular indeterminate size="16" width="2" color="white"/>
                   Signing you in…
                 </span>
                 <span v-else class="relative z-10">Login</span>
@@ -168,7 +181,8 @@
                       autocomplete="new-password"
                       class="field-input"
                   />
-                  <p class="mt-2 text-xs text-white/50">At least 8 characters, ideally include a number and special character.</p>
+                  <p class="mt-2 text-xs text-white/50">At least 8 characters, ideally include a number and special
+                    character.</p>
                 </div>
                 <div>
                   <div class="flex items-center justify-between">
@@ -189,26 +203,31 @@
                       class="field-input tracking-[0.6em] uppercase"
                       placeholder="e.g. ABCD1234"
                   />
-                  <p v-if="invitationStatus === 'valid'" class="mt-2 text-xs font-medium text-green-300">Code is valid.</p>
-                  <p v-else-if="invitationStatus === 'invalid'" class="mt-2 text-xs font-medium text-red-300">This invitation code is invalid or already used.</p>
-                  <p v-else-if="invitationStatus === 'checking'" class="mt-2 text-xs font-medium text-white/60">Checking invitation code…</p>
+                  <p v-if="invitationStatus === 'valid'" class="mt-2 text-xs font-medium text-green-300">Code is
+                    valid.</p>
+                  <p v-else-if="invitationStatus === 'invalid'" class="mt-2 text-xs font-medium text-red-300">This
+                    invitation code is invalid or already used.</p>
+                  <p v-else-if="invitationStatus === 'checking'" class="mt-2 text-xs font-medium text-white/60">Checking
+                    invitation code…</p>
                 </div>
               </div>
 
               <div class="space-y-3 text-xs text-white/60">
                 <label class="flex items-start gap-3">
-                  <input type="checkbox" v-model="registerForm.acceptTerms" class="mt-1" required />
-                  <span>I accept the <NuxtLink to="/agb" class="text-cyan-300 underline decoration-dotted underline-offset-4">Terms of Service</NuxtLink>.</span>
+                  <input type="checkbox" v-model="registerForm.acceptTerms" class="mt-1" required/>
+                  <span>I accept the <NuxtLink to="/agb"
+                                               class="text-cyan-300 underline decoration-dotted underline-offset-4">Terms of Service</NuxtLink>.</span>
                 </label>
                 <label class="flex items-start gap-3">
-                  <input type="checkbox" v-model="registerForm.acceptPrivacy" class="mt-1" required />
-                  <span>I have read the <NuxtLink to="/datenschutz" class="text-cyan-300 underline decoration-dotted underline-offset-4">privacy policy</NuxtLink> and consent to data processing.</span>
+                  <input type="checkbox" v-model="registerForm.acceptPrivacy" class="mt-1" required/>
+                  <span>I have read the <NuxtLink to="/datenschutz"
+                                                  class="text-cyan-300 underline decoration-dotted underline-offset-4">privacy policy</NuxtLink> and consent to data processing.</span>
                 </label>
               </div>
 
               <button type="submit" class="btn btn-primary w-full" :disabled="registerLoading || !canRegister">
                 <span v-if="registerLoading" class="relative z-10 flex items-center justify-center gap-2">
-                  <v-progress-circular indeterminate size="16" width="2" color="white" />
+                  <v-progress-circular indeterminate size="16" width="2" color="white"/>
                   Registering…
                 </span>
                 <span v-else class="relative z-10">Create account</span>
@@ -238,7 +257,8 @@
                 <ol class="space-y-4 text-sm text-white/70">
                   <li class="flex gap-4">
                     <span class="step-badge">1</span>
-                    <span>Join the <NuxtLink to="/#cta" class="text-cyan-300 underline decoration-dotted underline-offset-4">waitlist</NuxtLink>.</span>
+                    <span>Join the <NuxtLink to="/#cta"
+                                             class="text-cyan-300 underline decoration-dotted underline-offset-4">waitlist</NuxtLink>.</span>
                   </li>
                   <li class="flex gap-4">
                     <span class="step-badge">2</span>
@@ -250,7 +270,8 @@
                   </li>
                 </ol>
                 <div class="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-5 text-sm text-cyan-100">
-                  Tip: After 14 days of active use you can generate up to two invitation codes yourself and share them with friends.
+                  Tip: After 14 days of active use you can generate up to two invitation codes yourself and share them
+                  with friends.
                 </div>
               </div>
             </Transition>
@@ -262,11 +283,11 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed, watch, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useHead } from '#imports'
-import { useAuthStore } from '~/stores/auth'
-import { useApi } from '~/composables/useApi'
+import {reactive, ref, computed, watch, onMounted} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {useHead} from '#imports'
+import {useAuthStore} from '~/stores/auth'
+import {useApi} from '~/composables/useApi'
 
 type Mode = 'login' | 'register'
 
@@ -317,14 +338,14 @@ const registerError = ref('')
 const invitationStatus = ref<'unknown' | 'checking' | 'valid' | 'invalid'>('unknown')
 
 const canRegister = computed(() =>
-  Boolean(
-    registerForm.email &&
-    registerForm.password &&
-    registerForm.invitationCode &&
-    registerForm.acceptTerms &&
-    registerForm.acceptPrivacy &&
-    invitationStatus.value !== 'invalid'
-  )
+    Boolean(
+        registerForm.email &&
+        registerForm.password &&
+        registerForm.invitationCode &&
+        registerForm.acceptTerms &&
+        registerForm.acceptPrivacy &&
+        invitationStatus.value !== 'invalid'
+    )
 )
 
 async function submitLogin() {
@@ -332,7 +353,7 @@ async function submitLogin() {
   loginLoading.value = true
   loginError.value = ''
   try {
-    await auth.login({ ...loginForm })
+    await auth.login({...loginForm})
     await auth.fetchUser()
     const target = redirectTarget.value || '/learn'
     await router.replace(target)
@@ -351,7 +372,7 @@ async function checkInvitationCode() {
   }
   invitationStatus.value = 'checking'
   try {
-    const res: any = await api.get(`/api/service/invitations/${registerForm.invitationCode.trim()}`, { auth: false })
+    const res: any = await api.get(`/api/service/invitations/${registerForm.invitationCode.trim()}`, {auth: false})
     invitationStatus.value = res.valid ? 'valid' : 'invalid'
   } catch {
     invitationStatus.value = 'invalid'
@@ -360,15 +381,15 @@ async function checkInvitationCode() {
 
 let codeCheckTimeout: ReturnType<typeof setTimeout> | null = null
 watch(
-  () => registerForm.invitationCode,
-  (code) => {
-    invitationStatus.value = code ? 'checking' : 'unknown'
-    if (codeCheckTimeout) clearTimeout(codeCheckTimeout)
-    if (!code) return
-    codeCheckTimeout = setTimeout(() => {
-      checkInvitationCode()
-    }, 400)
-  }
+    () => registerForm.invitationCode,
+    (code) => {
+      invitationStatus.value = code ? 'checking' : 'unknown'
+      if (codeCheckTimeout) clearTimeout(codeCheckTimeout)
+      if (!code) return
+      codeCheckTimeout = setTimeout(() => {
+        checkInvitationCode()
+      }, 400)
+    }
 )
 
 async function submitRegister() {
@@ -398,7 +419,7 @@ async function submitRegister() {
 useHead({
   title: 'OpenSquawk – Login & invite',
   meta: [
-    { name: 'robots', content: 'noindex,nofollow' },
+    {name: 'robots', content: 'noindex,nofollow'},
   ],
 })
 
@@ -449,7 +470,7 @@ onMounted(() => {
 .mode-toggle__glow {
   @apply pointer-events-none absolute inset-y-1 left-1 rounded-full shadow-lg shadow-cyan-500/40;
   width: calc(50% - 0.25rem);
-  background: linear-gradient(120deg, rgba(103, 232, 249, 0.95) 0%, rgba(14, 165, 233, 0.95) 45%, rgba(129, 140, 248, 0.95) 100%);
+  background: rgb(103 232 249 / var(--tw-bg-opacity, 1));
   filter: drop-shadow(0 10px 25px rgba(56, 189, 248, 0.35));
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease;
 }
@@ -471,7 +492,6 @@ onMounted(() => {
 .mode-toggle__btn[data-active='true'] {
   color: #020617;
   text-shadow: 0 8px 18px rgba(15, 118, 230, 0.45);
-  transform: translateY(-1px);
 }
 
 .mode-toggle__btn[data-active='true'] .mode-toggle__btn-inner {
@@ -481,7 +501,6 @@ onMounted(() => {
 .mode-toggle__btn:not([data-active='true']):hover,
 .mode-toggle__btn:not([data-active='true']):focus-visible {
   color: rgba(255, 255, 255, 0.88);
-  transform: translateY(-1px);
 }
 
 .mode-toggle__btn:focus-visible {
