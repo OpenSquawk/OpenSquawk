@@ -1,7 +1,8 @@
 <template>
   <div class="bg-[#0b1020] text-white antialiased selection:bg-cyan-400/30">
     <!-- NAV -->
-    <header class="sticky top-0 z-50 bg-[#0b1020]/70 backdrop-blur border-b border-white/10" data-aos="fade-down">
+    <header class="fixed left-0 right-0 top-0 z-50 bg-[#0b1020]/70 backdrop-blur border-b border-white/10"
+            data-aos="fade-down">
       <nav class="container-outer flex items-center justify-between py-3">
         <NuxtLink to="#" class="flex items-center gap-2 font-semibold tracking-tight">
           <v-icon icon="mdi-radar" size="28" class="text-cyan-400"/>
@@ -20,22 +21,26 @@
         <div class="flex items-center gap-2 sm:gap-3">
           <NuxtLink
               to="/login"
-              class="btn btn-primary btn-compact whitespace-nowrap"
+              class="btn btn-primary whitespace-nowrap btn-compact"
               aria-label="Login"
           >
             <v-icon icon="mdi-login" size="18"/>
-            <span class="hidden lg:inline">Login</span>
+            <span class="hidden sm:inline">Login</span>
           </NuxtLink>
+          <span
+              class="hidden lg:inline-block text-sm text-white/70"
+              title="OpenSquawk is open-source on GitHub"
+          >
           <NuxtLink
               :to="GITHUB_URL"
               external
               target="_blank"
               rel="noopener"
-              class="btn btn-ghost btn-compact hidden lg:inline-flex"
+              class="btn btn-ghost btn-compact"
           >
             <v-icon icon="mdi-github"/>
             GitHub
-          </NuxtLink>
+          </NuxtLink></span>
           <button
               type="button"
               class="mobile-toggle lg:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1020]"
@@ -129,7 +134,8 @@
             </NuxtLink>
           </div>
           <div class="mt-8 sm:mt-10 max-w-xl" data-aos="fade-up" data-aos-delay="120">
-            <form class="rounded-2xl border border-white/10 bg-black/30 p-4 sm:p-5 space-y-4" @submit.prevent="submitUpdates">
+            <form class="rounded-2xl border border-white/10 bg-black/30 p-4 sm:p-5 space-y-4"
+                  @submit.prevent="submitUpdates">
               <div class="space-y-1">
                 <h3 class="text-lg font-semibold">
                   Hear about new features first
@@ -199,7 +205,8 @@
     <!-- SOCIAL PROOF / LOGOS -->
     <section class="py-8 sm:py-10 border-t border-white/10 bg-[#0a0f1c]" data-aos="fade-up">
       <div class="container-outer">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 items-center opacity-80 text-xs sm:text-sm md:text-base">
+        <div
+            class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 items-center opacity-80 text-xs sm:text-sm md:text-base">
           <div class="flex items-center justify-center gap-2 text-white/60">
             <v-icon icon="mdi-test-tube" class="opacity-70"/>
             Alpha status
@@ -228,7 +235,8 @@
             Vision & focus
           </h2>
           <p class="mt-3 text-white/80">
-            Open-source, low-cost AI ATC for flight simulation. Community-driven features, transparent costs and the freedom to self-host or use hosted options later.
+            Open-source, low-cost AI ATC for flight simulation. Community-driven features, transparent costs and the
+            freedom to self-host or use hosted options later.
           </p>
         </div>
 
@@ -243,7 +251,8 @@
               </h3>
             </div>
             <p class="mt-3 text-white/80">
-              We are building an affordable core for radio analysis, decision logic and voices that anyone can inspect and extend.
+              We are building an affordable core for radio analysis, decision logic and voices that anyone can inspect
+              and extend.
             </p>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="100">
@@ -256,7 +265,8 @@
               </h3>
             </div>
             <p class="mt-3 text-white/80">
-              Roadmap votes and community proposals steer our priorities – training, tools and integrations grow with you.
+              Roadmap votes and community proposals steer our priorities – training, tools and integrations grow with
+              you.
             </p>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="200">
@@ -269,7 +279,8 @@
               </h3>
             </div>
             <p class="mt-3 text-white/80">
-              Beta goal: spin up your own instance via Docker within minutes or pick fairly priced hosting plans – open, transparent, affordable.
+              Beta goal: spin up your own instance via Docker within minutes or pick fairly priced hosting plans – open,
+              transparent, affordable.
             </p>
           </div>
         </div>
@@ -280,7 +291,8 @@
               Simulator support (plan)
             </h3>
             <p class="mt-3 text-white/80">
-              We focus on Microsoft Flight Simulator first, work on the X-Plane concept in parallel and gather feedback for additional platforms.
+              We focus on Microsoft Flight Simulator first, work on the X-Plane concept in parallel and gather feedback
+              for additional platforms.
             </p>
             <ul class="mt-3 space-y-2 text-white/70 text-sm list-disc list-inside">
               <li>MSFS alpha: local connector + radio workflows in testing
@@ -296,7 +308,8 @@
               Alpha prototype
             </h3>
             <p class="mt-3 text-white/80">
-              The current build runs locally (Node/Nuxt + services). You will need basic terminal skills and a taste for experimentation.
+              The current build runs locally (Node/Nuxt + services). You will need basic terminal skills and a taste for
+              experimentation.
             </p>
             <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div class="glass rounded-xl p-3 flex items-center gap-2">
@@ -327,7 +340,8 @@
         <div class="max-w-2xl" data-aos="fade-up">
           <h2 class="text-3xl md:text-4xl font-semibold">News & Updates</h2>
           <p class="mt-3 text-white/80">
-            Content-driven posts keep you in the loop. All articles are stored in Markdown – new stories show up here automatically.
+            Content-driven posts keep you in the loop. All articles are stored in Markdown – new stories show up here
+            automatically.
           </p>
         </div>
         <div v-if="latestNews.length" class="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -372,7 +386,8 @@
             Roadmap & community voting
           </h2>
           <p class="mt-3 text-white/80">
-            Vote on what should take priority next. We combine votes with timestamps to plan features for training, immersion and infrastructure.
+            Vote on what should take priority next. We combine votes with timestamps to plan features for training,
+            immersion and infrastructure.
           </p>
           <div
               class="mt-4 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
@@ -463,7 +478,8 @@
                   Save your selection
                 </h4>
                 <p class="text-sm text-white/70">
-                  We store every vote individually with a timestamp, so we see what matters right now. Adjust several cards and submit everything together.
+                  We store every vote individually with a timestamp, so we see what matters right now. Adjust several
+                  cards and submit everything together.
                 </p>
               </div>
               <div class="flex w-full flex-col gap-2 md:w-auto">
@@ -537,7 +553,7 @@
                 <input type="checkbox" v-model="roadmapSuggestionForm.consentPrivacy" class="mt-1" required/>
                 <span>
                   I have read the <NuxtLink to="/datenschutz"
-                                           class="text-cyan-300 underline">privacy policy</NuxtLink> and consent to the processing of my suggestion.
+                                            class="text-cyan-300 underline">privacy policy</NuxtLink> and consent to the processing of my suggestion.
                 </span>
               </label>
               <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -575,15 +591,20 @@
               Learning path (in progress)
             </h2>
             <p class="mt-3 text-white/80">
-              Together with the community we structure training modules – from the first radio call to networks like VATSIM. Feedback from tests flows straight into every chapter.
+              Together with the community we structure training modules – from the first radio call to networks like
+              VATSIM. Feedback from tests flows straight into every chapter.
             </p>
             <ol class="mt-5 space-y-3 text-white/80">
-              <li class="flex gap-3"><span class="chip">1</span><span><b>Basics</b> (concept): phonetic alphabet, numbers, standard readbacks.</span></li>
-              <li class="flex gap-3"><span class="chip">2</span><span><b>Ground</b> (alpha): taxi flows, hotspots, holding short.</span></li>
-              <li class="flex gap-3"><span class="chip">3</span><span><b>Departure</b> (planned): SID handling, altitude/speed calls.</span></li>
+              <li class="flex gap-3"><span class="chip">1</span><span><b>Basics</b> (concept): phonetic alphabet, numbers, standard readbacks.</span>
+              </li>
+              <li class="flex gap-3"><span class="chip">2</span><span><b>Ground</b> (alpha): taxi flows, hotspots, holding short.</span>
+              </li>
+              <li class="flex gap-3"><span class="chip">3</span><span><b>Departure</b> (planned): SID handling, altitude/speed calls.</span>
+              </li>
               <li class="flex gap-3"><span class="chip">4</span><span><b>Arrival</b> (planned): STARs, vectors, approach briefing.</span>
               </li>
-              <li class="flex gap-3"><span class="chip">5</span><span><b>VATSIM</b> (community beta): checklists, etiquette, live practice.</span></li>
+              <li class="flex gap-3"><span class="chip">5</span><span><b>VATSIM</b> (community beta): checklists, etiquette, live practice.</span>
+              </li>
             </ol>
             <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
               <NuxtLink to="#roadmap" class="btn btn-primary">
@@ -678,7 +699,8 @@
               <div class="flex flex-col flex-1">
                 <h3 class="text-xl font-semibold">Hosted – learning mode</h3>
                 <p class="mt-2 text-white/80 flex-1">
-                  We cover the base costs so you can train with all fundamental features. For live ATC you provide your own OpenAI API key – we only use it for the background radio requests.
+                  We cover the base costs so you can train with all fundamental features. For live ATC you provide your
+                  own OpenAI API key – we only use it for the background radio requests.
                 </p>
                 <div class="mt-5 text-3xl font-semibold">
                   0€<span class="text-white/60 text-sm font-normal"> / beta</span>
@@ -720,7 +742,8 @@
                   Hosted – community server
                 </h3>
                 <p class="mt-2 text-white/80 flex-1">
-                  For virtual airlines and groups that want to practise together. We are testing dedicated environments – currently also €0 and powered by your own API key.
+                  For virtual airlines and groups that want to practise together. We are testing dedicated environments
+                  – currently also €0 and powered by your own API key.
                 </p>
                 <div class="mt-5 text-3xl font-semibold">
                   0€<span class="text-white/60 text-sm font-normal"> / beta</span>
@@ -755,17 +778,17 @@
           </div>
         </div>
 
-          <div class="mt-8 text-sm text-white/70 space-y-2" data-aos="fade-up" data-aos-delay="300">
-            <p>
-              We are only allowed to connect to VATSIM as long as we do not make money with it. That is why live ATC
-              currently requires your own OpenAI API key, which we use solely for the related requests.
-            </p>
-            <p>
-              We are actively looking for a simple plug-and-play option – as soon as we find a viable approach, we will
-              roll it out.
-            </p>
-          </div>
+        <div class="mt-8 text-sm text-white/70 space-y-2" data-aos="fade-up" data-aos-delay="300">
+          <p>
+            We are only allowed to connect to VATSIM as long as we do not make money with it. That is why live ATC
+            currently requires your own OpenAI API key, which we use solely for the related requests.
+          </p>
+          <p>
+            We are actively looking for a simple plug-and-play option – as soon as we find a viable approach, we will
+            roll it out.
+          </p>
         </div>
+      </div>
     </section>
 
     <!-- OPEN SOURCE -->
@@ -877,7 +900,8 @@ POST /api/route/taxi
             </h2>
             <p class="mt-3 text-white/80">
               Issues with the label <code
-                class="text-xs bg-white/10 px-1.5 py-0.5 rounded">help-wanted</code> highlight tasks where we need support. Everything happens transparently on GitHub.
+                class="text-xs bg-white/10 px-1.5 py-0.5 rounded">help-wanted</code> highlight tasks where we need
+              support. Everything happens transparently on GitHub.
             </p>
             <ul class="mt-5 space-y-3 text-white/80 text-sm">
               <li class="flex gap-3">
@@ -895,7 +919,8 @@ POST /api/route/taxi
             </ul>
             <p class="mt-5 text-sm text-white/70">
               Email us at <a href="mailto:info@opensquawk.de"
-                                                                           class="text-cyan-300 underline">info@opensquawk.de</a> or leave a comment directly on the issue.
+                             class="text-cyan-300 underline">info@opensquawk.de</a> or leave a comment directly on the
+              issue.
             </p>
             <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
               <NuxtLink to="#roadmap" class="btn btn-primary">
@@ -935,7 +960,7 @@ POST /api/route/taxi
               <p class="mt-2 text-white/80">
                 Sign up to secure your spot for the alpha build. Right now (including internal tests) there are
                 <span class="font-semibold text-cyan-300">{{ waitlistCountDisplay }}</span>
-                 interested pilots waiting for the next invite drop.
+                interested pilots waiting for the next invite drop.
               </p>
             </div>
             <div>
@@ -997,7 +1022,7 @@ POST /api/route/taxi
                 <input type="checkbox" v-model="waitlistForm.consentPrivacy" class="mt-1" required/>
                 <span>
                   I have read the <NuxtLink to="/datenschutz"
-                                           class="text-cyan-300 underline">privacy policy</NuxtLink> and consent to storing my details for contact purposes.
+                                            class="text-cyan-300 underline">privacy policy</NuxtLink> and consent to storing my details for contact purposes.
                 </span>
               </label>
             </div>
@@ -1055,7 +1080,8 @@ POST /api/route/taxi
               Can I self-host?
             </h3>
             <p class="mt-2 text-white/80">
-              Alpha: Docker Compose + Node services are available. Docs and installers are in progress. Hosting options will follow.
+              Alpha: Docker Compose + Node services are available. Docs and installers are in progress. Hosting options
+              will follow.
             </p>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="300">
@@ -1063,7 +1089,8 @@ POST /api/route/taxi
               How affordable is “Hosted – Basic”?
             </h3>
             <p class="mt-2 text-white/80">
-              Current target is ~€4–5 per month, final pricing after cost benchmarking. We will share the results transparently on the blog.
+              Current target is ~€4–5 per month, final pricing after cost benchmarking. We will share the results
+              transparently on the blog.
             </p>
           </div>
         </div>
@@ -1080,7 +1107,8 @@ POST /api/route/taxi
               <span class="text-lg font-semibold">OpenSquawk</span>
             </div>
             <p class="mx-auto max-w-2xl text-sm text-white/70 sm:mx-0 lg:flex-1 lg:max-w-3xl">
-              Open-source, low-cost AI ATC for flight simulators. Alpha prototype available – basic coding skills recommended.
+              Open-source, low-cost AI ATC for flight simulators. Alpha prototype available – basic coding skills
+              recommended.
             </p>
             <div class="footer-brand-actions lg:flex-none">
               <NuxtLink
@@ -1626,10 +1654,16 @@ useHead(() => ({
   htmlAttrs: {lang: 'en'},
   title: 'OpenSquawk – Open-source, low-cost AI ATC for flight simulation',
   meta: [
-    {name: 'description', content: 'We are building OpenSquawk: open-source, low-cost AI ATC for flight sim pilots. Community roadmap, self-host today, hosted options in planning.'},
+    {
+      name: 'description',
+      content: 'We are building OpenSquawk: open-source, low-cost AI ATC for flight sim pilots. Community roadmap, self-host today, hosted options in planning.'
+    },
     {name: 'theme-color', content: '#0ea5e9'},
     {property: 'og:title', content: 'OpenSquawk – Open-source, low-cost AI ATC'},
-    {property: 'og:description', content: 'Alpha prototype for sim pilots. Community-driven features, self-host today, hosted options tomorrow.'},
+    {
+      property: 'og:description',
+      content: 'Alpha prototype for sim pilots. Community-driven features, self-host today, hosted options tomorrow.'
+    },
     {property: 'og:type', content: 'website'},
     {property: 'og:image', content: 'https://opensquawk.example.com/cover.png'},
     {name: 'twitter:card', content: 'summary_large_image'},
