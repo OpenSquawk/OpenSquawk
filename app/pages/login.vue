@@ -1,6 +1,15 @@
 <template>
   <div
       class="relative flex min-h-screen max-h-screen flex-col overflow-hidden bg-gradient-to-br from-[#050713] via-[#080d1f] to-[#010208] text-white">
+    <div class="pointer-events-none absolute inset-0 -z-30 flex items-center justify-center overflow-hidden">
+      <div class="radar-backdrop">
+        <div class="radar-backdrop__ring"/>
+        <div class="radar-backdrop__ring radar-backdrop__ring--delay"/>
+        <div class="radar-backdrop__ring radar-backdrop__ring--delay-2"/>
+        <div class="radar-backdrop__beam"/>
+      </div>
+    </div>
+
     <div class="pointer-events-none absolute inset-0 -z-20">
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.22),_transparent_65%)]"/>
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_rgba(129,140,248,0.16),_transparent_70%)]"/>
@@ -513,6 +522,58 @@ onMounted(() => {
   transform: translateY(0);
 }
 
+.radar-backdrop {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: min(120vmax, 1600px);
+  max-width: none;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: radial-gradient(circle at center, rgba(56, 189, 248, 0.16) 0%, rgba(59, 130, 246, 0.08) 42%, rgba(8, 11, 21, 0) 70%);
+  filter: drop-shadow(0 0 80px rgba(56, 189, 248, 0.35));
+  opacity: 0.55;
+}
+
+.radar-backdrop__beam,
+.radar-backdrop__ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 9999px;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.radar-backdrop__beam {
+  width: 100%;
+  height: 100%;
+  background: conic-gradient(from 90deg, rgba(14, 165, 233, 0) 0deg, rgba(14, 165, 233, 0.38) 40deg, rgba(14, 165, 233, 0) 75deg);
+  mix-blend-mode: screen;
+  opacity: 0.65;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  animation: radarRotate 16s linear infinite;
+}
+
+.radar-backdrop__ring {
+  width: 62%;
+  height: 62%;
+  border: 1px solid rgba(125, 211, 252, 0.45);
+  box-shadow: 0 0 40px rgba(14, 165, 233, 0.25);
+  transform: translate(-50%, -50%) scale(0.28);
+  transform-origin: center;
+  opacity: 0;
+  animation: radarPulse 10s ease-out infinite;
+}
+
+.radar-backdrop__ring--delay {
+  animation-delay: 3s;
+}
+
+.radar-backdrop__ring--delay-2 {
+  animation-delay: 6s;
+}
+
 .orb {
   @apply absolute rounded-full blur-3xl;
   animation: orbFloat 16s ease-in-out infinite;
@@ -606,15 +667,52 @@ onMounted(() => {
   }
 }
 
+@keyframes radarPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.55;
+  }
+  65% {
+    opacity: 0.25;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.05);
+    opacity: 0;
+  }
+}
+
+@keyframes radarRotate {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .orb,
   .floating-card,
-  .mode-toggle__glow {
+  .mode-toggle__glow,
+  .radar-backdrop__beam,
+  .radar-backdrop__ring {
     animation: none !important;
   }
 
   .mode-toggle__glow {
     transition: none;
+  }
+
+  .radar-backdrop__beam {
+    opacity: 0.35;
+  }
+
+  .radar-backdrop__ring {
+    opacity: 0.2;
+    transform: translate(-50%, -50%) scale(0.75);
   }
 }
 </style>
