@@ -20,6 +20,9 @@ export default defineEventHandler(async () => {
     try {
         const response = await client.chat.completions.create({
             model,
+            reasoning_effort: 'low',
+            n: 1,
+            verbosity: 'low',
             messages: [
                 { role: 'system', content: SYSTEM_PROMPT },
                 { role: 'user', content: `${READBACK}` }
