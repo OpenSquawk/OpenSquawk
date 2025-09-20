@@ -168,86 +168,6 @@
               >
                 {{ flowsError }}
               </v-alert>
-              <div class="flex items-center gap-3 overflow-hidden">
-                <div class="flex shrink-0 items-center gap-2 text-xs uppercase tracking-widest text-white/60">
-                  <span>Nodes</span>
-                  <v-chip v-if="flowDetail" size="x-small" color="cyan" variant="flat">
-                    {{ nodeSelectorItems.length }}
-                  </v-chip>
-                </div>
-                <div class="flex-1 overflow-hidden">
-                  <v-slide-group
-                    v-if="flowDetail"
-                    v-model="selectedNodeId"
-                    show-arrows
-                    center-active
-                    class="max-w-full"
-                  >
-                    <v-slide-group-item
-                      v-for="node in nodeSelectorItems"
-                      :key="node.id"
-                      :value="node.id"
-                      v-slot="{ isSelected, toggle }"
-                    >
-                      <v-tooltip
-                        :text="`${node.id} — ${node.title || 'Ohne Titel'}`"
-                        location="bottom"
-                      >
-                        <template #activator="{ props }">
-                          <span class="inline-flex">
-                            <v-badge
-                              v-if="node.autopCount > 0"
-                              :content="node.autopCount"
-                              color="amber"
-                              floating
-                              offset-x="8"
-                              offset-y="8"
-                              class="text-[10px]"
-                            >
-                              <v-btn
-                                v-bind="props"
-                                icon
-                                variant="text"
-                                :class="[
-                                  'h-9 w-9 rounded-xl transition-all',
-                                  isSelected
-                                    ? 'bg-cyan-500/20 text-cyan-100'
-                                    : 'text-white/70 hover:text-white',
-                                ]"
-                                @click="toggle(); selectNode(node.id)"
-                              >
-                                <v-icon
-                                  :icon="node.icon || roleIcons[node.role] || 'mdi-shape-outline'"
-                                  :color="isSelected ? roleColors[node.role] || 'cyan' : undefined"
-                                />
-                              </v-btn>
-                            </v-badge>
-                            <v-btn
-                              v-else
-                              v-bind="props"
-                              icon
-                              variant="text"
-                              :class="[
-                                'h-9 w-9 rounded-xl transition-all',
-                                isSelected
-                                  ? 'bg-cyan-500/20 text-cyan-100'
-                                  : 'text-white/70 hover:text-white',
-                              ]"
-                              @click="toggle(); selectNode(node.id)"
-                            >
-                              <v-icon
-                                :icon="node.icon || roleIcons[node.role] || 'mdi-shape-outline'"
-                                :color="isSelected ? roleColors[node.role] || 'cyan' : undefined"
-                              />
-                            </v-btn>
-                          </span>
-                        </template>
-                      </v-tooltip>
-                    </v-slide-group-item>
-                  </v-slide-group>
-                  <p v-else class="text-xs text-white/50">Kein Flow ausgewählt.</p>
-                </div>
-              </div>
             </div>
           </template>
         </v-app-bar>
@@ -303,12 +223,31 @@
                   Node löschen
                 </v-btn>
               </div>
-              <v-tabs v-model="inspectorTab" class="rounded-xl border border-white/10 bg-white/5" density="compact" slider-color="cyan">
-                <v-tab value="general">Allgemein</v-tab>
-                <v-tab value="transitions">Transitions</v-tab>
-                <v-tab value="llm">LLM Template</v-tab>
-                <v-tab value="metadata">Metadata</v-tab>
-              </v-tabs>
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+                  <template v-for="section in inspectorSections" :key="section.value">
+                    <v-tooltip :text="section.label" location="bottom">
+                      <template #activator="{ props }">
+                        <v-btn
+                          v-bind="props"
+                          icon
+                          size="small"
+                          variant="text"
+                          :class="[
+                            'h-9 w-9 rounded-lg transition-colors',
+                            inspectorTab === section.value
+                              ? 'bg-cyan-500/20 text-cyan-100'
+                              : 'text-white/70 hover:text-white',
+                          ]"
+                          @click="inspectorTab = section.value"
+                        >
+                          <v-icon :icon="section.icon" size="20" />
+                        </v-btn>
+                      </template>
+                    </v-tooltip>
+                  </template>
+                </div>
+              </div>
               <v-window v-model="inspectorTab" class="rounded-xl border border-white/10 bg-white/5 p-4">
                 <v-window-item value="general">
                   <div class="space-y-4">
@@ -703,6 +642,12 @@ const nodeFilter = reactive({
 
 const selectedNodeId = ref<string | null>(null)
 const inspectorTab = ref<'general' | 'transitions' | 'llm' | 'metadata'>('general')
+const inspectorSections = [
+  { value: 'general', label: 'Allgemein', icon: 'mdi-tune-variant' },
+  { value: 'transitions', label: 'Transitions', icon: 'mdi-source-branch' },
+  { value: 'llm', label: 'LLM Template', icon: 'mdi-robot-outline' },
+  { value: 'metadata', label: 'Metadata', icon: 'mdi-text-box-search-outline' },
+] as const
 const nodeForm = ref<DecisionNodeModel | null>(null)
 const nodeSnapshot = ref<DecisionNodeModel | null>(null)
 const nodeSaving = ref(false)
@@ -734,39 +679,6 @@ const phaseFilterOptions = computed(() => {
   flowForm.phases.forEach((phase) => phases.add(phase))
   flowDetail.value?.nodes.forEach((node) => phases.add(node.phase))
   return Array.from(phases)
-})
-
-const nodeSelectorItems = computed(() => {
-  if (!flowDetail.value) return []
-  const query = nodeFilter.search.trim().toLowerCase()
-  const role = nodeFilter.role
-  const phase = nodeFilter.phase
-  const autopOnly = nodeFilter.autopOnly
-  return flowDetail.value.nodes
-    .slice()
-    .sort((a, b) => a.stateId.localeCompare(b.stateId))
-    .map((node) => {
-      const autopCount = (node.transitions || []).filter((t) => t.autoTrigger).length
-      return {
-        id: node.stateId,
-        title: node.title,
-        summary: node.summary,
-        phase: node.phase,
-        role: node.role,
-        icon: node.layout?.icon,
-        autopCount,
-        matchesSearch:
-          !query ||
-          [node.stateId, node.title, node.summary]
-            .filter(Boolean)
-            .some((entry) => entry!.toLowerCase().includes(query)),
-        matchesRole: role === 'all' || node.role === role,
-        matchesPhase: phase === 'all' || node.phase === phase,
-        matchesAuto: !autopOnly || autopCount > 0,
-      }
-    })
-    .filter((node) => node.matchesSearch && node.matchesRole && node.matchesPhase && node.matchesAuto)
-    .map(({ matchesSearch, matchesRole, matchesPhase, matchesAuto, ...rest }) => rest)
 })
 
 const canvasNodes = computed<CanvasNodeView[]>(() => {
