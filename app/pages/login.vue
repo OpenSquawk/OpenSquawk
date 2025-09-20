@@ -18,8 +18,8 @@
         </div>
       </aside>
 
-      <main class="relative z-10 flex flex-1 items-center justify-center px-6 py-16 sm:px-10 lg:px-16">
-        <div class="w-full max-w-xl space-y-10">
+      <main class="relative z-10 flex flex-1 items-center justify-center px-4 py-12 sm:px-8 sm:py-16 lg:px-16">
+        <div class="w-full max-w-lg space-y-8 sm:space-y-10">
           <NuxtLink to="/" class="inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-cyan-300">
             <v-icon icon="mdi-arrow-left" size="18" />
             Back to landing page
@@ -27,13 +27,13 @@
 
           <div class="space-y-4">
             <p class="text-xs uppercase tracking-[0.4em] text-cyan-300/80">OpenSquawk Alpha Access</p>
-            <h1 class="text-4xl font-semibold leading-tight">Welcome back, pilot</h1>
-            <p class="text-base text-white/70">
+            <h1 class="text-3xl font-semibold leading-tight sm:text-4xl">Welcome back, pilot</h1>
+            <p class="text-sm text-white/70 sm:text-base">
               Sign in to continue your mission or unlock your invitation code to join the control room.
             </p>
           </div>
 
-          <div class="space-y-8 rounded-3xl border border-white/10 bg-white/[0.04] p-8 shadow-[0_0_60px_rgba(8,145,178,0.18)] backdrop-blur">
+          <div class="space-y-6 rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_0_60px_rgba(8,145,178,0.18)] backdrop-blur sm:space-y-8 sm:p-8">
             <div class="flex items-center gap-2 rounded-full bg-white/5 p-1 text-sm font-medium">
               <button
                   class="flex-1 rounded-full px-4 py-2 transition"
@@ -61,7 +61,7 @@
                       required
                       autocomplete="email"
                       placeholder="you@example.com"
-                      class="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 text-base text-white placeholder-white/40 outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950"
+                  class="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.07] px-3.5 py-3 text-base text-white placeholder-white/40 outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950"
                   />
                 </label>
                 <label class="block">
@@ -72,7 +72,7 @@
                       required
                       autocomplete="current-password"
                       placeholder="••••••••"
-                      class="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 text-base text-white placeholder-white/40 outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950"
+                  class="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.07] px-3.5 py-3 text-base text-white placeholder-white/40 outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950"
                   />
                 </label>
               </div>
@@ -85,7 +85,7 @@
 
               <button
                   type="submit"
-                  class="relative flex h-12 w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 text-sm font-semibold uppercase tracking-[0.25em] text-white transition hover:shadow-[0_0_35px_rgba(56,189,248,0.45)] focus:outline-none focus:ring-2 focus:ring-cyan-300/70 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                  class="relative flex h-12 w-full items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 text-sm font-semibold uppercase tracking-[0.25em] text-white transition hover:shadow-[0_0_35px_rgba(56,189,248,0.45)] focus:outline-none focus:ring-2 focus:ring-cyan-300/70 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
                   :disabled="loginLoading"
               >
                 <span v-if="loginLoading" class="flex items-center justify-center gap-2">
@@ -107,7 +107,7 @@
                       type="text"
                       autocomplete="name"
                       placeholder="First Last"
-                      class="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 text-base text-white placeholder-white/40 outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950"
+                  class="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.07] px-3.5 py-3 text-base text-white placeholder-white/40 outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950"
                   />
                 </label>
                 <label class="block">
@@ -118,7 +118,7 @@
                       required
                       autocomplete="email"
                       placeholder="you@example.com"
-                      class="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 text-base text-white placeholder-white/40 outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950"
+                  class="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.07] px-3.5 py-3 text-base text-white placeholder-white/40 outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950"
                   />
                 </label>
                 <label class="block">
@@ -130,7 +130,7 @@
                       minlength="8"
                       autocomplete="new-password"
                       placeholder="Create a secure password"
-                      class="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 text-base text-white placeholder-white/40 outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950"
+                  class="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.07] px-3.5 py-3 text-base text-white placeholder-white/40 outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950"
                   />
                   <p class="mt-2 text-xs text-white/55">At least 8 characters, ideally include a number and special character.</p>
                 </label>
@@ -151,7 +151,7 @@
                       v-model.trim="registerForm.invitationCode"
                       type="text"
                       required
-                      class="w-full rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 text-base tracking-[0.35em] text-white placeholder-white/40 outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950"
+                  class="w-full rounded-xl border border-white/10 bg-white/[0.07] px-3.5 py-3 text-base tracking-[0.35em] text-white placeholder-white/40 outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950"
                       placeholder="ABCD1234"
                   />
                   <p v-if="invitationStatus === 'valid'" class="mt-2 text-xs text-green-300">Code is valid.</p>
@@ -174,7 +174,7 @@
 
               <button
                   type="submit"
-                  class="relative flex h-12 w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 text-sm font-semibold uppercase tracking-[0.25em] text-white transition hover:shadow-[0_0_35px_rgba(56,189,248,0.45)] focus:outline-none focus:ring-2 focus:ring-cyan-300/70 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                  class="relative flex h-12 w-full items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 text-sm font-semibold uppercase tracking-[0.25em] text-white transition hover:shadow-[0_0_35px_rgba(56,189,248,0.45)] focus:outline-none focus:ring-2 focus:ring-cyan-300/70 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
                   :disabled="registerLoading || !canRegister"
               >
                 <span v-if="registerLoading" class="flex items-center justify-center gap-2">
@@ -188,30 +188,29 @@
             </form>
           </div>
 
-          <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-            <div class="mb-6 flex items-center justify-between">
-              <h2 class="text-lg font-semibold text-white">How to get access</h2>
-              <span class="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-            </div>
-            <ol class="grid gap-4 sm:grid-cols-3">
-              <li class="group rounded-2xl border border-white/10 bg-slate-900/60 p-4 text-sm text-white/70 transition hover:border-cyan-400/40 hover:text-white">
-                <span class="chip mb-3">1</span>
-                <span>Join the <NuxtLink to="/#cta" class="text-cyan-300 underline-offset-4 hover:text-cyan-200 hover:underline">waitlist</NuxtLink>.</span>
+          <section class="space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
+            <header class="flex items-center justify-between gap-4">
+              <h2 class="text-base font-semibold text-white sm:text-lg">How to get access</h2>
+              <span class="rounded-full border border-white/15 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.3em] text-white/60">Alpha</span>
+            </header>
+            <ol class="space-y-3 text-sm text-white/70 sm:grid sm:grid-cols-3 sm:gap-3 sm:space-y-0">
+              <li class="flex items-start gap-3 rounded-xl border border-white/10 bg-slate-900/60 p-3 leading-snug transition hover:border-cyan-400/40 hover:text-white sm:flex-col sm:items-start sm:gap-2 sm:p-4">
+                <span class="chip shrink-0">1</span>
+                <p>Join the <NuxtLink to="/#cta" class="text-cyan-300 underline-offset-4 hover:text-cyan-200 hover:underline">waitlist</NuxtLink> so we know you're interested.</p>
               </li>
-              <li class="group rounded-2xl border border-white/10 bg-slate-900/60 p-4 text-sm text-white/70 transition hover:border-cyan-400/40 hover:text-white">
-                <span class="chip mb-3">2</span>
-                <span>Receive your invite by email or get a code from an active member.</span>
+              <li class="flex items-start gap-3 rounded-xl border border-white/10 bg-slate-900/60 p-3 leading-snug transition hover:border-cyan-400/40 hover:text-white sm:flex-col sm:items-start sm:gap-2 sm:p-4">
+                <span class="chip shrink-0">2</span>
+                <p>Watch for an invite email or ask an active member to share one of their codes.</p>
               </li>
-              <li class="group rounded-2xl border border-white/10 bg-slate-900/60 p-4 text-sm text-white/70 transition hover:border-cyan-400/40 hover:text-white">
-                <span class="chip mb-3">3</span>
-                <span>Register here, accept the terms &amp; privacy policy and start flying.</span>
+              <li class="flex items-start gap-3 rounded-xl border border-white/10 bg-slate-900/60 p-3 leading-snug transition hover:border-cyan-400/40 hover:text-white sm:flex-col sm:items-start sm:gap-2 sm:p-4">
+                <span class="chip shrink-0">3</span>
+                <p>Come back here, enter the code, accept the terms &amp; privacy policy, and you’re cleared for takeoff.</p>
               </li>
             </ol>
-          </div>
-
-          <div class="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/15 via-sky-500/10 to-blue-500/20 p-6 text-sm text-cyan-100 shadow-[0_0_50px_rgba(34,211,238,0.25)]">
-            Tip: After 14 days of active use you can generate up to two invitation codes yourself and share them with friends.
-          </div>
+            <p class="rounded-xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/15 via-sky-500/10 to-blue-500/20 px-4 py-3 text-xs text-cyan-100 shadow-[0_0_35px_rgba(34,211,238,0.2)] sm:text-sm">
+              Tip: After 14 days of active use you can generate up to two invitation codes yourself and share them with friends.
+            </p>
+          </section>
         </div>
       </main>
     </div>
@@ -368,7 +367,7 @@ onMounted(() => {
 
 <style scoped>
 .chip {
-  @apply inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/40 via-cyan-500/20 to-blue-500/40 text-sm font-semibold text-cyan-100 shadow-lg shadow-cyan-500/20;
+  @apply inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/40 via-cyan-500/20 to-blue-500/40 text-xs font-semibold text-cyan-100 shadow-lg shadow-cyan-500/20;
 }
 </style>
 
