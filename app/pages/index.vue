@@ -2,28 +2,23 @@
   <div class="bg-[#0b1020] text-white antialiased selection:bg-cyan-400/30">
     <!-- NAV -->
     <header class="sticky top-0 z-50 bg-[#0b1020]/70 backdrop-blur border-b border-white/10" data-aos="fade-down">
-      <nav class="container-outer py-3 flex items-center justify-between">
+      <nav class="container-outer flex items-center justify-between py-3">
         <NuxtLink to="#" class="flex items-center gap-2 font-semibold tracking-tight">
           <v-icon icon="mdi-radar" size="28" class="text-cyan-400"/>
           <span class="text-white">OpenSquawk</span>
         </NuxtLink>
-        <div class="hidden md:flex gap-6 text-sm">
-          <NuxtLink to="#features" class="hover:text-cyan-300">
-            Vision
+        <div class="hidden lg:flex items-center gap-6 text-sm">
+          <NuxtLink
+              v-for="item in navLinks"
+              :key="item.to"
+              :to="item.to"
+              class="hover:text-cyan-300"
+          >
+            {{ item.label }}
           </NuxtLink>
-          <NuxtLink to="#roadmap" class="hover:text-cyan-300">
-            Roadmap
-          </NuxtLink>
-          <NuxtLink to="#pricing" class="hover:text-cyan-300">
-            Plans
-          </NuxtLink>
-          <NuxtLink to="#contributing" class="hover:text-cyan-300">
-            Get involved
-          </NuxtLink>
-          <NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink>
         </div>
-        <div class="flex items-center gap-2">
-          <NuxtLink to="/login" class="btn btn-primary text-sm">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <NuxtLink to="/login" class="btn btn-primary btn-compact">
             <v-icon icon="mdi-login" size="18"/> Login
           </NuxtLink>
           <NuxtLink
@@ -31,13 +26,61 @@
               external
               target="_blank"
               rel="noopener"
-              class="btn btn-ghost text-sm"
+              class="btn btn-ghost btn-compact hidden sm:inline-flex"
           >
             <v-icon icon="mdi-github"/>
             GitHub
           </NuxtLink>
+          <button
+              type="button"
+              class="inline-flex lg:hidden items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white transition hover:bg-white/10"
+              :aria-expanded="isMobileNavOpen ? 'true' : 'false'"
+              aria-controls="mobile-navigation"
+              aria-label="Toggle navigation"
+              @click="toggleMobileNav"
+          >
+            <v-icon :icon="isMobileNavOpen ? 'mdi-close' : 'mdi-menu'" size="22"/>
+          </button>
         </div>
       </nav>
+      <Transition name="mobile-nav">
+        <div
+            v-if="isMobileNavOpen"
+            id="mobile-navigation"
+            class="lg:hidden border-t border-white/10 bg-[#0b1020]/95 backdrop-blur"
+        >
+          <div class="container-outer py-4 space-y-4">
+            <nav class="grid gap-2 text-sm">
+              <NuxtLink
+                  v-for="item in navLinks"
+                  :key="`mobile-${item.to}`"
+                  :to="item.to"
+                  class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 transition hover:bg-white/10"
+                  @click="closeMobileNav"
+              >
+                <span>{{ item.label }}</span>
+                <v-icon icon="mdi-chevron-right" size="18" class="text-white/60"/>
+              </NuxtLink>
+            </nav>
+            <div class="grid gap-2">
+              <NuxtLink to="/login" class="btn btn-primary w-full" @click="closeMobileNav">
+                <v-icon icon="mdi-login" size="18"/> Login
+              </NuxtLink>
+              <NuxtLink
+                  to="https://github.com/FaktorxMensch/OpenSquawk"
+                  external
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn-ghost w-full"
+                  @click="closeMobileNav"
+              >
+                <v-icon icon="mdi-github" size="18"/>
+                GitHub
+              </NuxtLink>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </header>
 
     <!-- HERO -->
@@ -46,18 +89,18 @@
         <div class="absolute -top-24 right-0 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-3xl"/>
       </div>
 
-      <div class="container-outer pt-16 pb-12 md:pt-24 md:pb-20">
+      <div class="container-outer pt-14 pb-10 sm:pt-20 sm:pb-16 md:pt-24 md:pb-20">
         <div class="max-w-2xl" data-aos="fade-up">
           <span class="chip mb-4">Alpha · Open-Source AI ATC</span>
-          <h1 class="text-4xl md:text-6xl font-semibold leading-tight">
+          <h1 class="text-3xl sm:text-5xl md:text-6xl font-semibold leading-tight">
             OpenSquawk<br/>
             <span class="text-cyan-400">Open-source, low-cost AI ATC</span>
           </h1>
-          <p class="mt-4 md:mt-6 text-white/80 text-base md:text-lg">
+          <p class="mt-4 sm:mt-6 text-white/80 text-base sm:text-lg">
             We are building an open, affordable AI air traffic control for flight simulators – community-driven, with
             self-hosted and hosted options in planning.
           </p>
-          <ul class="mt-6 space-y-2 text-white/70 text-sm md:text-base">
+          <ul class="mt-6 space-y-2 text-white/70 text-sm sm:text-base">
             <li class="flex items-start gap-2">
               <v-icon icon="mdi-account-group" size="18" class="mt-[3px] text-cyan-300"/>
               <span>Community roadmap sets the priorities. Features only ship when they truly help you.</span>
@@ -71,7 +114,7 @@
             We are looking for collaborators (Node/Nuxt, ATC SMEs, testers, infra/cost benchmarking). Reach out via
             <a class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
           </p>
-          <div class="flex flex-col sm:flex-row gap-3 mt-6">
+          <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
             <NuxtLink to="#cta" class="btn btn-primary text-base">
               Join the waitlist
             </NuxtLink>
@@ -79,8 +122,8 @@
               Read news
             </NuxtLink>
           </div>
-          <div class="mt-8 max-w-xl" data-aos="fade-up" data-aos-delay="120">
-            <form class="rounded-2xl border border-white/10 bg-black/30 p-5 space-y-4" @submit.prevent="submitUpdates">
+          <div class="mt-8 sm:mt-10 max-w-xl" data-aos="fade-up" data-aos-delay="120">
+            <form class="rounded-2xl border border-white/10 bg-black/30 p-4 sm:p-5 space-y-4" @submit.prevent="submitUpdates">
               <div class="space-y-1">
                 <h3 class="text-lg font-semibold">
                   Hear about new features first
@@ -148,9 +191,9 @@
     </section>
 
     <!-- SOCIAL PROOF / LOGOS -->
-    <section class="py-10 border-t border-white/10 bg-[#0a0f1c]" data-aos="fade-up">
+    <section class="py-8 sm:py-10 border-t border-white/10 bg-[#0a0f1c]" data-aos="fade-up">
       <div class="container-outer">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 items-center opacity-80 text-sm md:text-base">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 items-center opacity-80 text-xs sm:text-sm md:text-base">
           <div class="flex items-center justify-center gap-2 text-white/60">
             <v-icon icon="mdi-test-tube" class="opacity-70"/>
             Alpha status
@@ -172,7 +215,7 @@
     </section>
 
     <!-- FEATURES -->
-    <section id="features" class="py-16 md:py-24 bg-gradient-to-b from-[#0a0f1c] to-[#0b1020]">
+    <section id="features" class="py-12 sm:py-16 md:py-24 bg-gradient-to-b from-[#0a0f1c] to-[#0b1020]">
       <div class="container-outer">
         <div class="max-w-2xl mb-10" data-aos="fade-up">
           <h2 class="text-3xl md:text-4xl font-semibold">
@@ -183,7 +226,7 @@
           </p>
         </div>
 
-        <div class="grid md:grid-cols-3 gap-6">
+        <div class="grid gap-4 md:grid-cols-3 md:gap-6">
           <div class="card" data-aos="fade-up" data-aos-delay="0">
             <div class="flex items-center gap-3">
               <div class="p-2 rounded-lg bg-cyan-500/20 border border-cyan-400/20">
@@ -225,7 +268,7 @@
           </div>
         </div>
 
-        <div class="grid md:grid-cols-2 gap-6 mt-6">
+        <div class="grid gap-4 md:grid-cols-2 md:gap-6 mt-6">
           <div class="card" data-aos="fade-up" data-aos-delay="0">
             <h3 class="font-semibold text-lg">
               Simulator support (plan)
@@ -273,7 +316,7 @@
     </section>
 
     <!-- NEWS -->
-    <section id="news" class="py-16 md:py-24 bg-[#0b1020] border-y border-white/10">
+    <section id="news" class="py-12 sm:py-16 md:py-24 bg-[#0b1020] border-y border-white/10">
       <div class="container-outer space-y-8">
         <div class="max-w-2xl" data-aos="fade-up">
           <h2 class="text-3xl md:text-4xl font-semibold">News & Updates</h2>
@@ -281,7 +324,7 @@
             Content-driven posts keep you in the loop. All articles are stored in Markdown – new stories show up here automatically.
           </p>
         </div>
-        <div v-if="latestNews.length" class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div v-if="latestNews.length" class="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
           <article
               v-for="post in latestNews"
               :key="post.slug"
@@ -304,11 +347,11 @@
         <div v-else class="card text-sm text-white/70" data-aos="fade-up">
           No news published yet – the first post is coming soon.
         </div>
-        <div class="flex items-center gap-3" data-aos="fade-up">
+        <div class="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3" data-aos="fade-up">
           <NuxtLink to="/news" class="btn btn-ghost">
             View all news
           </NuxtLink>
-          <span class="text-xs text-white/50">
+          <span class="text-xs text-white/50 sm:text-left text-center">
             Tell us if you want to share your own experience.
           </span>
         </div>
@@ -316,7 +359,7 @@
     </section>
 
     <!-- ROADMAP -->
-    <section id="roadmap" class="py-16 md:py-24 bg-[#0b1020] border-y border-white/10">
+    <section id="roadmap" class="py-12 sm:py-16 md:py-24 bg-[#0b1020] border-y border-white/10">
       <div class="container-outer space-y-10">
         <div class="max-w-3xl" data-aos="fade-up">
           <h2 class="text-3xl md:text-4xl font-semibold">
@@ -337,7 +380,7 @@
             Loading current roadmap priorities…
           </div>
           <template v-else>
-            <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div class="grid gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-3">
               <div
                   v-for="item in roadmapItems"
                   :key="item.key"
@@ -518,9 +561,9 @@
     </section>
 
     <!-- LEARN PATH -->
-    <section id="learn" class="py-16 md:py-24 bg-[#0b1020]">
+    <section id="learn" class="py-12 sm:py-16 md:py-24 bg-[#0b1020]">
       <div class="container-outer">
-        <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div class="grid gap-6 md:grid-cols-2 md:gap-8 items-center">
           <div data-aos="fade-right">
             <h2 class="text-3xl md:text-4xl font-semibold">
               Learning path (in progress)
@@ -536,7 +579,7 @@
               </li>
               <li class="flex gap-3"><span class="chip">5</span><span><b>VATSIM</b> (community beta): checklists, etiquette, live practice.</span></li>
             </ol>
-            <div class="mt-6 flex gap-3">
+            <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
               <NuxtLink to="#roadmap" class="btn btn-primary">
                 View roadmap
               </NuxtLink>
@@ -553,7 +596,7 @@
     </section>
 
     <!-- PRICING -->
-    <section id="pricing" class="py-16 md:py-24 bg-gradient-to-b from-[#0b1020] to-[#0a0f1c]">
+    <section id="pricing" class="py-12 sm:py-16 md:py-24 bg-gradient-to-b from-[#0b1020] to-[#0a0f1c]">
       <div class="container-outer">
         <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4" data-aos="fade-up">
           <div class="max-w-2xl">
@@ -566,7 +609,7 @@
           </div>
         </div>
 
-        <div class="mt-8 grid md:grid-cols-3 gap-6 items-stretch">
+        <div class="mt-8 grid gap-4 md:grid-cols-3 md:gap-6 items-stretch">
           <!-- OSS -->
           <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="0">
             <div class="absolute -top-3 right-4 chip">Community</div>
@@ -720,9 +763,9 @@
     </section>
 
     <!-- OPEN SOURCE -->
-    <section id="opensource" class="py-16 md:py-24 bg-[#0a0f1c]">
+    <section id="opensource" class="py-12 sm:py-16 md:py-24 bg-[#0a0f1c]">
       <div class="container-outer">
-        <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div class="grid gap-6 md:grid-cols-2 md:gap-8 items-center">
           <div data-aos="fade-right">
             <h2 class="text-3xl md:text-4xl font-semibold">
               Open-source, community-driven
@@ -779,7 +822,7 @@ POST /api/route/taxi
     </section>
 
     <!-- HOW IT WORKS -->
-    <section class="py-16 md:py-24 bg-[#0b1020]">
+    <section class="py-12 sm:py-16 md:py-24 bg-[#0b1020]">
       <div class="container-outer">
         <div class="max-w-2xl mb-10" data-aos="fade-up">
           <h2 class="text-3xl md:text-4xl font-semibold">
@@ -819,9 +862,9 @@ POST /api/route/taxi
     </section>
 
     <!-- CONTRIBUTING -->
-    <section id="contributing" class="py-16 md:py-24 bg-[#0a0f1c] border-y border-white/10">
+    <section id="contributing" class="py-12 sm:py-16 md:py-24 bg-[#0a0f1c] border-y border-white/10">
       <div class="container-outer">
-        <div class="grid md:grid-cols-2 gap-8 items-start">
+        <div class="grid gap-6 md:grid-cols-2 md:gap-8 items-start">
           <div data-aos="fade-right">
             <h2 class="text-3xl md:text-4xl font-semibold">
               Contribute
@@ -848,7 +891,7 @@ POST /api/route/taxi
               Email us at <a href="mailto:info@opensquawk.de"
                                                                            class="text-cyan-300 underline">info@opensquawk.de</a> or leave a comment directly on the issue.
             </p>
-            <div class="mt-6 flex gap-3">
+            <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
               <NuxtLink to="#roadmap" class="btn btn-primary">
                 Shape the roadmap
               </NuxtLink>
@@ -875,9 +918,9 @@ POST /api/route/taxi
 
     <!-- CTA -->
     <section id="cta"
-             class="py-16 md:py-24 bg-gradient-to-tr from-cyan-500/20 via-blue-500/10 to-transparent border-y border-white/10">
+             class="py-12 sm:py-16 md:py-24 bg-gradient-to-tr from-cyan-500/20 via-blue-500/10 to-transparent border-y border-white/10">
       <div class="container-outer">
-        <div class="card grid gap-8 md:grid-cols-2" data-aos="zoom-in">
+        <div class="card grid gap-6 md:grid-cols-2 md:gap-8" data-aos="zoom-in">
           <div class="space-y-4">
             <div>
               <h3 class="text-2xl md:text-3xl font-semibold">
@@ -976,7 +1019,7 @@ POST /api/route/taxi
     </section>
 
     <!-- FAQ -->
-    <section id="faq" class="py-16 md:py-24 bg-[#0a0f1c]">
+    <section id="faq" class="py-12 sm:py-16 md:py-24 bg-[#0a0f1c]">
       <div class="container-outer">
         <div class="max-w-2xl mb-10" data-aos="fade-up">
           <h2 class="text-3xl md:text-4xl font-semibold">FAQ</h2>
@@ -984,7 +1027,7 @@ POST /api/route/taxi
             Quick answers.
           </p>
         </div>
-        <div class="grid md:grid-cols-2 gap-6">
+        <div class="grid gap-4 md:grid-cols-2 md:gap-6">
           <div class="card" data-aos="fade-up" data-aos-delay="0">
             <h3 class="font-semibold">
               Is this for real-world aviation?
@@ -1024,7 +1067,7 @@ POST /api/route/taxi
     <!-- FOOTER -->
     <footer class="py-12 bg-[#0b1020] border-t border-white/10" data-aos="fade-up">
       <div class="container-outer">
-        <div class="grid md:grid-cols-4 gap-6">
+        <div class="grid gap-4 md:grid-cols-4 md:gap-6">
           <div>
             <div class="flex items-center gap-2 font-semibold">
               <v-icon icon="mdi-radar" class="text-cyan-400"/>
@@ -1112,13 +1155,47 @@ POST /api/route/taxi
 
 
 <script setup lang="ts">
-import {ref, reactive, computed, onMounted, watch} from 'vue'
-import {useHead} from '#imports'
+import {ref, reactive, computed, onMounted, watch, onBeforeUnmount} from 'vue'
+import {useHead, useRoute} from '#imports'
 import {useApi} from '~/composables/useApi'
 import {getAllNews} from '~~/shared/utils/news'
 import type {NewsPost} from '~~/shared/utils/news'
 
 const api = useApi()
+
+const navLinks = [
+  {label: 'Vision', to: '#features'},
+  {label: 'Roadmap', to: '#roadmap'},
+  {label: 'Plans', to: '#pricing'},
+  {label: 'Get involved', to: '#contributing'},
+  {label: 'FAQ', to: '#faq'},
+]
+
+const isMobileNavOpen = ref(false)
+const toggleMobileNav = () => {
+  isMobileNavOpen.value = !isMobileNavOpen.value
+}
+const closeMobileNav = () => {
+  isMobileNavOpen.value = false
+}
+
+const route = useRoute()
+watch(
+    () => route.fullPath,
+    () => {
+      closeMobileNav()
+    },
+)
+
+if (import.meta.client) {
+  watch(isMobileNavOpen, (open) => {
+    document.body.classList.toggle('overflow-hidden', open)
+  })
+
+  onBeforeUnmount(() => {
+    document.body.classList.remove('overflow-hidden')
+  })
+}
 
 const numberFormatter = computed(() => new Intl.NumberFormat('en-US'))
 const formatNumber = (value: number | null | undefined) => numberFormatter.value.format(Math.max(0, Math.round(value ?? 0)))
@@ -1537,7 +1614,7 @@ onMounted(async () => {
 
 <style scoped>
 .container-outer {
-  @apply mx-auto max-w-screen-xl px-4;
+  @apply mx-auto w-full max-w-screen-xl px-4 sm:px-6 md:px-8;
 }
 
 .gradient-hero {
@@ -1553,7 +1630,7 @@ onMounted(async () => {
 }
 
 .btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-medium transition;
+  @apply inline-flex items-center justify-center gap-2 rounded-xl font-medium transition px-4 py-2.5 sm:px-5 sm:py-3;
 }
 
 .btn-primary {
@@ -1564,8 +1641,20 @@ onMounted(async () => {
   @apply bg-white/5 text-white hover:bg-white/10;
 }
 
+.btn-compact {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .btn-compact {
+    padding: 0.6rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
 .card {
-  @apply glass rounded-2xl p-5 md:p-6;
+  @apply glass rounded-2xl p-4 sm:p-5 md:p-6;
 }
 
 .pricing-card {
@@ -1618,5 +1707,26 @@ onMounted(async () => {
 
 .roadmap-pill.is-active .label {
   color: rgba(224, 242, 254, 0.85);
+}
+
+.mobile-nav-enter-active,
+.mobile-nav-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.mobile-nav-enter-from,
+.mobile-nav-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+@media (max-width: 480px) {
+  .roadmap-scale {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .roadmap-pill {
+    padding: 0.5rem 0.6rem;
+  }
 }
 </style>
