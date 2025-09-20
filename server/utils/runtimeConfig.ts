@@ -58,7 +58,7 @@ export function getServerRuntimeConfig(): ServerRuntimeConfig {
 
   const openaiKey = String(runtimeConfig.openaiKey || '').trim()
   if (!openaiKey && !warnedMissingOpenAIKey) {
-    console.warn('[OpenSquawk] OPENAI_API_KEY fehlt. Einige KI-Funktionen stehen ohne Schlüssel nicht zur Verfügung.')
+    console.warn('[OpenSquawk] OPENAI_API_KEY is missing. Some AI features are unavailable without a key.')
     warnedMissingOpenAIKey = true
   }
 

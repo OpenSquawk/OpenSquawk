@@ -97,7 +97,7 @@ export async function sendMail(options: MailOptions) {
 
   const success = await sendViaSmtp(payload)
   if (!success) {
-    console.info(`[mail:fallback] ${options.subject}\nEmpfänger: ${options.to}\n${options.text}`)
+    console.info(`[mail:fallback] ${options.subject}\nRecipient: ${options.to}\n${options.text}`)
   }
   return success
 }
@@ -169,7 +169,7 @@ export async function sendAdminNotification(notification: string | AdminNotifica
 
   const success = await sendMail(mailOptions)
   if (!success) {
-    console.info(`[notify:fallback] ${mailOptions.subject}\nEmpfänger: ${to}\n${mailOptions.text}`)
+    console.info(`[notify:fallback] ${mailOptions.subject}\nRecipient: ${to}\n${mailOptions.text}`)
   }
   return success
 }

@@ -161,7 +161,7 @@ export default defineEventHandler(async (event) => {
         let actualMime = mime;
 
         if (useSpeaches) {
-            // Speaches (bevorzugt klein: MP3, alternativ FLAC/WAV/PCM)
+            // Speaches (prefer compact: MP3, otherwise FLAC/WAV/PCM)
             const baseUrl = runtimeConfig.speachesBaseUrl || "";
             const model = runtimeConfig.speechModelId || "speaches-ai/piper-en_US-ryan-low";
             if (!baseUrl) {
@@ -169,16 +169,16 @@ export default defineEventHandler(async (event) => {
             }
             audioBuffer = await speachesTTS(normalized, voice, model, fmt, baseUrl);
             modelUsed = model;
-            // Server liefert korrektes Format gemäß response_format
+            // Server returns the correct format according to response_format
             actualMime = fmtToMime(fmt);
         } else if (usePiper) {
-            // Lokaler Piper
+            // Local Piper
             audioBuffer = await piperTTS(normalized, voice, runtimeConfig.piperPort);
             modelUsed = "piper-local";
-            // Piper liefert WAV
+            // Piper returns WAV
             actualMime = "audio/wav";
         } else {
-            // OpenAI (Fallback)
+            // OpenAI (fallback)
             const tts = await normalize.audio.speech.create({
                 model: TTS_MODEL,
                 voice,
@@ -191,7 +191,7 @@ export default defineEventHandler(async (event) => {
             actualMime = "audio/wav";
         }
 
-        // Optional speichern
+        // Optional persistence
         // await ensureDir(baseDir);
         // await writeFile(fileOut, audioBuffer);
         const meta = {

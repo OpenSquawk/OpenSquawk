@@ -10,7 +10,7 @@ function ensureOpenAI(): OpenAI {
     if (!openaiClient) {
         const { openaiKey, openaiProject, llmModel } = getServerRuntimeConfig()
         if (!openaiKey) {
-            throw new Error('OPENAI_API_KEY fehlt. Bitte den Schlüssel setzen, bevor KI-Funktionen genutzt werden.')
+            throw new Error('OPENAI_API_KEY is missing. Please set the key before using AI features.')
         }
         const clientOptions: ConstructorParameters<typeof OpenAI>[0] = { apiKey: openaiKey }
         if (openaiProject) {
@@ -246,9 +246,9 @@ function extractTemplateVariables(text?: string): string[] {
     return matches.map(match => match.slice(1, -1)) // Remove { }
 }
 
-// Optimierte aber ausreichende Eingabe für gute Entscheidungen
+// Optimized yet sufficient input for reliable decisions
 function optimizeInputForLLM(input: LLMDecisionInput) {
-    // Sammle alle verfügbaren Variablen aus dem Decision Tree
+    // Collect all available variables from the decision tree
     const availableVariables = [
         'callsign', 'dest', 'dep', 'runway', 'squawk', 'sid', 'transition',
         'initial_altitude_ft', 'climb_altitude_ft', 'cruise_flight_level',
@@ -308,7 +308,7 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
         current_role: input.state.role,
         state_summary: stateSummary,
         candidates: candidates,
-        available_variables: availableVariables, // Alle verfügbaren Variablen
+        available_variables: availableVariables, // All available variables
         candidate_variables: Array.from(candidateVars), // Variablen die Candidates verwenden
         pilot_utterance: input.pilot_utterance,
         decision_hints: {
@@ -318,7 +318,7 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
             has_interrupt_candidate: input.candidates.some(c => c.id.startsWith('INT_')),
             readback_check_state: Boolean(readbackKeys.length)
         },
-        // Nur aktueller Context ohne Werte (für Token-Sparen)
+        // Current context only without values (to save tokens)
         context: {
             callsign: input.variables.callsign,
             current_unit: input.flags.current_unit,
@@ -459,7 +459,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         }
     }
 
-    // Sofortige Erkennung ohne LLM für häufige Cases
+    // Instant detection without the LLM for common cases
     if (pilotText.includes('radio check') || pilotText.includes('signal test') ||
         (pilotText.includes('read') && (pilotText.includes('check') || pilotText.includes('you')))) {
         return finalize({
@@ -479,17 +479,17 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
 
     const optimizedInput = optimizeInputForLLM(input)
 
-    // Prüfe ob nächste States ATC-Responses brauchen
+    // Check whether the next states require ATC responses
     const atcCandidates = input.candidates.filter(c =>
         c.state.role === 'atc' || c.state.say_tpl || c.id.startsWith('INT_')
     )
 
-    // Wenn keine ATC-States verfügbar, einfache Transition ohne Response
+    // If no ATC states are available, perform a simple transition without a response
     if (atcCandidates.length === 0 && input.candidates.length > 0) {
         return finalize({ next_state: input.candidates[0].id })
     }
 
-    // Kompakter aber informativer Prompt - mit Variable-Info für intelligente Responses
+    // Compact yet informative prompt — includes variable info for intelligent responses
     const system = [
         'You are an ATC state router. Return strict JSON.',
         'Keys: next_state, controller_say_tpl (optional), off_schema (optional), intent (optional).',
@@ -593,7 +593,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             })
         }
 
-        // Pilot readback oder acknowledgment → keine ATC response nötig
+        // Pilot readback or acknowledgment → no ATC response required
         if (pilotText.includes('wilco') || pilotText.includes('roger') ||
             pilotText.includes('cleared') || pilotText.includes('copied')) {
             fallbackInfo.selected = 'acknowledge'
