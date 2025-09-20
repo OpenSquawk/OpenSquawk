@@ -12,85 +12,92 @@
         >
           <div class="flex w-full flex-wrap items-center gap-4 px-3 lg:flex-nowrap lg:gap-6 lg:px-5">
             <div class="flex shrink-0 items-center gap-4">
-              <div class="flex items-center gap-3">
-                <div
-                  class="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/40 bg-cyan-500/10"
-                >
-                  <v-icon icon="mdi-radar" size="22" color="cyan" />
-                </div>
-                <div class="min-w-0 leading-tight">
-                  <p class="text-[11px] uppercase tracking-[0.45em] text-cyan-200/70">OpenSquawk</p>
-                  <p class="text-sm font-semibold text-white/90">Decision Flow Studio</p>
-                </div>
-              </div>
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener"
+                class="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/40 bg-cyan-500/10 transition hover:border-cyan-300 hover:bg-cyan-500/20"
+              >
+                <v-icon icon="mdi-radar" size="22" color="cyan" />
+              </a>
               <div class="hidden h-10 w-px bg-white/10 lg:block" />
               <div class="flex min-w-0 items-center gap-2">
-                <v-autocomplete
-                  v-model="selectedFlowSlug"
-                  v-model:search="flowSearch"
-                  :items="filteredFlows"
-                  item-title="name"
-                  item-value="slug"
-                  density="compact"
-                  variant="outlined"
-                  hide-details
-                  clearable
-                  class="w-[220px] md:w-[260px]"
-                  prepend-inner-icon="mdi-file-tree"
-                  :loading="flowsLoading"
-                  label="Flow auswählen"
-                  :custom-filter="() => true"
-                  @update:model-value="(value) => value && selectFlow(value)"
-                >
-                  <template #item="{ props, item }">
-                    <v-list-item v-bind="props">
-                      <template #title>
-                        <div class="flex items-center justify-between gap-3">
-                          <span class="font-medium">{{ item?.raw?.name }}</span>
-                          <v-chip v-if="item?.raw?.nodeCount" size="x-small" color="cyan" variant="tonal">
-                            {{ item.raw.nodeCount }}
-                          </v-chip>
-                        </div>
-                      </template>
-                      <template #subtitle>
-                        <span class="text-xs text-white/60">Start: {{ item?.raw?.startState }}</span>
-                      </template>
-                    </v-list-item>
+                <v-menu v-model="flowMenuOpen" transition="scale-transition" offset-y>
+                  <template #activator="{ props }">
+                    <v-btn
+                      v-bind="props"
+                      color="cyan"
+                      variant="tonal"
+                      prepend-icon="mdi-sitemap"
+                      class="rounded-lg px-4 font-semibold tracking-wide text-white"
+                      :loading="flowsLoading"
+                    >
+                      {{ currentFlowLabel }}
+                    </v-btn>
                   </template>
-                </v-autocomplete>
-                <div class="flex shrink-0 items-center gap-1">
-                  <v-tooltip text="Neuen Flow anlegen">
-                    <template #activator="{ props }">
+                  <v-card class="w-[320px] border border-white/10 bg-[#050910]/95 backdrop-blur">
+                    <v-card-text class="space-y-3">
+                      <v-text-field
+                        v-model="flowSearch"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        clearable
+                        prepend-inner-icon="mdi-magnify"
+                        placeholder="Flows durchsuchen"
+                      />
+                      <v-divider class="border-white/10" />
+                      <v-list
+                        v-if="filteredFlows.length"
+                        density="compact"
+                        class="max-h-[280px] overflow-auto"
+                      >
+                        <v-list-item
+                          v-for="flow in filteredFlows"
+                          :key="flow.slug"
+                          :value="flow.slug"
+                          class="rounded-lg"
+                          @click="selectFlow(flow.slug); flowMenuOpen = false"
+                        >
+                          <template #title>
+                            <div class="flex items-center justify-between gap-3">
+                              <span class="font-medium">{{ flow.name }}</span>
+                              <v-chip v-if="flow.nodeCount" size="x-small" color="cyan" variant="tonal">
+                                {{ flow.nodeCount }}
+                              </v-chip>
+                            </div>
+                          </template>
+                          <template #subtitle>
+                            <span class="text-xs text-white/60">Start: {{ flow.startState }}</span>
+                          </template>
+                        </v-list-item>
+                      </v-list>
+                      <p v-else class="py-6 text-center text-xs text-white/40">Keine Flows gefunden.</p>
+                    </v-card-text>
+                    <v-divider class="border-white/10" />
+                    <v-card-actions class="flex flex-col gap-2 p-4">
                       <v-btn
-                        v-bind="props"
-                        icon
-                        size="small"
-                        variant="text"
+                        block
                         color="cyan"
-                        class="rounded-lg border border-white/10 bg-white/5 text-white/80 hover:border-cyan-300"
-                        @click="openCreateFlow"
+                        variant="flat"
+                        prepend-icon="mdi-plus"
+                        @click="flowMenuOpen = false; openCreateFlow()"
                       >
-                        <v-icon icon="mdi-plus" />
+                        Flow hinzufügen
                       </v-btn>
-                    </template>
-                  </v-tooltip>
-                  <v-tooltip text="Legacy ATC Import">
-                    <template #activator="{ props }">
                       <v-btn
-                        v-bind="props"
-                        icon
-                        size="small"
-                        variant="text"
+                        block
                         color="purple"
-                        class="rounded-lg border border-white/10 bg-white/5 text-white/80 hover:border-purple-300"
+                        variant="tonal"
+                        prepend-icon="mdi-database-import"
                         :loading="importLoading"
-                        @click="runImport"
+                        @click="flowMenuOpen = false; runImport()"
                       >
-                        <v-icon icon="mdi-database-import" />
+                        Legacy Import
                       </v-btn>
-                    </template>
-                  </v-tooltip>
-                </div>
+                    </v-card-actions>
+                  </v-card>
+                </v-menu>
               </div>
             </div>
             <div class="flex min-w-0 flex-1 items-center gap-3">
@@ -167,33 +174,23 @@
                 </v-card>
               </v-menu>
             </div>
-            <div class="flex shrink-0 items-center gap-3">
-              <div class="hidden min-w-0 text-right leading-tight sm:block">
-                <p class="text-[11px] uppercase tracking-[0.35em] text-white/40">Aktiver Flow</p>
-                <p class="truncate text-sm font-semibold text-white/90">
-                  {{ flowForm.name || 'Kein Flow ausgewählt' }}
-                </p>
-              </div>
-              <v-chip
-                v-if="flowDetail"
-                color="cyan"
-                size="small"
-                variant="tonal"
-                class="font-mono text-xs uppercase tracking-widest text-cyan-100"
-              >
-                {{ flowDetail.flow.slug }}
-              </v-chip>
+            <div class="flex shrink-0 items-center gap-2">
+              <transition name="autosave-fade">
+                <v-icon
+                  v-if="autosaveIndicator"
+                  icon="mdi-check-circle"
+                  size="20"
+                  class="text-emerald-400"
+                />
+              </transition>
               <v-btn
-                color="cyan"
-                variant="flat"
-                size="small"
-                prepend-icon="mdi-content-save"
-                class="rounded-lg px-4 font-semibold tracking-wide"
-                :disabled="!flowDirty"
-                :loading="flowSaveLoading"
-                @click="saveFlow"
+                icon
+                variant="tonal"
+                color="white"
+                class="rounded-lg border border-white/10 bg-white/5 text-white/80 hover:border-cyan-200"
+                @click="inspectorOpen = !inspectorOpen"
               >
-                Speichern
+                <v-icon :icon="inspectorOpen ? 'mdi-dock-right' : 'mdi-dock-left'" />
               </v-btn>
               <v-btn
                 color="white"
@@ -331,12 +328,16 @@
           <section class="relative flex-1 overflow-hidden bg-[#070d1a]">
             <DecisionNodeCanvas
               v-if="flowDetail"
+              ref="canvasComponent"
               :nodes="canvasNodes"
               :zoom="canvasState.zoom"
               :pan="canvasState.pan"
               :role-colors="roleColors"
-              @select="selectNode"
-              @navigate="selectNode"
+              @select="(stateId) => selectNode(stateId, { focus: false })"
+              @navigate="(stateId) => selectNode(stateId, { focus: true })"
+              @add-before="(stateId) => createNodeRelative(stateId, 'before')"
+              @add-after="(stateId) => createNodeRelative(stateId, 'after')"
+              @node-drag-start="onNodeDragStart"
               @node-move="onNodeMove"
               @node-drop="onNodeDrop"
               @update:pan="onUpdatePan"
@@ -350,41 +351,81 @@
               </div>
             </div>
           </section>
-          <aside class="w-[380px] shrink-0 border-l border-white/10 bg-[#0b1224]/85 backdrop-blur overflow-y-auto">
-            <div class="border-b border-white/10 px-5 py-4">
-              <h2 class="text-lg font-semibold">Node Inspector</h2>
-              <p class="text-xs text-white/50">
-                {{ nodeForm ? 'Bearbeite Knoten und Auto-Trigger' : 'Wähle einen Node auf der Canvas aus' }}
-              </p>
-            </div>
-            <div v-if="nodeForm" class="space-y-5 px-5 py-5">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="font-mono text-xs text-white/50">{{ nodeForm.stateId }}</p>
-                  <h3 class="text-xl font-semibold">{{ nodeForm.title || 'Unbenannter Node' }}</h3>
-                </div>
-                <div class="flex gap-2">
-                  <v-chip color="cyan" size="small" variant="tonal">{{ nodeForm.role }}</v-chip>
-                  <v-chip color="purple" size="small" variant="tonal">{{ nodeForm.phase }}</v-chip>
-                </div>
+          <transition name="inspector-slide">
+            <aside
+              v-if="inspectorOpen && flowDetail"
+              class="w-[380px] shrink-0 overflow-y-auto border-l border-white/10 bg-[#0b1224]/85 backdrop-blur"
+            >
+              <div class="border-b border-white/10 px-5 py-4">
+                <h2 class="text-lg font-semibold">Node Inspector</h2>
+                <p class="text-xs text-white/50">
+                  {{ nodeForm ? 'Bearbeite Knoten und Auto-Trigger' : 'Wähle einen Node auf der Canvas aus' }}
+                </p>
               </div>
-              <div class="flex flex-wrap gap-2">
-                <v-btn color="cyan" variant="flat" size="small" :disabled="!nodeDirty" :loading="nodeSaving" @click="saveNode">
-                  Node speichern
-                </v-btn>
-                <v-btn color="grey" variant="outlined" size="small" :disabled="!nodeDirty" @click="resetNode">
-                  Änderungen verwerfen
-                </v-btn>
-                <v-btn color="red" variant="tonal" size="small" prepend-icon="mdi-delete" @click="deleteNode">
-                  Node löschen
-                </v-btn>
-              </div>
-              <v-tabs v-model="inspectorTab" class="rounded-xl border border-white/10 bg-white/5" density="compact" slider-color="cyan">
-                <v-tab value="general">Allgemein</v-tab>
-                <v-tab value="transitions">Transitions</v-tab>
-                <v-tab value="llm">LLM Template</v-tab>
-                <v-tab value="metadata">Metadata</v-tab>
-              </v-tabs>
+              <div v-if="nodeForm" class="space-y-5 px-5 py-5">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                      <p class="font-mono text-xs text-white/50">{{ nodeForm.stateId }}</p>
+                      <v-chip color="cyan" size="x-small" variant="tonal">{{ nodeForm.role }}</v-chip>
+                      <v-chip color="purple" size="x-small" variant="tonal">{{ nodeForm.phase }}</v-chip>
+                    </div>
+                    <h3 class="truncate text-xl font-semibold">{{ nodeForm.title || 'Unbenannter Node' }}</h3>
+                  </div>
+                  <v-menu location="bottom end">
+                    <template #activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        icon
+                        variant="text"
+                        color="white"
+                        class="-mr-2"
+                      >
+                        <v-icon icon="mdi-dots-vertical" />
+                      </v-btn>
+                    </template>
+                    <v-list density="compact">
+                      <v-list-item :disabled="nodeSaving" prepend-icon="mdi-content-save" @click="persistNodeNow">
+                        <v-list-item-title>Node speichern</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item :disabled="nodeSaving" prepend-icon="mdi-restore" @click="resetNode">
+                        <v-list-item-title>Änderungen verwerfen</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item class="text-red-300" prepend-icon="mdi-delete" @click="deleteNode">
+                        <v-list-item-title>Node löschen</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
+                </div>
+                <v-text-field
+                  v-model="nodeIdDraft"
+                  label="Node Key"
+                  hide-details
+                  color="cyan"
+                  prepend-inner-icon="mdi-identifier"
+                  @keydown.enter.prevent="applyNodeRename"
+                  @blur="applyNodeRename"
+                />
+                <v-tabs
+                  v-model="inspectorTab"
+                  class="rounded-xl border border-white/10 bg-white/5"
+                  density="compact"
+                  slider-color="cyan"
+                  grow
+                >
+                  <v-tab value="general" :title="'Allgemein'">
+                    <v-icon icon="mdi-tune" />
+                  </v-tab>
+                  <v-tab value="transitions" :title="'Transitions'">
+                    <v-icon icon="mdi-transit-connection-variant" />
+                  </v-tab>
+                  <v-tab value="llm" :title="'LLM Template'">
+                    <v-icon icon="mdi-brain" />
+                  </v-tab>
+                  <v-tab value="metadata" :title="'Metadata'">
+                    <v-icon icon="mdi-tag-text-outline" />
+                  </v-tab>
+                </v-tabs>
               <v-window v-model="inspectorTab" class="rounded-xl border border-white/10 bg-white/5 p-4">
                 <v-window-item value="general">
                   <div class="space-y-4">
@@ -622,6 +663,7 @@
               Kein Node ausgewählt.
             </div>
           </aside>
+          </transition>
         </div>
       </main>
     </div>
@@ -657,7 +699,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useApi } from '~/composables/useApi'
 import { useAuthStore } from '~/stores/auth'
 import DecisionNodeCanvas from '~/components/editor/DecisionNodeCanvas.vue'
@@ -742,6 +784,12 @@ const flows = ref<DecisionFlowSummary[]>([])
 const flowsLoading = ref(false)
 const flowsError = ref('')
 const flowSearch = ref('')
+const flowMenuOpen = ref(false)
+
+const autosaveIndicator = ref(false)
+const canvasComponent = ref<InstanceType<typeof DecisionNodeCanvas> | null>(null)
+
+const inspectorOpen = ref(false)
 
 const selectedFlowSlug = ref<string | null>(null)
 const flowDetail = ref<{ flow: DecisionFlowModel; nodes: DecisionNodeModel[] } | null>(null)
@@ -809,6 +857,10 @@ const nodeSnapshot = ref<DecisionNodeModel | null>(null)
 const nodeSaving = ref(false)
 const nodeActionsText = ref('[]')
 const nodeActionsError = ref('')
+const nodeIdDraft = ref('')
+
+let lastTitleSuggestion = ''
+let nodeRenaming = false
 
 const showCreateFlowDialog = ref(false)
 const newFlowForm = reactive({ slug: '', name: '', description: '' })
@@ -817,6 +869,26 @@ const createFlowLoading = ref(false)
 
 const snackbar = reactive({ show: false, color: 'cyan', text: '' })
 
+type HistoryEntry =
+  | { type: 'node-update'; nodeId: string; before: DecisionNodeModel; after: DecisionNodeModel }
+  | { type: 'node-layout'; nodeId: string; before: { x: number; y: number }; after: { x: number; y: number } }
+  | { type: 'node-rename'; beforeId: string; afterId: string; before: DecisionNodeModel; after: DecisionNodeModel }
+
+const historyEntries = ref<HistoryEntry[]>([])
+const historyIndex = ref(-1)
+
+let isApplyingHistory = false
+let pendingNodeHistory: { nodeId: string; before: DecisionNodeModel } | null = null
+let pendingLayoutHistory: { nodeId: string; start: { x: number; y: number } } | null = null
+
+let flowInitializing = false
+let nodeInitializing = false
+let flowAutoSaveTimer: ReturnType<typeof setTimeout> | null = null
+let nodeAutoSaveTimer: ReturnType<typeof setTimeout> | null = null
+let autosaveIndicatorTimer: ReturnType<typeof setTimeout> | null = null
+let lastFlowAutosaveError = ''
+let lastNodeAutosaveError = ''
+
 const filteredFlows = computed(() => {
   const query = flowSearch.value.trim().toLowerCase()
   if (!query) return flows.value
@@ -824,6 +896,8 @@ const filteredFlows = computed(() => {
     [flow.name, flow.slug, flow.description].some((entry) => entry?.toLowerCase().includes(query))
   )
 })
+
+const currentFlowLabel = computed(() => flowDetail.value?.flow.name || 'Flow auswählen')
 
 const roleFilterOptions = computed(() => {
   const unique = new Set<string>(['all', ...flowForm.roles, ...roleOptions])
@@ -908,16 +982,6 @@ const canvasNodes = computed<CanvasNodeView[]>(() => {
   })
 })
 
-const flowDirty = computed(() => {
-  if (!flowSnapshot.value) return false
-  return JSON.stringify(flowForm) !== JSON.stringify(flowSnapshot.value)
-})
-
-const nodeDirty = computed(() => {
-  if (!nodeSnapshot.value || !nodeForm.value) return false
-  return JSON.stringify(nodeForm.value) !== JSON.stringify(nodeSnapshot.value)
-})
-
 watch(selectedFlowSlug, (slug) => {
   if (slug) {
     void loadFlowDetail(slug)
@@ -941,6 +1005,8 @@ watch(selectedNodeId, (stateId) => {
     nodeForm.value = null
     nodeSnapshot.value = null
     nodeActionsText.value = '[]'
+    nodeActionsError.value = ''
+    nodeIdDraft.value = ''
     return
   }
   const source = flowDetail.value.nodes.find((node) => node.stateId === stateId)
@@ -948,8 +1014,12 @@ watch(selectedNodeId, (stateId) => {
     nodeForm.value = null
     nodeSnapshot.value = null
     nodeActionsText.value = '[]'
+    nodeActionsError.value = ''
+    nodeIdDraft.value = ''
     return
   }
+  nodeInitializing = true
+  inspectorOpen.value = true
   const clone = cloneNode(source)
   if (!clone.layout) clone.layout = { x: 0, y: 0 }
   if (!clone.readbackRequired) clone.readbackRequired = []
@@ -961,6 +1031,12 @@ watch(selectedNodeId, (stateId) => {
   nodeSnapshot.value = cloneNode(clone)
   nodeActionsText.value = JSON.stringify(clone.actions ?? [], null, 2)
   nodeActionsError.value = ''
+  nodeIdDraft.value = clone.stateId
+  lastTitleSuggestion = buildNodeKeyFromText(clone.title || clone.stateId)
+  pendingNodeHistory = null
+  nextTick(() => {
+    nodeInitializing = false
+  })
 })
 
 watch(
@@ -970,8 +1046,26 @@ watch(
     const index = flowDetail.value.nodes.findIndex((node) => node.stateId === value.stateId)
     if (index === -1) return
     flowDetail.value.nodes.splice(index, 1, cloneNode(value))
+    if (nodeInitializing || isApplyingHistory) return
+    if (!nodeSnapshot.value) return
+    if (!pendingNodeHistory || pendingNodeHistory.nodeId !== value.stateId) {
+      pendingNodeHistory = { nodeId: value.stateId, before: cloneNode(nodeSnapshot.value) }
+    }
+    scheduleNodeSave()
   },
   { deep: true }
+)
+
+watch(
+  () => nodeForm.value?.title,
+  (title) => {
+    if (!nodeForm.value) return
+    const suggestion = buildNodeKeyFromText(title || nodeForm.value.stateId)
+    if (!nodeRenaming && nodeIdDraft.value === lastTitleSuggestion) {
+      nodeIdDraft.value = suggestion
+    }
+    lastTitleSuggestion = suggestion
+  }
 )
 
 watch(
@@ -979,6 +1073,9 @@ watch(
   (start) => {
     if (!flowDetail.value) return
     flowDetail.value.flow.startState = start
+    if (!flowInitializing) {
+      scheduleFlowSave()
+    }
   }
 )
 
@@ -987,6 +1084,18 @@ watch(
   (states) => {
     if (!flowDetail.value) return
     flowDetail.value.flow.endStates = [...states]
+    if (!flowInitializing) {
+      scheduleFlowSave()
+    }
+  },
+  { deep: true }
+)
+
+watch(
+  flowForm,
+  () => {
+    if (flowInitializing) return
+    scheduleFlowSave()
   },
   { deep: true }
 )
@@ -1005,7 +1114,24 @@ onMounted(async () => {
   if (!auth.initialized) {
     await auth.fetchUser().catch(() => null)
   }
+  window.addEventListener('keydown', onGlobalKeydown)
   await loadFlows()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onGlobalKeydown)
+  if (flowAutoSaveTimer) {
+    clearTimeout(flowAutoSaveTimer)
+  }
+  if (nodeAutoSaveTimer) {
+    clearTimeout(nodeAutoSaveTimer)
+  }
+  if (autosaveIndicatorTimer) {
+    clearTimeout(autosaveIndicatorTimer)
+  }
+  if (layoutSaveTimer) {
+    clearTimeout(layoutSaveTimer)
+  }
 })
 
 function cloneNode<T>(node: T): T {
@@ -1026,6 +1152,122 @@ function showSnack(message: string, color = 'cyan') {
   snackbar.text = message
   snackbar.color = color
   snackbar.show = true
+}
+
+function flashAutosaveIndicator() {
+  if (autosaveIndicatorTimer) {
+    clearTimeout(autosaveIndicatorTimer)
+  }
+  autosaveIndicator.value = false
+  nextTick(() => {
+    autosaveIndicator.value = true
+    autosaveIndicatorTimer = setTimeout(() => {
+      autosaveIndicator.value = false
+    }, 3000)
+  })
+}
+
+function pushHistory(entry: HistoryEntry) {
+  if (historyIndex.value < historyEntries.value.length - 1) {
+    historyEntries.value = historyEntries.value.slice(0, historyIndex.value + 1)
+  }
+  historyEntries.value.push(entry)
+  if (historyEntries.value.length > 50) {
+    historyEntries.value.shift()
+  }
+  historyIndex.value = historyEntries.value.length - 1
+}
+
+async function undoHistory() {
+  if (historyIndex.value < 0) return
+  const entry = historyEntries.value[historyIndex.value]
+  await applyHistory(entry, 'undo')
+  historyIndex.value -= 1
+}
+
+async function redoHistory() {
+  if (historyIndex.value + 1 >= historyEntries.value.length) return
+  const entry = historyEntries.value[historyIndex.value + 1]
+  await applyHistory(entry, 'redo')
+  historyIndex.value += 1
+}
+
+async function applyHistory(entry: HistoryEntry, direction: 'undo' | 'redo') {
+  if (!flowDetail.value) return
+  isApplyingHistory = true
+  pendingNodeHistory = null
+  try {
+    if (entry.type === 'node-update') {
+      const target = direction === 'undo' ? entry.before : entry.after
+      const index = flowDetail.value.nodes.findIndex((node) => node.stateId === target.stateId)
+      if (index !== -1) {
+        flowDetail.value.nodes.splice(index, 1, cloneNode(target))
+      }
+      if (selectedNodeId.value === target.stateId) {
+        nodeInitializing = true
+        nodeForm.value = cloneNode(target)
+        nodeSnapshot.value = cloneNode(target)
+        nodeActionsText.value = JSON.stringify(target.actions ?? [], null, 2)
+        nodeIdDraft.value = target.stateId
+        lastTitleSuggestion = buildNodeKeyFromText(target.title || target.stateId)
+        nextTick(() => {
+          nodeInitializing = false
+        })
+      }
+      try {
+        await api.put(`/api/editor/flows/${flowDetail.value.flow.slug}/nodes/${target.stateId}`, cloneNode(target))
+        flashAutosaveIndicator()
+        if (selectedNodeId.value === target.stateId) {
+          nodeSnapshot.value = cloneNode(target)
+        }
+      } catch (error) {
+        console.error('Failed to apply node history', error)
+      }
+    } else if (entry.type === 'node-layout') {
+      const layout = direction === 'undo' ? entry.before : entry.after
+      const target = flowDetail.value.nodes.find((node) => node.stateId === entry.nodeId)
+      if (target) {
+        target.layout = { ...(target.layout || {}), ...layout }
+      }
+      if (nodeForm.value?.stateId === entry.nodeId) {
+        nodeForm.value.layout = { ...(nodeForm.value.layout || {}), ...layout }
+        nodeSnapshot.value = cloneNode(nodeForm.value)
+      }
+      try {
+        await api.request(`/api/editor/flows/${flowDetail.value.flow.slug}/nodes/${entry.nodeId}/layout`, {
+          method: 'PATCH',
+          body: layout,
+        })
+        flashAutosaveIndicator()
+      } catch (error) {
+        console.error('Failed to apply layout history', error)
+      }
+    } else if (entry.type === 'node-rename') {
+      const fromId = direction === 'undo' ? entry.afterId : entry.beforeId
+      const toId = direction === 'undo' ? entry.beforeId : entry.afterId
+      await renameNode(fromId, toId, { recordHistory: false })
+      if (direction === 'undo') {
+        nodeSnapshot.value = cloneNode(entry.before)
+      } else {
+        nodeSnapshot.value = cloneNode(entry.after)
+      }
+    }
+  } finally {
+    isApplyingHistory = false
+  }
+}
+
+function onGlobalKeydown(event: KeyboardEvent) {
+  const isModifier = event.metaKey || event.ctrlKey
+  if (!isModifier) return
+  if (event.key.toLowerCase() === 'z') {
+    event.preventDefault()
+    if (event.shiftKey) {
+      void redoHistory()
+    } else {
+      void undoHistory()
+    }
+  }
 }
 
 async function loadFlows() {
@@ -1056,15 +1298,25 @@ async function loadFlowDetail(slug: string) {
   try {
     const data = await api.get<{ flow: DecisionFlowModel; nodes: DecisionNodeModel[] }>(`/api/editor/flows/${slug}`)
     flowDetail.value = data
+    flowInitializing = true
     populateFlowForm(data.flow)
     flowSnapshot.value = cloneNode(flowForm)
     canvasState.zoom = data.flow.layout?.zoom ?? 1
     canvasState.pan = { x: data.flow.layout?.pan?.x ?? 0, y: data.flow.layout?.pan?.y ?? 0 }
     selectedNodeId.value = data.flow.startState || data.nodes[0]?.stateId || null
+    historyEntries.value = []
+    historyIndex.value = -1
+    pendingNodeHistory = null
+    pendingLayoutHistory = null
+    nextTick(() => {
+      flowInitializing = false
+    })
   } catch (error) {
     console.error('Failed to load flow detail', error)
     flowError.value = 'Details konnten nicht geladen werden.'
     flowDetail.value = null
+    flowInitializing = false
+    selectedNodeId.value = null
   } finally {
     flowLoading.value = false
   }
@@ -1144,9 +1396,25 @@ function resetNodeFilters() {
   nodeFilter.autopOnly = false
 }
 
-function selectNode(stateId: string) {
-  selectedNodeId.value = stateId
+function selectNode(stateId: string | null, options: { focus?: boolean } = {}) {
+  if (!stateId) {
+    selectedNodeId.value = null
+    return
+  }
+  inspectorOpen.value = true
+  if (selectedNodeId.value !== stateId) {
+    selectedNodeId.value = stateId
+  }
   inspectorTab.value = 'general'
+  if (options.focus !== false) {
+    focusNodeOnCanvas(stateId)
+  }
+}
+
+function focusNodeOnCanvas(stateId: string) {
+  nextTick(() => {
+    canvasComponent.value?.focusNode(stateId)
+  })
 }
 
 function syncNodeLayout() {
@@ -1167,11 +1435,17 @@ function syncActionsFromText() {
   }
 }
 
-async function saveFlow() {
+async function persistFlow(options: { silent?: boolean } = {}) {
   if (!flowDetail.value) return
+  const silent = options.silent ?? false
+  if (flowAutoSaveTimer) {
+    clearTimeout(flowAutoSaveTimer)
+    flowAutoSaveTimer = null
+  }
   flowSaveLoading.value = true
+  let payload: Record<string, any>
   try {
-    const payload: Record<string, any> = {
+    payload = {
       name: flowForm.name.trim(),
       description: flowForm.description,
       schemaVersion: flowForm.schemaVersion.trim(),
@@ -1189,29 +1463,78 @@ async function saveFlow() {
       policies: safeParse(flowForm.policies, 'Policies'),
       hooks: safeParse(flowForm.hooks, 'Hooks'),
     }
+    flowForm.name = payload.name
+    flowForm.schemaVersion = payload.schemaVersion
+    flowForm.startState = payload.startState
+  } catch (error: any) {
+    flowSaveLoading.value = false
+    const message = error?.message || 'Flow konnte nicht gespeichert werden.'
+    if (!silent || message !== lastFlowAutosaveError) {
+      showSnack(message, 'red')
+    }
+    lastFlowAutosaveError = message
+    return
+  }
+
+  try {
     const updated = await api.put<{ flow: DecisionFlowModel; nodes: DecisionNodeModel[] }>(
       `/api/editor/flows/${flowDetail.value.flow.slug}`,
       payload
     )
-    flowDetail.value = updated
-    populateFlowForm(updated.flow)
+    if (flowDetail.value) {
+      flowDetail.value.flow = updated.flow
+      if (Array.isArray(updated.nodes)) {
+        flowDetail.value.nodes = updated.nodes
+      }
+    }
     flowSnapshot.value = cloneNode(flowForm)
-    showSnack('Flow gespeichert.')
-    await loadFlows()
+    lastFlowAutosaveError = ''
+
+    if (silent) {
+      const summaryIndex = flows.value.findIndex((flow) => flow.slug === updated.flow.slug)
+      if (summaryIndex !== -1) {
+        const previous = flows.value[summaryIndex]
+        flows.value.splice(summaryIndex, 1, {
+          ...previous,
+          name: updated.flow.name,
+          description: updated.flow.description,
+          startState: updated.flow.startState,
+          nodeCount: updated.nodes?.length ?? previous.nodeCount,
+        })
+      }
+      flashAutosaveIndicator()
+    } else {
+      showSnack('Flow gespeichert.')
+      await loadFlows()
+    }
   } catch (error: any) {
     console.error('Failed to save flow', error)
-    showSnack(error?.statusMessage || 'Flow konnte nicht gespeichert werden.', 'red')
+    const message = error?.statusMessage || 'Flow konnte nicht gespeichert werden.'
+    if (!silent || message !== lastFlowAutosaveError) {
+      showSnack(message, 'red')
+    }
+    lastFlowAutosaveError = message
   } finally {
     flowSaveLoading.value = false
   }
 }
 
-async function saveNode() {
+async function persistNode(options: { silent?: boolean } = {}) {
   if (!flowDetail.value || !nodeForm.value) return
+  const silent = options.silent ?? false
+  if (nodeAutoSaveTimer) {
+    clearTimeout(nodeAutoSaveTimer)
+    nodeAutoSaveTimer = null
+  }
   if (nodeActionsError.value) {
-    showSnack('Actions JSON korrigieren.', 'amber')
+    const message = 'Actions JSON korrigieren.'
+    if (!silent || message !== lastNodeAutosaveError) {
+      showSnack(message, 'amber')
+    }
+    lastNodeAutosaveError = message
     return
   }
+
   nodeSaving.value = true
   try {
     const response = await api.put<DecisionNodeModel>(
@@ -1223,14 +1546,252 @@ async function saveNode() {
       flowDetail.value.nodes.splice(index, 1, response)
     }
     nodeSnapshot.value = cloneNode(response)
+    nodeInitializing = true
     nodeForm.value = cloneNode(response)
     nodeActionsText.value = JSON.stringify(response.actions ?? [], null, 2)
-    showSnack('Node gespeichert.')
+    nodeIdDraft.value = response.stateId
+    lastTitleSuggestion = buildNodeKeyFromText(response.title || response.stateId)
+    if (pendingNodeHistory && pendingNodeHistory.nodeId === response.stateId) {
+      const beforeSnapshot = JSON.stringify(pendingNodeHistory.before)
+      const afterSnapshot = JSON.stringify(response)
+      if (beforeSnapshot !== afterSnapshot) {
+        pushHistory({
+          type: 'node-update',
+          nodeId: response.stateId,
+          before: pendingNodeHistory.before,
+          after: cloneNode(response),
+        })
+      }
+    }
+    pendingNodeHistory = null
+    nextTick(() => {
+      nodeInitializing = false
+    })
+    lastNodeAutosaveError = ''
+    if (silent) {
+      flashAutosaveIndicator()
+    } else {
+      showSnack('Node gespeichert.')
+    }
   } catch (error: any) {
     console.error('Failed to save node', error)
-    showSnack(error?.statusMessage || 'Node konnte nicht gespeichert werden.', 'red')
+    const message = error?.statusMessage || 'Node konnte nicht gespeichert werden.'
+    if (!silent || message !== lastNodeAutosaveError) {
+      showSnack(message, 'red')
+    }
+    lastNodeAutosaveError = message
   } finally {
     nodeSaving.value = false
+  }
+}
+
+function persistNodeNow() {
+  void persistNode({ silent: false })
+}
+
+function scheduleFlowSave() {
+  if (!flowDetail.value) return
+  if (flowAutoSaveTimer) {
+    clearTimeout(flowAutoSaveTimer)
+  }
+  flowAutoSaveTimer = setTimeout(() => {
+    flowAutoSaveTimer = null
+    void persistFlow({ silent: true })
+  }, 800)
+}
+
+function scheduleNodeSave() {
+  if (!flowDetail.value || !nodeForm.value) return
+  if (nodeActionsError.value) return
+  if (nodeAutoSaveTimer) {
+    clearTimeout(nodeAutoSaveTimer)
+  }
+  nodeAutoSaveTimer = setTimeout(() => {
+    nodeAutoSaveTimer = null
+    if (!nodeForm.value) return
+    void persistNode({ silent: true })
+  }, 800)
+}
+
+async function applyNodeRename() {
+  if (!flowDetail.value || !nodeForm.value) return
+  const draft = nodeIdDraft.value.trim()
+  if (!draft) {
+    nodeIdDraft.value = nodeForm.value.stateId
+    return
+  }
+  const targetId = buildNodeKeyFromText(draft)
+  if (targetId === nodeForm.value.stateId) {
+    nodeIdDraft.value = targetId
+    return
+  }
+  await renameNode(nodeForm.value.stateId, targetId, { recordHistory: true })
+}
+
+async function renameNode(oldId: string, newId: string, options: { recordHistory?: boolean } = {}) {
+  if (!flowDetail.value || !newId) return
+  const trimmedNewId = newId.trim().toUpperCase()
+  if (!trimmedNewId || oldId === trimmedNewId) {
+    nodeIdDraft.value = oldId
+    return
+  }
+  nodeRenaming = true
+  try {
+    const previousIndex = flowDetail.value.nodes.findIndex((node) => node.stateId === oldId)
+    const previousNode = previousIndex !== -1 ? cloneNode(flowDetail.value.nodes[previousIndex]) : null
+    const response = await api.request<{
+      node: DecisionNodeModel
+      references: DecisionNodeModel[]
+      flow: { startState: string; endStates: string[] }
+    }>(`/api/editor/flows/${flowDetail.value.flow.slug}/nodes/${oldId}/rename`, {
+      method: 'PATCH',
+      body: { stateId: trimmedNewId },
+    })
+
+    if (previousIndex !== -1) {
+      flowDetail.value.nodes.splice(previousIndex, 1, response.node)
+    } else {
+      flowDetail.value.nodes.push(response.node)
+    }
+
+    response.references.forEach((ref) => {
+      const idx = flowDetail.value!.nodes.findIndex((node) => node.stateId === ref.stateId)
+      if (idx !== -1) {
+        flowDetail.value!.nodes.splice(idx, 1, ref)
+      }
+    })
+
+    flowDetail.value.flow.startState = response.flow.startState
+    flowDetail.value.flow.endStates = response.flow.endStates
+    flowInitializing = true
+    flowForm.startState = response.flow.startState
+    flowForm.endStates = [...response.flow.endStates]
+    nextTick(() => {
+      flowInitializing = false
+    })
+    flowSnapshot.value = cloneNode(flowForm)
+
+    const summaryIndex = flows.value.findIndex((flow) => flow.slug === flowDetail.value!.flow.slug)
+    if (summaryIndex !== -1) {
+      const previous = flows.value[summaryIndex]
+      flows.value.splice(summaryIndex, 1, {
+        ...previous,
+        startState: response.flow.startState,
+      })
+    }
+
+    nodeIdDraft.value = response.node.stateId
+    lastTitleSuggestion = buildNodeKeyFromText(response.node.title || response.node.stateId)
+    pendingNodeHistory = null
+
+    if (options.recordHistory !== false && previousNode) {
+      pushHistory({
+        type: 'node-rename',
+        beforeId: oldId,
+        afterId: response.node.stateId,
+        before: previousNode,
+        after: cloneNode(response.node),
+      })
+    }
+
+    selectedNodeId.value = response.node.stateId
+    flashAutosaveIndicator()
+  } catch (error: any) {
+    console.error('Failed to rename node', error)
+    showSnack(error?.statusMessage || 'Node konnte nicht umbenannt werden.', 'red')
+    nodeIdDraft.value = oldId
+  } finally {
+    nodeRenaming = false
+  }
+}
+
+async function createNodeRelative(referenceId: string, position: 'before' | 'after') {
+  if (!flowDetail.value) return
+  const reference = flowDetail.value.nodes.find((node) => node.stateId === referenceId)
+  if (!reference) return
+
+  const baseTitle = reference.title || reference.stateId
+  const defaultTitle = position === 'after' ? `${baseTitle} Weiter` : `${baseTitle} Eingang`
+  let candidateId = buildNodeKeyFromText(defaultTitle)
+  let suffix = 1
+  while (flowDetail.value.nodes.some((node) => node.stateId === candidateId)) {
+    candidateId = `${buildNodeKeyFromText(defaultTitle)}_${suffix}`
+    suffix += 1
+  }
+
+  const layoutY = (reference.layout?.y ?? 0) + (position === 'after' ? 220 : -220)
+  const layout = {
+    x: reference.layout?.x ?? 0,
+    y: Math.max(0, layoutY),
+  }
+
+  const newNodePayload = {
+    stateId: candidateId,
+    title: 'Neuer Node',
+    summary: '',
+    role: reference.role || 'pilot',
+    phase: reference.phase || 'general',
+    transitions:
+      position === 'before'
+        ? [
+            {
+              key: generateKey('tr'),
+              type: 'next' as const,
+              target: reference.stateId,
+              order: 0,
+            },
+          ]
+        : [],
+    layout,
+  }
+
+  try {
+    const newNode = await api.post<DecisionNodeModel>(
+      `/api/editor/flows/${flowDetail.value.flow.slug}/nodes`,
+      newNodePayload
+    )
+
+    const referenceIndex = flowDetail.value.nodes.findIndex((node) => node.stateId === referenceId)
+    if (referenceIndex !== -1) {
+      const insertIndex = position === 'after' ? referenceIndex + 1 : referenceIndex
+      flowDetail.value.nodes.splice(insertIndex, 0, newNode)
+    } else {
+      flowDetail.value.nodes.push(newNode)
+    }
+
+    if (position === 'after') {
+      const transition = {
+        key: generateKey('tr'),
+        type: 'next' as const,
+        target: newNode.stateId,
+        order: (reference.transitions?.length ?? 0),
+      }
+      reference.transitions = [...(reference.transitions || []), transition]
+      if (nodeForm.value?.stateId === reference.stateId) {
+        nodeForm.value.transitions = cloneNode(reference.transitions)
+      }
+      try {
+        await api.put(`/api/editor/flows/${flowDetail.value.flow.slug}/nodes/${reference.stateId}`, cloneNode(reference))
+      } catch (error) {
+        console.error('Failed to link new node', error)
+      }
+    }
+
+    const summaryIndex = flows.value.findIndex((flow) => flow.slug === flowDetail.value!.flow.slug)
+    if (summaryIndex !== -1) {
+      const previous = flows.value[summaryIndex]
+      flows.value.splice(summaryIndex, 1, {
+        ...previous,
+        nodeCount: previous.nodeCount + 1,
+      })
+    }
+
+    selectedNodeId.value = newNode.stateId
+    focusNodeOnCanvas(newNode.stateId)
+    flashAutosaveIndicator()
+  } catch (error: any) {
+    console.error('Failed to create node', error)
+    showSnack(error?.statusMessage || 'Node konnte nicht angelegt werden.', 'red')
   }
 }
 
@@ -1240,6 +1801,7 @@ function resetNode() {
   nodeActionsText.value = JSON.stringify(nodeSnapshot.value.actions ?? [], null, 2)
   nodeActionsError.value = ''
   syncNodeLayout()
+  pendingNodeHistory = null
 }
 
 async function deleteNode() {
@@ -1251,6 +1813,15 @@ async function deleteNode() {
     flowDetail.value.nodes = flowDetail.value.nodes.filter((node) => node.stateId !== nodeForm.value?.stateId)
     showSnack('Node gelöscht.', 'amber')
     selectedNodeId.value = flowDetail.value.flow.startState || flowDetail.value.nodes[0]?.stateId || null
+    const summaryIndex = flows.value.findIndex((flow) => flow.slug === flowDetail.value!.flow.slug)
+    if (summaryIndex !== -1) {
+      const previous = flows.value[summaryIndex]
+      flows.value.splice(summaryIndex, 1, {
+        ...previous,
+        nodeCount: Math.max(0, previous.nodeCount - 1),
+      })
+    }
+    flashAutosaveIndicator()
   } catch (error) {
     console.error('Failed to delete node', error)
     showSnack('Node konnte nicht gelöscht werden.', 'red')
@@ -1357,6 +1928,18 @@ function autoLayoutNodes() {
   }
 
   showSnack('Auto-Layout angewendet.')
+  flashAutosaveIndicator()
+}
+
+function onNodeDragStart(stateId: string) {
+  if (!flowDetail.value) return
+  const target = flowDetail.value.nodes.find((node) => node.stateId === stateId)
+  if (!target) return
+  const layout = target.layout || { x: 0, y: 0 }
+  pendingLayoutHistory = {
+    nodeId: stateId,
+    start: { x: layout.x ?? 0, y: layout.y ?? 0 },
+  }
 }
 
 function onNodeMove(payload: { stateId: string; x: number; y: number }) {
@@ -1382,9 +1965,22 @@ async function onNodeDrop(payload: { stateId: string; x: number; y: number }) {
       method: 'PATCH',
       body: { x, y },
     })
+    if (pendingLayoutHistory && pendingLayoutHistory.nodeId === payload.stateId) {
+      const before = pendingLayoutHistory.start
+      if (before.x !== x || before.y !== y) {
+        pushHistory({
+          type: 'node-layout',
+          nodeId: payload.stateId,
+          before,
+          after: { x, y },
+        })
+      }
+    }
+    flashAutosaveIndicator()
   } catch (error) {
     console.error('Failed to persist node layout', error)
   }
+  pendingLayoutHistory = null
 }
 
 function onUpdatePan(pan: { x: number; y: number }) {
@@ -1411,8 +2007,11 @@ function scheduleLayoutSave() {
           groups: flowDetail.value!.flow.layout?.groups ?? [],
         },
       })
+      flashAutosaveIndicator()
     } catch (error) {
       console.error('Failed to persist canvas transform', error)
+    } finally {
+      layoutSaveTimer = null
     }
   }, 500)
 }
@@ -1484,6 +2083,14 @@ const suggestedReadbackFields = [
   'frequency',
 ]
 
+function buildNodeKeyFromText(text: string) {
+  return text
+    .normalize('NFKD')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase() || 'NODE'
+}
+
 function generateKey(prefix: string) {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return `${prefix}_${crypto.randomUUID().slice(0, 8)}`
@@ -1553,6 +2160,27 @@ function removePlaceholder(index: number) {
 </script>
 
 <style scoped>
+.autosave-fade-enter-active,
+.autosave-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.autosave-fade-enter-from,
+.autosave-fade-leave-to {
+  opacity: 0;
+}
+
+.inspector-slide-enter-active,
+.inspector-slide-leave-active {
+  transition: transform 0.28s ease, opacity 0.28s ease;
+}
+
+.inspector-slide-enter-from,
+.inspector-slide-leave-to {
+  opacity: 0;
+  transform: translateX(12px);
+}
+
 .sidebar-button {
   @apply w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-cyan-400;
 }
