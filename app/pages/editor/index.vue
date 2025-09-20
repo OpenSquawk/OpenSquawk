@@ -7,12 +7,10 @@
           flat
           density="comfortable"
           color="rgba(11, 18, 36, 0.92)"
-          class="border-b border-white/10 backdrop-blur-md shrink-0"
-          :extended="true"
-          height="72"
-          extension-height="92"
+          class="shrink-0 border-b border-white/10 backdrop-blur-md"
+          height="76"
         >
-          <div class="flex flex-1 items-center gap-3 overflow-hidden">
+          <div class="flex w-full items-center gap-4 overflow-hidden px-1">
             <div class="flex shrink-0 items-center gap-2">
               <v-icon icon="mdi-radar" size="24" color="cyan" />
               <div class="leading-tight">
@@ -20,105 +18,195 @@
                 <p class="text-sm font-semibold text-white/90">Decision Flow Studio</p>
               </div>
             </div>
-            <v-autocomplete
-              v-model="selectedFlowSlug"
-              v-model:search="flowSearch"
-              :items="filteredFlows"
-              item-title="name"
-              item-value="slug"
-              density="compact"
-              variant="outlined"
-              hide-details
-              clearable
-              class="min-w-[220px] max-w-[320px]"
-              prepend-inner-icon="mdi-file-tree"
-              :loading="flowsLoading"
-              label="Flow auswählen"
-              :custom-filter="() => true"
-              @update:model-value="(value) => value && selectFlow(value)"
-            >
-              <template #item="{ props, item }">
-                <v-list-item v-bind="props">
-                  <template #title>
-                    <div class="flex items-center justify-between gap-3">
-                      <span class="font-medium">{{ item?.raw?.name }}</span>
-                      <v-chip v-if="item?.raw?.nodeCount" size="x-small" color="cyan" variant="tonal">
-                        {{ item.raw.nodeCount }}
-                      </v-chip>
-                    </div>
+            <v-divider vertical class="h-9 border-white/10" />
+            <div class="flex items-center gap-2 min-w-0">
+              <v-autocomplete
+                v-model="selectedFlowSlug"
+                v-model:search="flowSearch"
+                :items="filteredFlows"
+                item-title="name"
+                item-value="slug"
+                density="compact"
+                variant="outlined"
+                hide-details
+                clearable
+                class="w-[240px]"
+                prepend-inner-icon="mdi-file-tree"
+                :loading="flowsLoading"
+                label="Flow auswählen"
+                :custom-filter="() => true"
+                @update:model-value="(value) => value && selectFlow(value)"
+              >
+                <template #item="{ props, item }">
+                  <v-list-item v-bind="props">
+                    <template #title>
+                      <div class="flex items-center justify-between gap-3">
+                        <span class="font-medium">{{ item?.raw?.name }}</span>
+                        <v-chip v-if="item?.raw?.nodeCount" size="x-small" color="cyan" variant="tonal">
+                          {{ item.raw.nodeCount }}
+                        </v-chip>
+                      </div>
+                    </template>
+                    <template #subtitle>
+                      <span class="text-xs text-white/60">Start: {{ item?.raw?.startState }}</span>
+                    </template>
+                  </v-list-item>
+                </template>
+              </v-autocomplete>
+              <div class="flex shrink-0 items-center gap-1">
+                <v-tooltip text="Neuen Flow anlegen">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" icon size="small" variant="text" color="cyan" @click="openCreateFlow">
+                      <v-icon icon="mdi-plus" />
+                    </v-btn>
                   </template>
-                  <template #subtitle>
-                    <span class="text-xs text-white/60">Start: {{ item?.raw?.startState }}</span>
+                </v-tooltip>
+                <v-tooltip text="Legacy ATC Import">
+                  <template #activator="{ props }">
+                    <v-btn
+                      v-bind="props"
+                      icon
+                      size="small"
+                      variant="text"
+                      color="purple"
+                      :loading="importLoading"
+                      @click="runImport"
+                    >
+                      <v-icon icon="mdi-database-import" />
+                    </v-btn>
                   </template>
-                </v-list-item>
-              </template>
-            </v-autocomplete>
-            <v-tooltip text="Neuen Flow anlegen">
-              <template #activator="{ props }">
-                <v-btn v-bind="props" icon variant="text" color="cyan" @click="openCreateFlow">
-                  <v-icon icon="mdi-plus" />
-                </v-btn>
-              </template>
-            </v-tooltip>
-            <v-tooltip text="Legacy ATC Import">
-              <template #activator="{ props }">
-                <v-btn
-                  v-bind="props"
-                  icon
-                  variant="text"
-                  color="purple"
-                  :loading="importLoading"
-                  @click="runImport"
+                </v-tooltip>
+              </div>
+            </div>
+            <v-divider vertical class="h-9 border-white/10" />
+            <div class="flex items-center gap-2 min-w-0">
+              <v-text-field
+                v-model="nodeFilter.search"
+                density="compact"
+                variant="outlined"
+                hide-details
+                prepend-inner-icon="mdi-magnify"
+                placeholder="Node suchen"
+                class="w-[200px]"
+              />
+              <v-select
+                v-model="nodeFilter.role"
+                :items="roleFilterOptions"
+                density="compact"
+                hide-details
+                variant="outlined"
+                class="w-[140px]"
+                label="Rolle"
+              />
+              <v-select
+                v-model="nodeFilter.phase"
+                :items="phaseFilterOptions"
+                density="compact"
+                hide-details
+                variant="outlined"
+                class="w-[160px]"
+                label="Phase"
+              />
+              <v-tooltip text="Nur Auto-Trigger anzeigen">
+                <template #activator="{ props }">
+                  <v-btn
+                    v-bind="props"
+                    icon
+                    size="small"
+                    variant="text"
+                    :color="nodeFilter.autopOnly ? 'amber' : undefined"
+                    class="text-white/70 hover:text-white"
+                    @click="toggleAutopOnly"
+                  >
+                    <v-icon icon="mdi-auto-fix" />
+                  </v-btn>
+                </template>
+              </v-tooltip>
+            </div>
+            <v-divider vertical class="h-9 border-white/10" />
+            <div class="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
+              <div class="flex shrink-0 items-center gap-2 text-xs uppercase tracking-widest text-white/60">
+                <span>Nodes</span>
+                <v-chip v-if="flowDetail" size="x-small" color="cyan" variant="flat">
+                  {{ nodeSelectorItems.length }}
+                </v-chip>
+              </div>
+              <div class="flex-1 overflow-hidden">
+                <v-slide-group
+                  v-if="flowDetail"
+                  v-model="selectedNodeId"
+                  show-arrows
+                  center-active
+                  class="max-w-full"
                 >
-                  <v-icon icon="mdi-database-import" />
-                </v-btn>
-              </template>
-            </v-tooltip>
-            <v-divider vertical class="mx-1 h-8 border-white/10" />
-            <v-text-field
-              v-model="nodeFilter.search"
-              density="compact"
-              variant="outlined"
-              hide-details
-              prepend-inner-icon="mdi-magnify"
-              placeholder="Node suchen"
-              class="max-w-[220px]"
-            />
-            <v-select
-              v-model="nodeFilter.role"
-              :items="roleFilterOptions"
-              density="compact"
-              hide-details
-              variant="outlined"
-              class="w-[140px]"
-              label="Rolle"
-            />
-            <v-select
-              v-model="nodeFilter.phase"
-              :items="phaseFilterOptions"
-              density="compact"
-              hide-details
-              variant="outlined"
-              class="w-[150px]"
-              label="Phase"
-            />
-            <v-tooltip text="Nur Auto-Trigger anzeigen">
-              <template #activator="{ props }">
-                <v-btn
-                  v-bind="props"
-                  icon
-                  variant="text"
-                  :color="nodeFilter.autopOnly ? 'amber' : undefined"
-                  class="text-white/70 hover:text-white"
-                  @click="toggleAutopOnly"
-                >
-                  <v-icon icon="mdi-auto-fix" />
-                </v-btn>
-              </template>
-            </v-tooltip>
-            <v-spacer />
-            <div class="flex min-w-0 items-center gap-3">
-              <div class="min-w-0">
+                  <v-slide-group-item
+                    v-for="node in nodeSelectorItems"
+                    :key="node.id"
+                    :value="node.id"
+                    v-slot="{ isSelected, toggle }"
+                  >
+                    <v-tooltip
+                      :text="`${node.id} — ${node.title || 'Ohne Titel'}`"
+                      location="bottom"
+                    >
+                      <template #activator="{ props }">
+                        <span class="inline-flex">
+                          <v-badge
+                            v-if="node.autopCount > 0"
+                            :content="node.autopCount"
+                            color="amber"
+                            floating
+                            offset-x="8"
+                            offset-y="8"
+                            class="text-[10px]"
+                          >
+                            <v-btn
+                              v-bind="props"
+                              icon
+                              variant="text"
+                              :class="[
+                                'h-9 w-9 rounded-xl transition-all',
+                                isSelected
+                                  ? 'bg-cyan-500/20 text-cyan-100'
+                                  : 'text-white/70 hover:text-white',
+                              ]"
+                              @click="toggle(); selectNode(node.id)"
+                            >
+                              <v-icon
+                                :icon="node.icon || roleIcons[node.role] || 'mdi-shape-outline'"
+                                :color="isSelected ? roleColors[node.role] || 'cyan' : undefined"
+                              />
+                            </v-btn>
+                          </v-badge>
+                          <v-btn
+                            v-else
+                            v-bind="props"
+                            icon
+                            variant="text"
+                            :class="[
+                              'h-9 w-9 rounded-xl transition-all',
+                              isSelected
+                                ? 'bg-cyan-500/20 text-cyan-100'
+                                : 'text-white/70 hover:text-white',
+                            ]"
+                            @click="toggle(); selectNode(node.id)"
+                          >
+                            <v-icon
+                              :icon="node.icon || roleIcons[node.role] || 'mdi-shape-outline'"
+                              :color="isSelected ? roleColors[node.role] || 'cyan' : undefined"
+                            />
+                          </v-btn>
+                        </span>
+                      </template>
+                    </v-tooltip>
+                  </v-slide-group-item>
+                </v-slide-group>
+                <p v-else class="truncate text-xs text-white/50">Kein Flow ausgewählt.</p>
+              </div>
+            </div>
+            <v-divider vertical class="h-9 border-white/10" />
+            <div class="flex shrink-0 items-center gap-3 pl-2 min-w-0">
+              <div class="min-w-0 text-right leading-tight">
                 <p class="text-[11px] uppercase tracking-wider text-white/50">Aktueller Flow</p>
                 <p class="truncate text-sm font-semibold">
                   {{ flowForm.name || 'Kein Flow ausgewählt' }}
@@ -150,108 +238,29 @@
               </v-btn>
             </div>
           </div>
-          <template #extension>
-            <div class="w-full space-y-2 px-3 pb-3 pt-2">
-              <v-progress-linear
-                v-if="flowsLoading"
-                indeterminate
-                color="cyan"
-                class="bg-white/10"
-                height="3"
-                rounded
-              />
-              <v-alert
-                v-if="flowsError"
-                type="warning"
-                density="comfortable"
-                class="bg-amber-500/10 text-amber-200"
-                border="start"
-              >
-                {{ flowsError }}
-              </v-alert>
-              <div class="flex items-center gap-3 overflow-hidden">
-                <div class="flex shrink-0 items-center gap-2 text-xs uppercase tracking-widest text-white/60">
-                  <span>Nodes</span>
-                  <v-chip v-if="flowDetail" size="x-small" color="cyan" variant="flat">
-                    {{ nodeSelectorItems.length }}
-                  </v-chip>
-                </div>
-                <div class="flex-1 overflow-hidden">
-                  <v-slide-group
-                    v-if="flowDetail"
-                    v-model="selectedNodeId"
-                    show-arrows
-                    center-active
-                    class="max-w-full"
-                  >
-                    <v-slide-group-item
-                      v-for="node in nodeSelectorItems"
-                      :key="node.id"
-                      :value="node.id"
-                      v-slot="{ isSelected, toggle }"
-                    >
-                      <v-tooltip
-                        :text="`${node.id} — ${node.title || 'Ohne Titel'}`"
-                        location="bottom"
-                      >
-                        <template #activator="{ props }">
-                          <span class="inline-flex">
-                            <v-badge
-                              v-if="node.autopCount > 0"
-                              :content="node.autopCount"
-                              color="amber"
-                              floating
-                              offset-x="8"
-                              offset-y="8"
-                              class="text-[10px]"
-                            >
-                              <v-btn
-                                v-bind="props"
-                                icon
-                                variant="text"
-                                :class="[
-                                  'h-9 w-9 rounded-xl transition-all',
-                                  isSelected
-                                    ? 'bg-cyan-500/20 text-cyan-100'
-                                    : 'text-white/70 hover:text-white',
-                                ]"
-                                @click="toggle(); selectNode(node.id)"
-                              >
-                                <v-icon
-                                  :icon="node.icon || roleIcons[node.role] || 'mdi-shape-outline'"
-                                  :color="isSelected ? roleColors[node.role] || 'cyan' : undefined"
-                                />
-                              </v-btn>
-                            </v-badge>
-                            <v-btn
-                              v-else
-                              v-bind="props"
-                              icon
-                              variant="text"
-                              :class="[
-                                'h-9 w-9 rounded-xl transition-all',
-                                isSelected
-                                  ? 'bg-cyan-500/20 text-cyan-100'
-                                  : 'text-white/70 hover:text-white',
-                              ]"
-                              @click="toggle(); selectNode(node.id)"
-                            >
-                              <v-icon
-                                :icon="node.icon || roleIcons[node.role] || 'mdi-shape-outline'"
-                                :color="isSelected ? roleColors[node.role] || 'cyan' : undefined"
-                              />
-                            </v-btn>
-                          </span>
-                        </template>
-                      </v-tooltip>
-                    </v-slide-group-item>
-                  </v-slide-group>
-                  <p v-else class="text-xs text-white/50">Kein Flow ausgewählt.</p>
-                </div>
-              </div>
-            </div>
-          </template>
         </v-app-bar>
+        <div
+          v-if="flowsLoading || flowsError"
+          class="border-b border-white/10 bg-[#0b1224]/75 px-4 py-2 backdrop-blur"
+        >
+          <v-progress-linear
+            v-if="flowsLoading"
+            indeterminate
+            color="cyan"
+            class="bg-white/10"
+            height="3"
+            rounded
+          />
+          <v-alert
+            v-if="flowsError"
+            type="warning"
+            density="comfortable"
+            class="mt-2 bg-amber-500/10 text-amber-200"
+            border="start"
+          >
+            {{ flowsError }}
+          </v-alert>
+        </div>
         <div class="flex flex-1 overflow-hidden">
           <section class="relative flex-1 overflow-hidden bg-[#070d1a]">
             <DecisionNodeCanvas

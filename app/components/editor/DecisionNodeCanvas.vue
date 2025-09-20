@@ -41,40 +41,46 @@
           @pointerdown.stop="(event) => onNodePointerDown(event, node)"
           @dblclick.prevent="() => emit('select', node.id)"
         >
-          <div class="flex items-center justify-between gap-2 px-4 pt-3">
-            <div class="flex items-center gap-2">
-              <span
-                class="rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide"
-                :style="{ backgroundColor: node.accent, color: '#041726' }"
-              >
-                {{ node.role }}
-              </span>
-              <span class="text-xs uppercase tracking-wider text-white/50">{{ node.phase }}</span>
+          <span class="node-connector node-connector--input" />
+          <span class="node-connector node-connector--output" />
+          <div class="flex h-full flex-col">
+            <div class="flex items-center justify-between gap-2 px-4 pt-4">
+              <div class="flex items-center gap-2">
+                <span
+                  class="rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide"
+                  :style="{ backgroundColor: node.accent, color: '#041726' }"
+                >
+                  {{ node.role }}
+                </span>
+                <span class="text-xs uppercase tracking-wider text-white/50">{{ node.phase }}</span>
+              </div>
+              <div class="flex items-center gap-1 text-xs text-white/60">
+                <span v-if="node.isStart" class="rounded bg-emerald-400/20 px-1.5 py-0.5 text-emerald-200">Start</span>
+                <span v-if="node.isEnd" class="rounded bg-purple-400/20 px-1.5 py-0.5 text-purple-200">End</span>
+              </div>
             </div>
-            <div class="flex items-center gap-1 text-xs text-white/60">
-              <span v-if="node.isStart" class="rounded bg-emerald-400/20 px-1.5 py-0.5 text-emerald-200">Start</span>
-              <span v-if="node.isEnd" class="rounded bg-purple-400/20 px-1.5 py-0.5 text-purple-200">End</span>
-            </div>
-          </div>
-          <div class="space-y-1 px-4 pb-3 pt-1">
-            <p class="font-mono text-xs tracking-wider text-cyan-200/80">{{ node.id }}</p>
-            <p class="text-base font-semibold text-white/90">{{ node.title || 'Untitled node' }}</p>
-            <p class="line-clamp-2 text-sm text-white/60">{{ node.summary }}</p>
-            <div class="flex flex-wrap gap-1 pt-1">
-              <span
-                v-for="transition in node.previewTransitions"
-                :key="transition.key"
-                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
-                :class="transition.class"
-                @click.stop="emit('navigate', transition.target)"
-              >
-                <span class="font-mono">→ {{ transition.target }}</span>
-                <span v-if="transition.type !== 'next'" class="uppercase tracking-wider">{{ transition.type }}</span>
-              </span>
-            </div>
-            <div v-if="node.autopCount > 0" class="flex items-center gap-1 text-xs text-amber-200">
-              <v-icon icon="mdi-auto-fix" size="16" class="text-amber-300" />
-              <span>{{ node.autopCount }} auto trigger{{ node.autopCount > 1 ? 's' : '' }}</span>
+            <div class="flex flex-1 flex-col gap-2 px-4 pb-4 pt-2">
+              <div class="space-y-1">
+                <p class="font-mono text-xs tracking-wider text-cyan-200/80">{{ node.id }}</p>
+                <p class="text-base font-semibold text-white/90">{{ node.title || 'Untitled node' }}</p>
+                <p class="line-clamp-2 text-sm text-white/60">{{ node.summary }}</p>
+              </div>
+              <div class="flex flex-wrap gap-1 pt-1">
+                <span
+                  v-for="transition in node.previewTransitions"
+                  :key="transition.key"
+                  class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
+                  :class="transition.class"
+                  @click.stop="emit('navigate', transition.target)"
+                >
+                  <span class="font-mono">→ {{ transition.target }}</span>
+                  <span v-if="transition.type !== 'next'" class="uppercase tracking-wider">{{ transition.type }}</span>
+                </span>
+              </div>
+              <div v-if="node.autopCount > 0" class="flex items-center gap-1 text-xs text-amber-200">
+                <v-icon icon="mdi-auto-fix" size="16" class="text-amber-300" />
+                <span>{{ node.autopCount }} auto trigger{{ node.autopCount > 1 ? 's' : '' }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -325,14 +331,14 @@ function transitionColor(transition: DecisionNodeTransition) {
 }
 
 function computeEdgePath(source: { x: number; y: number; width: number; height: number }, target: { x: number; y: number; width: number; height: number }) {
-  const startX = source.x + source.width
-  const startY = source.y + source.height / 2
-  const endX = target.x
-  const endY = target.y + target.height / 2
-  const deltaX = Math.max(80, Math.abs(endX - startX) / 1.5)
-  const control1X = startX + deltaX
-  const control2X = endX - deltaX
-  return `M ${startX} ${startY} C ${control1X} ${startY}, ${control2X} ${endY}, ${endX} ${endY}`
+  const startX = source.x + source.width / 2
+  const startY = source.y + source.height
+  const endX = target.x + target.width / 2
+  const endY = target.y
+  const deltaY = Math.max(80, Math.abs(endY - startY) / 1.5)
+  const control1Y = startY + deltaY
+  const control2Y = endY - deltaY
+  return `M ${startX} ${startY} C ${startX} ${control1Y}, ${endX} ${control2Y}, ${endX} ${endY}`
 }
 
 let panPointerId: number | null = null
@@ -491,5 +497,21 @@ onBeforeUnmount(() => {
 <style scoped>
 .control-btn {
   @apply pointer-events-auto flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-black/40 text-white/80 transition hover:border-cyan-400 hover:text-cyan-200;
+}
+
+.node-connector {
+  @apply pointer-events-none absolute h-3 w-3 rounded-full border-2 border-white/60 bg-[#070d1a];
+}
+
+.node-connector--input {
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.node-connector--output {
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 50%);
 }
 </style>
