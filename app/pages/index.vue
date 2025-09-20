@@ -304,8 +304,6 @@
               </li>
               <li>SimBrief: direct import of flight plans &amp; briefings in planning
               </li>
-              <li>VATSIM/IVAO: no network coupling until licensing is cleared – focus on training paths
-              </li>
             </ul>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="100">
