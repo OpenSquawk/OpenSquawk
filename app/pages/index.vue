@@ -298,11 +298,13 @@
               for additional platforms.
             </p>
             <ul class="mt-3 space-y-2 text-white/70 text-sm list-disc list-inside">
-              <li>MSFS alpha: local connector + radio workflows in testing
+              <li>MSFS bridge: planned live-data connector scheduled for upcoming milestones
               </li>
-              <li>X-Plane: plugin sketch, community review welcome
+              <li>X-Plane: support follows MSFS once the shared bridge architecture is ready
               </li>
-              <li>VATSIM/IVAO: learning path & phraseology drills planned
+              <li>SimBrief: direct import of flight plans &amp; briefings in planning
+              </li>
+              <li>VATSIM/IVAO: no network coupling until licensing is cleared – focus on training paths
               </li>
             </ul>
           </div>
@@ -783,12 +785,12 @@
 
         <div class="mt-8 text-sm text-white/70 space-y-2" data-aos="fade-up" data-aos-delay="300">
           <p>
-            We are only allowed to connect to VATSIM as long as we do not make money with it. That is why live ATC
-            currently requires your own OpenAI API key, which we use solely for the related requests.
+            Direct VATSIM integration is on hold until licensing is clarified. We stay aligned with the network
+            guidelines before enabling any live connectivity.
           </p>
           <p>
-            We are actively looking for a simple plug-and-play option – as soon as we find a viable approach, we will
-            roll it out.
+            In the meantime we focus on offline training flows and roadmap voting to decide which learning content
+            launches next.
           </p>
         </div>
       </div>
