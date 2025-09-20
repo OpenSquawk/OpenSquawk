@@ -49,7 +49,7 @@ export function sanitizeStateInput(input: Partial<DecisionTreeState> & { role: D
   return {
     role: input.role,
     phase: input.phase,
-    label: input.label,
+    label: input.label?.trim() || undefined,
     prompt_out: input.prompt_out,
     say_tpl: input.say_tpl,
     utterance_tpl: input.utterance_tpl,
