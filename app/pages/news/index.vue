@@ -69,7 +69,7 @@ const formatNewsDate = (iso: string) => new Date(iso).toLocaleDateString('en-US'
 <style scoped>
 .container-outer { @apply mx-auto max-w-screen-xl px-4; }
 .card { @apply glass rounded-2xl p-5 md:p-6; }
-.btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-medium transition; }
+.btn { @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-medium transition; }
 .btn-primary { @apply bg-cyan-500 text-white hover:bg-cyan-400 shadow-[0_0_40px_rgba(34,211,238,.25)]; }
 .chip { @apply inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 text-white px-3 py-1 text-xs; }
 .glass { background: rgba(255,255,255,.06); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.08); }

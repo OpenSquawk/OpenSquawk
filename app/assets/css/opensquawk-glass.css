@@ -50,7 +50,7 @@
 
 /* Buttons – iOS shine and lift */
 .btn {
-    border-radius: calc(var(--glass-radius) - 6px);
+    border-radius: 1rem;
     transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08),
     0 6px 18px rgba(0, 0, 0, .28);
@@ -132,7 +132,7 @@
     color-mix(in srgb, var(--text) 7%, transparent),
     color-mix(in srgb, var(--text) 3%, transparent));
     border: 1px solid var(--glass-border);
-    border-radius: 14px;
+    border-radius: 1rem;
     color: var(--text);
     backdrop-filter: blur(var(--glass-blur));
 }

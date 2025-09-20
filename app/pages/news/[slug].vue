@@ -59,7 +59,7 @@ const formatNewsDate = (iso: string) => new Date(iso).toLocaleDateString('en-US'
 <style scoped>
 .container-outer { @apply mx-auto max-w-screen-lg px-4; }
 .card { @apply glass rounded-2xl p-6 md:p-10; }
-.btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-medium transition; }
+.btn { @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-medium transition; }
 .btn-primary { @apply bg-cyan-500 text-white hover:bg-cyan-400 shadow-[0_0_40px_rgba(34,211,238,.25)]; }
 .chip { @apply inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 text-white px-3 py-1 text-xs; }
 .news-body :deep(h2) { @apply text-2xl md:text-3xl font-semibold mt-6 mb-3 text-white; }

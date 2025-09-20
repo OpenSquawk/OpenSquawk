@@ -45,7 +45,7 @@
                 type="email"
                 required
                 autocomplete="email"
-                class="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400"
+                class="mt-1 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400"
               />
             </div>
 
@@ -86,7 +86,7 @@
                     required
                     minlength="8"
                     autocomplete="new-password"
-                    class="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400"
+                    class="mt-1 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400"
                   />
                   <p class="mt-1 text-xs text-white/50">At least 8 characters, ideally include a number and special character.</p>
                 </div>
@@ -97,7 +97,7 @@
                     type="password"
                     required
                     autocomplete="new-password"
-                    class="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400"
+                    class="mt-1 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400"
                   />
                 </div>
               </div>

@@ -2182,6 +2182,6 @@ function removePlaceholder(index: number) {
 }
 
 .sidebar-button {
-  @apply w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-cyan-400;
+  @apply w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-cyan-400;
 }
 </style>

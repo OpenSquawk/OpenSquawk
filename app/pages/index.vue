@@ -150,7 +150,7 @@
                     type="email"
                     required
                     placeholder="your@email"
-                    class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
+                    class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
                     aria-label="Email for product updates"
                 />
                 <button
@@ -523,7 +523,7 @@
                   type="text"
                   required
                   placeholder="Short title – e.g. ATIS integration for EDDF"
-                  class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
+                  class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
                   aria-label="Title for roadmap suggestion"
               />
               <textarea
@@ -531,14 +531,14 @@
                   rows="4"
                   required
                   placeholder="Describe why this matters or how it would help you."
-                  class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
+                  class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
               />
               <div class="grid gap-3 sm:grid-cols-2">
                 <input
                     v-model.trim="roadmapSuggestionForm.email"
                     type="email"
                     placeholder="Email (optional)"
-                    class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
+                    class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
                 />
                 <label class="flex items-start gap-3 text-xs text-white/60">
                   <input
@@ -991,7 +991,7 @@ POST /api/route/taxi
                   aria-label="Name"
                   type="text"
                   placeholder="First and last name (optional)"
-                  class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
+                  class="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
               />
               <input
                   v-model.trim="waitlistForm.email"
@@ -999,13 +999,13 @@ POST /api/route/taxi
                   type="email"
                   required
                   placeholder="your@email"
-                  class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
+                  class="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
               />
               <textarea
                   v-model.trim="waitlistForm.notes"
                   rows="3"
                   placeholder="What do you want to learn with OpenSquawk? (optional)"
-                  class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
+                  class="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
               />
             </div>
             <div class="space-y-2 text-xs text-white/60">
@@ -1708,7 +1708,7 @@ onMounted(async () => {
 }
 
 .btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl font-medium transition px-4 py-2.5 sm:px-5 sm:py-3;
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl font-medium transition px-4 py-2.5 sm:px-5 sm:py-3;
 }
 
 .btn-primary {
@@ -1799,7 +1799,7 @@ onMounted(async () => {
 }
 
 .mobile-toggle {
-  @apply inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10;
+  @apply inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10;
   width: 44px;
   height: 44px;
 }
