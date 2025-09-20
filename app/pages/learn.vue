@@ -450,8 +450,11 @@
                 <div v-if="nextLessonMeta" class="muted small">
                   Next: {{ nextLessonMeta.lesson.title }} · Lesson {{ nextLessonMeta.position }} of {{ nextLessonMeta.total }}
                 </div>
+                <div v-else-if="nextMissionMeta" class="muted small">
+                  Next mission: {{ nextMissionMeta.module.title }} · Mission {{ nextMissionMeta.position }} of {{ nextMissionMeta.total }}
+                </div>
                 <div v-else class="muted small">
-                  Last lesson in this module.
+                  Last lesson in this mission.
                 </div>
               </div>
               <div class="lesson-actions-buttons">
@@ -459,9 +462,14 @@
                   <v-icon size="18">mdi-dice-5</v-icon>
                   New scenario
                 </button>
-                <button class="btn primary" type="button" :disabled="!nextLessonMeta" @click="goToNextLesson">
+                <button
+                    class="btn primary"
+                    type="button"
+                    :disabled="!nextLessonMeta && !nextMissionMeta"
+                    @click="goToNextLesson"
+                >
                   <v-icon size="18">mdi-arrow-right</v-icon>
-                  Next lesson
+                  {{ nextActionLabel }}
                 </button>
               </div>
             </div>
@@ -981,6 +989,30 @@ const nextLessonMeta = computed(() => {
   }
 })
 
+const nextMissionMeta = computed(() => {
+  if (!current.value) return null
+  const currentIndex = modules.value.findIndex(module => module.id === current.value?.id)
+  if (currentIndex === -1) return null
+  const total = modules.value.length
+  for (let idx = currentIndex + 1; idx < modules.value.length; idx++) {
+    const module = modules.value[idx]
+    if (isModuleUnlocked(module.id)) {
+      return {
+        module,
+        position: idx + 1,
+        total
+      }
+    }
+  }
+  return null
+})
+
+const nextActionLabel = computed(() => {
+  if (nextLessonMeta.value) return 'Next lesson'
+  if (nextMissionMeta.value) return 'Next mission'
+  return 'Next lesson'
+})
+
 watch(activeLesson, lesson => {
   if (lesson) {
     rollScenario(true)
@@ -1054,8 +1086,14 @@ function repeatLesson() {
 
 function goToNextLesson() {
   const meta = nextLessonMeta.value
-  if (!meta) return
-  activeLesson.value = meta.lesson
+  if (meta) {
+    activeLesson.value = meta.lesson
+    return
+  }
+  const nextMission = nextMissionMeta.value
+  if (nextMission) {
+    quickContinue(nextMission.module.id)
+  }
 }
 
 function setActiveFrequency(freq: Frequency) {
