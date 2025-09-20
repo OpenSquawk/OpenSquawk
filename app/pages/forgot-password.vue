@@ -49,12 +49,14 @@
               />
             </div>
 
-            <button type="submit" class="btn btn-primary w-full" :disabled="requestLoading">
+            <button type="submit" class="btn btn-primary p-3 w-full" :disabled="requestLoading || requestSuccess || !requestForm.email">
               <span v-if="requestLoading" class="flex items-center justify-center gap-2">
                 <v-progress-circular indeterminate size="16" width="2" color="white" />
                 Sending link…
               </span>
-              <span v-else>Request link</span>
+              <span v-else class="flex items-center justify-center">
+                <v-icon icon="mdi-email" size="18" class="inline-block mr-2" />
+                Request link</span>
             </button>
 
             <p v-if="requestError" class="text-sm text-red-300">{{ requestError }}</p>
