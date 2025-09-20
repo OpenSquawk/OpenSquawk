@@ -3,27 +3,12 @@ import { createError } from 'h3'
 import { getOpenAIClient } from '../../utils/openai'
 import { getServerRuntimeConfig } from '../../utils/runtimeConfig'
 
-const CLEARANCE_MESSAGE = [
-    'ATC clearance:',
-    'Lufthansa four seven eight, cleared to Frankfurt via the NORDA one alpha departure,',
-    'climb and maintain five thousand, expect flight level three two zero ten minutes after departure,',
-    'departure frequency one two zero decimal eight, squawk four two one three.'
-].join(' ')
+const SYSTEM_PROMPT =
+    'Check if the pilot readback contains ALL of: Frankfurt or EDDF, FL320, and 120.8 MHz. ' +
+    'Reply with single digit only: 1 = all present, 0 = one or more missing, 2 = invalid/unrelated.';
 
-const READBACK_MESSAGE = [
-    'Pilot readback:',
-    'Lufthansa four seven eight is cleared to Frankfurt via NORDA one alpha,',
-    'climb maintain five thousand, expect flight level three two zero in ten,',
-    'departure one two zero decimal eight, squawk four two one three.'
-].join(' ')
-
-const SYSTEM_PROMPT = [
-    'You verify IFR clearance readbacks for aviation radio communication.',
-    'Answer with a single digit only:',
-    '1 when the readback correctly repeats the clearance,',
-    '0 when part of the readback is wrong or missing,',
-    '2 when the transmission is not a valid readback or unrelated to the clearance.'
-].join(' ')
+const READBACK =
+    'Lufthanser four seven eight cleared frankfurt via NORDA1A, climb 5000 feet, expect flight level tree tree zero, dep 120 decimal 8, squawk 4213.';
 
 export default defineEventHandler(async () => {
     const client = getOpenAIClient()
@@ -35,15 +20,10 @@ export default defineEventHandler(async () => {
     try {
         const response = await client.chat.completions.create({
             model,
-            temperature: 0,
-            max_tokens: 1,
             messages: [
                 { role: 'system', content: SYSTEM_PROMPT },
-                {
-                    role: 'user',
-                    content: [CLEARANCE_MESSAGE, READBACK_MESSAGE].join('\n')
-                }
-            ]
+                { role: 'user', content: `${READBACK}` }
+            ],
         })
 
         const raw = response.choices?.[0]?.message?.content?.trim() || ''
