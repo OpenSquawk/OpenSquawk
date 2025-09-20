@@ -25,7 +25,7 @@ function parseTarget(s:string){
 function selectorFor(kind:'threshold'|'gate'|'stand', ref:string, alias:string){
   if(kind==='gate')  return `node(area.a)["aeroway"="gate"]["ref"="${ref}"]->.${alias};`
   if(kind==='stand') return `node(area.a)["aeroway"="parking_position"]["ref"="${ref}"]->.${alias};`
-  // Threshold robust (versch. Tagging-Schemata)
+  // Threshold robust (versch. Taggingvarianten)
   return `
   (
     node(area.a)["runway"="threshold"]["ref"="${ref}"];
@@ -44,11 +44,11 @@ function buildOverpassQuery(airport:string, o:any, d:any, includeRunways=true){
 rel["aeroway"="aerodrome"]["icao"="${airport}"];
 map_to_area->.a;
 
-// Netz laden
+// Netz (nur Linien)
 way(area.a)["aeroway"~"${net}"]->.w;
 ( .w; >; ); out body;
 
-// Features laden (optional)
+// Features (Gate/Stand/Threshold)
 ${selO}
 ${selD}
 ${(selO||selD) ? '( .OSEL; .DSEL; ); out body;' : ''}
@@ -80,7 +80,7 @@ export default defineEventHandler(async (event)=>{
   const airport=String(q.airport||'EDDF').toUpperCase()
   const originRaw=String(q.origin||'').trim()
   const destRaw  =String(q.dest||'').trim()
-  const includeRunways = String(q.include_runways||'1')!=='0'
+  const includeRunways = String(q.include_runways||'0')!=='0'
 
   const oT = parseTarget(originRaw)
   const dT = parseTarget(destRaw)
@@ -89,17 +89,25 @@ export default defineEventHandler(async (event)=>{
 
   const nodes = new Map<number,NodeRec>()
   const ways:WayRec[]=[]
+  const featureNodes: Array<{id:number,lat:number,lon:number,tags?:any}> = []
   for(const el of osm.elements){
-    if(el.type==='node') nodes.set(el.id, {id:el.id, lat:el.lat, lon:el.lon})
-    else if(el.type==='way') ways.push({id:el.id, nodes:el.nodes, tags:el.tags})
+    if(el.type==='node'){
+      nodes.set(el.id, {id:el.id, lat:el.lat, lon:el.lon})
+      if(el.tags?.aeroway || el.tags?.runway) featureNodes.push(el)
+    } else if(el.type==='way'){
+      ways.push({id:el.id, nodes:el.nodes, tags:el.tags})
+    }
   }
 
   type Edge = {u:number; v:number; w:number; way_id:number; name:string|null}
   const edges:Edge[]=[]
+  const wayNodeIds = new Set<number>()
   for(const w of ways){
     const name = w.tags?.ref || w.tags?.name || null
     for(let i=0;i<w.nodes.length-1;i++){
-      const a=nodes.get(w.nodes[i]); const b=nodes.get(w.nodes[i+1]); if(!a||!b) continue
+      const aId=w.nodes[i], bId=w.nodes[i+1]
+      const a=nodes.get(aId), b=nodes.get(bId); if(!a||!b) continue
+      wayNodeIds.add(aId); wayNodeIds.add(bId)
       const dist=haversine({lat:a.lat,lon:a.lon},{lat:b.lat,lon:b.lon})
       edges.push({u:a.id,v:b.id,w:dist,way_id:w.id,name})
       edges.push({u:b.id,v:a.id,w:dist,way_id:w.id,name})
@@ -114,38 +122,49 @@ export default defineEventHandler(async (event)=>{
     edgeMeta.set(`${e.u}->${e.v}`, {name:e.name, way_id:e.way_id})
   }
 
-  function nearestNode(lat:number, lon:number){
+  // Helpers
+  function nearestNode(lat:number, lon:number, onlyNet=false){
     let best:NodeRec|undefined, dBest=Infinity
     for(const n of nodes.values()){
+      if(onlyNet && !wayNodeIds.has(n.id)) continue
       const d=haversine({lat,lon},{lat:n.lat,lon:n.lon})
-      if(d<dBest){dBest=d; best=n}
+      if(d<dBest){ dBest=d; best=n }
     }
     if(!best) return null
     return {node_id:best.id, lat:best.lat, lon:best.lon, distance_m:dBest}
   }
+  function nearestCandidates(lat:number, lon:number, k=5, onlyNet=true){
+    const arr: Array<{node_id:number, lat:number, lon:number, distance_m:number}> = []
+    for(const n of nodes.values()){
+      if(onlyNet && !wayNodeIds.has(n.id)) continue
+      arr.push({node_id:n.id, lat:n.lat, lon:n.lon, distance_m:haversine({lat,lon},{lat:n.lat,lon:n.lon})})
+    }
+    arr.sort((a,b)=>a.distance_m-b.distance_m)
+    return arr.slice(0,k)
+  }
 
-  // Feature-/Koordinatenpunkt → Attach
   function resolvePoint(t:ReturnType<typeof parseTarget>){
     if(!t) return null
     if(t.kind==='coord'){
       const [latS,lonS]=t.value.split(',').map(x=>x.trim())
       const lat=Number(latS), lon=Number(lonS); if(!Number.isFinite(lat)||!Number.isFinite(lon)) return null
-      const attach=nearestNode(lat,lon); if(!attach) return null
-      return {point:{lat,lon}, attach}
+      const raw = nearestNode(lat,lon,false)
+      const net = nearestNode(lat,lon,true)
+      return {point:{lat,lon}, attach_raw:raw, attach_net:net}
     }
-    const hits=(osm.elements as any[]).filter(e=>{
-      if(e.type!=='node') return false
+    // Feature lookup aus Overpass-Antwort
+    const hits = featureNodes.filter(e=>{
       const refOk = e.tags?.ref===t.value
       if(t.kind==='gate')      return refOk && e.tags?.aeroway==='gate'
       if(t.kind==='stand')     return refOk && e.tags?.aeroway==='parking_position'
-      // threshold: mehrere Taggingvarianten
       return refOk && (e.tags?.runway==='threshold' || e.tags?.aeroway==='threshold' ||
         (e.tags?.aeroway==='runway' && e.tags?.runway==='threshold'))
     })
     if(!hits.length) return null
     const p={lat:hits[0].lat, lon:hits[0].lon}
-    const attach=nearestNode(p.lat,p.lon); if(!attach) return null
-    return {point:p, attach}
+    const raw = nearestNode(p.lat,p.lon,false)
+    const net = nearestNode(p.lat,p.lon,true)
+    return {point:p, attach_raw:raw, attach_net:net}
   }
 
   const oRes=resolvePoint(oT)
@@ -154,52 +173,32 @@ export default defineEventHandler(async (event)=>{
     return { airport, error:'feature_not_found_or_attach_failed', origin_query:originRaw, dest_query:destRaw }
   }
 
-  function dijkstra(src: number, dst: number) {
-    const dist = new Map<number, number>()
-    const prev = new Map<number, number>()
-    const done = new Set<number>()
-    const pq: Array<{ id: number; d: number }> = []
-    const push = (id: number, d: number) => { pq.push({ id, d }); pq.sort((a, b) => a.d - b.d) }
+  // Start/End an NETZ-Knoten binden (falls raw-Knoten nicht im Netz hängt)
+  const oAttach = (oRes.attach_raw && wayNodeIds.has(oRes.attach_raw.node_id)) ? oRes.attach_raw : oRes.attach_net
+  const dAttach = (dRes.attach_raw && wayNodeIds.has(dRes.attach_raw.node_id)) ? dRes.attach_raw : dRes.attach_net
 
-    for (const id of nodes.keys()) dist.set(id, Infinity)
-    dist.set(src, 0); push(src, 0)
-
-    while (pq.length) {
-      const { id: u } = pq.shift()!
-      if (done.has(u)) continue
-      done.add(u)
-      if (u === dst) break
-
-      const nb = adj.get(u)
-      if (!nb) continue
-
+  function dijkstra(src:number, dst:number){
+    const dist=new Map<number,number>(), prev=new Map<number,number>(), done=new Set<number>()
+    const pq:Array<{id:number,d:number}>=[]; const push=(id:number,d:number)=>{pq.push({id,d}); pq.sort((a,b)=>a.d-b.d)}
+    for(const id of wayNodeIds) dist.set(id,Infinity)
+    if(!dist.has(src) || !dist.has(dst)) return null
+    dist.set(src,0); push(src,0)
+    while(pq.length){
+      const {id:u}=pq.shift()!; if(done.has(u)) continue; done.add(u); if(u===dst) break
+      const nb=adj.get(u); if(!nb) continue
       for (const { to: v, w: cost } of nb) {
         const alt = dist.get(u)! + cost
-        if (alt < dist.get(v)!) {
-          dist.set(v, alt)
-          prev.set(v, u)
-          push(v, alt)
-        }
+        if (alt < dist.get(v)!) { dist.set(v, alt); prev.set(v, u); push(v, alt) }
       }
     }
-
-    if (!prev.has(dst) && src !== dst) return null
-    const path: number[] = []
-    let u = dst
-    path.push(u)
-    while (u !== src) {
-      const p = prev.get(u)
-      if (p === undefined) break
-      u = p
-      path.push(u)
-    }
+    if(!prev.has(dst) && src!==dst) return null
+    const path:number[]=[]; let u=dst; path.push(u)
+    while(u!==src){ const p=prev.get(u); if(p===undefined) break; u=p; path.push(u) }
     path.reverse()
     return { path, total_m: dist.get(dst)! }
   }
 
-
-
-  const sp=dijkstra(oRes.attach.node_id, dRes.attach.node_id)
+  const sp = (oAttach && dAttach) ? dijkstra(oAttach.node_id, dAttach.node_id) : null
 
   const names:string[]=[]
   if(sp && sp.path.length>1){
@@ -211,11 +210,41 @@ export default defineEventHandler(async (event)=>{
     }
   }
 
+  // Debug
+  const deg0 = [...nodes.keys()].filter(id => !adj.has(id))
+  const netDeg0 = [...wayNodeIds].filter(id => !adj.has(id))
+  const originCandidates = nearestCandidates(oRes.point.lat, oRes.point.lon, 5, true)
+  const destCandidates   = nearestCandidates(dRes.point.lat, dRes.point.lon, 5, true)
+
   return {
     airport,
-    origin:{ query:originRaw, point:oRes.point, attach:oRes.attach },
-    dest:  { query:destRaw,   point:dRes.point, attach:dRes.attach },
-    route: sp ? { node_ids:sp.path, total_distance_m:sp.total_m } : null,
-    names
+    origin: {
+      query: originRaw,
+      point: oRes.point,
+      attach_raw: oRes.attach_raw,          // evtl. Feature-Knoten (kann "isolated" sein)
+      attach_net: oAttach,                  // Snap auf Netz-Knoten
+      net_candidates_top5: originCandidates // Debug
+    },
+    dest: {
+      query: destRaw,
+      point: dRes.point,
+      attach_raw: dRes.attach_raw,
+      attach_net: dAttach,
+      net_candidates_top5: destCandidates
+    },
+    route: sp ? { node_ids: sp.path, total_distance_m: sp.total_m } : null,
+    names,
+    debug: {
+      stats: {
+        nodes_total: nodes.size,
+        ways_total: ways.length,
+        edges_total: edges.length,
+        net_nodes: wayNodeIds.size,
+        isolated_nodes_total: deg0.length,
+        net_isolated_nodes: netDeg0.length
+      },
+      attach_ok: Boolean(sp),
+      note: 'attach_raw kann außerhalb des Netzgraphs liegen; attach_net ist immer ein Way-Knoten.'
+    }
   }
 })
