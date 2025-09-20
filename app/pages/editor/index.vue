@@ -1,542 +1,666 @@
 <template>
   <div class="min-h-screen bg-[#050910] text-white">
-    <div class="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-10">
-      <header class="flex flex-col gap-6 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur lg:flex-row lg:items-start lg:justify-between">
-        <div class="space-y-3">
-          <p class="text-xs uppercase tracking-[0.4em] text-cyan-300/70">Decision Engine</p>
-          <h1 class="text-3xl font-semibold">ATC Flow Editor</h1>
-          <p class="max-w-xl text-sm text-white/70">
-            Craft, debug and publish the full ATC decision tree with instant feedback. Drag nodes, wire transitions and enrich
-            LLM templates without leaving the browser.
-          </p>
-          <div v-if="tree" class="flex flex-wrap gap-4 text-xs text-white/50">
-            <span>Schema {{ tree.schema_version }}</span>
-            <span>Start state <strong class="font-mono text-white">{{ tree.start_state }}</strong></span>
-            <span>States {{ Object.keys(tree.states || {}).length }}</span>
-            <span v-if="tree.updatedAt">Updated {{ formatRelativeTime(tree.updatedAt) }}</span>
+    <div class="flex min-h-screen">
+      <aside class="sticky top-0 h-screen w-[320px] flex-shrink-0 border-r border-white/10 bg-white/5 px-6 py-8 backdrop-blur">
+        <div class="flex h-full flex-col gap-8 overflow-y-auto pr-2">
+          <div class="space-y-3">
+            <p class="text-xs uppercase tracking-[0.4em] text-cyan-300/70">Decision Engine</p>
+            <h1 class="text-3xl font-semibold leading-tight">ATC Flow Editor</h1>
+            <p class="text-sm text-white/70">
+              Craft, debug and publish the full ATC decision tree with instant feedback. Manage states, branches and templates in a
+              vertically flowing layout.
+            </p>
           </div>
-        </div>
-        <div class="flex flex-col gap-4">
-          <div class="flex flex-wrap gap-3">
-            <input
-              v-model="searchTerm"
-              type="search"
-              placeholder="Search state or template"
-              class="w-64 rounded-2xl border border-white/10 bg-black/40 px-4 py-2 text-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
-            />
-            <select
-              v-model="newNodeRole"
-              class="rounded-2xl border border-white/10 bg-black/40 px-4 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
-            >
-              <option value="atc">New ATC node</option>
-              <option value="pilot">New pilot node</option>
-              <option value="system">New system node</option>
-            </select>
-            <button
-              class="rounded-2xl border border-cyan-400/60 px-4 py-2 text-sm text-cyan-200 transition hover:border-cyan-300 hover:text-white disabled:opacity-50"
-              :disabled="loadingTree || !tree"
-              @click="createNode"
-            >
-              Add node
-            </button>
-          </div>
-          <div class="flex flex-wrap gap-3 text-sm">
-            <button
-              class="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 transition hover:border-cyan-400 hover:text-cyan-200 disabled:opacity-50"
-              :disabled="loadingTree"
-              @click="refreshTree"
-            >
-              <span v-if="loadingTree">Refreshing…</span>
-              <span v-else>Refresh tree</span>
-            </button>
-            <button
-              class="rounded-2xl border border-purple-400/60 bg-purple-500/10 px-4 py-2 transition hover:border-purple-300 hover:text-purple-100 disabled:opacity-60"
-              :disabled="importRunning"
-              @click="triggerImport"
-            >
-              <span v-if="importRunning">Importing…</span>
-              <span v-else>Import from source file</span>
-            </button>
-            <span v-if="saveError" class="self-center text-xs text-rose-300">{{ saveError }}</span>
-            <span v-else-if="saveStatus === 'saved'" class="self-center text-xs text-emerald-300">Node saved</span>
-          </div>
-        </div>
-      </header>
-
-      <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section class="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-          <div ref="canvasWrapperRef" class="relative h-[720px] overflow-auto">
-            <div ref="canvasRef" class="relative min-h-[1200px] min-w-[1600px]">
-              <svg class="pointer-events-none absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" fill="currentColor">
-                    <path d="M0,0 L6,3 L0,6 z" />
-                  </marker>
-                </defs>
-                <g>
-                  <path
-                    v-for="connection in connections"
-                    :key="connection.id"
-                    :d="connection.path"
-                    fill="none"
-                    :stroke="connectionColor(connection.type)"
-                    stroke-width="2"
-                    marker-end="url(#arrowhead)"
-                    class="opacity-70"
-                  />
-                </g>
-              </svg>
-              <div
-                v-for="node in nodes"
-                :key="node.id"
-                :ref="el => registerNodeRef(node.id, el)"
-                :style="nodeStyle(node)"
-                class="absolute w-64 cursor-pointer rounded-2xl border bg-black/60 p-4 shadow-lg transition"
-                :class="[
-                  selectedNodeId === node.id ? 'border-cyan-400/70 shadow-cyan-500/30' : 'border-white/10 shadow-black/40',
-                  isNodeHighlighted(node.id) ? 'opacity-100' : 'opacity-40',
-                ]"
-                @click.stop="selectNode(node.id)"
-              >
-                <div class="flex items-start justify-between gap-2">
-                  <div>
-                    <p class="text-xs uppercase tracking-[0.3em] text-white/40">{{ node.role }}</p>
-                    <h3 class="text-lg font-semibold leading-tight">{{ node.state.label || node.id }}</h3>
-                    <p class="text-xs text-white/40">{{ node.id }}</p>
-                  </div>
-                  <span class="rounded-full px-2 py-1 text-xs font-medium" :style="{ backgroundColor: roleBadge(node.role) }">
-                    {{ node.state.phase }}
-                  </span>
-                </div>
-                <div class="mt-3 space-y-2 text-xs text-white/60">
-                  <p v-if="node.state.say_tpl" class="line-clamp-2 font-mono text-[11px] text-cyan-200/80">
-                    {{ node.state.say_tpl }}
-                  </p>
-                  <p v-if="node.state.utterance_tpl" class="line-clamp-2 font-mono text-[11px] text-emerald-200/70">
-                    {{ node.state.utterance_tpl }}
-                  </p>
-                  <div class="flex flex-wrap gap-2 text-[11px]">
-                    <span v-if="node.state.next?.length" class="rounded-full bg-cyan-500/20 px-2 py-[2px] text-cyan-200/80">
-                      {{ node.state.next.length }} next
-                    </span>
-                    <span v-if="node.state.auto_transitions?.length" class="rounded-full bg-purple-500/20 px-2 py-[2px] text-purple-200/80">
-                      {{ node.state.auto_transitions.length }} auto
-                    </span>
-                    <span v-if="node.state.readback_required?.length" class="rounded-full bg-amber-500/20 px-2 py-[2px] text-amber-200/80">
-                      Readback
-                    </span>
-                  </div>
-                </div>
-                <div
-                  class="mt-4 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/60"
-                  @pointerdown.stop.prevent="beginDrag($event, node)"
-                >
-                  <span class="font-mono">{{ Math.round(node.layout.x) }}, {{ Math.round(node.layout.y) }}</span>
-                  <span class="cursor-grab text-white/50">Drag</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <aside class="flex h-full flex-col gap-4">
-          <div v-if="tree && selectedNode && editableNode" class="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur">
-            <div class="flex items-start justify-between gap-2">
-              <div>
-                <p class="text-xs uppercase tracking-[0.3em] text-white/40">Node inspector</p>
-                <h2 class="text-xl font-semibold">{{ editableNode.label || selectedNode.id }}</h2>
-                <p class="text-xs text-white/40">{{ selectedNode.id }}</p>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  class="rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs transition hover:border-rose-400 hover:text-rose-200"
-                  @click="deleteNode"
-                >
-                  Delete
-                </button>
-                <button
-                  class="rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs transition hover:border-white/40"
-                  @click="duplicateNode"
-                >
-                  Duplicate
-                </button>
-              </div>
-            </div>
-
-            <div class="grid gap-3">
-              <label class="text-xs uppercase tracking-[0.3em] text-white/40">Label</label>
+          <div class="space-y-5 text-sm">
+            <div class="space-y-2">
+              <label class="text-[11px] uppercase tracking-[0.3em] text-white/40">Search</label>
               <input
-                v-model="editableNode.label"
-                type="text"
-                placeholder="Readable node name"
-                class="rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                v-model="searchTerm"
+                type="search"
+                placeholder="Search state or template"
+                class="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-2 text-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
               />
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">Role</label>
-                  <select
-                    v-model="editableNode.role"
-                    class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
-                  >
-                    <option value="pilot">Pilot</option>
-                    <option value="atc">ATC</option>
-                    <option value="system">System</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">Phase</label>
-                  <select
-                    v-model="editableNode.phase"
-                    class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
-                  >
-                    <option v-for="phase in phaseOptions" :key="phase" :value="phase">{{ phase }}</option>
-                  </select>
-                </div>
+            </div>
+            <div class="space-y-2">
+              <label class="text-[11px] uppercase tracking-[0.3em] text-white/40">Create node</label>
+              <div class="flex gap-2">
+                <select
+                  v-model="newNodeRole"
+                  class="flex-1 rounded-2xl border border-white/10 bg-black/40 px-4 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                >
+                  <option value="atc">ATC</option>
+                  <option value="pilot">Pilot</option>
+                  <option value="system">System</option>
+                </select>
+                <button
+                  class="rounded-2xl border border-cyan-400/60 px-4 py-2 text-sm text-cyan-200 transition hover:border-cyan-300 hover:text-white disabled:opacity-50"
+                  :disabled="loadingTree || !tree"
+                  @click="createNode"
+                >
+                  Add
+                </button>
               </div>
-              <div class="grid gap-2">
-                <label class="text-xs uppercase tracking-[0.3em] text-white/40">Controller say template</label>
-                <textarea
-                  v-model="editableNode.say_tpl"
-                  rows="3"
-                  placeholder="{callsign}, cleared to …"
-                  class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm text-white/90 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
-                />
+            </div>
+            <div class="space-y-2">
+              <button
+                class="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-2 transition hover:border-cyan-400 hover:text-cyan-200 disabled:opacity-50"
+                :disabled="loadingTree"
+                @click="refreshTree"
+              >
+                <span v-if="loadingTree">Refreshing…</span>
+                <span v-else>Refresh tree</span>
+              </button>
+              <button
+                class="w-full rounded-2xl border border-purple-400/60 bg-purple-500/10 px-4 py-2 transition hover:border-purple-300 hover:text-purple-100 disabled:opacity-60"
+                :disabled="importRunning"
+                @click="triggerImport"
+              >
+                <span v-if="importRunning">Importing…</span>
+                <span v-else>Import from source file</span>
+              </button>
+              <p v-if="saveError" class="text-[11px] text-rose-300">{{ saveError }}</p>
+              <p v-else-if="saveStatus === 'saved'" class="text-[11px] text-emerald-300">Node saved</p>
+            </div>
+            <div v-if="tree" class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-4 text-xs text-white/70">
+              <div class="flex items-center justify-between">
+                <span class="text-white/50">Schema</span>
+                <span>{{ tree.schema_version }}</span>
               </div>
-              <div class="grid gap-2">
-                <label class="text-xs uppercase tracking-[0.3em] text-white/40">Pilot utterance template</label>
-                <textarea
-                  v-model="editableNode.utterance_tpl"
-                  rows="3"
-                  placeholder="{callsign}, ready for push…"
-                  class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm text-white/90 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
-                />
+              <div class="flex items-center justify-between">
+                <span class="text-white/50">Start state</span>
+                <span class="font-mono text-white">{{ tree.start_state }}</span>
               </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">Auto</label>
-                  <input
-                    v-model="editableNode.auto"
-                    type="text"
-                    placeholder="check_readback"
-                    class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
-                  />
+              <div class="flex items-center justify-between">
+                <span class="text-white/50">States</span>
+                <span>{{ Object.keys(tree.states || {}).length }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-white/50">Updated</span>
+                <span>{{ formatRelativeTime(tree.updatedAt) }}</span>
+              </div>
+            </div>
+            <div v-if="tree?.description" class="rounded-2xl border border-white/10 bg-black/30 p-4 text-xs text-white/60">
+              <p>{{ tree.description }}</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="flex min-h-screen flex-1">
+        <div class="grid h-screen flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section class="overflow-y-auto px-8 py-10">
+            <div class="space-y-8">
+              <div v-if="tree" class="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+                <div class="flex flex-wrap items-end justify-between gap-6">
+                  <div class="space-y-2">
+                    <p class="text-xs uppercase tracking-[0.3em] text-white/40">Flow overview</p>
+                    <h2 class="text-2xl font-semibold leading-tight">{{ tree.name }}</h2>
+                    <p class="max-w-3xl text-sm text-white/60">
+                      Nodes are arranged vertically, while alternative transitions appear next to each other for quick comparisons.
+                    </p>
+                  </div>
+                  <div class="flex flex-wrap gap-4 text-xs text-white/50">
+                    <span>Phases {{ tree.phases.length }}</span>
+                    <span>End states {{ tree.end_states.length }}</span>
+                    <span v-if="tree.updatedAt">Updated {{ formatRelativeTime(tree.updatedAt) }}</span>
+                  </div>
                 </div>
-                <div>
-                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">Trigger</label>
-                  <input
-                    v-model="editableNode.trigger"
-                    type="text"
-                    placeholder="no_reply"
-                    class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
-                  />
-                </div>
-              </div>
-              <div class="grid gap-2">
-                <label class="text-xs uppercase tracking-[0.3em] text-white/40">Guard expression</label>
-                <input
-                  v-model="editableNode.guard"
-                  type="text"
-                  placeholder="variables.cleared === true"
-                  class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
-                />
               </div>
 
-              <section class="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
-                <div class="flex items-center justify-between">
-                  <h3 class="text-sm font-semibold text-white/80">Transitions</h3>
-                  <div class="flex gap-2 text-xs">
-                    <button class="rounded-lg border border-white/10 px-2 py-1 hover:border-cyan-400" @click="addTransition('next')">
-                      + Next
-                    </button>
-                    <button class="rounded-lg border border-white/10 px-2 py-1 hover:border-emerald-400" @click="addTransition('ok_next')">
-                      + OK
-                    </button>
-                    <button class="rounded-lg border border-white/10 px-2 py-1 hover;border-rose-400" @click="addTransition('bad_next')">
-                      + Bad
-                    </button>
-                  </div>
-                </div>
-                <div class="space-y-3">
-                  <div v-for="(transition, index) in editableNode.next" :key="`next-${index}`" class="rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-xs">
-                    <div class="flex gap-2">
-                      <input v-model="transition.to" placeholder="Target state" class="w-full rounded-lg bg-black/40 px-2 py-1 font-mono" />
-                      <button class="rounded-lg bg-black/40 px-2" @click="removeTransition('next', index)">×</button>
+              <div v-if="tree" class="space-y-10">
+                <template v-if="flowSections.length">
+                  <div v-for="section in flowSections" :key="section.phase" class="space-y-4">
+                    <div class="flex items-center gap-3">
+                      <div class="h-px flex-1 bg-white/10"></div>
+                      <p class="text-xs uppercase tracking-[0.3em] text-white/40">{{ section.phase }}</p>
+                      <div class="h-px flex-1 bg-white/10"></div>
                     </div>
-                    <input
-                      v-model="transition.when"
-                      placeholder="Condition (optional)"
-                      class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1 font-mono"
-                    />
-                    <input v-model="transition.label" placeholder="Label" class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1" />
-                  </div>
-                  <div v-for="(transition, index) in editableNode.ok_next" :key="`ok-${index}`" class="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-xs">
-                    <div class="flex gap-2">
-                      <input v-model="transition.to" placeholder="OK target" class="w-full rounded-lg bg-black/40 px-2 py-1 font-mono" />
-                      <button class="rounded-lg bg-black/40 px-2" @click="removeTransition('ok_next', index)">×</button>
-                    </div>
-                    <input v-model="transition.label" placeholder="Label" class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1" />
-                  </div>
-                  <div v-for="(transition, index) in editableNode.bad_next" :key="`bad-${index}`" class="rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-xs">
-                    <div class="flex gap-2">
-                      <input v-model="transition.to" placeholder="Bad target" class="w-full rounded-lg bg-black/40 px-2 py-1 font-mono" />
-                      <button class="rounded-lg bg-black/40 px-2" @click="removeTransition('bad_next', index)">×</button>
-                    </div>
-                    <input v-model="transition.label" placeholder="Label" class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1" />
-                  </div>
-                  <div class="space-y-3">
-                    <div class="flex items-center justify-between text-xs">
-                      <h4 class="font-semibold text-white/70">Timer transitions</h4>
-                      <button class="rounded-lg border border-white/10 px-2 py-1 hover:border-amber-400" @click="addTimerTransition">+ Timer</button>
-                    </div>
-                    <div v-for="(transition, index) in editableNode.timer_next" :key="`timer-${index}`" class="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-xs">
-                      <div class="flex gap-2">
-                        <input
-                          v-model.number="transition.after_s"
-                          type="number"
-                          placeholder="After seconds"
-                          class="w-20 rounded-lg bg-black/40 px-2 py-1 text-right"
-                        />
-                        <input v-model="transition.to" placeholder="Target" class="w-full rounded-lg bg-black/40 px-2 py-1 font-mono" />
-                        <button class="rounded-lg bg-black/40 px-2" @click="removeTimerTransition(index)">×</button>
-                      </div>
-                      <input v-model="transition.label" placeholder="Label" class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1" />
-                    </div>
-                  </div>
-                </div>
-              </section>
+                    <div class="space-y-4">
+                      <article
+                        v-for="node in section.nodes"
+                        :key="node.id"
+                        class="cursor-pointer rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-lg transition hover:border-cyan-400/40"
+                        :class="[
+                          selectedNodeId === node.id ? 'border-cyan-400/70 shadow-cyan-500/30' : 'shadow-black/20',
+                          isNodeHighlighted(node.id) ? 'opacity-100' : 'opacity-40',
+                        ]"
+                        :style="{
+                          borderColor: selectedNodeId === node.id ? 'rgba(34,211,238,0.6)' : roleBorder(node.role),
+                        }"
+                        @click="selectNode(node.id)"
+                      >
+                        <div class="flex flex-wrap items-start justify-between gap-4">
+                          <div class="space-y-2">
+                            <div class="flex flex-wrap items-center gap-2 text-xs text-white/60">
+                              <span
+                                class="rounded-full px-2 py-[2px] font-medium uppercase tracking-[0.2em]"
+                                :style="{ backgroundColor: roleBadge(node.role) }"
+                              >
+                                {{ node.role }}
+                              </span>
+                              <span class="rounded-full border border-white/10 px-2 py-[2px]">{{ node.state.phase }}</span>
+                              <span
+                                v-if="tree.start_state === node.id"
+                                class="rounded-full border border-cyan-300/60 px-2 py-[2px] text-cyan-200"
+                              >
+                                Start
+                              </span>
+                              <span
+                                v-if="tree.end_states.includes(node.id)"
+                                class="rounded-full border border-emerald-300/60 px-2 py-[2px] text-emerald-200"
+                              >
+                                End
+                              </span>
+                            </div>
+                            <h3 class="text-2xl font-semibold leading-tight">
+                              {{ node.state.label || node.id }}
+                            </h3>
+                            <p class="font-mono text-xs text-white/40">{{ node.id }}</p>
+                            <div class="flex flex-wrap gap-2 text-[11px] text-white/60">
+                              <span v-if="node.state.auto" class="rounded-lg bg-white/10 px-2 py-[2px] font-mono">auto: {{ node.state.auto }}</span>
+                              <span v-if="node.state.trigger" class="rounded-lg bg-white/10 px-2 py-[2px] font-mono">trigger: {{ node.state.trigger }}</span>
+                              <span v-if="node.state.guard" class="rounded-lg bg-white/10 px-2 py-[2px] font-mono">guard: {{ node.state.guard }}</span>
+                              <span
+                                v-if="node.state.readback_required?.length"
+                                class="rounded-lg bg-amber-500/20 px-2 py-[2px] text-amber-100"
+                              >
+                                Readback ×{{ node.state.readback_required.length }}
+                              </span>
+                              <span v-if="node.state.actions?.length" class="rounded-lg bg-sky-500/20 px-2 py-[2px] text-sky-100">
+                                {{ node.state.actions.length }} actions
+                              </span>
+                            </div>
+                          </div>
+                          <div class="flex flex-col items-end gap-1 text-right text-xs text-white/50">
+                            <span>Transitions {{ totalTransitionCount(node.state) }}</span>
+                            <span v-if="node.state.auto_transitions?.length">Auto {{ node.state.auto_transitions.length }}</span>
+                            <span v-if="node.state.timer_next?.length">Timer {{ node.state.timer_next.length }}</span>
+                          </div>
+                        </div>
 
-              <section class="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
-                <div class="flex items-center justify-between">
-                  <h3 class="text-sm font-semibold text-white/80">Actions</h3>
-                  <div class="flex gap-2 text-xs">
-                    <button class="rounded-lg border border-white/10 px-2 py-1 hover:border-sky-400" @click="addActionObject">+ Rule</button>
-                    <button class="rounded-lg border border-white/10 px-2 py-1 hover;border-sky-400" @click="addActionKeyword">+ Keyword</button>
-                  </div>
-                </div>
-                <div v-if="!editableNode.actions || !editableNode.actions.length" class="text-xs text-white/40">No actions</div>
-                <div v-for="(action, index) in editableNode.actions" :key="`action-${index}`" class="rounded-xl border border-white/10 bg-black/40 p-3 text-xs">
-                  <template v-if="typeof action === 'string'">
-                    <div class="flex items-center gap-2">
-                      <input v-model="editableNode.actions[index]" placeholder="Action keyword" class="w-full rounded-lg bg-black/60 px-2 py-1 font-mono" />
-                      <button class="rounded-lg bg-black/60 px-2" @click="removeAction(index)">×</button>
-                    </div>
-                  </template>
-                  <template v-else>
-                    <div class="flex gap-2">
-                      <input v-model="action.set" placeholder="flags.current_unit" class="w-full rounded-lg bg-black/60 px-2 py-1 font-mono" />
-                      <button class="rounded-lg bg-black/60 px-2" @click="removeAction(index)">×</button>
-                    </div>
-                    <input v-model="action.to" placeholder="APP" class="mt-2 w-full rounded-lg bg-black/60 px-2 py-1 font-mono" />
-                    <input v-model="action.if" placeholder="Condition (optional)" class="mt-2 w-full rounded-lg bg-black/60 px-2 py-1 font-mono" />
-                  </template>
-                </div>
-              </section>
+                        <div class="mt-4 grid gap-4 md:grid-cols-2">
+                          <div v-if="node.state.say_tpl" class="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
+                            <p class="text-xs uppercase tracking-[0.3em] text-white/50">Say template</p>
+                            <p class="mt-2 font-mono text-sm text-cyan-100">{{ node.state.say_tpl }}</p>
+                          </div>
+                          <div v-if="node.state.utterance_tpl" class="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
+                            <p class="text-xs uppercase tracking-[0.3em] text-white/50">Pilot template</p>
+                            <p class="mt-2 font-mono text-sm text-emerald-100">{{ node.state.utterance_tpl }}</p>
+                          </div>
+                        </div>
 
-              <section class="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                        <div v-if="stateTransitionGroups(node.state).length" class="mt-6 space-y-3">
+                          <p class="text-xs uppercase tracking-[0.3em] text-white/40">Branches</p>
+                          <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                            <div
+                              v-for="group in stateTransitionGroups(node.state)"
+                              :key="group.key"
+                              class="rounded-2xl border p-4"
+                              :class="[group.borderClass, group.backgroundClass]"
+                            >
+                              <div class="flex items-center justify-between text-xs">
+                                <span :class="group.textClass">{{ group.label }}</span>
+                                <span class="text-white/50">{{ group.items.length }}</span>
+                              </div>
+                              <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                                <div
+                                  v-for="(transition, index) in group.items"
+                                  :key="`${group.key}-${index}`"
+                                  class="rounded-xl bg-black/40 p-3 text-xs text-white/70"
+                                >
+                                  <template v-if="group.key === 'timer_next'">
+                                    <p class="font-mono text-sm text-white">→ {{ transition.to || '—' }}</p>
+                                    <p class="mt-1 text-white/60">After {{ transition.after_s }}s</p>
+                                    <p v-if="transition.label" class="mt-1 text-white/40">{{ transition.label }}</p>
+                                    <p v-if="transition.description" class="mt-1 text-white/50">{{ transition.description }}</p>
+                                  </template>
+                                  <template v-else-if="group.key === 'auto_transitions'">
+                                    <p class="font-mono text-sm text-white">→ {{ transition.to || '—' }}</p>
+                                    <p class="mt-1 text-white/60">{{ describeAutoTransition(transition) }}</p>
+                                    <div class="mt-2 flex flex-wrap gap-2 text-[10px] text-white/50">
+                                      <span v-if="transition.priority !== undefined" class="rounded-full bg-white/10 px-2 py-[2px]">
+                                        Priority {{ transition.priority }}
+                                      </span>
+                                      <span v-if="transition.runOn?.length" class="rounded-full bg-white/10 px-2 py-[2px]">
+                                        {{ transition.runOn.join(', ') }}
+                                      </span>
+                                      <span v-if="transition.enabled === false" class="rounded-full bg-white/10 px-2 py-[2px]">
+                                        Disabled
+                                      </span>
+                                    </div>
+                                  </template>
+                                  <template v-else>
+                                    <p class="font-mono text-sm text-white">→ {{ transition.to || '—' }}</p>
+                                    <p v-if="transition.when" class="mt-1 text-white/60">{{ transition.when }}</p>
+                                    <p v-if="transition.label" class="mt-1 text-white/40">{{ transition.label }}</p>
+                                    <p v-if="transition.description" class="mt-1 text-white/50">{{ transition.description }}</p>
+                                  </template>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div v-if="node.state.notes" class="mt-6 rounded-2xl border border-white/10 bg-black/30 p-4 text-xs text-white/60">
+                          {{ node.state.notes }}
+                        </div>
+                      </article>
+                    </div>
+                  </div>
+                </template>
+                <div v-else class="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/60">
+                  <p>No decision states available yet.</p>
+                </div>
+              </div>
+
+              <div v-else class="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/60">
+                <p>Loading decision tree…</p>
+              </div>
+            </div>
+          </section>
+
+          <aside class="border-t border-white/10 bg-white/5 px-6 py-8 backdrop-blur xl:border-t-0 xl:border-l">
+            <div class="flex h-full flex-col gap-6 overflow-y-auto pr-2">
+              <div v-if="tree && selectedNode && editableNode" class="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur">
                 <div class="flex items-start justify-between gap-2">
                   <div>
-                    <h3 class="text-sm font-semibold text-white/80">Auto transitions</h3>
-                    <p class="text-xs text-white/40">Define telemetry triggers or expressions to skip LLM calls.</p>
+                    <p class="text-xs uppercase tracking-[0.3em] text-white/40">Node inspector</p>
+                    <h2 class="text-xl font-semibold">{{ editableNode.label || selectedNode.id }}</h2>
+                    <p class="text-xs text-white/40">{{ selectedNode.id }}</p>
                   </div>
-                  <button class="rounded-lg border border-white/10 px-2 py-1 text-xs hover:border-purple-400" @click="addAutoTransition">
-                    + Auto
+                  <div class="flex gap-2">
+                    <button
+                      class="rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs transition hover:border-rose-400 hover:text-rose-200"
+                      @click="deleteNode"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      class="rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs transition hover:border-white/40"
+                      @click="duplicateNode"
+                    >
+                      Duplicate
+                    </button>
+                  </div>
+                </div>
+
+                <div class="grid gap-3">
+                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">Label</label>
+                  <input
+                    v-model="editableNode.label"
+                    type="text"
+                    placeholder="Readable node name"
+                    class="rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                  />
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="text-xs uppercase tracking-[0.3em] text-white/40">Role</label>
+                      <select
+                        v-model="editableNode.role"
+                        class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                      >
+                        <option value="pilot">Pilot</option>
+                        <option value="atc">ATC</option>
+                        <option value="system">System</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="text-xs uppercase tracking-[0.3em] text-white/40">Phase</label>
+                      <select
+                        v-model="editableNode.phase"
+                        class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                      >
+                        <option v-for="phase in phaseOptions" :key="phase" :value="phase">{{ phase }}</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="grid gap-2">
+                    <label class="text-xs uppercase tracking-[0.3em] text-white/40">Controller say template</label>
+                    <textarea
+                      v-model="editableNode.say_tpl"
+                      rows="3"
+                      placeholder="{callsign}, cleared to …"
+                      class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm text-white/90 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                    />
+                  </div>
+                  <div class="grid gap-2">
+                    <label class="text-xs uppercase tracking-[0.3em] text-white/40">Pilot utterance template</label>
+                    <textarea
+                      v-model="editableNode.utterance_tpl"
+                      rows="3"
+                      placeholder="{callsign}, ready for push…"
+                      class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm text-white/90 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                    />
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="text-xs uppercase tracking-[0.3em] text-white/40">Auto</label>
+                      <input
+                        v-model="editableNode.auto"
+                        type="text"
+                        placeholder="check_readback"
+                        class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                      />
+                    </div>
+                    <div>
+                      <label class="text-xs uppercase tracking-[0.3em] text-white/40">Trigger</label>
+                      <input
+                        v-model="editableNode.trigger"
+                        type="text"
+                        placeholder="no_reply"
+                        class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                      />
+                    </div>
+                  </div>
+                  <div class="grid gap-2">
+                    <label class="text-xs uppercase tracking-[0.3em] text-white/40">Guard expression</label>
+                    <input
+                      v-model="editableNode.guard"
+                      type="text"
+                      placeholder="variables.cleared === true"
+                      class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                    />
+                  </div>
+
+                  <section class="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div class="flex items-center justify-between">
+                      <h3 class="text-sm font-semibold text-white/80">Transitions</h3>
+                      <div class="flex gap-2 text-xs">
+                        <button class="rounded-lg border border-white/10 px-2 py-1 hover:border-cyan-400" @click="addTransition('next')">
+                          + Next
+                        </button>
+                        <button class="rounded-lg border border-white/10 px-2 py-1 hover:border-emerald-400" @click="addTransition('ok_next')">
+                          + OK
+                        </button>
+                        <button class="rounded-lg border border-white/10 px-2 py-1 hover:border-rose-400" @click="addTransition('bad_next')">
+                          + Bad
+                        </button>
+                      </div>
+                    </div>
+                    <div class="space-y-3">
+                      <div v-for="(transition, index) in editableNode.next" :key="`next-${index}`" class="rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-xs">
+                        <div class="flex gap-2">
+                          <input v-model="transition.to" placeholder="Target state" class="w-full rounded-lg bg-black/40 px-2 py-1 font-mono" />
+                          <button class="rounded-lg bg-black/40 px-2" @click="removeTransition('next', index)">×</button>
+                        </div>
+                        <input
+                          v-model="transition.when"
+                          placeholder="Condition (optional)"
+                          class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1 font-mono"
+                        />
+                        <input v-model="transition.label" placeholder="Label" class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1" />
+                      </div>
+                      <div v-for="(transition, index) in editableNode.ok_next" :key="`ok-${index}`" class="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-xs">
+                        <div class="flex gap-2">
+                          <input v-model="transition.to" placeholder="OK target" class="w-full rounded-lg bg-black/40 px-2 py-1 font-mono" />
+                          <button class="rounded-lg bg-black/40 px-2" @click="removeTransition('ok_next', index)">×</button>
+                        </div>
+                        <input v-model="transition.label" placeholder="Label" class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1" />
+                      </div>
+                      <div v-for="(transition, index) in editableNode.bad_next" :key="`bad-${index}`" class="rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-xs">
+                        <div class="flex gap-2">
+                          <input v-model="transition.to" placeholder="Bad target" class="w-full rounded-lg bg-black/40 px-2 py-1 font-mono" />
+                          <button class="rounded-lg bg-black/40 px-2" @click="removeTransition('bad_next', index)">×</button>
+                        </div>
+                        <input v-model="transition.label" placeholder="Label" class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1" />
+                      </div>
+                      <div class="space-y-3">
+                        <div class="flex items-center justify-between text-xs">
+                          <h4 class="font-semibold text-white/70">Timer transitions</h4>
+                          <button class="rounded-lg border border-white/10 px-2 py-1 hover:border-amber-400" @click="addTimerTransition">+ Timer</button>
+                        </div>
+                        <div v-for="(transition, index) in editableNode.timer_next" :key="`timer-${index}`" class="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-xs">
+                          <div class="flex gap-2">
+                            <input
+                              v-model.number="transition.after_s"
+                              type="number"
+                              placeholder="After seconds"
+                              class="w-20 rounded-lg bg-black/40 px-2 py-1 text-right"
+                            />
+                            <input v-model="transition.to" placeholder="Target" class="w-full rounded-lg bg-black/40 px-2 py-1 font-mono" />
+                            <button class="rounded-lg bg-black/40 px-2" @click="removeTimerTransition(index)">×</button>
+                          </div>
+                          <input v-model="transition.label" placeholder="Label" class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1" />
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div class="flex items-center justify-between">
+                      <h3 class="text-sm font-semibold text-white/80">Actions</h3>
+                      <div class="flex gap-2 text-xs">
+                        <button class="rounded-lg border border-white/10 px-2 py-1 hover:border-sky-400" @click="addActionObject">+ Rule</button>
+                        <button class="rounded-lg border border-white/10 px-2 py-1 hover:border-sky-400" @click="addActionKeyword">+ Keyword</button>
+                      </div>
+                    </div>
+                    <div v-if="!editableNode.actions || !editableNode.actions.length" class="text-xs text-white/40">No actions</div>
+                    <div v-for="(action, index) in editableNode.actions" :key="`action-${index}`" class="rounded-xl border border-white/10 bg-black/40 p-3 text-xs">
+                      <template v-if="typeof action === 'string'">
+                        <div class="flex items-center gap-2">
+                          <input v-model="editableNode.actions[index]" placeholder="Action keyword" class="w-full rounded-lg bg-black/60 px-2 py-1 font-mono" />
+                          <button class="rounded-lg bg-black/60 px-2" @click="removeAction(index)">×</button>
+                        </div>
+                      </template>
+                      <template v-else>
+                        <div class="flex gap-2">
+                          <input v-model="action.set" placeholder="flags.current_unit" class="w-full rounded-lg bg-black/60 px-2 py-1 font-mono" />
+                          <button class="rounded-lg bg-black/60 px-2" @click="removeAction(index)">×</button>
+                        </div>
+                        <input v-model="action.to" placeholder="APP" class="mt-2 w-full rounded-lg bg-black/60 px-2 py-1 font-mono" />
+                        <input v-model="action.if" placeholder="Condition (optional)" class="mt-2 w-full rounded-lg bg-black/60 px-2 py-1 font-mono" />
+                      </template>
+                    </div>
+                  </section>
+
+                  <section class="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div class="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 class="text-sm font-semibold text-white/80">Auto transitions</h3>
+                        <p class="text-xs text-white/40">Define telemetry triggers or expressions to skip LLM calls.</p>
+                      </div>
+                      <button class="rounded-lg border border-white/10 px-2 py-1 text-xs hover:border-purple-400" @click="addAutoTransition">
+                        + Auto
+                      </button>
+                    </div>
+                    <div v-if="!editableNode.auto_transitions || !editableNode.auto_transitions.length" class="text-xs text-white/40">
+                      No automatic transitions defined.
+                    </div>
+                    <div
+                      v-for="(auto, index) in editableNode.auto_transitions"
+                      :key="`auto-${auto.id || index}`"
+                      class="space-y-3 rounded-xl border border-purple-400/30 bg-purple-500/10 p-3 text-xs"
+                    >
+                      <div class="flex gap-2">
+                        <input v-model="auto.label" placeholder="Label" class="w-full rounded-lg bg-black/40 px-2 py-1" />
+                        <button class="rounded-lg bg-black/40 px-2" @click="removeAutoTransition(index)">×</button>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <input v-model="auto.to" placeholder="Target state" class="rounded-lg bg-black/40 px-2 py-1 font-mono" />
+                        <input v-model.number="auto.priority" type="number" placeholder="Priority" class="rounded-lg bg-black/40 px-2 py-1" />
+                      </div>
+                      <select v-model="auto.conditionType" class="w-full rounded-lg bg-black/40 px-2 py-1">
+                        <option value="expression">Expression</option>
+                        <option value="telemetry">Telemetry</option>
+                      </select>
+                      <div v-if="auto.conditionType === 'telemetry'" class="grid grid-cols-3 gap-2">
+                        <select v-model="auto.telemetryKey" class="rounded-lg bg-black/40 px-2 py-1">
+                          <option value="altitude_ft">Altitude ft</option>
+                          <option value="speed_kt">Speed kt</option>
+                          <option value="vertical_speed_fpm">Vertical speed</option>
+                          <option value="latitude">Latitude</option>
+                          <option value="longitude">Longitude</option>
+                        </select>
+                        <select v-model="auto.comparator" class="rounded-lg bg-black/40 px-2 py-1">
+                          <option value=">">&gt;</option>
+                          <option value=">=">≥</option>
+                          <option value="<">&lt;</option>
+                          <option value="<=">≤</option>
+                          <option value="===">=</option>
+                          <option value="!==">≠</option>
+                        </select>
+                        <input v-model.number="auto.value" type="number" placeholder="Value" class="rounded-lg bg-black/40 px-2 py-1" />
+                      </div>
+                      <div v-else class="space-y-2">
+                        <textarea
+                          v-model="auto.expression"
+                          rows="2"
+                          placeholder="flags.in_air && variables.altitude_ft > 200"
+                          class="w-full rounded-lg bg-black/40 px-2 py-1 font-mono"
+                        />
+                        <div class="flex flex-wrap gap-2 text-[11px]">
+                          <button class="rounded-lg border border-purple-300/40 px-2 py-1 hover:border-purple-200" @click="applyAutoPreset(auto, 'altitude')">
+                            Altitude &gt; 200
+                          </button>
+                          <button class="rounded-lg border border-purple-300/40 px-2 py-1 hover:border-purple-200" @click="applyAutoPreset(auto, 'speed')">
+                            Speed &lt; 60
+                          </button>
+                          <button class="rounded-lg border border-purple-300/40 px-2 py-1 hover:border-purple-200" @click="applyAutoPreset(auto, 'gear')">
+                            flags.gear_down === true
+                          </button>
+                        </div>
+                      </div>
+                      <div class="flex flex-wrap gap-3">
+                        <label class="flex items-center gap-1">
+                          <input type="checkbox" value="state-entry" v-model="auto.runOn" />
+                          <span>On entry</span>
+                        </label>
+                        <label class="flex items-center gap-1">
+                          <input type="checkbox" value="telemetry-update" v-model="auto.runOn" />
+                          <span>On telemetry</span>
+                        </label>
+                        <label class="flex items-center gap-1">
+                          <input type="checkbox" value="decision-applied" v-model="auto.runOn" />
+                          <span>After LLM</span>
+                        </label>
+                        <label class="flex items-center gap-1">
+                          <input type="checkbox" v-model="auto.enabled" true-value="true" false-value="false" />
+                          <span>Enabled</span>
+                        </label>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <h3 class="text-sm font-semibold text-white/80">LLM templates</h3>
+                    <div class="space-y-3">
+                      <div class="rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-xs">
+                        <h4 class="text-sm font-semibold text-white/80">Decision prompt</h4>
+                        <input v-model="editableNode.llm_templates.decision.title" placeholder="Title" class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1" />
+                        <textarea
+                          v-model="editableNode.llm_templates.decision.system_prompt"
+                          rows="2"
+                          placeholder="System prompt"
+                          class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1 font-mono"
+                        />
+                        <textarea
+                          v-model="editableNode.llm_templates.decision.user_prompt"
+                          rows="2"
+                          placeholder="User prompt"
+                          class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1 font-mono"
+                        />
+                        <input
+                          v-model="editableNode.llm_templates.decision.placeholders"
+                          placeholder="Placeholders comma-separated"
+                          class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1"
+                        />
+                      </div>
+                      <div class="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-xs">
+                        <h4 class="text-sm font-semibold text-white/80">Readback prompt</h4>
+                        <textarea
+                          v-model="editableNode.llm_templates.readback.system_prompt"
+                          rows="2"
+                          placeholder="System prompt"
+                          class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1 font-mono"
+                        />
+                        <textarea
+                          v-model="editableNode.llm_templates.readback.user_prompt"
+                          rows="2"
+                          placeholder="User prompt"
+                          class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1 font-mono"
+                        />
+                      </div>
+                    </div>
+                  </section>
+
+                  <div class="flex items-center justify-between pt-2">
+                    <button
+                      class="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs uppercase tracking-[0.3em] text-white/60 hover:border-white/30"
+                      :disabled="!hasUnsavedChanges"
+                      @click="resetEditableNode"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      class="rounded-xl border border-cyan-400/60 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300 hover:text-white disabled:opacity-40"
+                      :disabled="!hasUnsavedChanges || saveStatus === 'saving'"
+                      @click="saveNode"
+                    >
+                      <span v-if="saveStatus === 'saving'">Saving…</span>
+                      <span v-else>Save changes</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else-if="tree" class="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.3em] text-white/40">Tree overview</p>
+                  <h2 class="text-xl font-semibold">{{ tree.name }}</h2>
+                  <p class="text-sm text-white/60">Configure default behaviour and lifecycle hooks.</p>
+                </div>
+                <div class="space-y-3 text-sm text-white/70">
+                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">Description</label>
+                  <textarea
+                    v-model="treeSettings.description"
+                    rows="3"
+                    class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                  />
+                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">Start state</label>
+                  <input
+                    v-model="treeSettings.start_state"
+                    class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                  />
+                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">End states</label>
+                  <input
+                    v-model="treeSettings.end_states"
+                    placeholder="FLOW_COMPLETE, OTHER_STATE"
+                    class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+                  />
+                  <button
+                    class="rounded-xl border border-cyan-400/60 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-100 transition hover:border-cyan-300 hover:text-white disabled:opacity-50"
+                    :disabled="savingSettings"
+                    @click="saveTreeSettings"
+                  >
+                    <span v-if="savingSettings">Saving…</span>
+                    <span v-else>Save settings</span>
                   </button>
                 </div>
-                <div v-if="!editableNode.auto_transitions || !editableNode.auto_transitions.length" class="text-xs text-white/40">
-                  No automatic transitions defined.
+                <div class="space-y-1 text-xs text-white/40">
+                  <p>Roles: {{ tree.roles.join(', ') }}</p>
+                  <p>Phases: {{ tree.phases.join(', ') }}</p>
+                  <p>Import via /api/editor/decision-tree/import once after updating the source file.</p>
                 </div>
-                <div
-                  v-for="(auto, index) in editableNode.auto_transitions"
-                  :key="`auto-${auto.id || index}`"
-                  class="space-y-3 rounded-xl border border-purple-400/30 bg-purple-500/10 p-3 text-xs"
-                >
-                  <div class="flex gap-2">
-                    <input v-model="auto.label" placeholder="Label" class="w-full rounded-lg bg-black/40 px-2 py-1" />
-                    <button class="rounded-lg bg-black/40 px-2" @click="removeAutoTransition(index)">×</button>
-                  </div>
-                  <div class="grid grid-cols-2 gap-2">
-                    <input v-model="auto.to" placeholder="Target state" class="rounded-lg bg-black/40 px-2 py-1 font-mono" />
-                    <input v-model.number="auto.priority" type="number" placeholder="Priority" class="rounded-lg bg-black/40 px-2 py-1" />
-                  </div>
-                  <select v-model="auto.conditionType" class="w-full rounded-lg bg-black/40 px-2 py-1">
-                    <option value="expression">Expression</option>
-                    <option value="telemetry">Telemetry</option>
-                  </select>
-                  <div v-if="auto.conditionType === 'telemetry'" class="grid grid-cols-3 gap-2">
-                    <select v-model="auto.telemetryKey" class="rounded-lg bg-black/40 px-2 py-1">
-                      <option value="altitude_ft">Altitude ft</option>
-                      <option value="speed_kt">Speed kt</option>
-                      <option value="vertical_speed_fpm">Vertical speed</option>
-                      <option value="latitude">Latitude</option>
-                      <option value="longitude">Longitude</option>
-                    </select>
-                    <select v-model="auto.comparator" class="rounded-lg bg-black/40 px-2 py-1">
-                      <option value=">">&gt;</option>
-                      <option value=">=">≥</option>
-                      <option value="<">&lt;</option>
-                      <option value="<=">≤</option>
-                      <option value="===">=</option>
-                      <option value="!==">≠</option>
-                    </select>
-                    <input v-model.number="auto.value" type="number" placeholder="Value" class="rounded-lg bg-black/40 px-2 py-1" />
-                  </div>
-                  <div v-else class="space-y-2">
-                    <textarea
-                      v-model="auto.expression"
-                      rows="2"
-                      placeholder="flags.in_air && variables.altitude_ft > 200"
-                      class="w-full rounded-lg bg-black/40 px-2 py-1 font-mono"
-                    />
-                    <div class="flex flex-wrap gap-2 text-[11px]">
-                      <button class="rounded-lg border border-purple-300/40 px-2 py-1 hover:border-purple-200" @click="applyAutoPreset(auto, 'altitude')">
-                        Altitude &gt; 200
-                      </button>
-                      <button class="rounded-lg border border-purple-300/40 px-2 py-1 hover:border-purple-200" @click="applyAutoPreset(auto, 'speed')">
-                        Speed &lt; 60
-                      </button>
-                      <button class="rounded-lg border border-purple-300/40 px-2 py-1 hover:border-purple-200" @click="applyAutoPreset(auto, 'gear')">
-                        flags.gear_down === true
-                      </button>
-                    </div>
-                  </div>
-                  <div class="flex flex-wrap gap-3">
-                    <label class="flex items-center gap-1">
-                      <input type="checkbox" value="state-entry" v-model="auto.runOn" />
-                      <span>On entry</span>
-                    </label>
-                    <label class="flex items-center gap-1">
-                      <input type="checkbox" value="telemetry-update" v-model="auto.runOn" />
-                      <span>On telemetry</span>
-                    </label>
-                    <label class="flex items-center gap-1">
-                      <input type="checkbox" value="decision-applied" v-model="auto.runOn" />
-                      <span>After LLM</span>
-                    </label>
-                    <label class="flex items-center gap-1">
-                      <input type="checkbox" v-model="auto.enabled" true-value="true" false-value="false" />
-                      <span>Enabled</span>
-                    </label>
-                  </div>
-                </div>
-              </section>
+              </div>
 
-              <section class="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
-                <h3 class="text-sm font-semibold text-white/80">LLM templates</h3>
-                <div class="space-y-3">
-                  <div class="rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-xs">
-                    <h4 class="text-sm font-semibold text-white/80">Decision prompt</h4>
-                    <input v-model="editableNode.llm_templates.decision.title" placeholder="Title" class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1" />
-                    <textarea
-                      v-model="editableNode.llm_templates.decision.system_prompt"
-                      rows="2"
-                      placeholder="System prompt"
-                      class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1 font-mono"
-                    />
-                    <textarea
-                      v-model="editableNode.llm_templates.decision.user_prompt"
-                      rows="2"
-                      placeholder="User prompt"
-                      class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1 font-mono"
-                    />
-                    <input
-                      v-model="editableNode.llm_templates.decision.placeholders"
-                      placeholder="Placeholders comma-separated"
-                      class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1"
-                    />
-                  </div>
-                  <div class="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-xs">
-                    <h4 class="text-sm font-semibold text-white/80">Readback prompt</h4>
-                    <textarea
-                      v-model="editableNode.llm_templates.readback.system_prompt"
-                      rows="2"
-                      placeholder="System prompt"
-                      class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1 font-mono"
-                    />
-                    <textarea
-                      v-model="editableNode.llm_templates.readback.user_prompt"
-                      rows="2"
-                      placeholder="User prompt"
-                      class="mt-2 w-full rounded-lg bg-black/40 px-2 py-1 font-mono"
-                    />
-                  </div>
-                </div>
-              </section>
-
-              <div class="flex items-center justify-between pt-2">
-                <button
-                  class="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs uppercase tracking-[0.3em] text-white/60 hover:border-white/30"
-                  :disabled="!hasUnsavedChanges"
-                  @click="resetEditableNode"
-                >
-                  Reset
-                </button>
-                <button
-                  class="rounded-xl border border-cyan-400/60 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300 hover:text-white disabled:opacity-40"
-                  :disabled="!hasUnsavedChanges || saveStatus === 'saving'"
-                  @click="saveNode"
-                >
-                  <span v-if="saveStatus === 'saving'">Saving…</span>
-                  <span v-else>Save changes</span>
-                </button>
+              <div v-else class="rounded-3xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
+                <p>Loading decision tree…</p>
               </div>
             </div>
-          </div>
-
-          <div v-else-if="tree" class="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur">
-            <div>
-              <p class="text-xs uppercase tracking-[0.3em] text-white/40">Tree overview</p>
-              <h2 class="text-xl font-semibold">{{ tree.name }}</h2>
-              <p class="text-sm text-white/60">Configure default behaviour and lifecycle hooks.</p>
-            </div>
-            <div class="space-y-3 text-sm text-white/70">
-              <label class="text-xs uppercase tracking-[0.3em] text-white/40">Description</label>
-              <textarea
-                v-model="treeSettings.description"
-                rows="3"
-                class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
-              />
-              <label class="text-xs uppercase tracking-[0.3em] text-white/40">Start state</label>
-              <input
-                v-model="treeSettings.start_state"
-                class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
-              />
-              <label class="text-xs uppercase tracking-[0.3em] text-white/40">End states</label>
-              <input
-                v-model="treeSettings.end_states"
-                placeholder="FLOW_COMPLETE, OTHER_STATE"
-                class="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
-              />
-              <button
-                class="rounded-xl border border-cyan-400/60 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-100 transition hover:border-cyan-300 hover:text-white disabled:opacity-50"
-                :disabled="savingSettings"
-                @click="saveTreeSettings"
-              >
-                <span v-if="savingSettings">Saving…</span>
-                <span v-else>Save settings</span>
-              </button>
-            </div>
-            <div class="space-y-1 text-xs text-white/40">
-              <p>Roles: {{ tree.roles.join(', ') }}</p>
-              <p>Phases: {{ tree.phases.join(', ') }}</p>
-              <p>Import via /api/editor/decision-tree/import once after updating the source file.</p>
-            </div>
-          </div>
-
-          <div v-else class="rounded-3xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
-            <p>Loading decision tree…</p>
-          </div>
-        </aside>
+          </aside>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useApi } from '~/composables/useApi'
-import type { DecisionTreeRecord, DecisionTreeState, AutoTransition } from '~/types/decision-tree'
+import type { AutoTransition, DecisionTreeRecord, DecisionTreeState } from '~/types/decision-tree'
 
 type Role = DecisionTreeState['role']
+type TransitionGroupKey = 'next' | 'ok_next' | 'bad_next' | 'timer_next' | 'auto_transitions'
 
 definePageMeta({ middleware: 'require-admin' })
 useHead({ title: 'ATC Editor • OpenSquawk' })
@@ -558,14 +682,6 @@ const originalSnapshot = ref('')
 
 const treeSettings = reactive({ description: '', start_state: '', end_states: '' })
 
-const canvasWrapperRef = ref<HTMLElement | null>(null)
-const canvasRef = ref<HTMLElement | null>(null)
-const nodeMap = new Map<string, HTMLElement>()
-const connections = ref<EditorConnection[]>([])
-let connectionRaf: number | null = null
-
-const dragState = ref<{ id: string; startX: number; startY: number; originX: number; originY: number } | null>(null)
-
 interface EditorNode {
   id: string
   state: DecisionTreeState
@@ -573,12 +689,21 @@ interface EditorNode {
   role: Role
 }
 
-interface EditorConnection {
-  id: string
-  from: string
-  to: string
-  path: string
-  type: 'default' | 'ok' | 'bad' | 'timer' | 'auto'
+interface TransitionGroupDescriptor {
+  key: TransitionGroupKey
+  label: string
+  items: any[]
+  borderClass: string
+  backgroundClass: string
+  textClass: string
+}
+
+const transitionPalette: Record<TransitionGroupKey, { label: string; borderClass: string; backgroundClass: string; textClass: string }> = {
+  next: { label: 'Next', borderClass: 'border-cyan-400/40', backgroundClass: 'bg-cyan-500/10', textClass: 'text-cyan-100' },
+  ok_next: { label: 'OK', borderClass: 'border-emerald-400/40', backgroundClass: 'bg-emerald-500/10', textClass: 'text-emerald-100' },
+  bad_next: { label: 'Bad', borderClass: 'border-rose-400/40', backgroundClass: 'bg-rose-500/10', textClass: 'text-rose-100' },
+  timer_next: { label: 'Timer', borderClass: 'border-amber-400/40', backgroundClass: 'bg-amber-500/10', textClass: 'text-amber-100' },
+  auto_transitions: { label: 'Auto', borderClass: 'border-purple-400/40', backgroundClass: 'bg-purple-500/10', textClass: 'text-purple-100' },
 }
 
 const nodes = computed<EditorNode[]>(() => {
@@ -624,21 +749,119 @@ const hasUnsavedChanges = computed(() => {
   return JSON.stringify(buildStatePayload(editableNode.value)) !== originalSnapshot.value
 })
 
-function registerNodeRef(id: string, el: HTMLElement | null) {
-  if (el) {
-    nodeMap.set(id, el)
-  } else {
-    nodeMap.delete(id)
+const flowNodes = computed<EditorNode[]>(() => {
+  if (!tree.value) return []
+  const map = new Map<string, EditorNode>()
+  nodes.value.forEach((node) => map.set(node.id, node))
+  const visited = new Set<string>()
+  const enqueued = new Set<string>()
+  const ordered: EditorNode[] = []
+  const queue: string[] = []
+
+  const enqueue = (id?: string) => {
+    if (!id) return
+    if (!map.has(id)) return
+    if (visited.has(id) || enqueued.has(id)) return
+    enqueued.add(id)
+    queue.push(id)
   }
-  requestConnectionUpdate()
+
+  enqueue(tree.value.start_state)
+  if (!queue.length) {
+    const sorted = [...map.keys()].sort()
+    sorted.forEach((id) => enqueue(id))
+  }
+
+  const pushNeighbors = (state: DecisionTreeState) => {
+    const pushList = (list?: { to: string }[]) => {
+      list?.forEach((transition) => {
+        if (transition.to) enqueue(transition.to)
+      })
+    }
+    pushList(state.next)
+    pushList(state.ok_next)
+    pushList(state.bad_next)
+    state.timer_next?.forEach((transition) => enqueue(transition.to))
+    state.auto_transitions?.forEach((transition) => enqueue(transition.to))
+  }
+
+  while (queue.length) {
+    const id = queue.shift()!
+    enqueued.delete(id)
+    if (visited.has(id)) continue
+    const node = map.get(id)
+    if (!node) continue
+    visited.add(id)
+    ordered.push(node)
+    pushNeighbors(node.state)
+  }
+
+  const leftovers = nodes.value.filter((node) => !visited.has(node.id))
+  leftovers.sort((a, b) => {
+    const dy = (a.layout.y ?? 0) - (b.layout.y ?? 0)
+    if (dy !== 0) return dy
+    const dx = (a.layout.x ?? 0) - (b.layout.x ?? 0)
+    if (dx !== 0) return dx
+    return a.id.localeCompare(b.id)
+  })
+  ordered.push(...leftovers)
+
+  return ordered
+})
+
+const flowSections = computed(() => {
+  if (!tree.value) return [] as { phase: string; nodes: EditorNode[] }[]
+  const groups = new Map<string, EditorNode[]>()
+  flowNodes.value.forEach((node) => {
+    const phase = node.state.phase || 'Unassigned'
+    if (!groups.has(phase)) groups.set(phase, [])
+    groups.get(phase)!.push(node)
+  })
+  const sections: { phase: string; nodes: EditorNode[] }[] = []
+  const knownPhases = tree.value.phases || []
+  knownPhases.forEach((phase) => {
+    const phaseNodes = groups.get(phase)
+    if (phaseNodes?.length) {
+      sections.push({ phase, nodes: phaseNodes })
+      groups.delete(phase)
+    }
+  })
+  groups.forEach((phaseNodes, phase) => {
+    sections.push({ phase, nodes: phaseNodes })
+  })
+  return sections
+})
+
+function stateTransitionGroups(state: DecisionTreeState): TransitionGroupDescriptor[] {
+  const groups: TransitionGroupDescriptor[] = []
+  const pushGroup = (key: TransitionGroupKey, items?: any[]) => {
+    if (!items || !items.length) return
+    const palette = transitionPalette[key]
+    groups.push({
+      key,
+      label: palette.label,
+      items,
+      borderClass: palette.borderClass,
+      backgroundClass: palette.backgroundClass,
+      textClass: palette.textClass,
+    })
+  }
+  pushGroup('next', state.next)
+  pushGroup('ok_next', state.ok_next)
+  pushGroup('bad_next', state.bad_next)
+  pushGroup('timer_next', state.timer_next)
+  pushGroup('auto_transitions', state.auto_transitions)
+  return groups
 }
 
-function nodeStyle(node: EditorNode) {
-  return {
-    left: `${node.layout.x}px`,
-    top: `${node.layout.y}px`,
-    borderColor: roleBorder(node.role),
-  }
+function totalTransitionCount(state: DecisionTreeState) {
+  return (
+    (state.next?.length || 0) +
+    (state.ok_next?.length || 0) +
+    (state.bad_next?.length || 0) +
+    (state.timer_next?.length || 0) +
+    (state.auto_transitions?.length || 0)
+  )
 }
 
 function roleBorder(role: Role) {
@@ -666,21 +889,6 @@ function roleBadge(role: Role) {
 function isNodeHighlighted(id: string) {
   const matches = matchingNodeIds.value
   return matches.size === 0 || matches.has(id)
-}
-
-function connectionColor(type: EditorConnection['type']) {
-  switch (type) {
-    case 'ok':
-      return '#34d399'
-    case 'bad':
-      return '#f87171'
-    case 'timer':
-      return '#fb923c'
-    case 'auto':
-      return '#a855f7'
-    default:
-      return '#38bdf8'
-  }
 }
 
 function formatRelativeTime(iso?: string) {
@@ -728,8 +936,6 @@ async function loadTree(force = false) {
       const defaultId = response.tree.start_state || Object.keys(response.tree.states || {})[0] || null
       selectedNodeId.value = defaultId
     }
-    await nextTick()
-    requestConnectionUpdate()
   } catch (err: any) {
     console.error('Failed to load decision tree', err)
     saveError.value = err?.data?.statusMessage || err?.message || 'Failed to load decision tree'
@@ -810,8 +1016,6 @@ async function createNode() {
     const response = await api.post<{ tree: DecisionTreeRecord; node: { id: string } }>('/api/editor/decision-tree/nodes', { state: payload })
     tree.value = response.tree
     selectedNodeId.value = response.node.id
-    await nextTick()
-    requestConnectionUpdate()
   } catch (err: any) {
     console.error('Failed to create node', err)
     saveError.value = err?.data?.statusMessage || err?.message || 'Node creation failed'
@@ -828,8 +1032,6 @@ async function duplicateNode() {
     })
     tree.value = response.tree
     selectedNodeId.value = response.node.id
-    await nextTick()
-    requestConnectionUpdate()
   } catch (err: any) {
     console.error('Failed to duplicate node', err)
     saveError.value = err?.data?.statusMessage || err?.message || 'Duplicate failed'
@@ -843,8 +1045,6 @@ async function deleteNode() {
     const response = await api.del<{ tree: DecisionTreeRecord }>('/api/editor/decision-tree/nodes/' + selectedNodeId.value)
     tree.value = response.tree
     selectedNodeId.value = response.tree.start_state || Object.keys(response.tree.states || {})[0] || null
-    await nextTick()
-    requestConnectionUpdate()
   } catch (err: any) {
     console.error('Failed to delete node', err)
     saveError.value = err?.data?.statusMessage || err?.message || 'Delete failed'
@@ -966,6 +1166,17 @@ function applyAutoPreset(auto: AutoTransition, preset: 'altitude' | 'speed' | 'g
   }
 }
 
+function describeAutoTransition(auto: AutoTransition | undefined) {
+  if (!auto) return '—'
+  if (auto.conditionType === 'telemetry' && auto.telemetryKey && auto.comparator && auto.value !== undefined) {
+    return `${auto.telemetryKey} ${auto.comparator} ${auto.value}`
+  }
+  if (auto.expression) {
+    return auto.expression
+  }
+  return 'No condition configured'
+}
+
 async function saveTreeSettings() {
   if (!tree.value) return
   savingSettings.value = true
@@ -988,106 +1199,8 @@ async function saveTreeSettings() {
   }
 }
 
-function requestConnectionUpdate() {
-  if (connectionRaf !== null) return
-  connectionRaf = requestAnimationFrame(() => {
-    connectionRaf = null
-    computeConnections()
-  })
-}
-
-function computeConnections() {
-  if (!canvasRef.value || !tree.value) {
-    connections.value = []
-    return
-  }
-  const canvasRect = canvasRef.value.getBoundingClientRect()
-  const list: EditorConnection[] = []
-  nodes.value.forEach((node) => {
-    const fromEl = nodeMap.get(node.id)
-    if (!fromEl) return
-    const fromRect = fromEl.getBoundingClientRect()
-    const startX = fromRect.left - canvasRect.left + fromRect.width
-    const startY = fromRect.top - canvasRect.top + fromRect.height / 2
-
-    const add = (to: string, type: EditorConnection['type']) => {
-      const targetEl = nodeMap.get(to)
-      if (!targetEl) return
-      const toRect = targetEl.getBoundingClientRect()
-      const endX = toRect.left - canvasRect.left
-      const endY = toRect.top - canvasRect.top + toRect.height / 2
-      const deltaX = endX - startX
-      const curve = deltaX >= 0 ? Math.max(deltaX / 2, 40) : 40
-      const path = `M${startX},${startY} C${startX + curve},${startY} ${endX - curve},${endY} ${endX},${endY}`
-      list.push({ id: `${node.id}-${to}-${type}-${list.length}`, from: node.id, to, path, type })
-    }
-
-    node.state.next?.forEach((nxt) => add(nxt.to, 'default'))
-    node.state.ok_next?.forEach((nxt) => add(nxt.to, 'ok'))
-    node.state.bad_next?.forEach((nxt) => add(nxt.to, 'bad'))
-    node.state.timer_next?.forEach((nxt) => add(nxt.to, 'timer'))
-    node.state.auto_transitions?.forEach((nxt) => add(nxt.to, 'auto'))
-  })
-  connections.value = list
-}
-
-function beginDrag(event: PointerEvent, node: EditorNode) {
-  if (!tree.value) return
-  dragState.value = {
-    id: node.id,
-    startX: event.clientX,
-    startY: event.clientY,
-    originX: node.state.layout?.x ?? 0,
-    originY: node.state.layout?.y ?? 0,
-  }
-  window.addEventListener('pointermove', continueDrag)
-  window.addEventListener('pointerup', endDrag)
-}
-
-function continueDrag(event: PointerEvent) {
-  if (!dragState.value || !tree.value) return
-  const dx = event.clientX - dragState.value.startX
-  const dy = event.clientY - dragState.value.startY
-  const x = Math.round(dragState.value.originX + dx)
-  const y = Math.round(dragState.value.originY + dy)
-  const state = tree.value.states[dragState.value.id]
-  if (!state) return
-  if (!state.layout) state.layout = { x, y }
-  else {
-    state.layout.x = x
-    state.layout.y = y
-  }
-  requestConnectionUpdate()
-}
-
-async function endDrag() {
-  window.removeEventListener('pointermove', continueDrag)
-  window.removeEventListener('pointerup', endDrag)
-  const drag = dragState.value
-  dragState.value = null
-  if (!drag || !tree.value?.states[drag.id]) return
-  const layout = tree.value.states[drag.id].layout || { x: 0, y: 0 }
-  try {
-    await api.patch('/api/editor/decision-tree/nodes/' + drag.id, { state: { layout } })
-  } catch (err) {
-    console.warn('Failed to persist layout', err)
-  }
-}
-
 onMounted(() => {
   loadTree()
-  window.addEventListener('resize', requestConnectionUpdate)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', requestConnectionUpdate)
-  window.removeEventListener('pointermove', continueDrag)
-  window.removeEventListener('pointerup', endDrag)
-  if (connectionRaf !== null) cancelAnimationFrame(connectionRaf)
-})
-
-watch(nodes, () => {
-  nextTick(() => requestConnectionUpdate())
 })
 </script>
 
