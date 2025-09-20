@@ -7,11 +7,11 @@ const CREATION_DEADLINE = new Date(process.env.BOOTSTRAP_INVITE_DEADLINE ?? '202
 export default defineEventHandler(async (event) => {
   const now = new Date()
   if (Number.isNaN(CREATION_DEADLINE.getTime())) {
-    throw createError({ statusCode: 500, statusMessage: 'Konfiguration für Bootstrap-Deadline ungültig' })
+    throw createError({ statusCode: 500, statusMessage: 'Invalid bootstrap deadline configuration' })
   }
 
   if (now > CREATION_DEADLINE) {
-    throw createError({ statusCode: 403, statusMessage: 'Bootstrap-Zeitraum abgelaufen' })
+    throw createError({ statusCode: 403, statusMessage: 'Bootstrap window has expired' })
   }
 
   const body = await readBody<{ label?: string }>(event).catch(() => ({ label: undefined }))

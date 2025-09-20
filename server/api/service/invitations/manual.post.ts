@@ -31,14 +31,14 @@ export default defineEventHandler<ManualInviteResponse>(async (event) => {
   const expectedPassword = (config.manualInvitePassword as string | undefined)?.trim() || ''
 
   if (!expectedPassword) {
-    throw createError({ statusCode: 500, statusMessage: 'Konfiguration für manuellen Einladungscode fehlt' })
+    throw createError({ statusCode: 500, statusMessage: 'Manual invitation code configuration missing' })
   }
 
   const body = await readBody<ManualInviteRequestBody>(event).catch(() => ({}) as ManualInviteRequestBody)
   const providedPassword = body.password?.trim() || ''
 
   if (!providedPassword || !safeComparePassword(providedPassword, expectedPassword)) {
-    throw createError({ statusCode: 401, statusMessage: 'Ungültiges Passwort' })
+    throw createError({ statusCode: 401, statusMessage: 'Invalid password' })
   }
 
   const now = new Date()

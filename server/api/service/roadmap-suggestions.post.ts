@@ -21,19 +21,19 @@ export default defineEventHandler(async (event) => {
   const allowContact = Boolean(body.allowContact && email)
 
   if (!title || title.length < MIN_TITLE_LENGTH) {
-    throw createError({ statusCode: 400, statusMessage: 'Bitte gib einen kurzen Titel (mindestens 4 Zeichen) an.' })
+    throw createError({ statusCode: 400, statusMessage: 'Please provide a short title (at least 4 characters).' })
   }
 
   if (!details || details.length < MIN_DETAILS_LENGTH) {
-    throw createError({ statusCode: 400, statusMessage: 'Beschreibe deinen Vorschlag mit mindestens 20 Zeichen.' })
+    throw createError({ statusCode: 400, statusMessage: 'Please describe your suggestion in at least 20 characters.' })
   }
 
   if (!body.consentPrivacy) {
-    throw createError({ statusCode: 400, statusMessage: 'Wir benötigen deine Einwilligung zur Datenschutzerklärung.' })
+    throw createError({ statusCode: 400, statusMessage: 'We need your consent to the privacy policy.' })
   }
 
   if (body.allowContact && !email) {
-    throw createError({ statusCode: 400, statusMessage: 'Bitte gib eine E-Mail an, damit wir dich kontaktieren können.' })
+    throw createError({ statusCode: 400, statusMessage: 'Please provide an email address so we can contact you.' })
   }
 
   const suggestion = await RoadmapSuggestion.create({
@@ -45,15 +45,15 @@ export default defineEventHandler(async (event) => {
   })
 
   const dataEntries = [
-    ['Titel', title],
-    ['Beschreibung', details],
-    ['E-Mail', email || null],
-    ['Kontaktaufnahme erlaubt', allowContact],
+    ['Title', title],
+    ['Description', details],
+    ['Email', email || null],
+    ['Contact allowed', allowContact],
   ]
 
   await sendAdminNotification({
-    event: 'Neuer Roadmap-Vorschlag',
-    summary: `Neuer Roadmap-Vorschlag: ${title}`,
+    event: 'New roadmap suggestion',
+    summary: `New roadmap suggestion: ${title}`,
     data: dataEntries,
   })
 

@@ -4,14 +4,14 @@
       <div class="container-outer py-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <NuxtLink to="/" class="inline-flex items-center gap-2 text-sm text-white/60 hover:text-cyan-300">
-            <v-icon icon="mdi-arrow-left" size="18" /> Zurück zur Startseite
+            <v-icon icon="mdi-arrow-left" size="18" /> Back to landing page
           </NuxtLink>
-          <h1 class="text-3xl md:text-4xl font-semibold mt-2">News & Updates</h1>
+          <h1 class="text-3xl md:text-4xl font-semibold mt-2">News & updates</h1>
           <p class="text-white/70 text-sm md:text-base mt-2">
-            Content-getriebene Updates zu Alpha-Builds, Simulator-Support und Community-Entscheidungen.
+            Content-driven updates covering the alpha build, simulator support and community decisions.
           </p>
         </div>
-        <NuxtLink to="/#contributing" class="btn btn-primary w-fit">Zum aktuellen Feed</NuxtLink>
+        <NuxtLink to="/#contributing" class="btn btn-primary w-fit">View contributing section</NuxtLink>
       </div>
     </header>
 
@@ -30,12 +30,12 @@
             </div>
             <div class="mt-auto flex items-center justify-between text-xs text-white/60">
               <span>{{ post.readingTime }}</span>
-              <NuxtLink :to="`/news/${post.slug}`" class="text-cyan-300 text-sm font-medium hover:underline">Weiterlesen</NuxtLink>
+              <NuxtLink :to="`/news/${post.slug}`" class="text-cyan-300 text-sm font-medium hover:underline">Read more</NuxtLink>
             </div>
           </article>
         </div>
         <div v-else class="card text-white/70 text-sm">
-          Noch keine Beiträge veröffentlicht. Schau bald wieder vorbei!
+          No posts published yet. Check back soon!
         </div>
       </section>
     </main>
@@ -52,14 +52,14 @@ const posts = computed(() => getAllNews())
 useHead({
   title: 'News & Updates – OpenSquawk',
   meta: [
-    { name: 'description', content: 'Neuigkeiten zum OpenSquawk Alpha-Prototyp, Simulator-Support und Community-Updates.' },
+    { name: 'description', content: 'Updates on the OpenSquawk alpha build, simulator integrations and community news.' },
     { name: 'robots', content: 'index,follow' },
     { property: 'og:title', content: 'News & Updates – OpenSquawk' },
-    { property: 'og:description', content: 'Open-source, low-cost AI ATC: Wir teilen Fortschritte, Milestones und Aufrufe zum Mitmachen.' },
+    { property: 'og:description', content: 'Open-source, low-cost AI ATC: follow progress, milestones and community calls to action.' },
   ],
 })
 
-const formatNewsDate = (iso: string) => new Date(iso).toLocaleDateString('de-DE', {
+const formatNewsDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', {
   day: '2-digit',
   month: 'short',
   year: 'numeric',

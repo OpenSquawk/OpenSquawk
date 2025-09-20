@@ -69,21 +69,21 @@ export default defineEventHandler(async (event) => {
 
   if (channel) {
     if (!CHANNELS.has(channel)) {
-      throw createError({ statusCode: 400, statusMessage: 'Unbekannter Kanal' })
+      throw createError({ statusCode: 400, statusMessage: 'Unknown channel' })
     }
     filter.channel = channel as TransmissionLogDocument['channel']
   }
 
   if (direction) {
     if (!DIRECTIONS.has(direction)) {
-      throw createError({ statusCode: 400, statusMessage: 'Ungültige Richtung' })
+      throw createError({ statusCode: 400, statusMessage: 'Invalid direction' })
     }
     filter.direction = direction as TransmissionLogDocument['direction']
   }
 
   if (role) {
     if (!ROLES.has(role)) {
-      throw createError({ statusCode: 400, statusMessage: 'Unbekannte Rolle' })
+      throw createError({ statusCode: 400, statusMessage: 'Unknown role' })
     }
     filter.role = role
   }
@@ -91,7 +91,7 @@ export default defineEventHandler(async (event) => {
   if (sinceRaw) {
     const since = new Date(sinceRaw)
     if (Number.isNaN(since.valueOf())) {
-      throw createError({ statusCode: 400, statusMessage: 'Ungültiger Zeitraum' })
+      throw createError({ statusCode: 400, statusMessage: 'Invalid timeframe' })
     }
     filter.createdAt = { ...(filter.createdAt as any), $gte: since }
   }

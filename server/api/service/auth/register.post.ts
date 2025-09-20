@@ -23,36 +23,36 @@ export default defineEventHandler(async (event) => {
   const email = emailInput.toLowerCase()
 
   if (!emailInput || !password || !code) {
-    throw createError({ statusCode: 400, statusMessage: 'Bitte E-Mail, Passwort und Einladungscode angeben' })
+    throw createError({ statusCode: 400, statusMessage: 'Please provide email, password and invitation code' })
   }
 
   if (!body.acceptPrivacy || !body.acceptTerms) {
-    throw createError({ statusCode: 400, statusMessage: 'Bitte AGB und Datenschutz bestätigen' })
+    throw createError({ statusCode: 400, statusMessage: 'Please accept the terms and privacy policy' })
   }
 
   if (!isValidEmail(emailInput)) {
-    throw createError({ statusCode: 400, statusMessage: 'Bitte eine gültige E-Mail-Adresse angeben' })
+    throw createError({ statusCode: 400, statusMessage: 'Please provide a valid email address' })
   }
 
   const passwordValidation = validatePasswordStrength(password)
   if (!passwordValidation.valid) {
-    throw createError({ statusCode: 400, statusMessage: passwordValidation.message || 'Passwort ist zu schwach' })
+    throw createError({ statusCode: 400, statusMessage: passwordValidation.message || 'Password is too weak' })
   }
 
   const existingUser = await User.findOne({ email })
   if (existingUser) {
-    throw createError({ statusCode: 409, statusMessage: 'Für diese E-Mail existiert bereits ein Konto' })
+    throw createError({ statusCode: 409, statusMessage: 'An account already exists for this email address' })
   }
 
   const invitation = await InvitationCode.findOne({ code })
   if (!invitation) {
-    throw createError({ statusCode: 404, statusMessage: 'Einladungscode nicht gefunden' })
+    throw createError({ statusCode: 404, statusMessage: 'Invitation code not found' })
   }
   if (invitation.usedBy) {
-    throw createError({ statusCode: 400, statusMessage: 'Einladungscode wurde bereits verwendet' })
+    throw createError({ statusCode: 400, statusMessage: 'Invitation code has already been used' })
   }
   if (invitation.expiresAt && invitation.expiresAt < new Date()) {
-    throw createError({ statusCode: 400, statusMessage: 'Einladungscode ist abgelaufen' })
+    throw createError({ statusCode: 400, statusMessage: 'Invitation code has expired' })
   }
 
   const passwordHash = await hashPassword(password)

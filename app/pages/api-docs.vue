@@ -3,30 +3,30 @@
     <div class="mx-auto max-w-5xl space-y-10">
       <header class="space-y-3">
         <NuxtLink to="/" class="inline-flex items-center gap-2 text-sm text-white/60 hover:text-cyan-300">
-          <v-icon icon="mdi-arrow-left" size="18" /> Zurück zur Startseite
+          <v-icon icon="mdi-arrow-left" size="18" /> Back to landing page
         </NuxtLink>
         <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Developer</p>
-        <h1 class="text-3xl font-semibold">OpenSquawk API – Dokumentation</h1>
-        <p class="text-white/70">Alpha Build – Endpunkte können sich ändern. Alle Routen sind JSON-basiert und laufen über HTTPS. Standard-Response enthält <code class="bg-white/10 px-1">success</code> oder ein Fehlerobjekt mit <code class="bg-white/10 px-1">statusMessage</code>.</p>
+        <h1 class="text-3xl font-semibold">OpenSquawk API – documentation</h1>
+        <p class="text-white/70">Alpha build – endpoints may change. All routes use JSON over HTTPS. Standard responses include <code class="bg-white/10 px-1">success</code> or an error object with <code class="bg-white/10 px-1">statusMessage</code>.</p>
       </header>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
-        <h2 class="text-xl font-semibold">Authentifizierung</h2>
+        <h2 class="text-xl font-semibold">Authentication</h2>
         <p class="text-white/70">
-          Nach erfolgreichem Login wird ein JWT (Bearer-Token) zurückgegeben und ein HTTP-only-Refresh-Cookie gesetzt. Für alle geschützten Endpunkte muss der Header <code class="bg-white/10 px-1">Authorization: Bearer &lt;token&gt;</code> gesetzt werden. Tokens laufen nach 15 Minuten ab und können über <code>/api/service/auth/refresh</code> erneuert werden.
+          Successful login returns a JWT (bearer token) and sets an HTTP-only refresh cookie. All protected endpoints require the header <code class="bg-white/10 px-1">Authorization: Bearer &lt;token&gt;</code>. Access tokens expire after 15 minutes and can be refreshed via <code>/api/service/auth/refresh</code>.
         </p>
-        <p class="text-white/70">Nicht authentifizierte Endpunkte befinden sich im Namensraum <code class="bg-white/10 px-1">/api/service/*</code>.</p>
+        <p class="text-white/70">Public endpoints live under <code class="bg-white/10 px-1">/api/service/*</code>.</p>
       </section>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-6">
-        <h2 class="text-xl font-semibold">Öffentliche Endpunkte</h2>
+        <h2 class="text-xl font-semibold">Public endpoints</h2>
         <div class="overflow-x-auto">
           <table class="min-w-full text-left text-sm">
             <thead class="uppercase tracking-[0.2em] text-white/50">
               <tr>
-                <th class="px-3 py-2">Methode</th>
-                <th class="px-3 py-2">Pfad</th>
-                <th class="px-3 py-2">Beschreibung</th>
+                <th class="px-3 py-2">Method</th>
+                <th class="px-3 py-2">Path</th>
+                <th class="px-3 py-2">Description</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-white/10">
@@ -41,14 +41,14 @@
       </section>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-6">
-        <h2 class="text-xl font-semibold">Geschützte Endpunkte</h2>
+        <h2 class="text-xl font-semibold">Protected endpoints</h2>
         <div class="overflow-x-auto">
           <table class="min-w-full text-left text-sm">
             <thead class="uppercase tracking-[0.2em] text-white/50">
               <tr>
-                <th class="px-3 py-2">Methode</th>
-                <th class="px-3 py-2">Pfad</th>
-                <th class="px-3 py-2">Beschreibung</th>
+                <th class="px-3 py-2">Method</th>
+                <th class="px-3 py-2">Path</th>
+                <th class="px-3 py-2">Description</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-white/10">
@@ -63,20 +63,20 @@
       </section>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
-        <h2 class="text-xl font-semibold">Antwort- und Fehlerformat</h2>
+        <h2 class="text-xl font-semibold">Response & error format</h2>
         <pre class="overflow-x-auto rounded-xl bg-black/60 p-4 text-sm text-white/80">
 {
   "success": true,
   "data": { ... }
 }
 
-// Fehler
+// Error
 {
   "statusCode": 401,
   "statusMessage": "Authentication required"
 }
         </pre>
-        <p class="text-white/70">Weitere Felder wie <code class="bg-white/10 px-1">joinedAt</code> oder <code class="bg-white/10 px-1">invitationStatus</code> werden jeweils im Response dokumentiert.</p>
+        <p class="text-white/70">Additional fields such as <code class="bg-white/10 px-1">joinedAt</code> or <code class="bg-white/10 px-1">invitationStatus</code> are documented per response.</p>
       </section>
     </div>
   </div>
@@ -84,29 +84,29 @@
 
 <script setup lang="ts">
 const publicEndpoints = [
-  { method: 'POST', path: '/api/service/waitlist', description: 'Person auf die Warteliste setzen. Erfordert Zustimmung zu AGB & Datenschutz.' },
-  { method: 'GET', path: '/api/service/waitlist', description: 'Aggregierte Wartelistenstatistiken mit Gesamtanzahl, Wachstum und sichtbarem Puffer abrufen.' },
-  { method: 'POST', path: '/api/service/updates', description: 'E-Mail für Produkt-Updates und neue Features eintragen (Einwilligung erforderlich).' },
-  { method: 'GET', path: '/api/service/roadmap', description: 'Roadmap-Items inklusive Community-Durchschnitt, Gesamtstimmen und letzter Aktivität auslesen.' },
-  { method: 'POST', path: '/api/service/roadmap', description: 'Wichtigkeit (1–5) für einzelne Roadmap-Punkte voten; speichert jeden Vote mit Zeitstempel.' },
-  { method: 'POST', path: '/api/service/roadmap-suggestions', description: 'Neuen Roadmap-Vorschlag mit optionaler Kontaktadresse einreichen.' },
-  { method: 'POST', path: '/api/service/auth/login', description: 'Login mit E-Mail & Passwort. Gibt JWT zurück und setzt Refresh-Cookie.' },
-  { method: 'POST', path: '/api/service/auth/register', description: 'Registrierung mit Einladungscode und Einwilligungen.' },
-  { method: 'POST', path: '/api/service/auth/refresh', description: 'Access-Token anhand des Refresh-Cookies erneuern.' },
-  { method: 'GET', path: '/api/service/invitations/{code}', description: 'Einladungscode prüfen (gültig, abgelaufen, verwendet).' },
-  { method: 'POST', path: '/api/service/invitations/bootstrap', description: 'Bootstrap-Einladungscode generieren (aktiv bis 01.07.2024, optionales Label).' },
-  { method: 'POST', path: '/api/service/invitations/manual', description: 'Manuellen Einladungscode mit Passwortschutz erstellen (intern).' },
+  { method: 'POST', path: '/api/service/waitlist', description: 'Join the waitlist. Requires consent to terms and privacy policy.' },
+  { method: 'GET', path: '/api/service/waitlist', description: 'Fetch aggregated waitlist metrics including totals, growth and buffer.' },
+  { method: 'POST', path: '/api/service/updates', description: 'Subscribe to product updates and feature launches (consent required).' },
+  { method: 'GET', path: '/api/service/roadmap', description: 'Retrieve roadmap items with community averages, total votes and last activity.' },
+  { method: 'POST', path: '/api/service/roadmap', description: 'Submit importance ratings (1–5) for roadmap items; each vote is timestamped.' },
+  { method: 'POST', path: '/api/service/roadmap-suggestions', description: 'Send a roadmap suggestion with optional contact details.' },
+  { method: 'POST', path: '/api/service/auth/login', description: 'Login with email and password. Returns a JWT and sets a refresh cookie.' },
+  { method: 'POST', path: '/api/service/auth/register', description: 'Register with an invitation code and mandatory consents.' },
+  { method: 'POST', path: '/api/service/auth/refresh', description: 'Refresh the access token using the refresh cookie.' },
+  { method: 'GET', path: '/api/service/invitations/{code}', description: 'Validate an invitation code (valid, expired, already used).' },
+  { method: 'POST', path: '/api/service/invitations/bootstrap', description: 'Generate a bootstrap invitation code (active until 2024-07-01, optional label).' },
+  { method: 'POST', path: '/api/service/invitations/manual', description: 'Create a manual invitation code via password-protected endpoint (internal).' },
 ]
 
 const protectedEndpoints = [
-  { method: 'GET', path: '/api/auth/me', description: 'Profil des aktuellen Nutzers abrufen.' },
-  { method: 'POST', path: '/api/auth/logout', description: 'Aktive Session invalidieren und Refresh-Cookie löschen.' },
-  { method: 'GET', path: '/api/auth/invitations', description: 'Eigene erstellte Einladungscodes auflisten.' },
-  { method: 'POST', path: '/api/auth/invitations', description: 'Neuen Einladungscode generieren (nach 14 Tagen, max. 2).' },
-  { method: 'POST', path: '/api/atc/say', description: 'ATC-Sprachausgabe erzeugen (TTS) – mit Logging des Textes.' },
-  { method: 'POST', path: '/api/atc/ptt', description: 'Push-to-Talk Audio verarbeiten, transkribieren und loggen.' },
-  { method: 'POST', path: '/api/llm/decide', description: 'LLM-gestützte Entscheidungslogik für den aktuellen Flugzustand.' },
-  { method: 'GET', path: '/api/vatsim/flightplans', description: 'Gefilterte VATSIM-Flugpläne für eine CID abrufen.' },
+  { method: 'GET', path: '/api/auth/me', description: 'Fetch the current user profile.' },
+  { method: 'POST', path: '/api/auth/logout', description: 'Invalidate the active session and clear the refresh cookie.' },
+  { method: 'GET', path: '/api/auth/invitations', description: 'List invitation codes generated by the current user.' },
+  { method: 'POST', path: '/api/auth/invitations', description: 'Generate a new invitation code (available after 14 days, max 2).' },
+  { method: 'POST', path: '/api/atc/say', description: 'Trigger ATC text-to-speech output with logging.' },
+  { method: 'POST', path: '/api/atc/ptt', description: 'Process push-to-talk audio, transcribe it and store the log.' },
+  { method: 'POST', path: '/api/llm/decide', description: 'Run LLM-powered decision logic for the current flight state.' },
+  { method: 'GET', path: '/api/vatsim/flightplans', description: 'Retrieve filtered VATSIM flight plans for a CID.' },
 ]
 </script>
 

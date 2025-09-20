@@ -14,16 +14,16 @@ export default defineEventHandler(async (event) => {
   const twoWeeksMs = 1000 * 60 * 60 * 24 * 14
 
   if (accountAgeMs < twoWeeksMs) {
-    throw createError({ statusCode: 403, statusMessage: 'Einladungscodes stehen nach 14 Tagen zur Verfügung' })
+    throw createError({ statusCode: 403, statusMessage: 'Invitation codes become available after 14 days' })
   }
 
   if (user.invitationCodesIssued >= 2) {
-    throw createError({ statusCode: 403, statusMessage: 'Limit von zwei Einladungscodes erreicht' })
+    throw createError({ statusCode: 403, statusMessage: 'Limit of two invitation codes reached' })
   }
 
   const activeCodes = await InvitationCode.countDocuments({ createdBy: user._id, usedBy: { $exists: false } })
   if (activeCodes >= 2) {
-    throw createError({ statusCode: 403, statusMessage: 'Bitte vorhandene Einladungscodes zuerst nutzen' })
+    throw createError({ statusCode: 403, statusMessage: 'Please use your existing invitation codes first' })
   }
 
   const code = generateCode()

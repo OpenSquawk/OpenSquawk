@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   const email = body.email?.trim().toLowerCase()
 
   if (!email) {
-    throw createError({ statusCode: 400, statusMessage: 'Bitte eine E-Mail-Adresse angeben' })
+    throw createError({ statusCode: 400, statusMessage: 'Please provide an email address' })
   }
 
   const user = await User.findOne({ email })
@@ -32,21 +32,21 @@ export default defineEventHandler(async (event) => {
 
     const salutation = user.name ? ` ${user.name}` : ''
     const lines = [
-      `Hallo${salutation},`,
+      `Hi${salutation},`,
       '',
-      'du hast den Link zum Zurücksetzen deines OpenSquawk-Passworts angefordert.',
-      `Klicke innerhalb von ${RESET_TOKEN_TTL_MINUTES} Minuten auf den folgenden Link, um ein neues Passwort festzulegen:`,
+      'You requested a link to reset your OpenSquawk password.',
+      `Click the link below within ${RESET_TOKEN_TTL_MINUTES} minutes to choose a new password:`,
       resetLink,
       '',
-      'Wenn du diese Anfrage nicht gestellt hast, kannst du diese E-Mail ignorieren.',
+      'If you did not make this request, you can safely ignore this email.',
       '',
       'Blue skies,',
-      'dein OpenSquawk-Team',
+      'Your OpenSquawk crew',
     ]
 
     await sendMail({
       to: user.email,
-      subject: 'OpenSquawk Passwort zurücksetzen',
+      subject: 'Reset your OpenSquawk password',
       text: lines.join('\n'),
     })
   }

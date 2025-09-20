@@ -17,15 +17,15 @@ export default defineEventHandler(async (event) => {
   const source = body.source?.trim() || 'landing-updates'
 
   if (!email) {
-    throw createError({ statusCode: 400, statusMessage: 'E-Mail wird benötigt' })
+    throw createError({ statusCode: 400, statusMessage: 'Email is required' })
   }
 
   if (!body.consentPrivacy) {
-    throw createError({ statusCode: 400, statusMessage: 'Bitte bestätige die Datenschutzerklärung' })
+    throw createError({ statusCode: 400, statusMessage: 'Please confirm the privacy policy' })
   }
 
   if (!body.consentMarketing) {
-    throw createError({ statusCode: 400, statusMessage: 'Wir benötigen deine Einwilligung für Produkt-Updates per E-Mail' })
+    throw createError({ statusCode: 400, statusMessage: 'We need your consent to email you product updates' })
   }
 
   const result = await registerUpdateSubscriber({
@@ -38,13 +38,13 @@ export default defineEventHandler(async (event) => {
 
   if (result.created) {
     const dataEntries = [
-      ['E-Mail', email],
+      ['Email', email],
       ['Name', name || null],
-      ['Quelle', source],
+      ['Source', source],
     ]
     await sendAdminNotification({
-      event: 'Neue Updates-Liste',
-      summary: `Neue Updates-Anmeldung: ${email}`,
+      event: 'New updates signup',
+      summary: `New updates signup: ${email}`,
       data: dataEntries,
     })
   }

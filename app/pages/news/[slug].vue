@@ -2,7 +2,7 @@
   <div class="bg-[#0b1020] text-white min-h-screen">
     <div class="container-outer py-10 md:py-16 space-y-8">
       <NuxtLink to="/news" class="inline-flex items-center gap-2 text-sm text-white/60 hover:text-cyan-300">
-        <v-icon icon="mdi-arrow-left" size="18" /> Zurück zu News & Updates
+        <v-icon icon="mdi-arrow-left" size="18" /> Back to News & updates
       </NuxtLink>
 
       <article v-if="post" class="card space-y-6">
@@ -15,9 +15,9 @@
       </article>
 
       <div v-else class="card space-y-4 text-white/70 text-sm">
-        <h1 class="text-2xl font-semibold text-white">Beitrag nicht gefunden</h1>
-        <p>Der angeforderte News-Artikel existiert nicht (mehr). Schau dir stattdessen den aktuellen Feed an.</p>
-        <NuxtLink to="/news" class="btn btn-primary w-fit">Zur Übersicht</NuxtLink>
+        <h1 class="text-2xl font-semibold text-white">Article not found</h1>
+        <p>The requested news article does not exist. Head back to the feed instead.</p>
+        <NuxtLink to="/news" class="btn btn-primary w-fit">Back to overview</NuxtLink>
       </div>
     </div>
   </div>
@@ -34,11 +34,11 @@ const post = computed(() => getNewsBySlug(slug.value))
 useHead(() => {
   if (!post.value) {
     return {
-      title: 'Newsbeitrag nicht gefunden – OpenSquawk',
+      title: 'Article not found – OpenSquawk',
       meta: [{ name: 'robots', content: 'noindex' }],
     }
   }
-  const description = post.value.excerpt || 'Update aus dem OpenSquawk Projekt.'
+  const description = post.value.excerpt || 'Update from the OpenSquawk project.'
   return {
     title: `${post.value.title} – OpenSquawk News`,
     meta: [
@@ -49,7 +49,7 @@ useHead(() => {
   }
 })
 
-const formatNewsDate = (iso: string) => new Date(iso).toLocaleDateString('de-DE', {
+const formatNewsDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', {
   day: '2-digit',
   month: 'long',
   year: 'numeric',
