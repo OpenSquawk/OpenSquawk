@@ -1,14 +1,14 @@
 // server/api/llm/latency.get.ts
 import { createError } from 'h3'
-import { getOpenAIClient } from '../../utils/openai'
-import { getServerRuntimeConfig } from '../../utils/runtimeConfig'
+import { getOpenAIClient } from '../../../utils/openai'
+import { getServerRuntimeConfig } from '../../../utils/runtimeConfig'
 
 const SYSTEM_PROMPT =
     'Check if the pilot readback contains ALL of: Frankfurt or EDDF, FL320, and 120.8 MHz. ' +
     'Reply with single digit only: 1 = all present, 0 = one or more missing, 2 = invalid/unrelated.';
 
 const READBACK =
-    'Lufthanser four seven eight cleared frankfurt via NORDA1A, climb 5000 feet, expect flight level tree tree zero, dep 120 decimal 8, squawk 4213.';
+    'Lufthanser four seven eight cleared fra via NORDA1A, climb 5000 feet, expect flight level tree too zero, dep 120 decimal 8, squawk 4213.';
 
 export default defineEventHandler(async () => {
     const client = getOpenAIClient()
