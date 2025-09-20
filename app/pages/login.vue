@@ -4,6 +4,12 @@
     <div class="pointer-events-none absolute inset-0 -z-20">
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.22),_transparent_65%)]"/>
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_rgba(129,140,248,0.16),_transparent_70%)]"/>
+      <div class="radar-visual" aria-hidden="true">
+        <span class="radar-visual__pulse radar-visual__pulse--one"/>
+        <span class="radar-visual__pulse radar-visual__pulse--two"/>
+        <span class="radar-visual__pulse radar-visual__pulse--three"/>
+        <span class="radar-visual__ping"/>
+      </div>
     </div>
 
     <div class="pointer-events-none absolute inset-0 -z-10 opacity-70">
@@ -515,6 +521,106 @@ onMounted(() => {
   transform: translateY(0);
 }
 
+.radar-visual {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(72vw, 28rem);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  overflow: hidden;
+  opacity: 0.55;
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 65px rgba(56, 189, 248, 0.18));
+  background:
+      radial-gradient(circle at center, rgba(56, 189, 248, 0.28) 0%, rgba(56, 189, 248, 0.08) 36%, transparent 68%),
+      radial-gradient(circle at center, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.05) 50%, transparent 75%);
+}
+
+.radar-visual::before {
+  content: '';
+  position: absolute;
+  inset: 14%;
+  border-radius: 9999px;
+  border: 1px solid rgba(165, 243, 252, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.08), 0 0 22px rgba(56, 189, 248, 0.18);
+  background:
+      radial-gradient(circle at center, rgba(125, 211, 252, 0.16) 0%, transparent 55%),
+      repeating-linear-gradient(0deg, rgba(94, 234, 212, 0.08) 0, rgba(94, 234, 212, 0.08) 1px, transparent 1px, transparent 16px),
+      repeating-linear-gradient(90deg, rgba(94, 234, 212, 0.08) 0, rgba(94, 234, 212, 0.08) 1px, transparent 1px, transparent 16px);
+  opacity: 0.6;
+}
+
+.radar-visual::after {
+  content: '';
+  position: absolute;
+  inset: -35%;
+  background: conic-gradient(from 0deg, rgba(56, 189, 248, 0.55), rgba(56, 189, 248, 0) 60%);
+  animation: radarSweep 8s linear infinite;
+  mix-blend-mode: screen;
+  opacity: 0.7;
+}
+
+.radar-visual__pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36%;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  border: 1px solid rgba(165, 243, 252, 0.45);
+  transform: translate(-50%, -50%) scale(0.3);
+  opacity: 0.85;
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 24px rgba(56, 189, 248, 0.22));
+  animation: radarPulse 7s cubic-bezier(0.61, 1, 0.88, 1) infinite;
+}
+
+.radar-visual__pulse--one {
+  width: 32%;
+}
+
+.radar-visual__pulse--two {
+  width: 48%;
+  animation-delay: -2.3s;
+}
+
+.radar-visual__pulse--three {
+  width: 62%;
+  animation-delay: -4.6s;
+}
+
+.radar-visual__ping {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at center, rgba(165, 243, 252, 0.92) 0%, rgba(34, 211, 238, 0.3) 55%, transparent 100%);
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.6), 0 0 36px rgba(14, 165, 233, 0.35);
+  animation: radarPing 2.8s ease-out infinite;
+  mix-blend-mode: screen;
+}
+
+@media (min-width: 1024px) {
+  .radar-visual {
+    left: 24%;
+    top: 52%;
+    width: min(32rem, 38vw);
+    opacity: 0.68;
+  }
+}
+
+@media (max-width: 640px) {
+  .radar-visual {
+    width: min(88vw, 20rem);
+    top: 46%;
+  }
+}
+
 .orb {
   @apply absolute rounded-full blur-3xl;
   animation: orbFloat 16s ease-in-out infinite;
@@ -608,10 +714,50 @@ onMounted(() => {
   }
 }
 
+@keyframes radarPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.35);
+    opacity: 0.9;
+  }
+  65% {
+    opacity: 0.15;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes radarPing {
+  0% {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.2;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes radarSweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .orb,
   .floating-card,
-  .mode-toggle__glow {
+  .mode-toggle__glow,
+  .radar-visual::after,
+  .radar-visual__pulse,
+  .radar-visual__ping {
     animation: none !important;
   }
 
