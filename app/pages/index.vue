@@ -1,8 +1,8 @@
 <template>
-  <div class="bg-[#0b1020] text-white antialiased selection:bg-cyan-400/30">
+  <div class="page-shell bg-[#0b1020] text-white antialiased selection:bg-cyan-400/30">
     <!-- NAV -->
-    <header class="sticky top-0 z-50 bg-[#0b1020]/70 backdrop-blur border-b border-white/10" data-aos="fade-down">
-      <nav class="container-outer flex items-center justify-between py-3">
+    <header class="site-header" data-aos="fade-down">
+      <nav class="container-outer flex h-full items-center justify-between">
         <NuxtLink to="#" class="flex items-center gap-2 font-semibold tracking-tight">
           <v-icon icon="mdi-radar" size="28" class="text-cyan-400"/>
           <span class="text-white">OpenSquawk</span>
@@ -18,28 +18,29 @@
           </NuxtLink>
         </div>
         <div class="flex items-center gap-2 sm:gap-3">
-          <NuxtLink to="/login" class="btn btn-primary btn-compact">
-            <v-icon icon="mdi-login" size="18"/> Login
-          </NuxtLink>
           <NuxtLink
-              to="https://github.com/FaktorxMensch/OpenSquawk"
-              external
-              target="_blank"
-              rel="noopener"
-              class="btn btn-ghost btn-compact hidden sm:inline-flex"
+              to="/login"
+              class="header-login"
+              aria-label="Login"
           >
-            <v-icon icon="mdi-github"/>
-            GitHub
+            <v-icon icon="mdi-login" size="20" class="text-[#0b1020]"/>
+            <span class="sr-only">Login</span>
           </NuxtLink>
           <button
               type="button"
-              class="inline-flex lg:hidden items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white transition hover:bg-white/10"
+              class="mobile-toggle lg:hidden"
+              :class="{ 'is-active': isMobileNavOpen }"
               :aria-expanded="isMobileNavOpen ? 'true' : 'false'"
               aria-controls="mobile-navigation"
               aria-label="Toggle navigation"
               @click="toggleMobileNav"
           >
-            <v-icon :icon="isMobileNavOpen ? 'mdi-close' : 'mdi-menu'" size="22"/>
+            <span class="sr-only">Toggle navigation</span>
+            <span class="hamburger" :class="{ 'is-open': isMobileNavOpen }">
+              <span class="hamburger-bar"></span>
+              <span class="hamburger-bar"></span>
+              <span class="hamburger-bar"></span>
+            </span>
           </button>
         </div>
       </nav>
@@ -47,18 +48,24 @@
         <div
             v-if="isMobileNavOpen"
             id="mobile-navigation"
-            class="lg:hidden border-t border-white/10 bg-[#0b1020]/95 backdrop-blur"
+            class="mobile-nav-panel lg:hidden"
         >
-          <div class="container-outer py-4 space-y-4">
+          <div class="container-outer space-y-6 py-6 pb-10">
             <nav class="grid gap-2 text-sm">
               <NuxtLink
-                  v-for="item in navLinks"
+                  v-for="item in mobileNavLinks"
                   :key="`mobile-${item.to}`"
                   :to="item.to"
-                  class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 transition hover:bg-white/10"
+                  :external="item.external"
+                  :target="item.external ? '_blank' : undefined"
+                  :rel="item.external ? 'noopener' : undefined"
+                  class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 transition hover:bg-white/10"
                   @click="closeMobileNav"
               >
-                <span>{{ item.label }}</span>
+                <span class="flex items-center gap-3">
+                  <v-icon v-if="item.icon" :icon="item.icon" size="18" class="text-white/60"/>
+                  <span>{{ item.label }}</span>
+                </span>
                 <v-icon icon="mdi-chevron-right" size="18" class="text-white/60"/>
               </NuxtLink>
             </nav>
@@ -67,7 +74,7 @@
                 <v-icon icon="mdi-login" size="18"/> Login
               </NuxtLink>
               <NuxtLink
-                  to="https://github.com/FaktorxMensch/OpenSquawk"
+                  :to="GITHUB_URL"
                   external
                   target="_blank"
                   rel="noopener"
@@ -83,6 +90,7 @@
       </Transition>
     </header>
 
+    <main class="page-content">
     <!-- HERO -->
     <section class="gradient-hero relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
@@ -648,7 +656,7 @@
                 </ul>
               </div>
               <NuxtLink
-                  to="https://github.com/FaktorxMensch/OpenSquawk"
+                  :to="GITHUB_URL"
                   external
                   target="_blank"
                   rel="noopener"
@@ -1064,88 +1072,128 @@ POST /api/route/taxi
       </div>
     </section>
 
+    </main>
+
     <!-- FOOTER -->
-    <footer class="py-12 bg-[#0b1020] border-t border-white/10" data-aos="fade-up">
-      <div class="container-outer">
-        <div class="grid gap-4 md:grid-cols-4 md:gap-6">
-          <div>
-            <div class="flex items-center gap-2 font-semibold">
-              <v-icon icon="mdi-radar" class="text-cyan-400"/>
-              OpenSquawk
+    <footer class="bg-[#070b16] border-t border-white/10 text-white" data-aos="fade-up">
+      <div class="container-outer py-12 sm:py-16">
+        <div class="flex flex-col gap-10">
+          <div class="footer-brand">
+            <div class="inline-flex items-center justify-center gap-2 sm:justify-start">
+              <v-icon icon="mdi-radar" size="26" class="text-cyan-400"/>
+              <span class="text-lg font-semibold">OpenSquawk</span>
             </div>
-            <p class="mt-3 text-white/70 text-sm">
+            <p class="mx-auto max-w-2xl text-sm text-white/70 sm:mx-0">
               Open-source, low-cost AI ATC for flight simulators. Alpha prototype available – basic coding skills recommended.
             </p>
+            <div class="footer-brand-actions">
+              <NuxtLink
+                  :to="GITHUB_URL"
+                  external
+                  target="_blank"
+                  rel="noopener"
+                  class="footer-action"
+              >
+                <v-icon icon="mdi-github" size="18" class="text-white/70"/>
+                <span>GitHub</span>
+              </NuxtLink>
+              <NuxtLink to="/login" class="footer-action">
+                <v-icon icon="mdi-login" size="18" class="text-white/70"/>
+                <span>Login</span>
+              </NuxtLink>
+            </div>
           </div>
-          <div>
-            <h4 class="font-semibold mb-3">Product</h4>
-            <ul class="space-y-2 text-white/70 text-sm">
-              <li>
-                <NuxtLink to="#features" class="hover:text-cyan-300">
-                  Vision
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="#learn" class="hover:text-cyan-300">
-                  Learning path
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="#pricing" class="hover:text-cyan-300">
-                  Pricing
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4 class="font-semibold mb-3">Resources</h4>
-            <ul class="space-y-2 text-white/70 text-sm">
-              <li>
-                <NuxtLink to="#opensource" class="hover:text-cyan-300">
-                  Open-source
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="#news" class="hover:text-cyan-300">News</NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="#contributing" class="hover:text-cyan-300">
-                  Get involved
-                </NuxtLink>
-              </li>
-              <li><a href="mailto:info@opensquawk.de" class="hover:text-cyan-300">info@opensquawk.de</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 class="font-semibold mb-3">Legal</h4>
-            <ul class="space-y-2 text-white/70 text-sm">
-              <li>
-                <NuxtLink to="/impressum" class="hover:text-cyan-300">
-                  Imprint
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="/datenschutz" class="hover:text-cyan-300">
-                  Privacy
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="/agb" class="hover:text-cyan-300">
-                  Terms
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="/api-docs" class="hover:text-cyan-300">
-                  API documentation
-                </NuxtLink>
-              </li>
-            </ul>
+          <div class="footer-links grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="footer-links-group">
+              <h4 class="footer-links-title">Product</h4>
+              <ul class="footer-links-list">
+                <li>
+                  <NuxtLink to="#features" class="footer-link">
+                    <span>Vision</span>
+                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="#learn" class="footer-link">
+                    <span>Learning path</span>
+                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="#pricing" class="footer-link">
+                    <span>Pricing</span>
+                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="#faq" class="footer-link">
+                    <span>FAQ</span>
+                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
+                  </NuxtLink>
+                </li>
+              </ul>
+            </div>
+            <div class="footer-links-group">
+              <h4 class="footer-links-title">Resources</h4>
+              <ul class="footer-links-list">
+                <li>
+                  <NuxtLink to="#opensource" class="footer-link">
+                    <span>Open-source</span>
+                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="#news" class="footer-link">
+                    <span>News</span>
+                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="#contributing" class="footer-link">
+                    <span>Get involved</span>
+                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
+                  </NuxtLink>
+                </li>
+                <li>
+                  <a href="mailto:info@opensquawk.de" class="footer-link">
+                    <span>info@opensquawk.de</span>
+                    <v-icon icon="mdi-email-outline" size="16" class="footer-link-icon"/>
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div class="footer-links-group">
+              <h4 class="footer-links-title">Legal</h4>
+              <ul class="footer-links-list">
+                <li>
+                  <NuxtLink to="/impressum" class="footer-link">
+                    <span>Imprint</span>
+                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="/datenschutz" class="footer-link">
+                    <span>Privacy</span>
+                    <v-icon icon="mdi-shield-check-outline" size="16" class="footer-link-icon"/>
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="/agb" class="footer-link">
+                    <span>Terms</span>
+                    <v-icon icon="mdi-file-document-edit-outline" size="16" class="footer-link-icon"/>
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="/api-docs" class="footer-link">
+                    <span>API documentation</span>
+                    <v-icon icon="mdi-code-tags" size="16" class="footer-link-icon"/>
+                  </NuxtLink>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
-        <div class="mt-8 pt-6 border-t border-white/10 text-xs text-white/60">
+        <div class="mt-10 border-t border-white/10 pt-6 text-center text-xs text-white/60 sm:text-left">
           © {{ year }} OpenSquawk. Not for real-world aviation. *VATSIM/IVAO: trademarks of their respective owners.
         </div>
       </div>
@@ -1163,13 +1211,30 @@ import type {NewsPost} from '~~/shared/utils/news'
 
 const api = useApi()
 
-const navLinks = [
+const GITHUB_URL = 'https://github.com/FaktorxMensch/OpenSquawk'
+
+interface NavLink {
+  label: string
+  to: string
+}
+
+interface ExtendedNavLink extends NavLink {
+  external?: boolean
+  icon?: string
+}
+
+const navLinks: NavLink[] = [
   {label: 'Vision', to: '#features'},
   {label: 'Roadmap', to: '#roadmap'},
   {label: 'Plans', to: '#pricing'},
   {label: 'Get involved', to: '#contributing'},
   {label: 'FAQ', to: '#faq'},
 ]
+
+const mobileNavLinks = computed<ExtendedNavLink[]>(() => [
+  ...navLinks,
+  {label: 'GitHub', to: GITHUB_URL, external: true, icon: 'mdi-github'},
+])
 
 const isMobileNavOpen = ref(false)
 const toggleMobileNav = () => {
@@ -1617,6 +1682,93 @@ onMounted(async () => {
   @apply mx-auto w-full max-w-screen-xl px-4 sm:px-6 md:px-8;
 }
 
+.page-shell {
+  position: relative;
+  min-height: 100vh;
+  --header-height: 4.25rem;
+  padding-top: var(--header-height);
+}
+
+@media (min-width: 640px) {
+  .page-shell {
+    --header-height: 4.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page-shell {
+    --header-height: 4.75rem;
+  }
+}
+
+.site-header {
+  @apply fixed left-0 right-0 top-0 z-50 border-b border-white/10;
+  height: var(--header-height);
+  background: rgba(11, 16, 32, 0.85);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 55px rgba(4, 7, 15, 0.6);
+}
+
+.site-header::after {
+  content: '';
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.1), rgba(56, 189, 248, 0.55), rgba(34, 211, 238, 0.1));
+}
+
+.page-content {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.header-login {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.95), rgba(14, 165, 233, 0.85));
+  box-shadow: 0 16px 32px rgba(34, 211, 238, 0.28);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  text-decoration: none;
+}
+
+.header-login:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 22px 45px rgba(14, 165, 233, 0.32);
+}
+
+.header-login:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.header-login:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.55);
+  outline-offset: 3px;
+}
+
+.mobile-nav-panel {
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 15, 28, 0.94);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 0 20px 60px rgba(5, 9, 20, 0.55);
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
+
 .gradient-hero {
   background: radial-gradient(1200px 600px at 10% -10%, rgba(6, 182, 212, .35), transparent),
   radial-gradient(900px 480px at 100% 10%, rgba(59, 130, 246, .25), transparent),
@@ -1711,13 +1863,242 @@ onMounted(async () => {
 
 .mobile-nav-enter-active,
 .mobile-nav-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 .mobile-nav-enter-from,
 .mobile-nav-leave-to {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(-16px) scale(0.98);
+}
+
+.mobile-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: linear-gradient(135deg, rgba(14, 116, 144, 0.2), rgba(2, 132, 199, 0.08));
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background 0.3s ease;
+  box-shadow: 0 12px 28px rgba(8, 47, 73, 0.25);
+  overflow: hidden;
+}
+
+.mobile-toggle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.35), transparent 65%);
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  pointer-events: none;
+}
+
+.mobile-toggle:hover {
+  transform: translateY(-2px);
+  border-color: rgba(125, 211, 252, 0.45);
+  box-shadow: 0 16px 36px rgba(8, 47, 73, 0.35);
+}
+
+.mobile-toggle:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.mobile-toggle:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.5);
+  outline-offset: 3px;
+}
+
+.mobile-toggle.is-active {
+  border-color: rgba(34, 211, 238, 0.55);
+  box-shadow: 0 18px 36px rgba(6, 182, 212, 0.28);
+  background: linear-gradient(135deg, rgba(8, 145, 178, 0.28), rgba(59, 130, 246, 0.18));
+}
+
+.mobile-toggle.is-active::after {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.mobile-toggle:hover .hamburger-bar {
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+}
+
+.mobile-toggle.is-active .hamburger-bar {
+  background: linear-gradient(90deg, rgba(244, 114, 182, 0.9), rgba(56, 189, 248, 0.9));
+}
+
+.hamburger {
+  position: relative;
+  display: block;
+  width: 22px;
+  height: 18px;
+}
+
+.hamburger-bar {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(129, 230, 217, 0.9), rgba(56, 189, 248, 0.9));
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.45);
+  transform-origin: center;
+  transition: top 0.35s cubic-bezier(0.22, 1, 0.36, 1), transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease,
+    width 0.35s cubic-bezier(0.65, 0, 0.35, 1), left 0.35s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.hamburger-bar:nth-child(1) {
+  top: 0;
+}
+
+.hamburger-bar:nth-child(2) {
+  top: 8px;
+}
+
+.hamburger-bar:nth-child(3) {
+  top: 16px;
+}
+
+.hamburger:not(.is-open) .hamburger-bar:nth-child(2) {
+  width: 80%;
+  left: 10%;
+}
+
+.hamburger:not(.is-open) .hamburger-bar:nth-child(3) {
+  width: 60%;
+  left: 20%;
+}
+
+.hamburger.is-open .hamburger-bar:nth-child(1) {
+  top: 8px;
+  transform: rotate(42deg);
+  width: 100%;
+  left: 0;
+}
+
+.hamburger.is-open .hamburger-bar:nth-child(2) {
+  opacity: 0;
+  transform: translateX(14px);
+}
+
+.hamburger.is-open .hamburger-bar:nth-child(3) {
+  top: 8px;
+  transform: rotate(-42deg);
+  width: 100%;
+  left: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-toggle,
+  .mobile-toggle::after,
+  .header-login,
+  .hamburger-bar {
+    transition: none;
+  }
+}
+
+.footer-brand {
+  @apply flex flex-col items-center gap-4 text-center sm:items-start sm:text-left;
+}
+
+.footer-brand-actions {
+  @apply flex flex-wrap items-center justify-center gap-3 sm:justify-start;
+}
+
+.footer-action {
+  @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-cyan-400/60 hover:bg-white/10;
+}
+
+.footer-links {
+  @apply grid gap-6;
+}
+
+.footer-links-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.55), rgba(17, 25, 48, 0.3));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 15px 35px rgba(7, 11, 22, 0.35);
+}
+
+.footer-links-title {
+  position: relative;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  color: rgba(226, 232, 240, 0.75);
+  padding-left: 1.75rem;
+}
+
+.footer-links-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 1.1rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.8), rgba(56, 189, 248, 0.4));
+  transform: translateY(-50%);
+}
+
+.footer-links-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.footer-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.55);
+  color: rgba(226, 232, 240, 0.85);
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.footer-link span {
+  flex: 1;
+}
+
+.footer-link-icon {
+  color: rgba(165, 243, 252, 0.85);
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+
+.footer-link:hover {
+  color: #fff;
+  border-color: rgba(34, 211, 238, 0.5);
+  background: rgba(8, 145, 178, 0.22);
+  box-shadow: 0 12px 30px rgba(8, 145, 178, 0.2);
+  transform: translateY(-2px);
+}
+
+.footer-link:hover .footer-link-icon {
+  color: #fff;
+  transform: translateX(3px) rotate(-4deg);
+}
+
+.footer-link:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.5);
+  outline-offset: 3px;
 }
 
 @media (max-width: 480px) {
