@@ -1094,11 +1094,9 @@ POST /api/route/taxi
                   rel="noopener"
                   class="footer-action"
               >
-                <v-icon icon="mdi-github" size="18" class="text-white/70"/>
                 <span>GitHub</span>
               </NuxtLink>
               <NuxtLink to="/login" class="footer-action">
-                <v-icon icon="mdi-login" size="18" class="text-white/70"/>
                 <span>Login</span>
               </NuxtLink>
             </div>
@@ -1110,25 +1108,21 @@ POST /api/route/taxi
                 <li>
                   <NuxtLink to="#features" class="footer-link">
                     <span>Vision</span>
-                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
                   </NuxtLink>
                 </li>
                 <li>
                   <NuxtLink to="#learn" class="footer-link">
                     <span>Learning path</span>
-                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
                   </NuxtLink>
                 </li>
                 <li>
                   <NuxtLink to="#pricing" class="footer-link">
                     <span>Pricing</span>
-                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
                   </NuxtLink>
                 </li>
                 <li>
                   <NuxtLink to="#faq" class="footer-link">
                     <span>FAQ</span>
-                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
                   </NuxtLink>
                 </li>
               </ul>
@@ -1139,25 +1133,21 @@ POST /api/route/taxi
                 <li>
                   <NuxtLink to="#opensource" class="footer-link">
                     <span>Open-source</span>
-                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
                   </NuxtLink>
                 </li>
                 <li>
                   <NuxtLink to="#news" class="footer-link">
                     <span>News</span>
-                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
                   </NuxtLink>
                 </li>
                 <li>
                   <NuxtLink to="#contributing" class="footer-link">
                     <span>Get involved</span>
-                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
                   </NuxtLink>
                 </li>
                 <li>
                   <a href="mailto:info@opensquawk.de" class="footer-link">
                     <span>info@opensquawk.de</span>
-                    <v-icon icon="mdi-email-outline" size="16" class="footer-link-icon"/>
                   </a>
                 </li>
               </ul>
@@ -1168,25 +1158,21 @@ POST /api/route/taxi
                 <li>
                   <NuxtLink to="/impressum" class="footer-link">
                     <span>Imprint</span>
-                    <v-icon icon="mdi-chevron-right" size="16" class="footer-link-icon"/>
                   </NuxtLink>
                 </li>
                 <li>
                   <NuxtLink to="/datenschutz" class="footer-link">
                     <span>Privacy</span>
-                    <v-icon icon="mdi-shield-check-outline" size="16" class="footer-link-icon"/>
                   </NuxtLink>
                 </li>
                 <li>
                   <NuxtLink to="/agb" class="footer-link">
                     <span>Terms</span>
-                    <v-icon icon="mdi-file-document-edit-outline" size="16" class="footer-link-icon"/>
                   </NuxtLink>
                 </li>
                 <li>
                   <NuxtLink to="/api-docs" class="footer-link">
                     <span>API documentation</span>
-                    <v-icon icon="mdi-code-tags" size="16" class="footer-link-icon"/>
                   </NuxtLink>
                 </li>
               </ul>
@@ -1760,6 +1746,7 @@ onMounted(async () => {
   left: 0;
   right: 0;
   bottom: 0;
+  min-height: calc(100vh - var(--header-height));
   background: rgba(10, 15, 28, 0.94);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(148, 163, 184, 0.18);
@@ -2024,34 +2011,15 @@ onMounted(async () => {
 .footer-links-group {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.5rem;
-  border-radius: 1.5rem;
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.55), rgba(17, 25, 48, 0.3));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 15px 35px rgba(7, 11, 22, 0.35);
+  gap: 1rem;
 }
 
 .footer-links-title {
-  position: relative;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.75rem;
   color: rgba(226, 232, 240, 0.75);
-  padding-left: 1.75rem;
-}
-
-.footer-links-title::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 1.1rem;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(34, 211, 238, 0.8), rgba(56, 189, 248, 0.4));
-  transform: translateY(-50%);
 }
 
 .footer-links-list {
@@ -2062,8 +2030,8 @@ onMounted(async () => {
 .footer-link {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  justify-content: flex-start;
+  gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-radius: 1rem;
   border: 1px solid rgba(148, 163, 184, 0.12);
@@ -2078,22 +2046,12 @@ onMounted(async () => {
   flex: 1;
 }
 
-.footer-link-icon {
-  color: rgba(165, 243, 252, 0.85);
-  transition: transform 0.25s ease, color 0.25s ease;
-}
-
 .footer-link:hover {
   color: #fff;
   border-color: rgba(34, 211, 238, 0.5);
   background: rgba(8, 145, 178, 0.22);
   box-shadow: 0 12px 30px rgba(8, 145, 178, 0.2);
   transform: translateY(-2px);
-}
-
-.footer-link:hover .footer-link-icon {
-  color: #fff;
-  transform: translateX(3px) rotate(-4deg);
 }
 
 .footer-link:focus-visible {
