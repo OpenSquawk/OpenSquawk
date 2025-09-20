@@ -7,7 +7,7 @@
 
     <aside class="relative hidden flex-1 overflow-hidden lg:flex">
       <img
-        src="/img/landing/runway.jpeg"
+        src="http://localhost:3000/img/landing/runway.jpeg"
         alt="OpenSquawk runway with a jet preparing for takeoff"
         class="h-full w-full object-cover"
       />
