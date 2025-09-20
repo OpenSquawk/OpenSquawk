@@ -1291,7 +1291,7 @@ function moduleSecondaryIcon(modId: string) {
 function moduleStatusText(modId: string) {
   if (!isModuleUnlocked(modId)) return 'Locked'
   if (moduleCompleted(modId)) return 'Complete'
-  if (moduleHasProgress(modId)) return 'In progress'
+  if (moduleHasProgress(modId)) return 'Progress'
   return 'Ready'
 }
 
@@ -1452,7 +1452,7 @@ function objectiveProgressPct(objective: Objective): number {
 
 function objectiveBadgeLabel(objective: Objective): string {
   if (objective.complete) return 'Completed'
-  if (!objective.goal || objective.goal <= 0) return 'In progress'
+  if (!objective.goal || objective.goal <= 0) return 'Progress'
   const clamped = Math.min(objective.goal, Math.max(0, Math.round(objective.progress)))
   return `${clamped}/${objective.goal}`
 }
