@@ -100,7 +100,7 @@
         <div class="absolute -top-24 right-0 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-3xl"/>
       </div>
 
-      <div class="container-outer pt-14 pb-10 sm:pt-20 sm:pb-16 md:pt-24 md:pb-20">
+      <div class="container-outer pt-14 pb-10 sm:pt-20 sm:pb-16 md:pt-24 md:pb-20 lg:mt-12">
         <div class="max-w-2xl" data-aos="fade-up">
           <span class="chip mb-4">Alpha · Open-Source AI ATC</span>
           <h1 class="text-3xl sm:text-5xl md:text-6xl font-semibold leading-tight">
@@ -155,14 +155,17 @@
                 />
                 <button
                     type="submit"
-                    class="btn btn-primary w-full sm:w-auto"
+                    class="btn btn-primary w-full sm:w-auto lg:w-48"
                     :disabled="!updatesFormValid || updatesSubmitting"
                 >
                   <span v-if="updatesSubmitting" class="flex items-center gap-2">
                     <v-progress-circular indeterminate size="16" width="2" color="white"/>
                     Saving…
                   </span>
-                  <span v-else>Notify me</span>
+                  <span v-else class="flex items-center gap-2">
+                    <v-icon icon="mdi-bell-ring" size="18"/>
+                    Notify me
+                  </span>
                 </button>
               </div>
               <div class="space-y-2 text-xs text-white/60">
