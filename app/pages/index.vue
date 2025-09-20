@@ -18,15 +18,20 @@
           </NuxtLink>
         </div>
         <div class="flex items-center gap-2 sm:gap-3">
-          <NuxtLink to="/login" class="btn btn-primary btn-compact whitespace-nowrap">
-            <v-icon icon="mdi-login" size="18"/> Login
+          <NuxtLink
+              to="/login"
+              class="btn btn-primary btn-compact whitespace-nowrap"
+              aria-label="Login"
+          >
+            <v-icon icon="mdi-login" size="18"/>
+            <span class="hidden lg:inline">Login</span>
           </NuxtLink>
           <NuxtLink
               :to="GITHUB_URL"
               external
               target="_blank"
               rel="noopener"
-              class="btn btn-ghost btn-compact hidden xl:inline-flex"
+              class="btn btn-ghost btn-compact hidden lg:inline-flex"
           >
             <v-icon icon="mdi-github"/>
             GitHub
@@ -75,18 +80,8 @@
             </nav>
             <div class="grid gap-2">
               <NuxtLink to="/login" class="btn btn-primary w-full" @click="closeMobileNav">
-                <v-icon icon="mdi-login" size="18"/> Login
-              </NuxtLink>
-              <NuxtLink
-                  :to="GITHUB_URL"
-                  external
-                  target="_blank"
-                  rel="noopener"
-                  class="btn btn-ghost w-full"
-                  @click="closeMobileNav"
-              >
-                <v-icon icon="mdi-github" size="18"/>
-                GitHub
+                <v-icon icon="mdi-login" size="18"/>
+                Login
               </NuxtLink>
             </div>
           </div>
@@ -1080,14 +1075,14 @@ POST /api/route/taxi
       <div class="container-outer py-12 sm:py-16">
         <div class="flex flex-col gap-10">
           <div class="footer-brand">
-            <div class="inline-flex items-center justify-center gap-2 sm:justify-start">
+            <div class="inline-flex items-center justify-center gap-2 sm:justify-start lg:flex-none">
               <v-icon icon="mdi-radar" size="26" class="text-cyan-400"/>
               <span class="text-lg font-semibold">OpenSquawk</span>
             </div>
-            <p class="mx-auto max-w-2xl text-sm text-white/70 sm:mx-0">
+            <p class="mx-auto max-w-2xl text-sm text-white/70 sm:mx-0 lg:flex-1 lg:max-w-3xl">
               Open-source, low-cost AI ATC for flight simulators. Alpha prototype available – basic coding skills recommended.
             </p>
-            <div class="footer-brand-actions">
+            <div class="footer-brand-actions lg:flex-none">
               <NuxtLink
                   :to="GITHUB_URL"
                   external
@@ -1772,6 +1767,12 @@ onMounted(async () => {
   height: 44px;
 }
 
+@media (min-width: 1024px) {
+  .mobile-toggle {
+    display: none;
+  }
+}
+
 .hamburger {
   position: relative;
   width: 20px;
@@ -1822,11 +1823,11 @@ onMounted(async () => {
 }
 
 .footer-brand {
-  @apply flex flex-col items-center gap-4 text-center sm:items-start sm:text-left;
+  @apply flex flex-col items-center gap-4 text-center sm:items-start sm:text-left lg:flex-row lg:items-center lg:justify-between lg:gap-8;
 }
 
 .footer-brand-actions {
-  @apply flex flex-wrap items-center justify-center gap-3 sm:justify-start;
+  @apply flex flex-wrap items-center justify-center gap-3 sm:justify-start lg:justify-end lg:ml-auto;
 }
 
 .footer-action {
