@@ -729,9 +729,9 @@
                     <v-expand-transition>
                       <div
                         v-if="expandedLog === entry.id"
-                        class="space-y-3 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-4 text-xs text-white/80"
+                        class="space-y-4 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-4 text-xs text-white/80"
                       >
-                        <div v-if="entry.metadata?.decision" class="space-y-2">
+                        <div v-if="entry.metadata?.decision" class="space-y-3">
                           <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">LLM Decision Summary</p>
                           <div class="grid gap-2 md:grid-cols-2">
                             <div class="rounded-lg border border-white/10 bg-black/30 p-3">
@@ -750,6 +750,159 @@
                             <v-chip size="x-small" color="cyan" variant="outlined">
                               Radio check: {{ entry.metadata.decision.radio_check ? 'Yes' : 'No' }}
                             </v-chip>
+                          </div>
+                        </div>
+                        <template v-for="usage in [buildLlmUsage(entry)]" :key="`${entry.id}-usage`">
+                          <div
+                            v-if="usage"
+                            class="space-y-2 rounded-xl border border-white/10 bg-black/30 p-3 text-[11px] text-white/70"
+                          >
+                            <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">LLM usage</p>
+                            <p class="text-sm font-semibold text-white">{{ usage.method }}</p>
+                            <div class="flex flex-wrap gap-2">
+                              <v-chip size="x-small" color="cyan" variant="outlined">
+                                Auto decision: {{ usage.autoDecide === false ? 'Disabled' : 'Enabled' }}
+                              </v-chip>
+                              <v-chip size="x-small" color="cyan" variant="outlined">
+                                OpenAI: {{ usage.openaiUsed ? 'Used' : 'Not used' }}
+                              </v-chip>
+                              <v-chip v-if="usage.openaiUsed" size="x-small" color="cyan" variant="outlined">
+                                Calls: {{ usage.callCount }}
+                              </v-chip>
+                              <v-chip v-if="usage.fallbackUsed" size="x-small" color="orange" variant="tonal">
+                                Fallback triggered
+                              </v-chip>
+                            </div>
+                            <p v-if="usage.reason" class="text-white/60">{{ usage.reason }}</p>
+                          </div>
+                        </template>
+                        <div v-if="entry.metadata?.context" class="space-y-3">
+                          <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">State context snapshot</p>
+                          <div class="space-y-3 rounded-xl border border-white/10 bg-black/30 p-3">
+                            <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                              <div>
+                                <p class="font-mono text-sm text-white">
+                                  {{ entry.metadata.context.stateId || 'Unknown state' }}
+                                </p>
+                                <p v-if="entry.metadata.context.state?.name" class="text-[11px] text-white/60">
+                                  {{ entry.metadata.context.state?.name }}
+                                </p>
+                              </div>
+                              <div class="flex flex-wrap gap-2 text-[11px] text-white/60">
+                                <v-chip v-if="entry.metadata.context.state?.role" size="x-small" color="cyan" variant="outlined">
+                                  Role: {{ entry.metadata.context.state?.role }}
+                                </v-chip>
+                                <v-chip v-if="entry.metadata.context.state?.phase" size="x-small" color="cyan" variant="text">
+                                  Phase: {{ entry.metadata.context.state?.phase }}
+                                </v-chip>
+                              </div>
+                            </div>
+                            <div
+                              v-if="entry.metadata.context.state?.say_tpl"
+                              class="rounded-lg border border-white/10 bg-black/40 p-3"
+                            >
+                              <p class="text-[11px] text-white/50">State Say Template</p>
+                              <p class="font-mono text-sm">{{ entry.metadata.context.state?.say_tpl }}</p>
+                            </div>
+                            <div class="grid gap-3 md:grid-cols-3">
+                              <div>
+                                <p class="text-[11px] text-white/50">Next transitions</p>
+                                <ul
+                                  v-if="transitionList(entry.metadata.context.state?.next).length"
+                                  class="list-inside list-disc space-y-1 text-[11px] text-white/70"
+                                >
+                                  <li
+                                    v-for="(transition, index) in transitionList(entry.metadata.context.state?.next)"
+                                    :key="`next-${index}`"
+                                  >
+                                    {{ describeTransition(transition) }}
+                                  </li>
+                                </ul>
+                                <p v-else class="text-[11px] text-white/50">—</p>
+                              </div>
+                              <div>
+                                <p class="text-[11px] text-white/50">OK transitions</p>
+                                <ul
+                                  v-if="transitionList(entry.metadata.context.state?.ok_next).length"
+                                  class="list-inside list-disc space-y-1 text-[11px] text-white/70"
+                                >
+                                  <li
+                                    v-for="(transition, index) in transitionList(entry.metadata.context.state?.ok_next)"
+                                    :key="`ok-${index}`"
+                                  >
+                                    {{ describeTransition(transition) }}
+                                  </li>
+                                </ul>
+                                <p v-else class="text-[11px] text-white/50">—</p>
+                              </div>
+                              <div>
+                                <p class="text-[11px] text-white/50">Bad transitions</p>
+                                <ul
+                                  v-if="transitionList(entry.metadata.context.state?.bad_next).length"
+                                  class="list-inside list-disc space-y-1 text-[11px] text-white/70"
+                                >
+                                  <li
+                                    v-for="(transition, index) in transitionList(entry.metadata.context.state?.bad_next)"
+                                    :key="`bad-${index}`"
+                                  >
+                                    {{ describeTransition(transition) }}
+                                  </li>
+                                </ul>
+                                <p v-else class="text-[11px] text-white/50">—</p>
+                              </div>
+                            </div>
+                            <div v-if="entry.metadata.context.candidates?.length" class="space-y-2">
+                              <p class="text-[11px] text-white/50 uppercase tracking-[0.3em]">Candidates</p>
+                              <div
+                                v-for="(candidate, index) in entry.metadata.context.candidates"
+                                :key="candidate.id || index"
+                                class="space-y-2 rounded-lg border border-white/10 bg-black/40 p-3"
+                              >
+                                <div class="flex items-center justify-between">
+                                  <span class="font-mono text-sm text-white">{{ candidate.id || 'unknown' }}</span>
+                                  <v-chip
+                                    v-if="candidate.id && candidate.id === entry.metadata?.decision?.next_state"
+                                    size="x-small"
+                                    color="cyan"
+                                    variant="flat"
+                                  >
+                                    Selected
+                                  </v-chip>
+                                </div>
+                                <p v-if="candidate.state?.name" class="text-[11px] text-white/60">
+                                  {{ candidate.state?.name }}
+                                </p>
+                                <div class="flex flex-wrap gap-2 text-[11px] text-white/60">
+                                  <v-chip v-if="candidate.state?.role" size="x-small" color="cyan" variant="outlined">
+                                    Role: {{ candidate.state?.role }}
+                                  </v-chip>
+                                  <v-chip
+                                    v-if="candidate.state?.requires_atc_reply"
+                                    size="x-small"
+                                    color="cyan"
+                                    variant="tonal"
+                                  >
+                                    Requires ATC reply
+                                  </v-chip>
+                                </div>
+                                <p
+                                  v-if="candidate.state?.say_tpl"
+                                  class="rounded-lg border border-white/10 bg-black/60 p-2 font-mono text-[11px] text-white"
+                                >
+                                  {{ candidate.state?.say_tpl }}
+                                </p>
+                              </div>
+                            </div>
+                            <div class="grid gap-3 md:grid-cols-2">
+                              <div v-if="entry.metadata.context.variables">
+                                <p class="text-[11px] text-white/50">Variables snapshot</p>
+                                <pre class="trace-json">{{ formatJson(entry.metadata.context.variables) }}</pre>
+                              </div>
+                              <div v-if="entry.metadata.context.flags">
+                                <p class="text-[11px] text-white/50">Flags snapshot</p>
+                                <pre class="trace-json">{{ formatJson(entry.metadata.context.flags) }}</pre>
+                              </div>
+                            </div>
                           </div>
                         </div>
                         <div v-if="entry.metadata?.decisionTrace?.calls?.length" class="space-y-3">
@@ -801,6 +954,62 @@
                                 · Path: {{ entry.metadata.decisionTrace.fallback.selected }}
                               </span>
                             </p>
+                          </div>
+                        </div>
+                        <template v-else>
+                          <template v-for="usage in [buildLlmUsage(entry)]" :key="`${entry.id}-usage-empty`">
+                            <div
+                              v-if="usage"
+                              class="space-y-2 rounded-xl border border-white/10 bg-black/30 p-3 text-[11px] text-white/70"
+                            >
+                              <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">OpenAI Decision Calls</p>
+                              <p>No OpenAI call was recorded for this transmission.</p>
+                              <p v-if="usage.reason" class="text-white/60">{{ usage.reason }}</p>
+                            </div>
+                          </template>
+                        </template>
+                        <div v-if="entry.channel === 'say'" class="space-y-2">
+                          <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Say endpoint invocation</p>
+                          <div class="grid gap-3 md:grid-cols-2">
+                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
+                              <p class="text-[11px] text-white/50">Voice</p>
+                              <p class="font-mono text-sm text-white">{{ entry.metadata?.voice || '—' }}</p>
+                            </div>
+                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
+                              <p class="text-[11px] text-white/50">Signal level</p>
+                              <p class="font-mono text-sm text-white">{{ entry.metadata?.level ?? '—' }}</p>
+                            </div>
+                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
+                              <p class="text-[11px] text-white/50">Speech speed</p>
+                              <p class="font-mono text-sm text-white">{{ entry.metadata?.speed ?? '—' }}</p>
+                            </div>
+                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
+                              <p class="text-[11px] text-white/50">Radio quality</p>
+                              <p class="font-mono text-sm text-white">{{ entry.metadata?.radioQuality || '—' }}</p>
+                            </div>
+                          </div>
+                          <div class="grid gap-3 md:grid-cols-3">
+                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
+                              <p class="text-[11px] text-white/50">TTS provider</p>
+                              <p class="font-mono text-sm text-white">{{ entry.metadata?.tts?.provider || '—' }}</p>
+                            </div>
+                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
+                              <p class="text-[11px] text-white/50">Model</p>
+                              <p class="font-mono text-sm text-white">{{ entry.metadata?.tts?.model || '—' }}</p>
+                            </div>
+                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
+                              <p class="text-[11px] text-white/50">Format</p>
+                              <p class="font-mono text-sm text-white">
+                                {{ entry.metadata?.tts?.format || '—' }}
+                                <span v-if="entry.metadata?.tts?.extension">
+                                  ({{ entry.metadata?.tts?.extension }})
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                          <div v-if="entry.metadata?.tag" class="rounded-lg border border-white/10 bg-black/30 p-3">
+                            <p class="text-[11px] text-white/50">Tag</p>
+                            <p class="font-mono text-sm text-white">{{ entry.metadata?.tag }}</p>
                           </div>
                         </div>
                         <div>
@@ -980,6 +1189,78 @@ interface TransmissionUser {
   role: string
 }
 
+interface DecisionTraceCall {
+  stage: 'readback-check' | 'decision'
+  request: Record<string, any>
+  response?: any
+  rawResponseText?: string
+  error?: string
+}
+
+interface DecisionTraceMetadata {
+  calls?: DecisionTraceCall[]
+  fallback?: { used?: boolean; reason?: string; selected?: string }
+}
+
+interface CandidateSnapshot {
+  id?: string
+  state?: Record<string, any>
+}
+
+interface TransmissionContextSnapshot {
+  stateId?: string
+  state?: Record<string, any>
+  candidates?: CandidateSnapshot[]
+  selectedCandidate?: CandidateSnapshot
+  variables?: Record<string, any>
+  flags?: Record<string, any>
+}
+
+interface LlmUsageMetadata {
+  autoDecide?: boolean
+  openaiUsed?: boolean
+  callCount?: number
+  fallbackUsed?: boolean
+  strategy?: 'manual' | 'openai' | 'heuristic' | 'fallback'
+  reason?: string
+}
+
+interface TransmissionMetadata {
+  moduleId?: string
+  lessonId?: string
+  autoDecide?: boolean
+  decision?: {
+    next_state?: string
+    controller_say_tpl?: string
+    off_schema?: boolean
+    radio_check?: boolean
+  }
+  decisionTrace?: DecisionTraceMetadata
+  context?: TransmissionContextSnapshot
+  llm?: LlmUsageMetadata
+  tts?: {
+    provider?: string
+    model?: string
+    format?: string
+    extension?: string
+  }
+  voice?: string
+  level?: number
+  speed?: number
+  tag?: string | null
+  radioQuality?: string
+  [key: string]: any
+}
+
+interface LlmUsageSummary {
+  method: string
+  openaiUsed: boolean
+  callCount: number
+  fallbackUsed: boolean
+  autoDecide?: boolean
+  reason?: string
+}
+
 interface TransmissionEntry {
   id: string
   role: string
@@ -988,7 +1269,7 @@ interface TransmissionEntry {
   text: string
   normalized?: string
   createdAt: string
-  metadata?: Record<string, any>
+  metadata?: TransmissionMetadata
   user?: TransmissionUser
 }
 
@@ -1200,6 +1481,92 @@ function formatJson(value?: any) {
     return JSON.stringify(value, null, 2)
   } catch {
     return String(value)
+  }
+}
+
+function transitionList(value: any) {
+  return Array.isArray(value) ? value : []
+}
+
+function describeTransition(transition: any) {
+  if (!transition) return '—'
+  if (typeof transition === 'string') return transition
+  if (typeof transition !== 'object') return String(transition)
+
+  const destination = transition.to || transition.id || '—'
+  const details: string[] = []
+
+  if (transition.when) details.push(`when: ${transition.when}`)
+  if (transition.action) details.push(`action: ${transition.action}`)
+  if (transition.intent) details.push(`intent: ${transition.intent}`)
+  if (transition.auto) details.push(`auto: ${transition.auto}`)
+  if (transition.say_tpl || transition.controller_say_tpl) details.push('say')
+  if (transition.note) details.push(`note: ${transition.note}`)
+  if (transition.condition) details.push(`cond: ${transition.condition}`)
+
+  return details.length ? `${destination} (${details.join(', ')})` : destination
+}
+
+function buildLlmUsage(entry: TransmissionEntry): LlmUsageSummary | null {
+  const metadata = entry.metadata
+  if (!metadata) return null
+
+  const hasDecisionData =
+    metadata.autoDecide !== undefined ||
+    Boolean(metadata.llm) ||
+    Boolean(metadata.decisionTrace?.calls?.length) ||
+    Boolean(metadata.decisionTrace?.fallback?.used)
+
+  if (!hasDecisionData) return null
+
+  const autoDecide = metadata.llm?.autoDecide ?? metadata.autoDecide
+  const callCount = metadata.llm?.callCount ?? metadata.decisionTrace?.calls?.length ?? 0
+  const fallbackUsed = metadata.llm?.fallbackUsed ?? Boolean(metadata.decisionTrace?.fallback?.used)
+  const openaiUsed = metadata.llm?.openaiUsed ?? callCount > 0
+
+  const strategy =
+    metadata.llm?.strategy ||
+    (!autoDecide
+      ? 'manual'
+      : openaiUsed
+        ? 'openai'
+        : fallbackUsed
+          ? 'fallback'
+          : 'heuristic')
+
+  let method: string
+  switch (strategy) {
+    case 'openai':
+      method = `OpenAI decision (${callCount} ${callCount === 1 ? 'call' : 'calls'})`
+      break
+    case 'fallback':
+      method = 'Fallback decision after OpenAI error'
+      break
+    case 'manual':
+      method = 'Manual routing (auto decision disabled)'
+      break
+    default:
+      method = 'Heuristic decision (no OpenAI call)'
+      break
+  }
+
+  const reason =
+    metadata.llm?.reason ||
+    (strategy === 'openai'
+      ? `Decision derived from OpenAI with ${callCount} ${callCount === 1 ? 'call' : 'calls'}.`
+      : strategy === 'fallback'
+        ? metadata.decisionTrace?.fallback?.reason || 'Fallback executed because OpenAI response could not be used.'
+        : strategy === 'manual'
+          ? 'Automatic decision was disabled for this transmission.'
+          : 'Rules and heuristics resolved the decision without contacting OpenAI.')
+
+  return {
+    method,
+    openaiUsed,
+    callCount,
+    fallbackUsed,
+    autoDecide,
+    reason,
   }
 }
 
