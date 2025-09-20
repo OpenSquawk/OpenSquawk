@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
 
   if (role) {
     if (!['user', 'admin', 'dev'].includes(role)) {
-      throw createError({ statusCode: 400, statusMessage: 'Ungültige Rolle' })
+      throw createError({ statusCode: 400, statusMessage: 'Invalid role' })
     }
     filter.role = role
   }

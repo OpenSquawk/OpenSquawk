@@ -20,11 +20,11 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<{ votes?: RoadmapVotePayload[] }>(event)
 
   if (!body?.votes || !Array.isArray(body.votes) || body.votes.length === 0) {
-    throw createError({ statusCode: 400, statusMessage: 'Keine Stimmen übermittelt' })
+    throw createError({ statusCode: 400, statusMessage: 'No votes submitted' })
   }
 
   if (body.votes.length > MAX_VOTES_PER_SUBMISSION) {
-    throw createError({ statusCode: 400, statusMessage: 'Zu viele Stimmen in einer Anfrage' })
+    throw createError({ statusCode: 400, statusMessage: 'Too many votes in a single request' })
   }
 
   const normalized = new Map<string, number>()
@@ -35,17 +35,17 @@ export default defineEventHandler(async (event) => {
     }
     const key = String(vote.key ?? '').trim()
     if (!ROADMAP_ITEM_KEYS.has(key)) {
-      throw createError({ statusCode: 400, statusMessage: `Unbekannter Roadmap-Eintrag: ${key || '?'}` })
+      throw createError({ statusCode: 400, statusMessage: `Unknown roadmap entry: ${key || '?'}` })
     }
     const importance = Math.round(Number(vote.importance ?? 0))
     if (!Number.isFinite(importance) || importance < 1 || importance > 5) {
-      throw createError({ statusCode: 400, statusMessage: 'Bewertung muss zwischen 1 und 5 liegen' })
+      throw createError({ statusCode: 400, statusMessage: 'Rating must be between 1 and 5' })
     }
     normalized.set(key, importance)
   }
 
   if (normalized.size === 0) {
-    throw createError({ statusCode: 400, statusMessage: 'Keine gültigen Stimmen gefunden' })
+    throw createError({ statusCode: 400, statusMessage: 'No valid votes found' })
   }
 
   const clientHash = buildClientHash(event)

@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
 
   if (channel) {
     if (!CHANNELS.has(channel)) {
-      throw createError({ statusCode: 400, statusMessage: 'Unbekannter Kanal' })
+      throw createError({ statusCode: 400, statusMessage: 'Unknown channel' })
     }
     filter.channel = channel
   }
@@ -83,7 +83,7 @@ export default defineEventHandler(async (event) => {
       filter.usedBy = { $exists: false }
       filter.expiresAt = { $lt: now }
     } else {
-      throw createError({ statusCode: 400, statusMessage: 'Ungültiger Status' })
+      throw createError({ statusCode: 400, statusMessage: 'Invalid status' })
     }
   }
 

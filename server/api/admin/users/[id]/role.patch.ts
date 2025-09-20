@@ -12,19 +12,19 @@ export default defineEventHandler(async (event) => {
   const userId = params?.id
 
   if (!userId) {
-    throw createError({ statusCode: 400, statusMessage: 'User-ID fehlt' })
+    throw createError({ statusCode: 400, statusMessage: 'Missing user ID' })
   }
 
   const body = await readBody<UpdateRoleBody>(event).catch(() => ({}))
   const role = body.role?.trim()
 
   if (!role || !['user', 'admin', 'dev'].includes(role)) {
-    throw createError({ statusCode: 400, statusMessage: 'Ungültige Rolle' })
+    throw createError({ statusCode: 400, statusMessage: 'Invalid role' })
   }
 
   const target = await User.findById(userId)
   if (!target) {
-    throw createError({ statusCode: 404, statusMessage: 'Nutzer nicht gefunden' })
+    throw createError({ statusCode: 404, statusMessage: 'User not found' })
   }
 
   const previousRole = target.role

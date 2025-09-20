@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     try {
         const { decision, trace } = await routeDecision(body)
 
-        // Log für Debugging bei off-schema oder radio check
+        // Log for debugging when off-schema or radio check triggers
         if (decision.off_schema) {
             console.log(`[ATC] Off-schema response for: "${body.pilot_utterance}"`)
         }

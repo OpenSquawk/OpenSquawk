@@ -13,17 +13,17 @@ export default defineEventHandler(async (event) => {
   const password = body.password?.trim()
 
   if (!email || !password) {
-    throw createError({ statusCode: 400, statusMessage: 'Bitte E-Mail und Passwort angeben' })
+    throw createError({ statusCode: 400, statusMessage: 'Please provide email and password' })
   }
 
   const user = await User.findOne({ email })
   if (!user) {
-    throw createError({ statusCode: 401, statusMessage: 'Ungültige Zugangsdaten' })
+    throw createError({ statusCode: 401, statusMessage: 'Invalid credentials' })
   }
 
   const valid = await verifyPassword(password, user.passwordHash)
   if (!valid) {
-    throw createError({ statusCode: 401, statusMessage: 'Ungültige Zugangsdaten' })
+    throw createError({ statusCode: 401, statusMessage: 'Invalid credentials' })
   }
 
   user.lastLoginAt = new Date()

@@ -6,14 +6,14 @@
           <p class="text-xs uppercase tracking-[0.4em] text-cyan-300/70">OpenSquawk</p>
           <h1 class="text-3xl font-semibold">Admin Operations Center</h1>
           <p class="text-sm text-white/70">
-            Vollständiger Überblick über Nutzer, Einladungscodes und Funkprotokolle mit Live-Trace.
+            Complete overview of users, invitation codes and radio logs with live tracing.
           </p>
         </div>
         <div class="flex flex-col items-start gap-3 text-sm text-white/70 sm:items-end">
           <div class="flex items-center gap-2 text-white/80">
             <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
             <span>
-              Eingeloggt als <strong>{{ auth.user?.email }}</strong>
+              Signed in as <strong>{{ auth.user?.email }}</strong>
               <v-chip size="x-small" color="cyan" variant="outlined" class="ml-2">
                 {{ auth.user?.role?.toUpperCase() }}
               </v-chip>
@@ -27,7 +27,7 @@
             prepend-icon="mdi-refresh"
             @click="refreshActiveTab"
           >
-            Daten aktualisieren
+            Refresh data
           </v-btn>
         </div>
       </header>
@@ -38,11 +38,11 @@
         slider-color="cyan"
         density="comfortable"
       >
-        <v-tab value="overview">Übersicht</v-tab>
-        <v-tab value="users">Nutzer</v-tab>
-        <v-tab value="invitations">Einladungen</v-tab>
-        <v-tab value="waitlist">Warteliste</v-tab>
-        <v-tab value="logs">Funkprotokolle</v-tab>
+        <v-tab value="overview">Overview</v-tab>
+        <v-tab value="users">Users</v-tab>
+        <v-tab value="invitations">Invitations</v-tab>
+        <v-tab value="waitlist">Waitlist</v-tab>
+        <v-tab value="logs">Transmissions</v-tab>
       </v-tabs>
 
       <v-window v-model="activeTab" class="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
@@ -50,10 +50,10 @@
           <section class="space-y-6">
             <div class="flex items-center justify-between gap-4">
               <div>
-                <h2 class="text-2xl font-semibold">Systemmetriken</h2>
-                <p class="text-sm text-white/70">Letzte Aktualisierung: {{ formatDateTime(overview?.generatedAt) }}</p>
+                <h2 class="text-2xl font-semibold">System metrics</h2>
+                <p class="text-sm text-white/70">Last updated: {{ formatDateTime(overview?.generatedAt) }}</p>
               </div>
-              <v-chip v-if="overviewLoading" color="cyan" variant="tonal" size="small">lädt…</v-chip>
+              <v-chip v-if="overviewLoading" color="cyan" variant="tonal" size="small">loading…</v-chip>
             </div>
 
             <v-alert
@@ -85,12 +85,12 @@
                       <p class="text-xl font-semibold text-white">{{ overview.users.devs }}</p>
                     </div>
                     <div>
-                      <p class="text-xs uppercase tracking-[0.3em] text-white/40">Neu (7 Tage)</p>
+                      <p class="text-xs uppercase tracking-[0.3em] text-white/40">New (7 days)</p>
                       <p class="text-xl font-semibold text-emerald-300">{{ overview.users.newLast7Days }}</p>
                     </div>
                   </div>
                   <div>
-                    <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Neueste Accounts</p>
+                    <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Latest accounts</p>
                     <ul class="space-y-2 text-sm text-white/80">
                       <li
                         v-for="user in overview.users.recent"
@@ -111,21 +111,21 @@
               <v-card class="bg-black/40">
                 <v-card-text class="space-y-4">
                   <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold">Einladungscodes</h3>
+                    <h3 class="text-lg font-semibold">Invitation codes</h3>
                     <v-chip size="small" color="cyan" variant="outlined">{{ overview.invitations.total }}</v-chip>
                   </div>
                   <div class="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <p class="text-xs uppercase tracking-[0.3em] text-white/40">Aktiv</p>
+                      <p class="text-xs uppercase tracking-[0.3em] text-white/40">Active</p>
                       <p class="text-xl font-semibold text-white">{{ overview.invitations.active }}</p>
                     </div>
                     <div>
-                      <p class="text-xs uppercase tracking-[0.3em] text-white/40">Läuft in 7 Tagen ab</p>
+                      <p class="text-xs uppercase tracking-[0.3em] text-white/40">Expires in 7 days</p>
                       <p class="text-xl font-semibold text-orange-300">{{ overview.invitations.expiringSoon }}</p>
                     </div>
                   </div>
                   <div>
-                    <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Letzte Codes</p>
+                    <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Latest codes</p>
                     <ul class="space-y-2 text-sm text-white/80">
                       <li
                         v-for="inv in overview.invitations.recent"
@@ -141,7 +141,7 @@
                           <v-chip v-if="inv.label" size="x-small" color="cyan" variant="tonal">{{ inv.label }}</v-chip>
                         </div>
                         <p v-if="inv.expiresAt" class="text-xs text-white/50">
-                          gültig bis {{ formatDateTime(inv.expiresAt) }}
+                          Valid until {{ formatDateTime(inv.expiresAt) }}
                         </p>
                       </li>
                     </ul>
@@ -152,7 +152,7 @@
               <v-card class="bg-black/40">
                 <v-card-text class="space-y-4">
                   <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold">Funkprotokolle</h3>
+                    <h3 class="text-lg font-semibold">Radio logs</h3>
                     <v-chip size="small" color="cyan" variant="outlined">{{ overview.transmissions.total }}</v-chip>
                   </div>
                   <div class="grid grid-cols-2 gap-3 text-sm">
@@ -161,7 +161,7 @@
                       <p class="text-xl font-semibold text-white">{{ overview.transmissions.last24h }}</p>
                     </div>
                     <div>
-                      <p class="text-xs uppercase tracking-[0.3em] text-white/40">Kanäle</p>
+                      <p class="text-xs uppercase tracking-[0.3em] text-white/40">Channels</p>
                       <div class="flex flex-wrap gap-2 pt-1 text-xs text-white/60">
                         <span
                           v-for="(value, key) in overview.transmissions.byChannel"
@@ -175,7 +175,7 @@
                     </div>
                   </div>
                   <div>
-                    <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Neueste Übertragungen</p>
+                    <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Latest transmissions</p>
                     <ul class="space-y-2 text-sm text-white/80">
                       <li
                         v-for="log in overview.transmissions.recent"
@@ -198,7 +198,7 @@
             </div>
             <div v-else-if="overviewLoading" class="py-12 text-center text-white/70">
               <v-progress-circular indeterminate color="cyan" class="mb-4" />
-              <p>Daten werden geladen…</p>
+              <p>Loading data…</p>
             </div>
           </section>
         </v-window-item>
@@ -209,7 +209,7 @@
               <div class="flex flex-1 flex-col gap-4 md:flex-row md:items-end">
                 <v-text-field
                   v-model="userSearch"
-                  label="Suche nach Nutzer"
+                  label="Search users"
                   density="comfortable"
                   variant="outlined"
                   color="cyan"
@@ -221,7 +221,7 @@
                 <v-select
                   v-model="userRoleFilter"
                   :items="userRoleFilterOptions"
-                  label="Rolle filtern"
+                  label="Filter by role"
                   density="comfortable"
                   variant="outlined"
                   color="cyan"
@@ -236,7 +236,7 @@
                   <v-chip size="x-small" color="cyan" variant="outlined">Admin {{ userRoleStats.admin }}</v-chip>
                 </div>
                 <v-btn color="cyan" variant="tonal" @click="fetchUsers(true)" :loading="userLoading">
-                  Anwenden
+                  Apply
                 </v-btn>
               </div>
             </div>
@@ -254,7 +254,7 @@
 
             <div v-if="userLoading" class="py-12 text-center text-white/70">
               <v-progress-circular indeterminate color="cyan" class="mb-4" />
-              <p>Nutzerdaten werden geladen…</p>
+              <p>Loading user data…</p>
             </div>
 
             <div v-else class="space-y-4">
@@ -270,15 +270,15 @@
                       <h3 class="text-lg font-semibold">{{ user.email }}</h3>
                       <p v-if="user.name" class="text-sm text-white/60">{{ user.name }}</p>
                       <div class="flex flex-wrap gap-2 text-xs text-white/50">
-                        <span>Einladungen erstellt: {{ user.invitationCodesIssued }}</span>
-                        <span v-if="user.lastLoginAt">Letzter Login: {{ formatRelative(user.lastLoginAt) }}</span>
+                        <span>Invitations created: {{ user.invitationCodesIssued }}</span>
+                        <span v-if="user.lastLoginAt">Last login: {{ formatRelative(user.lastLoginAt) }}</span>
                       </div>
                     </div>
                     <div class="flex flex-col items-start gap-2 md:items-end">
                       <v-select
                         v-model="userRoleDraft[user.id]"
                         :items="userRoleEditOptions"
-                        label="Rolle"
+                        label="Role"
                         density="comfortable"
                         variant="outlined"
                         color="cyan"
@@ -293,17 +293,17 @@
                         :disabled="userRoleDraft[user.id] === user.role"
                         @click="applyRoleChange(user.id)"
                       >
-                        Aktualisieren
+                        Update role
                       </v-btn>
                     </div>
                   </v-card-text>
                 </v-card>
               </div>
-              <p v-else class="py-12 text-center text-sm text-white/60">Keine Nutzer gefunden.</p>
+              <p v-else class="py-12 text-center text-sm text-white/60">No users found.</p>
 
               <div class="flex flex-col items-center justify-between gap-3 sm:flex-row">
                 <div class="text-xs text-white/50">
-                  Seite {{ userPagination.page }} von {{ userPagination.pages }} · {{ userPagination.total }} Einträge
+                  Page {{ userPagination.page }} of {{ userPagination.pages }} · {{ userPagination.total }} entries
                 </div>
                 <div class="flex items-center gap-2">
                   <v-btn
@@ -312,7 +312,7 @@
                     :disabled="userPagination.page <= 1"
                     @click="changeUserPage(userPagination.page - 1)"
                   >
-                    Zurück
+                    Back
                   </v-btn>
                   <v-btn
                     variant="text"
@@ -320,7 +320,7 @@
                     :disabled="userPagination.page >= userPagination.pages"
                     @click="changeUserPage(userPagination.page + 1)"
                   >
-                    Weiter
+                    Next
                   </v-btn>
                 </div>
               </div>
@@ -334,7 +334,7 @@
               <div class="flex flex-1 flex-col gap-4 md:flex-row md:items-end">
                 <v-text-field
                   v-model="invitationSearch"
-                  label="Code oder Label suchen"
+                  label="Search code or label"
                   density="comfortable"
                   variant="outlined"
                   color="cyan"
@@ -356,7 +356,7 @@
                 <v-select
                   v-model="invitationChannel"
                   :items="invitationChannelOptions"
-                  label="Kanal"
+                  label="Channel"
                   density="comfortable"
                   variant="outlined"
                   color="cyan"
@@ -366,10 +366,10 @@
               </div>
               <div class="flex items-center gap-3">
                 <v-btn color="cyan" variant="outlined" prepend-icon="mdi-plus" @click="showCreateInvite = true">
-                  Einladungscode erstellen
+                  Create invitation code
                 </v-btn>
                 <v-btn color="cyan" variant="tonal" :loading="invitationLoading" @click="fetchInvitations(true)">
-                  Anwenden
+                  Apply
                 </v-btn>
               </div>
             </div>
@@ -387,7 +387,7 @@
 
             <div v-if="invitationLoading" class="py-12 text-center text-white/70">
               <v-progress-circular indeterminate color="cyan" class="mb-4" />
-              <p>Einladungscodes werden geladen…</p>
+              <p>Loading invitation codes…</p>
             </div>
 
             <div v-else class="space-y-4">
@@ -417,18 +417,18 @@
                           {{ invitationStatusLabel(inv) }}
                         </strong>
                       </span>
-                      <span v-if="inv.expiresAt">Gültig bis {{ formatDateTime(inv.expiresAt) }}</span>
-                      <span v-if="inv.createdBy">Erstellt von {{ inv.createdBy.email }}</span>
-                      <span v-if="inv.usedBy">Verwendet von {{ inv.usedBy.email }}</span>
+                      <span v-if="inv.expiresAt">Valid until {{ formatDateTime(inv.expiresAt) }}</span>
+                      <span v-if="inv.createdBy">Created by {{ inv.createdBy.email }}</span>
+                      <span v-if="inv.usedBy">Used by {{ inv.usedBy.email }}</span>
                     </div>
                   </v-card-text>
                 </v-card>
               </div>
-              <p v-else class="py-12 text-center text-sm text-white/60">Keine Einladungen gefunden.</p>
+              <p v-else class="py-12 text-center text-sm text-white/60">No invitations found.</p>
 
               <div class="flex flex-col items-center justify-between gap-3 sm:flex-row">
                 <div class="text-xs text-white/50">
-                  Seite {{ invitationPagination.page }} von {{ invitationPagination.pages }} · {{ invitationPagination.total }} Codes
+                  Page {{ invitationPagination.page }} of {{ invitationPagination.pages }} · {{ invitationPagination.total }} codes
                 </div>
                 <div class="flex items-center gap-2">
                   <v-btn
@@ -437,7 +437,7 @@
                     :disabled="invitationPagination.page <= 1"
                     @click="changeInvitationPage(invitationPagination.page - 1)"
                   >
-                    Zurück
+                    Back
                   </v-btn>
                   <v-btn
                     variant="text"
@@ -445,7 +445,7 @@
                     :disabled="invitationPagination.page >= invitationPagination.pages"
                     @click="changeInvitationPage(invitationPagination.page + 1)"
                   >
-                    Weiter
+                    Next
                   </v-btn>
                 </div>
               </div>
@@ -457,16 +457,16 @@
           <section class="space-y-6">
             <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 class="text-2xl font-semibold">Warteliste</h2>
+                <h2 class="text-2xl font-semibold">Waitlist</h2>
                 <p class="text-sm text-white/70">
-                  Gesamt: {{ waitlistStats.total }} · Updates: {{ waitlistStats.updates }} · Aktiviert: {{ waitlistStats.activated }}
+                  Total: {{ waitlistStats.total }} · Updates: {{ waitlistStats.updates }} · Activated: {{ waitlistStats.activated }}
                 </p>
               </div>
               <div class="flex flex-wrap gap-2 text-xs text-white/60">
-                <v-chip size="small" color="cyan" variant="outlined">Gesamt: {{ waitlistStats.total }}</v-chip>
+                <v-chip size="small" color="cyan" variant="outlined">Total: {{ waitlistStats.total }}</v-chip>
                 <v-chip size="small" color="cyan" variant="text">Updates: {{ waitlistStats.updates }}</v-chip>
-                <v-chip size="small" color="cyan" variant="text">Aktiviert: {{ waitlistStats.activated }}</v-chip>
-                <v-chip size="small" color="cyan" variant="text">Wartend: {{ waitlistStats.pending }}</v-chip>
+                <v-chip size="small" color="cyan" variant="text">Activated: {{ waitlistStats.activated }}</v-chip>
+                <v-chip size="small" color="cyan" variant="text">Pending: {{ waitlistStats.pending }}</v-chip>
               </div>
             </div>
 
@@ -485,7 +485,7 @@
               <div class="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <v-text-field
                   v-model="waitlistSearch"
-                  label="Name, E-Mail oder Notizen"
+                  label="Name, email or notes"
                   density="comfortable"
                   variant="outlined"
                   color="cyan"
@@ -496,7 +496,7 @@
                 <v-select
                   v-model="waitlistSubscription"
                   :items="waitlistSubscriptionOptions"
-                  label="Opt-In"
+                  label="Opt-in"
                   density="comfortable"
                   variant="outlined"
                   color="cyan"
@@ -512,26 +512,26 @@
                   hide-details
                 />
                 <v-btn color="cyan" variant="tonal" :loading="waitlistLoading" @click="fetchWaitlist(true)">
-                  Filter anwenden
+                  Apply filters
                 </v-btn>
               </div>
               <div class="text-xs text-white/50">
-                {{ waitlistPagination.total }} Einträge · Seite {{ waitlistPagination.page }} von {{ waitlistPagination.pages }}
+                {{ waitlistPagination.total }} entries · Page {{ waitlistPagination.page }} of {{ waitlistPagination.pages }}
               </div>
             </div>
 
             <div v-if="waitlistLoading" class="py-12 text-center text-white/70">
               <v-progress-circular indeterminate color="cyan" class="mb-4" />
-              <p>Warteliste wird geladen…</p>
+              <p>Loading waitlist…</p>
             </div>
 
             <div v-else class="space-y-4">
               <v-table v-if="waitlistEntries.length" density="comfortable" class="text-sm text-white/80">
                 <thead>
                   <tr class="text-xs uppercase tracking-[0.3em] text-white/40">
-                    <th class="font-semibold">Kontakt</th>
-                    <th class="font-semibold">Beigetreten</th>
-                    <th class="font-semibold">Opt-In</th>
+                    <th class="font-semibold">Contact</th>
+                    <th class="font-semibold">Joined</th>
+                    <th class="font-semibold">Opt-in</th>
                     <th class="font-semibold">Status</th>
                   </tr>
                 </thead>
@@ -542,7 +542,7 @@
                       <div v-if="entry.name" class="text-xs text-white/60">{{ entry.name }}</div>
                       <div v-if="entry.notes" class="text-xs text-white/50">{{ entry.notes }}</div>
                       <div class="flex flex-wrap gap-2 text-[11px] text-white/40">
-                        <span>Quelle: {{ entry.source || 'landing' }}</span>
+                        <span>Source: {{ entry.source || 'landing' }}</span>
                       </div>
                     </td>
                     <td>
@@ -551,7 +551,7 @@
                     </td>
                     <td>
                       <div class="flex flex-wrap gap-2">
-                        <v-chip size="x-small" color="cyan" variant="outlined">Warteliste</v-chip>
+                        <v-chip size="x-small" color="cyan" variant="outlined">Waitlist</v-chip>
                         <v-chip
                           v-if="entry.wantsProductUpdates"
                           size="x-small"
@@ -562,7 +562,7 @@
                         </v-chip>
                       </div>
                       <div v-if="entry.updatesOptedInAt" class="mt-1 text-[11px] text-white/50">
-                        seit {{ formatDateTime(entry.updatesOptedInAt) }}
+                        since {{ formatDateTime(entry.updatesOptedInAt) }}
                       </div>
                     </td>
                     <td>
@@ -573,21 +573,21 @@
                         class="text-xs"
                       >
                         <template v-if="entry.activatedAt">
-                          Aktiviert · {{ formatRelative(entry.activatedAt) }}
+                          Activated · {{ formatRelative(entry.activatedAt) }}
                         </template>
                         <template v-else>
-                          Wartet auf Zugang
+                          Waiting for access
                         </template>
                       </v-chip>
                     </td>
                   </tr>
                 </tbody>
               </v-table>
-              <p v-else class="py-12 text-center text-sm text-white/60">Keine Wartelisten-Einträge gefunden.</p>
+              <p v-else class="py-12 text-center text-sm text-white/60">No waitlist entries found.</p>
 
               <div class="flex flex-col items-center justify-between gap-3 sm:flex-row">
                 <div class="text-xs text-white/50">
-                  Seite {{ waitlistPagination.page }} von {{ waitlistPagination.pages }} · {{ waitlistPagination.total }} Einträge
+                  Page {{ waitlistPagination.page }} of {{ waitlistPagination.pages }} · {{ waitlistPagination.total }} entries
                 </div>
                 <div class="flex items-center gap-2">
                   <v-btn
@@ -596,7 +596,7 @@
                     :disabled="waitlistPagination.page <= 1"
                     @click="changeWaitlistPage(waitlistPagination.page - 1)"
                   >
-                    Zurück
+                    Back
                   </v-btn>
                   <v-btn
                     variant="text"
@@ -604,7 +604,7 @@
                     :disabled="waitlistPagination.page >= waitlistPagination.pages"
                     @click="changeWaitlistPage(waitlistPagination.page + 1)"
                   >
-                    Weiter
+                    Next
                   </v-btn>
                 </div>
               </div>
@@ -618,7 +618,7 @@
               <div class="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <v-text-field
                   v-model="logSearch"
-                  label="Funktext durchsuchen"
+                  label="Search radio transcripts"
                   density="comfortable"
                   variant="outlined"
                   color="cyan"
@@ -629,7 +629,7 @@
                 <v-select
                   v-model="logChannel"
                   :items="logChannelOptions"
-                  label="Kanal"
+                  label="Channel"
                   density="comfortable"
                   variant="outlined"
                   color="cyan"
@@ -638,7 +638,7 @@
                 <v-select
                   v-model="logDirection"
                   :items="logDirectionOptions"
-                  label="Richtung"
+                  label="Direction"
                   density="comfortable"
                   variant="outlined"
                   color="cyan"
@@ -647,7 +647,7 @@
                 <v-select
                   v-model="logRole"
                   :items="logRoleOptions"
-                  label="Rolle"
+                  label="Role"
                   density="comfortable"
                   variant="outlined"
                   color="cyan"
@@ -656,18 +656,18 @@
                 <v-select
                   v-model="logTimeframe"
                   :items="logTimeframeOptions"
-                  label="Zeitraum"
+                  label="Timeframe"
                   density="comfortable"
                   variant="outlined"
                   color="cyan"
                   hide-details
                 />
                 <v-btn color="cyan" variant="tonal" :loading="logLoading" @click="fetchLogs(true)">
-                  Filter anwenden
+                  Apply filters
                 </v-btn>
               </div>
               <div class="text-xs text-white/50">
-                {{ logPagination.total }} Einträge · Seite {{ logPagination.page }} von {{ logPagination.pages }}
+                {{ logPagination.total }} entries · Page {{ logPagination.page }} of {{ logPagination.pages }}
               </div>
             </div>
 
@@ -684,7 +684,7 @@
 
             <div v-if="logLoading" class="py-12 text-center text-white/70">
               <v-progress-circular indeterminate color="cyan" class="mb-4" />
-              <p>Funkprotokolle werden geladen…</p>
+              <p>Loading radio logs…</p>
             </div>
 
             <div v-else class="space-y-4">
@@ -709,10 +709,10 @@
                       <strong class="text-white/70">Normalized:</strong> {{ entry.normalized }}
                     </p>
                     <div class="flex flex-wrap gap-3 text-xs text-white/50">
-                      <span v-if="entry.metadata?.moduleId">Modul {{ entry.metadata.moduleId }}</span>
+                      <span v-if="entry.metadata?.moduleId">Module {{ entry.metadata.moduleId }}</span>
                       <span v-if="entry.metadata?.lessonId">Lesson {{ entry.metadata.lessonId }}</span>
                       <span v-if="entry.metadata?.autoDecide !== undefined">
-                        Auto Decision: {{ entry.metadata.autoDecide ? 'Ja' : 'Nein' }}
+                        Auto Decision: {{ entry.metadata.autoDecide ? 'Yes' : 'No' }}
                       </span>
                     </div>
                     <div class="flex items-center justify-end">
@@ -723,7 +723,7 @@
                         prepend-icon="mdi-timeline-text"
                         @click="toggleLog(entry.id)"
                       >
-                        {{ expandedLog === entry.id ? 'Tracer schließen' : 'Tracer öffnen' }}
+                        {{ expandedLog === entry.id ? 'Close tracer' : 'Open tracer' }}
                       </v-btn>
                     </div>
                     <v-expand-transition>
@@ -745,10 +745,10 @@
                           </div>
                           <div class="flex flex-wrap gap-2 text-[11px] text-white/70">
                             <v-chip size="x-small" color="cyan" variant="outlined">
-                              Off-Schema: {{ entry.metadata.decision.off_schema ? 'Ja' : 'Nein' }}
+                              Off-script: {{ entry.metadata.decision.off_schema ? 'Yes' : 'No' }}
                             </v-chip>
                             <v-chip size="x-small" color="cyan" variant="outlined">
-                              Radio Check: {{ entry.metadata.decision.radio_check ? 'Ja' : 'Nein' }}
+                              Radio check: {{ entry.metadata.decision.radio_check ? 'Yes' : 'No' }}
                             </v-chip>
                           </div>
                         </div>
@@ -761,9 +761,9 @@
                           >
                             <div class="flex items-center justify-between text-[11px] text-white/60">
                               <span>
-                                Schritt: {{ call.stage === 'decision' ? 'Decision' : 'Readback-Check' }}
+                                Step: {{ call.stage === 'decision' ? 'Decision' : 'Readback check' }}
                               </span>
-                              <span v-if="call.error" class="text-red-300">Fehler beim Aufruf</span>
+                              <span v-if="call.error" class="text-red-300">Call failed</span>
                             </div>
                             <div>
                               <p class="text-[11px] text-white/50">Request</p>
@@ -774,7 +774,7 @@
                               <pre class="trace-json">{{ formatJson(call.response) }}</pre>
                             </div>
                             <div v-else class="rounded-lg border border-white/10 bg-black/40 p-2 text-[11px] text-white/60">
-                              Keine Antwort erhalten.
+                              No response received.
                             </div>
                             <div v-if="call.rawResponseText" class="space-y-1">
                               <p class="text-[11px] text-white/50">Raw Response</p>
@@ -794,11 +794,11 @@
                             v-if="entry.metadata.decisionTrace.fallback?.used"
                             class="space-y-1 rounded-xl border border-orange-400/40 bg-orange-500/10 p-3 text-[11px] text-orange-100"
                           >
-                            <p class="text-xs uppercase tracking-[0.3em] text-orange-200/80">Fallback aktiviert</p>
+                            <p class="text-xs uppercase tracking-[0.3em] text-orange-200/80">Fallback activated</p>
                             <p>
-                              Grund: {{ entry.metadata.decisionTrace.fallback.reason || 'unbekannt' }}
+                              Reason: {{ entry.metadata.decisionTrace.fallback.reason || 'unknown' }}
                               <span v-if="entry.metadata.decisionTrace.fallback.selected">
-                                · Pfad: {{ entry.metadata.decisionTrace.fallback.selected }}
+                                · Path: {{ entry.metadata.decisionTrace.fallback.selected }}
                               </span>
                             </p>
                           </div>
@@ -812,11 +812,11 @@
                   </v-card-text>
                 </v-card>
               </div>
-              <p v-else class="py-12 text-center text-sm text-white/60">Keine Funkprotokolle gefunden.</p>
+              <p v-else class="py-12 text-center text-sm text-white/60">No transmissions found.</p>
 
               <div class="flex flex-col items-center justify-between gap-3 sm:flex-row">
                 <div class="text-xs text-white/50">
-                  Seite {{ logPagination.page }} von {{ logPagination.pages }} · {{ logPagination.total }} Logs
+                  Page {{ logPagination.page }} of {{ logPagination.pages }} · {{ logPagination.total }} logs
                 </div>
                 <div class="flex items-center gap-2">
                   <v-btn
@@ -825,7 +825,7 @@
                     :disabled="logPagination.page <= 1"
                     @click="changeLogPage(logPagination.page - 1)"
                   >
-                    Zurück
+                    Back
                   </v-btn>
                   <v-btn
                     variant="text"
@@ -833,7 +833,7 @@
                     :disabled="logPagination.page >= logPagination.pages"
                     @click="changeLogPage(logPagination.page + 1)"
                   >
-                    Weiter
+                    Next
                   </v-btn>
                 </div>
               </div>
@@ -845,10 +845,10 @@
 
     <v-dialog v-model="showCreateInvite" max-width="480" persistent>
       <v-card class="border border-white/10 bg-[#0b1526] text-white">
-        <v-card-title class="text-lg font-semibold">Einladungscode erstellen</v-card-title>
+        <v-card-title class="text-lg font-semibold">Create invitation code</v-card-title>
         <v-card-text class="space-y-4">
           <p class="text-sm text-white/70">
-            Der Code wird sofort aktiv und läuft standardmäßig nach 30 Tagen ab. Optional kann ein Label gesetzt werden.
+            The code becomes active immediately and expires after 30 days by default. Adding a label is optional.
           </p>
           <v-text-field
             v-model="newInviteLabel"
@@ -867,7 +867,7 @@
             :step="1"
             color="cyan"
             thumb-label="always"
-            label="Gültigkeit in Tagen"
+            label="Validity in days"
           />
           <v-alert
             v-if="createInviteError"
@@ -879,15 +879,15 @@
             {{ createInviteError }}
           </v-alert>
           <v-sheet v-if="createInviteResult" class="space-y-2 rounded-xl border border-emerald-400/40 bg-emerald-500/10 p-4">
-            <p class="text-xs uppercase tracking-[0.3em] text-emerald-200/80">Neuer Code</p>
+            <p class="text-xs uppercase tracking-[0.3em] text-emerald-200/80">New code</p>
             <p class="font-mono text-3xl tracking-widest text-white">{{ createInviteResult.code }}</p>
-            <p class="text-xs text-white/60">Gültig bis {{ formatDateTime(createInviteResult.expiresAt) }}</p>
+            <p class="text-xs text-white/60">Valid until {{ formatDateTime(createInviteResult.expiresAt) }}</p>
           </v-sheet>
         </v-card-text>
         <v-card-actions class="justify-between">
-          <v-btn variant="text" color="white" @click="closeCreateInvite">Abbrechen</v-btn>
+          <v-btn variant="text" color="white" @click="closeCreateInvite">Cancel</v-btn>
           <v-btn color="cyan" variant="flat" :loading="createInviteLoading" @click="submitCreateInvite">
-            Code generieren
+            Generate code
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -1053,7 +1053,7 @@ const userSearch = ref('')
 const userRoleFilter = ref<'all' | 'user' | 'admin' | 'dev'>('all')
 const userRoleStats = reactive({ user: 0, admin: 0, dev: 0 })
 const userRoleFilterOptions = [
-  { title: 'Alle Rollen', value: 'all' },
+  { title: 'All roles', value: 'all' },
   { title: 'User', value: 'user' },
   { title: 'Developer', value: 'dev' },
   { title: 'Admin', value: 'admin' },
@@ -1074,16 +1074,16 @@ const invitationSearch = ref('')
 const invitationStatus = ref<'all' | 'active' | 'used' | 'expired'>('active')
 const invitationChannel = ref<'all' | 'user' | 'manual' | 'bootstrap' | 'admin'>('all')
 const invitationStatusOptions = [
-  { title: 'Alle Status', value: 'all' },
-  { title: 'Aktiv', value: 'active' },
-  { title: 'Verwendet', value: 'used' },
-  { title: 'Abgelaufen', value: 'expired' },
+  { title: 'All statuses', value: 'all' },
+  { title: 'Active', value: 'active' },
+  { title: 'Used', value: 'used' },
+  { title: 'Expired', value: 'expired' },
 ]
 const invitationChannelOptions = [
-  { title: 'Alle Kanäle', value: 'all' },
+  { title: 'All channels', value: 'all' },
   { title: 'User', value: 'user' },
   { title: 'Admin', value: 'admin' },
-  { title: 'Manuell', value: 'manual' },
+  { title: 'Manual', value: 'manual' },
   { title: 'Bootstrap', value: 'bootstrap' },
 ]
 
@@ -1095,14 +1095,14 @@ const waitlistSearch = ref('')
 const waitlistSubscription = ref<'all' | 'waitlist' | 'updates'>('all')
 const waitlistStatus = ref<'all' | 'pending' | 'activated'>('all')
 const waitlistSubscriptionOptions = [
-  { title: 'Alle Opt-Ins', value: 'all' },
-  { title: 'Nur Warteliste', value: 'waitlist' },
-  { title: 'Updates-Opt-in', value: 'updates' },
+  { title: 'All opt-ins', value: 'all' },
+  { title: 'Waitlist only', value: 'waitlist' },
+  { title: 'Product updates', value: 'updates' },
 ]
 const waitlistStatusOptions = [
-  { title: 'Alle Status', value: 'all' },
-  { title: 'Wartend', value: 'pending' },
-  { title: 'Aktiviert', value: 'activated' },
+  { title: 'All statuses', value: 'all' },
+  { title: 'Pending', value: 'pending' },
+  { title: 'Activated', value: 'activated' },
 ]
 const waitlistStats = reactive<WaitlistStatsSummary>({ total: 0, updates: 0, activated: 0, pending: 0 })
 
@@ -1116,26 +1116,26 @@ const logDirection = ref<'all' | 'incoming' | 'outgoing'>('all')
 const logRole = ref<'all' | 'pilot' | 'atc'>('all')
 const logTimeframe = ref<'24h' | '7d' | '30d' | 'all'>('24h')
 const logChannelOptions = [
-  { title: 'Alle Kanäle', value: 'all' },
+  { title: 'All channels', value: 'all' },
   { title: 'PTT', value: 'ptt' },
   { title: 'Say', value: 'say' },
   { title: 'Text', value: 'text' },
 ]
 const logDirectionOptions = [
-  { title: 'Alle Richtungen', value: 'all' },
+  { title: 'All directions', value: 'all' },
   { title: 'Incoming', value: 'incoming' },
   { title: 'Outgoing', value: 'outgoing' },
 ]
 const logRoleOptions = [
-  { title: 'Alle Rollen', value: 'all' },
+  { title: 'All roles', value: 'all' },
   { title: 'Pilot', value: 'pilot' },
   { title: 'ATC', value: 'atc' },
 ]
 const logTimeframeOptions = [
-  { title: 'Letzte 24 Stunden', value: '24h' },
-  { title: '7 Tage', value: '7d' },
-  { title: '30 Tage', value: '30d' },
-  { title: 'Alles', value: 'all' },
+  { title: 'Last 24 hours', value: '24h' },
+  { title: '7 days', value: '7d' },
+  { title: '30 days', value: '30d' },
+  { title: 'All time', value: 'all' },
 ]
 const expandedLog = ref<string | null>(null)
 
@@ -1170,7 +1170,7 @@ function formatDateTime(value?: string) {
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.valueOf())) return value
-  return date.toLocaleString('de-DE', {
+  return date.toLocaleString('en-US', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -1185,12 +1185,12 @@ function formatRelative(value?: string) {
   if (Number.isNaN(date.valueOf())) return value
   const diffMs = Date.now() - date.getTime()
   const diffMinutes = Math.floor(diffMs / (1000 * 60))
-  if (diffMinutes < 1) return 'vor wenigen Sekunden'
-  if (diffMinutes < 60) return `vor ${diffMinutes} Min`
+  if (diffMinutes < 1) return 'a few seconds ago'
+  if (diffMinutes < 60) return `${diffMinutes} min ago`
   const diffHours = Math.floor(diffMinutes / 60)
-  if (diffHours < 24) return `vor ${diffHours} Std`
+  if (diffHours < 24) return `${diffHours} h ago`
   const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 30) return `vor ${diffDays} Tagen`
+  if (diffDays < 30) return `${diffDays} days ago`
   return formatDateTime(value)
 }
 
@@ -1211,9 +1211,9 @@ function isExpired(expiresAt?: string) {
 }
 
 function invitationStatusLabel(inv: InvitationItem) {
-  if (inv.usedAt) return `verwendet ${formatRelative(inv.usedAt)}`
-  if (inv.expiresAt && isExpired(inv.expiresAt)) return 'abgelaufen'
-  return 'aktiv'
+  if (inv.usedAt) return `used ${formatRelative(inv.usedAt)}`
+  if (inv.expiresAt && isExpired(inv.expiresAt)) return 'expired'
+  return 'active'
 }
 
 function computeSince(timeframe: '24h' | '7d' | '30d' | 'all') {
@@ -1231,7 +1231,7 @@ async function loadOverview(force = false) {
   try {
     overview.value = await api.get<OverviewData>('/api/admin/overview')
   } catch (error) {
-    overviewError.value = extractErrorMessage(error, 'Übersicht konnte nicht geladen werden.')
+    overviewError.value = extractErrorMessage(error, 'Could not load overview.')
   } finally {
     overviewLoading.value = false
   }
@@ -1259,7 +1259,7 @@ async function fetchUsers(resetPage = false) {
     Object.assign(userRoleStats, response.roles)
     usersLoaded.value = true
   } catch (error) {
-    userError.value = extractErrorMessage(error, 'Nutzerliste konnte nicht geladen werden.')
+    userError.value = extractErrorMessage(error, 'Could not load user list.')
   } finally {
     userLoading.value = false
   }
@@ -1283,7 +1283,7 @@ async function applyRoleChange(userId: string) {
     })
     await fetchUsers()
   } catch (error) {
-    userError.value = extractErrorMessage(error, 'Rolle konnte nicht aktualisiert werden.')
+    userError.value = extractErrorMessage(error, 'Could not update role.')
   } finally {
     userRoleUpdating.value = null
   }
@@ -1308,7 +1308,7 @@ async function fetchInvitations(resetPage = false) {
     Object.assign(invitationPagination, response.pagination)
     invitationsLoaded.value = true
   } catch (error) {
-    invitationError.value = extractErrorMessage(error, 'Einladungen konnten nicht geladen werden.')
+    invitationError.value = extractErrorMessage(error, 'Could not load invitations.')
   } finally {
     invitationLoading.value = false
   }
@@ -1348,7 +1348,7 @@ async function fetchWaitlist(resetPage = false) {
     }
     waitlistLoaded.value = true
   } catch (error) {
-    waitlistError.value = extractErrorMessage(error, 'Warteliste konnte nicht geladen werden.')
+    waitlistError.value = extractErrorMessage(error, 'Could not load waitlist.')
   } finally {
     waitlistLoading.value = false
   }
@@ -1388,7 +1388,7 @@ async function fetchLogs(resetPage = false) {
     Object.assign(logPagination, response.pagination)
     logsLoaded.value = true
   } catch (error) {
-    logError.value = extractErrorMessage(error, 'Funkprotokolle konnten nicht geladen werden.')
+    logError.value = extractErrorMessage(error, 'Could not load radio logs.')
   } finally {
     logLoading.value = false
   }
@@ -1419,7 +1419,7 @@ async function submitCreateInvite() {
     newInviteLabel.value = ''
     await fetchInvitations(true)
   } catch (error) {
-    createInviteError.value = extractErrorMessage(error, 'Einladungscode konnte nicht erstellt werden.')
+    createInviteError.value = extractErrorMessage(error, 'Could not create invitation code.')
   } finally {
     createInviteLoading.value = false
   }

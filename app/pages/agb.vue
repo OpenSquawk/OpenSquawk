@@ -3,11 +3,11 @@
     <div class="mx-auto max-w-4xl space-y-8">
       <header class="space-y-3">
         <NuxtLink to="/" class="inline-flex items-center gap-2 text-sm text-white/60 hover:text-cyan-300">
-          <v-icon icon="mdi-arrow-left" size="18" /> Zurück zur Startseite
+          <v-icon icon="mdi-arrow-left" size="18" /> Back to landing page
         </NuxtLink>
-        <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Rechtliches</p>
-        <h1 class="text-3xl font-semibold">Allgemeine Geschäftsbedingungen (AGB)</h1>
-        <p class="text-white/70">Stand: {{ lastUpdated }}</p>
+        <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Legal</p>
+        <h1 class="text-3xl font-semibold">Terms of Service (TOS)</h1>
+        <p class="text-white/70">Updated: {{ lastUpdated }}</p>
       </header>
 
       <section v-for="section in sections" :key="section.title" class="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-6">
@@ -21,85 +21,85 @@
       </section>
 
       <footer class="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
-        <p>Fragen zu diesen AGB beantworten wir unter info@opensquawk.dev. Für Enterprise- oder Trainingsprogramme erstellen wir individuelle Verträge.</p>
+        <p>Questions about these terms? Email us at info@opensquawk.dev. We provide tailored contracts for enterprise or training programmes on request.</p>
       </footer>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-const lastUpdated = new Date('2025-09-17').toLocaleDateString('de-DE')
+const lastUpdated = new Date('2025-09-17').toLocaleDateString('en-US')
 
 const sections = [
   {
-    title: '1. Geltungsbereich',
+    title: '1. Scope',
     paragraphs: [
-      'Diese AGB regeln die Nutzung der Plattform OpenSquawk (“Dienst”), betrieben von der Faktor Mensch MEDIA UG (haftungsbeschränkt). Abweichende Bedingungen des Nutzers werden nicht anerkannt, es sei denn, wir stimmen ihrer Geltung ausdrücklich schriftlich zu.',
+      'These terms govern the use of the OpenSquawk platform (the “Service”), operated by Faktor Mensch MEDIA UG (limited liability). Conflicting user terms only apply if agreed to in writing.',
     ],
   },
   {
-    title: '2. Registrierung & Einladungscodes',
+    title: '2. Registration & Invitation Codes',
     paragraphs: [
-      'Ein Nutzerkonto darf nur mit gültigem Einladungscode angelegt werden. Einladungscodes sind personalisiert, zeitlich limitiert und dürfen nicht verkauft oder unbefugt weitergegeben werden.',
+      'Accounts require a valid invitation code. Codes are personal, time-limited and must not be sold or shared without permission.',
     ],
     list: [
-      'Wartelistenplätze berechtigen nicht automatisch zur Registrierung.',
-      'Aktive Nutzer können frühestens 14 Tage nach Account-Erstellung bis zu zwei Einladungscodes generieren.',
-      'OpenSquawk behält sich vor, Einladungscodes nach Missbrauchsverdacht zu sperren.',
+      'A waitlist spot does not guarantee immediate access.',
+      'Active users may generate up to two invitation codes after 14 days.',
+      'We may revoke codes if abuse is suspected.',
     ],
   },
   {
-    title: '3. Vertragsgegenstand',
+    title: '3. Service Description',
     paragraphs: [
-      'OpenSquawk bietet AI-gestützte Kommunikationssimulation für Flugsimulatoren. Funktionen umfassen Push-to-Talk-Verarbeitung, Text-to-Speech, Lernmodule und Integrationen. Der Dienst ist ausschließlich für Ausbildungs- und Trainingszwecke gedacht – nicht für den realen Flugfunk.',
+      'OpenSquawk provides AI-assisted communication simulation for flight simulators, including push-to-talk processing, text-to-speech, training modules and integrations. The service is strictly for training purposes and must not be used for real-world aviation.',
     ],
   },
   {
-    title: '4. Pflichten der Nutzer',
+    title: '4. User Responsibilities',
     list: [
-      'Zugangsdaten vertraulich behandeln und Dritten nicht überlassen.',
-      'Keine rechtswidrigen oder beleidigenden Inhalte übertragen.',
-      'Systeme nicht übermäßig belasten oder Sicherheitsmechanismen umgehen.',
-      'Eigenständige Sicherung lokaler Daten/Audioaufnahmen.',
+      'Keep login credentials confidential and do not share them.',
+      'Do not transmit unlawful, harmful or offensive content.',
+      'Avoid excessive load or attempts to circumvent security measures.',
+      'Back up local recordings or data independently.',
     ],
     paragraphs: [
-      'Wir behalten uns vor, Accounts bei Verstößen temporär oder dauerhaft zu sperren.',
-    ],
-  },
-  {
-    title: '5. Logging & Datenanalyse',
-    paragraphs: [
-      'Zur Qualitätsverbesserung werden sämtliche Funksprüche – sowohl Texteingaben als auch PTT-Transkripte – zusammen mit Metaangaben (z. B. Modul, Entscheidungspfad, Signalstärke) gespeichert und ausgewertet. Mit Nutzung des Dienstes stimmen Sie dieser Verarbeitung zu.',
+      'We reserve the right to suspend or terminate accounts that breach these terms.',
     ],
   },
   {
-    title: '6. Preise & Zahlungsbedingungen',
+    title: '5. Logging & Analytics',
     paragraphs: [
-      'OpenSquawk kann kostenpflichtige Hosted-Pläne anbieten. Preise werden transparent vor Vertragsabschluss angezeigt. Gebühren sind monatlich im Voraus fällig. Erfolgt die Zahlung nicht fristgerecht, kann das Konto gesperrt werden.',
+      'To improve quality we log all radio interactions—text or push-to-talk transcripts—together with metadata such as module, decision path and signal strength. By using the service you consent to this processing.',
     ],
   },
   {
-    title: '7. Laufzeit & Kündigung',
+    title: '6. Pricing & Payment',
     paragraphs: [
-      'Kostenlose Konten können jederzeit ohne Frist gelöscht werden. Bei kostenpflichtigen Tarifen gilt – sofern nichts anderes vereinbart – eine monatliche Laufzeit mit Kündigungsfrist von sieben Tagen zum Monatsende. Kündigungen müssen schriftlich oder per E-Mail erfolgen.',
+      'Hosted plans may incur subscription fees disclosed before purchase. Fees are billed monthly in advance. Overdue payments may lead to account suspension.',
     ],
   },
   {
-    title: '8. Gewährleistung & Haftung',
+    title: '7. Term & Cancellation',
     paragraphs: [
-      'OpenSquawk stellt einen Alpha-Dienst bereit. Wir übernehmen keine Gewähr für unterbrechungsfreie Verfügbarkeit oder absolute Richtigkeit der generierten Inhalte. Haftung besteht nur bei Vorsatz, grober Fahrlässigkeit sowie bei Verletzung von Leben, Körper oder Gesundheit.',
+      'Free accounts can be deleted at any time. Paid plans run month-to-month with a seven-day notice period to month-end unless agreed otherwise. Cancellations must be submitted in writing or via email.',
     ],
   },
   {
-    title: '9. Änderungen der AGB',
+    title: '8. Warranty & Liability',
     paragraphs: [
-      'Wir behalten uns vor, diese AGB bei Bedarf anzupassen. Nutzer werden mindestens 14 Tage vor Inkrafttreten informiert. Widerspricht der Nutzer nicht innerhalb der Frist, gelten die neuen Bedingungen als akzeptiert.',
+      'OpenSquawk is provided as an alpha service. We do not guarantee uninterrupted availability or absolute accuracy. Liability is limited to intent, gross negligence, or injury to life, body or health.',
     ],
   },
   {
-    title: '10. Schlussbestimmungen',
+    title: '9. Changes to the Terms',
     paragraphs: [
-      'Es gilt deutsches Recht. Gerichtsstand für Kaufleute ist Berlin. Sollten einzelne Bestimmungen unwirksam sein, bleibt die Wirksamkeit der übrigen Regelungen unberührt.',
+      'We may amend these terms with at least 14 days’ notice. Continued use after the effective date constitutes acceptance of the updated terms.',
+    ],
+  },
+  {
+    title: '10. Governing Law',
+    paragraphs: [
+      'These terms are governed by German law. The place of jurisdiction for merchants is Berlin. If any clause is invalid, the remaining provisions remain effective.',
     ],
   },
 ]

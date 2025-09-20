@@ -15,24 +15,24 @@ export default defineEventHandler(async (event) => {
   const password = body.password?.trim()
 
   if (!token || !password) {
-    throw createError({ statusCode: 400, statusMessage: 'Token und neues Passwort erforderlich' })
+    throw createError({ statusCode: 400, statusMessage: 'Token and new password required' })
   }
 
   if (password.length < 8) {
-    throw createError({ statusCode: 400, statusMessage: 'Das Passwort muss mindestens 8 Zeichen enthalten' })
+    throw createError({ statusCode: 400, statusMessage: 'Password must be at least 8 characters long' })
   }
 
   const tokenHash = createHash('sha256').update(token).digest('hex')
   const resetToken = await PasswordResetToken.findOne({ tokenHash })
 
   if (!resetToken || (resetToken.expiresAt && resetToken.expiresAt < new Date()) || resetToken.usedAt) {
-    throw createError({ statusCode: 400, statusMessage: 'Dieser Link ist ungültig oder abgelaufen' })
+    throw createError({ statusCode: 400, statusMessage: 'This link is invalid or has expired' })
   }
 
   const user = await User.findById(resetToken.user)
   if (!user) {
     await resetToken.deleteOne().catch(() => undefined)
-    throw createError({ statusCode: 400, statusMessage: 'Dieser Link ist ungültig oder abgelaufen' })
+    throw createError({ statusCode: 400, statusMessage: 'This link is invalid or has expired' })
   }
 
   user.passwordHash = await hashPassword(password)

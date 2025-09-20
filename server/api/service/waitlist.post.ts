@@ -22,11 +22,11 @@ export default defineEventHandler(async (event) => {
   const wantsProductUpdates = Boolean(body.wantsProductUpdates)
 
   if (!email) {
-    throw createError({ statusCode: 400, statusMessage: 'E-Mail wird benötigt' })
+    throw createError({ statusCode: 400, statusMessage: 'Email is required' })
   }
 
   if (!body.consentPrivacy || !body.consentTerms) {
-    throw createError({ statusCode: 400, statusMessage: 'Zustimmung zu AGB und Datenschutz ist erforderlich' })
+    throw createError({ statusCode: 400, statusMessage: 'Accepting the terms and privacy policy is required' })
   }
 
   const now = new Date()
@@ -57,20 +57,20 @@ export default defineEventHandler(async (event) => {
 
       if (!previouslyWantedUpdates && updateResult.created) {
         const dataEntries = [
-          ['E-Mail', email],
+          ['Email', email],
         ]
         if (name) {
           dataEntries.push(['Name', name])
         }
         if (notes) {
-          dataEntries.push(['Notizen', notes])
+          dataEntries.push(['Notes', notes])
         }
-        dataEntries.push(['Quelle', source])
-        dataEntries.push(['Opt-In', 'Produkt-Updates'])
+        dataEntries.push(['Source', source])
+        dataEntries.push(['Opt-in', 'Product updates'])
 
         await sendAdminNotification({
-          event: 'Neue Updates-Liste (via Warteliste)',
-          summary: `Produkt-Updates Opt-in (Warteliste): ${email}`,
+          event: 'New updates signup (waitlist)',
+          summary: `Product updates opt-in (waitlist): ${email}`,
           data: dataEntries,
         })
       }
@@ -106,20 +106,20 @@ export default defineEventHandler(async (event) => {
   }
 
   const dataEntries = [
-    ['E-Mail', email],
+    ['Email', email],
   ]
   if (name) {
     dataEntries.push(['Name', name])
   }
   if (notes) {
-    dataEntries.push(['Notizen', notes])
+    dataEntries.push(['Notes', notes])
   }
-  dataEntries.push(['Quelle', source])
-  dataEntries.push(['Opt-In', wantsProductUpdates ? 'Produkt-Updates' : 'Nur Warteliste'])
+  dataEntries.push(['Source', source])
+  dataEntries.push(['Opt-in', wantsProductUpdates ? 'Product updates' : 'Waitlist only'])
 
   await sendAdminNotification({
-    event: 'Neue Wartelisten-Anmeldung',
-    summary: `Neue Wartelisten-Anmeldung: ${email}`,
+    event: 'New waitlist signup',
+    summary: `New waitlist signup: ${email}`,
     data: dataEntries,
   })
 

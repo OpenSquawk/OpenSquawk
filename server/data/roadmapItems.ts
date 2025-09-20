@@ -9,81 +9,81 @@ export interface RoadmapItemDefinition {
 export const ROADMAP_ITEMS: RoadmapItemDefinition[] = [
   {
     key: 'touch-ptt-app',
-    title: 'Touch-Webapp für Handy & Tablet',
+    title: 'Touch web app for phones & tablets',
     description:
-      'Progressive Web-App mit großem Push-to-Talk-Button, vereinfachten Funk-Prompts und geführten Readbacks – ideal zum Üben unterwegs.',
+      'Progressive web app with a large push-to-talk button, simplified radio prompts and guided readbacks — ideal for practice on the go.',
     category: 'Training',
     icon: 'mdi-cellphone-sound',
   },
   {
     key: 'realism-upgrades',
-    title: 'Realismus-Boost für Phraseologie',
+    title: 'Phraseology realism boost',
     description:
-      'Feintuning für Stimmen, Hintergrundrauschen und prozedurale Antworten, damit Clearance, Handoffs und Phraseologie wie am echten Radar klingen.',
+      'Fine-tune voices, background noise and procedural replies so clearances, handoffs and phraseology sound like real radar.',
     category: 'Simulation',
     icon: 'mdi-rocket-launch'
   },
   {
     key: 'cockpit-intercom',
-    title: 'Virtuelles Intercom & Checklisten',
+    title: 'Virtual intercom & checklists',
     description:
-      'Sprich mit einer KI-Copilot:in, lass dir SOP-Checklisten vorlesen und hake Abläufe via Voice oder Touch ab.',
+      'Talk to an AI co-pilot, hear SOP checklists read aloud and tick off flows via voice or touch.',
     category: 'Crew',
     icon: 'mdi-account-voice',
   },
   {
     key: 'emergency-training',
-    title: 'Mayday & Pan-Pan Trainingsflows',
+    title: 'Mayday & pan-pan training flows',
     description:
-      'Geführte Szenarien für Notrufe inkl. Standard-Callouts, Priorisierung durch den Tower und Nachbereitung mit Debrief.',
+      'Guided emergency scenarios with standard callouts, tower prioritization and debrief follow-up.',
     category: 'Safety',
     icon: 'mdi-alert-decagram',
   },
   {
     key: 'taxi-routing',
-    title: 'Airport-genaue Taxi-Anweisungen',
+    title: 'Airport-specific taxi instructions',
     description:
-      'Apt.dat- & OSM-gestütztes Routing mit individuellen Taxi-Flows, Hotspots und visuellen Rollkarten pro Airport.',
+      'Routing powered by apt.dat and OSM with airport-specific taxi flows, hotspots and visual charts.',
     category: 'Ground',
     icon: 'mdi-map-marker-path',
   },
   {
     key: 'atc-learning-platform',
-    title: 'ATC-Only Lernplattform',
+    title: 'ATC-only learning platform',
     description:
-      'Browser-Trainings zum Hören, Buchstabieren und Störgeräusch-Filtern – ICAO-Alphabet, Speed-Drills und Readback-Checks ohne Simulator.',
+      'Browser trainings for listening, spelling and filtering interference — ICAO alphabet, speed drills and readback checks without a simulator.',
     category: 'Academy',
     icon: 'mdi-headset',
   },
   {
     key: 'self-hosting',
-    title: 'Selfhosting mit lokalen Modellen',
+    title: 'Self-hosting with local models',
     description:
-      'Docker-/Compose-Blueprints plus Offline-ASR/TTS-Optionen für lokales Hosting ohne Cloud-Abhängigkeit.',
+      'Docker/Compose blueprints plus offline ASR/TTS options for local hosting without cloud dependencies.',
     category: 'Infra',
     icon: 'mdi-server',
   },
   {
     key: 'premium-api-access',
-    title: 'Premium-Zugriff auf schnelle APIs',
+    title: 'Premium access to high-performance APIs',
     description:
-      'Optionale Monatsabos für performantere Speech- & Sim-APIs mit priorisierten Kontingenten zu niedrigen Beträgen.',
+      'Optional monthly plans for faster speech and sim APIs with prioritized quotas at low prices.',
     category: 'Business',
     icon: 'mdi-credit-card-clock',
   },
   {
     key: 'multi-voice',
-    title: 'Mehrere ATC-Stimmen',
+    title: 'Multiple ATC voices',
     description:
-      'Wechselnde Stimmen je Position, inklusive regionaler Akzente und geschlechtsneutraler Optionen.',
+      'Rotating voices per position, including regional accents and gender-neutral options.',
     category: 'Immersion',
     icon: 'mdi-account-multiple',
   },
   {
     key: 'ai-traffic',
-    title: 'AI-generierter ATC-Traffic',
+    title: 'AI-generated ATC traffic',
     description:
-      'Simulierte andere Piloten für Frequenzaufkommen, inklusive korrekter Callsigns, Handovers und Konflikt-Handling.',
+      'Simulated fellow pilots to increase frequency traffic, including correct callsigns, handovers and conflict handling.',
     category: 'Traffic',
     icon: 'mdi-airplane-takeoff',
   },

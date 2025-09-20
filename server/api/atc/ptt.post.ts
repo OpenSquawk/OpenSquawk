@@ -77,11 +77,11 @@ function decodeAudioPayload(encoded: string): Buffer {
     return buffer;
 }
 
-// Audio zu WAV konvertieren für bessere Whisper-Kompatibilität
+// Convert audio to WAV for better Whisper compatibility
 async function convertToWav(inputPath: string, outputPath: string) {
     await sh("ffmpeg", [
         "-y", "-i", inputPath,
-        "-ar", "16000",  // 16kHz für Whisper
+        "-ar", "16000",  // 16 kHz for Whisper
         "-ac", "1",      // Mono
         "-f", "wav",
         outputPath
@@ -104,11 +104,11 @@ export default defineEventHandler(async (event) => {
     const tmpAudioWav = join(tmpdir(), `ptt-wav-${id}.wav`);
 
     try {
-        // 1. Audio aus Base64 dekodieren und speichern
+        // 1. Decode audio from base64 and save
         const audioBuffer = decodeAudioPayload(body.audio);
         await writeFile(tmpAudioInput, audioBuffer);
 
-        // 2. Zu WAV konvertieren falls nötig (nur wenn FFmpeg verfügbar)
+        // 2. Convert to WAV if needed (only when FFmpeg is available)
         let audioFileForWhisper = tmpAudioInput;
         if (format !== 'wav') {
             try {
@@ -119,7 +119,7 @@ export default defineEventHandler(async (event) => {
             }
         }
 
-        // 3. OpenAI Whisper für Transkription
+        // 3. OpenAI Whisper for transcription
         const openai = getOpenAIClient();
         const transcription = await openai.audio.transcriptions.create({
             file: createReadStream(audioFileForWhisper),
@@ -143,7 +143,7 @@ export default defineEventHandler(async (event) => {
         let decision: PTTResponse['decision'];
 
         if (shouldAutoDecide) {
-            // 4. Direkt LLM Decision aufrufen mit transkribiertem Text
+            // 4. Call the LLM decision directly with the transcribed text
             const decisionInput = {
                 ...body.context,
                 pilot_utterance: transcribedText
@@ -191,7 +191,7 @@ export default defineEventHandler(async (event) => {
         return result;
 
     } catch (error: any) {
-        // Cleanup bei Fehler
+        // Cleanup on error
         await rm(tmpAudioInput).catch(() => {});
         await rm(tmpAudioWav).catch(() => {});
 
