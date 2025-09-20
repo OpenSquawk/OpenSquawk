@@ -18,28 +18,33 @@
           </NuxtLink>
         </div>
         <div class="flex items-center gap-2 sm:gap-3">
-          <NuxtLink to="/login" class="btn btn-primary btn-compact">
+          <NuxtLink to="/login" class="btn btn-primary btn-compact whitespace-nowrap">
             <v-icon icon="mdi-login" size="18"/> Login
           </NuxtLink>
           <NuxtLink
-              to="https://github.com/FaktorxMensch/OpenSquawk"
+              :to="GITHUB_URL"
               external
               target="_blank"
               rel="noopener"
-              class="btn btn-ghost btn-compact hidden sm:inline-flex"
+              class="btn btn-ghost btn-compact hidden xl:inline-flex"
           >
             <v-icon icon="mdi-github"/>
             GitHub
           </NuxtLink>
           <button
               type="button"
-              class="inline-flex lg:hidden items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white transition hover:bg-white/10"
+              class="mobile-toggle lg:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1020]"
               :aria-expanded="isMobileNavOpen ? 'true' : 'false'"
               aria-controls="mobile-navigation"
               aria-label="Toggle navigation"
               @click="toggleMobileNav"
           >
-            <v-icon :icon="isMobileNavOpen ? 'mdi-close' : 'mdi-menu'" size="22"/>
+            <span class="sr-only">Toggle navigation</span>
+            <span class="hamburger" :class="{ 'is-open': isMobileNavOpen }">
+              <span class="hamburger-bar"></span>
+              <span class="hamburger-bar"></span>
+              <span class="hamburger-bar"></span>
+            </span>
           </button>
         </div>
       </nav>
@@ -52,13 +57,19 @@
           <div class="container-outer py-4 space-y-4">
             <nav class="grid gap-2 text-sm">
               <NuxtLink
-                  v-for="item in navLinks"
+                  v-for="item in mobileNavLinks"
                   :key="`mobile-${item.to}`"
                   :to="item.to"
-                  class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 transition hover:bg-white/10"
+                  :external="item.external"
+                  :target="item.external ? '_blank' : undefined"
+                  :rel="item.external ? 'noopener' : undefined"
+                  class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 transition hover:bg-white/10"
                   @click="closeMobileNav"
               >
-                <span>{{ item.label }}</span>
+                <span class="flex items-center gap-3">
+                  <v-icon v-if="item.icon" :icon="item.icon" size="18" class="text-white/60"/>
+                  <span>{{ item.label }}</span>
+                </span>
                 <v-icon icon="mdi-chevron-right" size="18" class="text-white/60"/>
               </NuxtLink>
             </nav>
@@ -67,7 +78,7 @@
                 <v-icon icon="mdi-login" size="18"/> Login
               </NuxtLink>
               <NuxtLink
-                  to="https://github.com/FaktorxMensch/OpenSquawk"
+                  :to="GITHUB_URL"
                   external
                   target="_blank"
                   rel="noopener"
@@ -648,7 +659,7 @@
                 </ul>
               </div>
               <NuxtLink
-                  to="https://github.com/FaktorxMensch/OpenSquawk"
+                  :to="GITHUB_URL"
                   external
                   target="_blank"
                   rel="noopener"
@@ -1065,87 +1076,105 @@ POST /api/route/taxi
     </section>
 
     <!-- FOOTER -->
-    <footer class="py-12 bg-[#0b1020] border-t border-white/10" data-aos="fade-up">
-      <div class="container-outer">
-        <div class="grid gap-4 md:grid-cols-4 md:gap-6">
-          <div>
-            <div class="flex items-center gap-2 font-semibold">
-              <v-icon icon="mdi-radar" class="text-cyan-400"/>
-              OpenSquawk
+    <footer class="bg-[#070b16] border-t border-white/10 text-white" data-aos="fade-up">
+      <div class="container-outer py-12 sm:py-16">
+        <div class="flex flex-col gap-10">
+          <div class="footer-brand">
+            <div class="inline-flex items-center justify-center gap-2 sm:justify-start">
+              <v-icon icon="mdi-radar" size="26" class="text-cyan-400"/>
+              <span class="text-lg font-semibold">OpenSquawk</span>
             </div>
-            <p class="mt-3 text-white/70 text-sm">
+            <p class="mx-auto max-w-2xl text-sm text-white/70 sm:mx-0">
               Open-source, low-cost AI ATC for flight simulators. Alpha prototype available – basic coding skills recommended.
             </p>
+            <div class="footer-brand-actions">
+              <NuxtLink
+                  :to="GITHUB_URL"
+                  external
+                  target="_blank"
+                  rel="noopener"
+                  class="footer-action"
+              >
+                <v-icon icon="mdi-github" size="18" class="text-white/70"/>
+                <span>GitHub</span>
+              </NuxtLink>
+              <NuxtLink to="/login" class="footer-action">
+                <v-icon icon="mdi-login" size="18" class="text-white/70"/>
+                <span>Login</span>
+              </NuxtLink>
+            </div>
           </div>
-          <div>
-            <h4 class="font-semibold mb-3">Product</h4>
-            <ul class="space-y-2 text-white/70 text-sm">
-              <li>
-                <NuxtLink to="#features" class="hover:text-cyan-300">
-                  Vision
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="#learn" class="hover:text-cyan-300">
-                  Learning path
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="#pricing" class="hover:text-cyan-300">
-                  Pricing
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4 class="font-semibold mb-3">Resources</h4>
-            <ul class="space-y-2 text-white/70 text-sm">
-              <li>
-                <NuxtLink to="#opensource" class="hover:text-cyan-300">
-                  Open-source
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="#news" class="hover:text-cyan-300">News</NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="#contributing" class="hover:text-cyan-300">
-                  Get involved
-                </NuxtLink>
-              </li>
-              <li><a href="mailto:info@opensquawk.de" class="hover:text-cyan-300">info@opensquawk.de</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 class="font-semibold mb-3">Legal</h4>
-            <ul class="space-y-2 text-white/70 text-sm">
-              <li>
-                <NuxtLink to="/impressum" class="hover:text-cyan-300">
-                  Imprint
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="/datenschutz" class="hover:text-cyan-300">
-                  Privacy
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="/agb" class="hover:text-cyan-300">
-                  Terms
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="/api-docs" class="hover:text-cyan-300">
-                  API documentation
-                </NuxtLink>
-              </li>
-            </ul>
+          <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <h4 class="mb-3 font-semibold">Product</h4>
+              <ul class="space-y-2 text-sm text-white/70">
+                <li>
+                  <NuxtLink to="#features" class="hover:text-cyan-300">
+                    Vision
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="#learn" class="hover:text-cyan-300">
+                    Learning path
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="#pricing" class="hover:text-cyan-300">
+                    Pricing
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="mb-3 font-semibold">Resources</h4>
+              <ul class="space-y-2 text-sm text-white/70">
+                <li>
+                  <NuxtLink to="#opensource" class="hover:text-cyan-300">
+                    Open-source
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="#news" class="hover:text-cyan-300">News</NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="#contributing" class="hover:text-cyan-300">
+                    Get involved
+                  </NuxtLink>
+                </li>
+                <li><a href="mailto:info@opensquawk.de" class="hover:text-cyan-300">info@opensquawk.de</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="mb-3 font-semibold">Legal</h4>
+              <ul class="space-y-2 text-sm text-white/70">
+                <li>
+                  <NuxtLink to="/impressum" class="hover:text-cyan-300">
+                    Imprint
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="/datenschutz" class="hover:text-cyan-300">
+                    Privacy
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="/agb" class="hover:text-cyan-300">
+                    Terms
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="/api-docs" class="hover:text-cyan-300">
+                    API documentation
+                  </NuxtLink>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
-        <div class="mt-8 pt-6 border-t border-white/10 text-xs text-white/60">
+        <div class="mt-10 border-t border-white/10 pt-6 text-center text-xs text-white/60 sm:text-left">
           © {{ year }} OpenSquawk. Not for real-world aviation. *VATSIM/IVAO: trademarks of their respective owners.
         </div>
       </div>
@@ -1163,13 +1192,30 @@ import type {NewsPost} from '~~/shared/utils/news'
 
 const api = useApi()
 
-const navLinks = [
+const GITHUB_URL = 'https://github.com/FaktorxMensch/OpenSquawk'
+
+interface NavLink {
+  label: string
+  to: string
+}
+
+interface ExtendedNavLink extends NavLink {
+  external?: boolean
+  icon?: string
+}
+
+const navLinks: NavLink[] = [
   {label: 'Vision', to: '#features'},
   {label: 'Roadmap', to: '#roadmap'},
   {label: 'Plans', to: '#pricing'},
   {label: 'Get involved', to: '#contributing'},
   {label: 'FAQ', to: '#faq'},
 ]
+
+const mobileNavLinks = computed<ExtendedNavLink[]>(() => [
+  ...navLinks,
+  {label: 'GitHub', to: GITHUB_URL, external: true, icon: 'mdi-github'},
+])
 
 const isMobileNavOpen = ref(false)
 const toggleMobileNav = () => {
@@ -1718,6 +1764,73 @@ onMounted(async () => {
 .mobile-nav-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+.mobile-toggle {
+  @apply inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10;
+  width: 44px;
+  height: 44px;
+}
+
+.hamburger {
+  position: relative;
+  width: 20px;
+  height: 14px;
+}
+
+.hamburger-bar {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.9);
+  transition: top 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
+}
+
+.hamburger-bar:nth-child(1) {
+  top: 0;
+}
+
+.hamburger-bar:nth-child(2) {
+  top: 6px;
+}
+
+.hamburger-bar:nth-child(3) {
+  top: 12px;
+}
+
+.hamburger.is-open .hamburger-bar:nth-child(1) {
+  top: 6px;
+  transform: rotate(45deg);
+}
+
+.hamburger.is-open .hamburger-bar:nth-child(2) {
+  opacity: 0;
+  transform: translateX(-6px);
+}
+
+.hamburger.is-open .hamburger-bar:nth-child(3) {
+  top: 6px;
+  transform: rotate(-45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hamburger-bar {
+    transition: none;
+  }
+}
+
+.footer-brand {
+  @apply flex flex-col items-center gap-4 text-center sm:items-start sm:text-left;
+}
+
+.footer-brand-actions {
+  @apply flex flex-wrap items-center justify-center gap-3 sm:justify-start;
+}
+
+.footer-action {
+  @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-cyan-400/60 hover:bg-white/10;
 }
 
 @media (max-width: 480px) {
