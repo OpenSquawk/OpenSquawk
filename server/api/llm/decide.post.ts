@@ -1,6 +1,7 @@
 // server/api/llm/decide.post.ts
 import { readBody, createError } from 'h3'
-import { routeDecision, type LLMDecisionInput } from '../../utils/openai'
+import type { LLMDecisionInput } from '~~/shared/types/llm'
+import { routeDecision } from '../../utils/openai'
 
 export default defineEventHandler(async (event) => {
     const body = await readBody<LLMDecisionInput | undefined>(event)
