@@ -675,7 +675,7 @@ let activeRadioSound: RadioSoundInstance | null = null
 let activeRadioCleanup: Array<() => void> = []
 let radioNoiseContext: AudioContext | null = null
 let radioNoiseSource: AudioBufferSourceNode | null = null
-type CachedAudio = { base64: string; mime?: string }
+type CachedAudio = { base64: string; mime?: string; model?: string | null; speed?: number }
 const sayCache = new Map<string, CachedAudio>()
 const pendingSayRequests = new Map<string, Promise<CachedAudio>>()
 const audioReveal = ref(true)
@@ -1531,7 +1531,14 @@ async function requestSayAudio(cacheKey: string, payload: Record<string, unknown
     if (!audioData?.base64) {
       throw new Error('Missing audio data')
     }
-    return { base64: audioData.base64 as string, mime: audioData.mime || 'audio/wav' }
+    const model = typeof response?.meta?.model === 'string' ? response.meta.model : null
+    const speed = typeof response?.speed === 'number' ? response.speed : undefined
+    return {
+      base64: audioData.base64 as string,
+      mime: audioData.mime || 'audio/wav',
+      model,
+      speed
+    }
   })()
 
   pendingSayRequests.set(cacheKey, request)
@@ -1545,7 +1552,18 @@ async function requestSayAudio(cacheKey: string, payload: Record<string, unknown
   }
 }
 
-async function playAudioSource(source: CachedAudio) {
+const clampRate = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+
+const providerSupportsNativeSpeed = (model?: string | null) => {
+  if (!model) return false
+  const normalized = model.toLowerCase()
+  if (normalized.includes('piper') || normalized.includes('speaches')) {
+    return false
+  }
+  return normalized.includes('tts')
+}
+
+async function playAudioSource(source: CachedAudio, targetRate: number) {
   if (!source?.base64) return
 
   audioElement.value = null
@@ -1554,8 +1572,18 @@ async function playAudioSource(source: CachedAudio) {
   const mime = source.mime || 'audio/wav'
   const dataUrl = `data:${mime};base64,${source.base64}`
 
+  const desiredRate = clampRate(Number.isFinite(targetRate) ? targetRate : 1, 0.5, 2)
+  const supportsNativeSpeed = providerSupportsNativeSpeed(source.model)
+  const nativeRate = supportsNativeSpeed
+    ? clampRate(typeof source.speed === 'number' && Number.isFinite(source.speed) ? source.speed : desiredRate, 0.5, 2)
+    : 1
+  const playbackRate = supportsNativeSpeed
+    ? clampRate(desiredRate / (nativeRate || 1), 0.5, 2)
+    : desiredRate
+
   const playWithoutEffects = async () => {
     const audio = new Audio(dataUrl)
+    audio.playbackRate = playbackRate
     audioElement.value = audio
     audio.onended = () => {
       if (audioElement.value === audio) {
@@ -1582,6 +1610,7 @@ async function playAudioSource(source: CachedAudio) {
     }
 
     const sound = await pizzicato.createSoundFromBase64(ctx, source.base64)
+    sound.setPlaybackRate(playbackRate)
     const profile = getReadabilityProfile(readability)
     const { Effects } = pizzicato
 
@@ -1624,7 +1653,8 @@ async function playAudioSource(source: CachedAudio) {
 
     sound.setVolume(profile.gain)
 
-    const noiseStops = createNoiseGenerators(ctx, sound.duration, profile, readability)
+    const playbackDuration = Math.max(0.1, sound.duration / Math.max(playbackRate, 0.01))
+    const noiseStops = createNoiseGenerators(ctx, playbackDuration, profile, readability)
 
     activeRadioSound = sound
     activeRadioCleanup = noiseStops
@@ -1803,7 +1833,7 @@ async function say(text: string) {
     if (!audioData) {
       audioData = await requestSayAudio(cacheKey, payload)
     }
-    await playAudioSource(audioData)
+    await playAudioSource(audioData, normalizedRate)
   } catch (err) {
     console.error('TTS request failed', err)
   } finally {
