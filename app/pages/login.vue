@@ -16,11 +16,7 @@
         class="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden px-5 py-8 sm:px-8 lg:flex-row lg:items-stretch lg:py-12 lg:pl-0 min-h-0">
       <div
           class="relative hidden h-full min-h-0 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:flex lg:w-[48%]">
-<!--        <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway"-->
-<!--        <img src="/img/learn/modules/img13.jpeg" alt="Guiding lights on a runway"-->
-<!--        <img src="/img/learn/modules/img2.jpeg" alt="Guiding lights on a runway"-->
-<!--        <img src="/img/learn/modules/img4.jpeg" alt="Guiding lights on a runway"-->
-        <img src="/img/learn/modules/img4.jpeg" alt="Guiding lights on a runway"
+        <img :src="'/img/login/img' + (Math.ceil(Math.random() * 3)) + '.jpeg'" alt="Guiding lights on a runway"
              class="absolute inset-0 h-full w-full object-cover"/>
         <div class="absolute inset-0 bg-gradient-to-t from-[#050816]/95 via-[#050816]/40 to-transparent"/>
         <div class="relative z-10 flex h-full flex-col justify-between p-10">
