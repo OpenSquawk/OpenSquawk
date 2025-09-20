@@ -1,3 +1,5 @@
+// call GET: http://localhost:3000/api/service/tools/taxiroute?icao=EDDF&origin_lat=50.046377&origin_lng=8.558253&dest_lat=50.04609&dest_lng=8.57114
+
 import { defineEventHandler, getQuery } from 'h3'
 
 type Node = { id: number; lat: number; lon: number }
