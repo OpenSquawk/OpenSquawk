@@ -1,5 +1,10 @@
 <template>
   <div class="relative flex min-h-screen max-h-screen flex-col overflow-hidden bg-gradient-to-br from-[#050713] via-[#080d1f] to-[#010208] text-white">
+    <div class="pointer-events-none absolute inset-0 -z-20">
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.22),_transparent_65%)]" />
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_rgba(129,140,248,0.16),_transparent_70%)]" />
+    </div>
+
     <div class="pointer-events-none absolute inset-0 -z-10 opacity-70">
       <div class="orb orb-one" />
       <div class="orb orb-two" />
@@ -120,7 +125,7 @@
                 </div>
               </div>
 
-              <button type="submit" class="btn btn-primary btn-fancy w-full" :disabled="loginLoading">
+              <button type="submit" class="btn btn-primary w-full" :disabled="loginLoading">
                 <span v-if="loginLoading" class="relative z-10 flex items-center justify-center gap-2">
                   <v-progress-circular indeterminate size="16" width="2" color="white" />
                   Signing you in…
@@ -201,7 +206,7 @@
                 </label>
               </div>
 
-              <button type="submit" class="btn btn-primary btn-fancy w-full" :disabled="registerLoading || !canRegister">
+              <button type="submit" class="btn btn-primary w-full" :disabled="registerLoading || !canRegister">
                 <span v-if="registerLoading" class="relative z-10 flex items-center justify-center gap-2">
                   <v-progress-circular indeterminate size="16" width="2" color="white" />
                   Registering…
@@ -422,6 +427,18 @@ onMounted(() => {
   @apply flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500/10 text-sm font-semibold text-cyan-200;
 }
 
+.btn {
+  @apply relative inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-base font-semibold transition;
+}
+
+.btn-primary {
+  @apply bg-cyan-400 text-slate-950 shadow-[0_14px_35px_rgba(56,189,248,0.35)] hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent;
+}
+
+.btn-primary:disabled {
+  @apply cursor-not-allowed opacity-70 shadow-none;
+}
+
 .mode-toggle {
   @apply relative grid grid-cols-2 items-center overflow-hidden rounded-full border border-white/10 bg-white/5 p-1 shadow-inner;
   color: rgba(255, 255, 255, 0.68);
@@ -473,25 +490,6 @@ onMounted(() => {
 
 .mode-toggle__btn:active {
   transform: translateY(0);
-}
-
-.btn-fancy {
-  @apply relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 text-base font-semibold text-slate-950 shadow-lg shadow-cyan-500/30 transition focus:outline-none focus:ring-2 focus:ring-cyan-300/70 focus:ring-offset-2 focus:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-70;
-}
-
-.btn-fancy::before {
-  content: '';
-  position: absolute;
-  inset: -120% 0 auto 0;
-  height: 200%;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 45%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.35) 55%, transparent 100%);
-  transform: translateX(-100%);
-  animation: shimmer 4s infinite;
-  opacity: 0.85;
-}
-
-.btn-fancy:disabled::before {
-  opacity: 0.4;
 }
 
 .orb {
@@ -569,18 +567,6 @@ onMounted(() => {
   transform: translateY(0);
 }
 
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  50% {
-    transform: translateX(100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
 @keyframes orbFloat {
   0%, 100% {
     transform: translate3d(0, 0, 0) scale(1);
@@ -600,7 +586,6 @@ onMounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .btn-fancy::before,
   .orb,
   .floating-card,
   .mode-toggle__glow {
