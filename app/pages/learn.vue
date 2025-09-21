@@ -4280,9 +4280,15 @@ onMounted(() => {
   background:
       radial-gradient(420px 260px at -10% -20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
       linear-gradient(150deg, color-mix(in srgb, var(--bg2) 82%, transparent), color-mix(in srgb, var(--text) 6%, transparent));
-  gap: 28px;
+  --module-overview-gap: 28px;
+  --lesson-track-max-height: 400px;
+  --lesson-track-opacity: 1;
+  --lesson-track-pointer-events: auto;
+  --lesson-track-padding-bottom: 12px;
+  --lesson-track-offset: 0px;
   display: flex;
   flex-direction: column;
+  gap: var(--module-overview-gap);
   border-radius: 28px;
   isolation: isolate;
 }
@@ -4407,7 +4413,8 @@ onMounted(() => {
 
 .lesson-track {
   overflow-x: auto;
-  padding-bottom: 12px;
+  overflow-y: hidden;
+  padding-bottom: var(--lesson-track-padding-bottom, 12px);
   margin: 0;
   padding-left: 6px;
   padding-right: 6px;
@@ -4415,6 +4422,32 @@ onMounted(() => {
   mask-image: linear-gradient(to right, transparent, rgba(0, 0, 0, .9) 20%, rgba(0, 0, 0, .9) 80%, transparent);
   position: relative;
   z-index: 1;
+  max-height: var(--lesson-track-max-height, 400px);
+  opacity: var(--lesson-track-opacity, 1);
+  pointer-events: var(--lesson-track-pointer-events, auto);
+  transform: translateY(var(--lesson-track-offset, 0px));
+  transition: max-height .3s ease, opacity .3s ease, padding-bottom .3s ease, transform .3s ease;
+}
+
+@media (hover: hover) {
+  .module-overview {
+    --module-overview-gap: 18px;
+    --lesson-track-max-height: 0px;
+    --lesson-track-opacity: 0;
+    --lesson-track-pointer-events: none;
+    --lesson-track-padding-bottom: 0px;
+    --lesson-track-offset: -12px;
+  }
+
+  .module-overview:hover,
+  .module-overview:focus-within {
+    --module-overview-gap: 28px;
+    --lesson-track-max-height: 400px;
+    --lesson-track-opacity: 1;
+    --lesson-track-pointer-events: auto;
+    --lesson-track-padding-bottom: 12px;
+    --lesson-track-offset: 0px;
+  }
 }
 
 .lesson-grid {
