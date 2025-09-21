@@ -1,7 +1,8 @@
 // communicationsEngine composable
-import { ref, computed, readonly } from 'vue'
+import { ref, computed, readonly, reactive } from 'vue'
 import type {
     RuntimeDecisionTree,
+    RuntimeDecisionSystem,
     RuntimeDecisionState,
     RuntimeDecisionAutoTransition,
     DecisionNodeAutoTrigger,
@@ -93,6 +94,19 @@ export interface EngineLog {
     state: string
     radioCheck?: boolean
     offSchema?: boolean
+    flow?: string
+}
+
+interface FlowSnapshot {
+    tree: RuntimeDecisionTree
+    variables: Record<string, any>
+    flags: EngineFlags
+    telemetry: TelemetryState
+    currentStateId: string
+    communicationLog: EngineLog[]
+    autoHistory: Map<string, Set<string>>
+    flightContext: FlightContext
+    ready: boolean
 }
 
 type TelemetryState = {
@@ -111,6 +125,33 @@ export function normalizeATCText(text: string, context: Record<string, any>): st
     return normalizeRadioPhrase(rendered)
 }
 
+function createDefaultFlightContext(): FlightContext {
+    return {
+        callsign: '',
+        aircraft: 'A320',
+        dep: 'EDDF',
+        dest: 'EDDM',
+        stand: 'A12',
+        runway: '25R',
+        squawk: '1234',
+        atis_code: 'K',
+        sid: 'ANEKI7S',
+        transition: 'ANEKI',
+        flight_level: 'FL360',
+        atis_freq: '118.025',
+        ground_freq: '121.700',
+        tower_freq: '118.700',
+        departure_freq: '125.350',
+        approach_freq: '120.800',
+        handoff_freq: '121.800',
+        qnh_hpa: 1015,
+        taxi_route: 'A, V',
+        remarks: 'standard',
+        time_now: undefined,
+        phase: 'clearance',
+    }
+}
+
 function renderTpl(tpl: string, ctx: Record<string, any>): string {
     return tpl.replace(/\{([\w.]+)\}/g, (_m, key) => {
         const parts = key.split('.')
@@ -121,8 +162,14 @@ function renderTpl(tpl: string, ctx: Record<string, any>): string {
 }
 
 export default function useCommunicationsEngine() {
+    const runtimeSystem = ref<RuntimeDecisionSystem | null>(null)
+    const flowOrder = ref<string[]>([])
+    const activeFlowSlug = ref<string>('')
+
     const tree = ref<RuntimeDecisionTree | null>(null)
     const ready = ref(false)
+
+    const flowSnapshots = reactive<Record<string, FlowSnapshot>>({})
 
     const states = computed<Record<string, RuntimeDecisionState>>(() => tree.value?.states ?? {})
 
@@ -148,31 +195,8 @@ export default function useCommunicationsEngine() {
         heading_deg: 0,
     })
 
-    const autoExecutionHistory = new Map<string, Set<string>>()
-
     // Flight context used for pm_alt.vue integration
-    const flightContext = ref<FlightContext>({
-        callsign: '',
-        aircraft: 'A320',
-        dep: 'EDDF',
-        dest: 'EDDM',
-        stand: 'A12',
-        runway: '25R',
-        squawk: '1234',
-        atis_code: 'K',
-        sid: 'ANEKI7S',
-        transition: 'ANEKI',
-        flight_level: 'FL360',
-        atis_freq: '118.025',
-        ground_freq: '121.700',
-        tower_freq: '118.700',
-        departure_freq: '125.350',
-        approach_freq: '120.800',
-        handoff_freq: '121.800',
-        qnh_hpa: 1015,
-        taxi_route: 'A, V',
-        phase: 'clearance'
-    })
+    const flightContext = ref<FlightContext>(createDefaultFlightContext())
 
     const currentState = computed<RuntimeDecisionState & { id: string } | null>(() => {
         const stateMap = states.value
@@ -183,6 +207,140 @@ export default function useCommunicationsEngine() {
         return base ? { ...base, id } : null
     })
 
+    function ensureSnapshot(slug: string): FlowSnapshot {
+        const snapshot = flowSnapshots[slug]
+        if (!snapshot) {
+            throw new Error(`Flow snapshot not loaded: ${slug}`)
+        }
+        return snapshot
+    }
+
+    function getActiveSnapshot(): FlowSnapshot | null {
+        if (!activeFlowSlug.value) return null
+        return flowSnapshots[activeFlowSlug.value] || null
+    }
+
+    function assignActiveVariables(next: Record<string, any>) {
+        variables.value = next
+        if (activeFlowSlug.value && flowSnapshots[activeFlowSlug.value]) {
+            flowSnapshots[activeFlowSlug.value].variables = next
+        }
+    }
+
+    function assignActiveFlags(next: EngineFlags) {
+        flags.value = next
+        if (activeFlowSlug.value && flowSnapshots[activeFlowSlug.value]) {
+            flowSnapshots[activeFlowSlug.value].flags = next
+        }
+    }
+
+    function assignActiveTelemetry(next: TelemetryState) {
+        telemetry.value = next
+        if (activeFlowSlug.value && flowSnapshots[activeFlowSlug.value]) {
+            flowSnapshots[activeFlowSlug.value].telemetry = next
+        }
+    }
+
+    function assignCommunicationLog(next: EngineLog[]) {
+        communicationLog.value = next
+        if (activeFlowSlug.value && flowSnapshots[activeFlowSlug.value]) {
+            flowSnapshots[activeFlowSlug.value].communicationLog = next
+        }
+    }
+
+    function assignFlightContext(next: FlightContext) {
+        flightContext.value = next
+        if (activeFlowSlug.value && flowSnapshots[activeFlowSlug.value]) {
+            flowSnapshots[activeFlowSlug.value].flightContext = next
+        }
+    }
+
+    function setActiveStateId(stateId: string) {
+        currentStateId.value = stateId
+        if (activeFlowSlug.value && flowSnapshots[activeFlowSlug.value]) {
+            flowSnapshots[activeFlowSlug.value].currentStateId = stateId
+        }
+    }
+
+    function createSnapshotFromTree(treeData: RuntimeDecisionTree): FlowSnapshot {
+        const variables = { ...treeData.variables }
+        const baseFlags = (treeData.flags && typeof treeData.flags === 'object') ? { ...treeData.flags } : {}
+        const stack = Array.isArray((baseFlags as any).stack) ? [...(baseFlags as any).stack] : []
+        const flags: EngineFlags = {
+            in_air: Boolean((baseFlags as any).in_air),
+            emergency_active: Boolean((baseFlags as any).emergency_active),
+            current_unit: typeof (baseFlags as any).current_unit === 'string'
+                ? (baseFlags as any).current_unit
+                : 'DEL',
+            stack,
+            off_schema_count: Number((baseFlags as any).off_schema_count) || 0,
+            radio_checks_done: Number((baseFlags as any).radio_checks_done) || 0,
+            ...(baseFlags as EngineFlags),
+        }
+        if (!Array.isArray(flags.stack)) {
+            flags.stack = []
+        }
+
+        const telemetry: TelemetryState = {
+            altitude_ft: Number((baseFlags as any).altitude_ft) || 0,
+            speed_kts: Number((baseFlags as any).speed_kts) || 0,
+            groundspeed_kts: Number((baseFlags as any).groundspeed_kts) || 0,
+            vertical_speed_fpm: Number((baseFlags as any).vertical_speed_fpm) || 0,
+            latitude_deg: Number((baseFlags as any).latitude_deg) || 0,
+            longitude_deg: Number((baseFlags as any).longitude_deg) || 0,
+            heading_deg: Number((baseFlags as any).heading_deg) || 0,
+        }
+
+        const log: EngineLog[] = []
+        const snapshotContext = createDefaultFlightContext()
+        snapshotContext.phase = 'clearance'
+
+        const autoHistory = new Map<string, Set<string>>()
+        if (treeData.start_state) {
+            autoHistory.set(treeData.start_state, new Set())
+        }
+
+        return {
+            tree: treeData,
+            variables,
+            flags,
+            telemetry,
+            currentStateId: treeData.start_state,
+            communicationLog: log,
+            autoHistory,
+            flightContext: snapshotContext,
+            ready: true,
+        }
+    }
+
+    function persistActiveSnapshot() {
+        if (!activeFlowSlug.value) return
+        const snapshot = flowSnapshots[activeFlowSlug.value]
+        if (!snapshot) return
+        snapshot.variables = variables.value
+        snapshot.flags = flags.value
+        snapshot.telemetry = telemetry.value
+        snapshot.currentStateId = currentStateId.value
+        snapshot.communicationLog = communicationLog.value
+        snapshot.flightContext = flightContext.value
+        snapshot.ready = ready.value
+    }
+
+    function activateFlow(slug: string) {
+        const snapshot = ensureSnapshot(slug)
+        if (activeFlowSlug.value && activeFlowSlug.value !== slug) {
+            persistActiveSnapshot()
+        }
+        activeFlowSlug.value = slug
+        tree.value = snapshot.tree
+        assignActiveVariables(snapshot.variables)
+        assignActiveFlags(snapshot.flags)
+        assignActiveTelemetry(snapshot.telemetry)
+        assignCommunicationLog(snapshot.communicationLog)
+        assignFlightContext(snapshot.flightContext)
+        setActiveStateId(snapshot.currentStateId)
+        ready.value = snapshot.ready
+    }
     const nextCandidates = computed<string[]>(() => {
         const s = currentState.value
         if (!s) return []
@@ -210,59 +368,126 @@ export default function useCommunicationsEngine() {
         return tree.value
     }
 
-    function resetAutoHistory(stateId: string) {
-        autoExecutionHistory.set(stateId, new Set())
+    function resetAutoHistory(stateId: string, slug = activeFlowSlug.value) {
+        if (!slug) return
+        const snapshot = ensureSnapshot(slug)
+        snapshot.autoHistory.set(stateId, new Set())
     }
 
-    function markAutoExecuted(stateId: string, transitionId: string) {
-        if (!autoExecutionHistory.has(stateId)) {
-            autoExecutionHistory.set(stateId, new Set())
+    function markAutoExecuted(stateId: string, transitionId: string, slug = activeFlowSlug.value) {
+        if (!slug) return
+        const snapshot = ensureSnapshot(slug)
+        if (!snapshot.autoHistory.has(stateId)) {
+            snapshot.autoHistory.set(stateId, new Set())
         }
-        autoExecutionHistory.get(stateId)!.add(transitionId)
+        snapshot.autoHistory.get(stateId)!.add(transitionId)
     }
 
-    function hasAutoExecuted(stateId: string, transitionId: string): boolean {
-        const set = autoExecutionHistory.get(stateId)
+    function hasAutoExecuted(stateId: string, transitionId: string, slug = activeFlowSlug.value): boolean {
+        if (!slug) return false
+        const snapshot = ensureSnapshot(slug)
+        const set = snapshot.autoHistory.get(stateId)
         return set ? set.has(transitionId) : false
     }
 
     function resetEngineFromTree(treeData: RuntimeDecisionTree) {
-        tree.value = treeData
-        variables.value = { ...treeData.variables }
-        const baseFlags = (treeData.flags && typeof treeData.flags === 'object') ? { ...treeData.flags } : {}
-        const stack = Array.isArray(baseFlags.stack) ? [...baseFlags.stack] : []
-        flags.value = {
-            in_air: Boolean(baseFlags.in_air),
-            emergency_active: Boolean(baseFlags.emergency_active),
-            current_unit: typeof baseFlags.current_unit === 'string' ? baseFlags.current_unit : 'DEL',
-            stack,
-            off_schema_count: 0,
-            radio_checks_done: 0,
-            ...baseFlags,
+        const system: RuntimeDecisionSystem = {
+            main: treeData.slug,
+            order: [treeData.slug],
+            flows: { [treeData.slug]: treeData },
         }
-        if (!Array.isArray(flags.value.stack)) {
-            flags.value.stack = []
+        resetEngineFromSystem(system, { activeSlug: treeData.slug })
+    }
+
+    function resetEngineFromSystem(system: RuntimeDecisionSystem, options: { activeSlug?: string } = {}) {
+        runtimeSystem.value = system
+        const order = Array.isArray(system.order) && system.order.length
+            ? [...system.order]
+            : Object.keys(system.flows)
+        flowOrder.value = order
+
+        for (const key of Object.keys(flowSnapshots)) {
+            delete flowSnapshots[key]
         }
-        currentStateId.value = treeData.start_state
-        communicationLog.value = []
-        telemetry.value = {
-            altitude_ft: Number(baseFlags.altitude_ft) || 0,
-            speed_kts: Number(baseFlags.speed_kts) || 0,
-            groundspeed_kts: Number(baseFlags.groundspeed_kts) || 0,
-            vertical_speed_fpm: Number(baseFlags.vertical_speed_fpm) || 0,
-            latitude_deg: Number(baseFlags.latitude_deg) || 0,
-            longitude_deg: Number(baseFlags.longitude_deg) || 0,
-            heading_deg: Number(baseFlags.heading_deg) || 0,
+
+        for (const slug of order) {
+            const treeData = system.flows[slug]
+            if (!treeData) continue
+            flowSnapshots[slug] = createSnapshotFromTree(treeData)
         }
-        autoExecutionHistory.clear()
-        resetAutoHistory(currentStateId.value)
-        flightContext.value.phase = 'clearance'
-        ready.value = true
-        evaluateAutoTransitions()
+
+        const preferred = options.activeSlug && system.flows[options.activeSlug]
+            ? options.activeSlug
+            : system.main && system.flows[system.main]
+                ? system.main
+                : order[0]
+
+        if (preferred) {
+            activateFlow(preferred)
+            ready.value = true
+            const snapshot = ensureSnapshot(preferred)
+            resetAutoHistory(snapshot.currentStateId, preferred)
+            evaluateAutoTransitions()
+        } else {
+            activeFlowSlug.value = ''
+            tree.value = null
+            ready.value = false
+            assignActiveVariables({})
+            assignActiveFlags({
+                in_air: false,
+                emergency_active: false,
+                current_unit: 'DEL',
+                stack: [],
+                off_schema_count: 0,
+                radio_checks_done: 0,
+            })
+            assignActiveTelemetry({
+                altitude_ft: 0,
+                speed_kts: 0,
+                groundspeed_kts: 0,
+                vertical_speed_fpm: 0,
+                latitude_deg: 0,
+                longitude_deg: 0,
+                heading_deg: 0,
+            })
+            assignCommunicationLog([])
+            assignFlightContext(createDefaultFlightContext())
+            setActiveStateId('')
+        }
     }
 
     function loadRuntimeTree(data: RuntimeDecisionTree) {
         resetEngineFromTree(data)
+    }
+
+    function loadRuntimeSystem(data: RuntimeDecisionSystem, options: { activeSlug?: string } = {}) {
+        resetEngineFromSystem(data, options)
+    }
+
+    const activeFlow = computed(() => activeFlowSlug.value)
+
+    const availableFlows = computed(() => {
+        if (!runtimeSystem.value) return [] as Array<{ slug: string; name: string; description?: string; start: string }>
+        return flowOrder.value
+            .filter((slug) => Boolean(runtimeSystem.value!.flows[slug]))
+            .map((slug) => {
+                const treeData = runtimeSystem.value!.flows[slug]
+                return {
+                    slug,
+                    name: treeData.name || slug,
+                    description: treeData.description,
+                    start: treeData.start_state,
+                }
+            })
+    })
+
+    function setActiveFlow(slug: string) {
+        if (!slug || !flowSnapshots[slug]) {
+            throw new Error(`Flow snapshot not loaded: ${slug}`)
+        }
+        activateFlow(slug)
+        ready.value = true
+        queueMicrotask(() => evaluateAutoTransitions())
     }
 
     async function fetchRuntimeTree(slug = 'icao_atc_decision_tree') {
@@ -271,8 +496,9 @@ export default function useCommunicationsEngine() {
         if (typeof fetcher !== 'function') {
             throw new Error('Universal fetch is not available in this context')
         }
-        const data = await fetcher<RuntimeDecisionTree>(`/api/decision-flows/${slug}/runtime`)
-        resetEngineFromTree(data)
+        const data = await fetcher<RuntimeDecisionSystem>('/api/decision-flows/runtime')
+        const activeSlug = slug && data.flows[slug] ? slug : data.main
+        resetEngineFromSystem(data, { activeSlug })
     }
 
     function normalizeComparableValue(value: any): any {
@@ -417,7 +643,7 @@ export default function useCommunicationsEngine() {
     function initializeFlight(fpl: any) {
         const runtime = ensureTree()
         // Set variables
-        variables.value = {
+        const nextVariables = {
             ...variables.value,
             callsign: fpl.callsign || fpl.callsign,
             acf_type: fpl.aircraft?.split('/')[0] || 'A320',
@@ -448,6 +674,7 @@ export default function useCommunicationsEngine() {
             remarks: 'standard',
             time_now: new Date().toISOString()
         }
+        assignActiveVariables(nextVariables)
 
         // Update flight context
         Object.assign(flightContext.value, {
@@ -455,7 +682,7 @@ export default function useCommunicationsEngine() {
             phase: 'clearance'
         })
 
-        flags.value = {
+        const nextFlags: EngineFlags = {
             ...flags.value,
             in_air: false,
             emergency_active: false,
@@ -464,10 +691,11 @@ export default function useCommunicationsEngine() {
             off_schema_count: 0,
             radio_checks_done: 0
         }
+        assignActiveFlags(nextFlags)
 
-        currentStateId.value = runtime.start_state
-        communicationLog.value = []
-        resetAutoHistory(currentStateId.value)
+        setActiveStateId(runtime.start_state)
+        assignCommunicationLog([])
+        resetAutoHistory(runtime.start_state)
     }
 
     function updateFrequencyVariables(update: Partial<Record<FrequencyVariableKey, string>>) {
@@ -624,7 +852,7 @@ export default function useCommunicationsEngine() {
             const fallback = typeof raw === 'number' ? raw : Number(raw)
             next[key] = Number.isNaN(fallback) ? current : fallback
         }
-        telemetry.value = next
+        assignActiveTelemetry(next)
         queueMicrotask(() => evaluateAutoTransitions())
     }
 
@@ -693,7 +921,7 @@ export default function useCommunicationsEngine() {
             flags.value.stack.push(currentStateId.value)
         }
 
-        currentStateId.value = stateId
+        setActiveStateId(stateId)
         resetAutoHistory(stateId)
         const s = currentState.value
         if (!s) return
@@ -764,7 +992,8 @@ export default function useCommunicationsEngine() {
             normalized: normalizeATCText(msg, exposeCtxFlat()),
             state: stateId,
             radioCheck: options.radioCheck,
-            offSchema: options.offSchema
+            offSchema: options.offSchema,
+            flow: activeFlowSlug.value || undefined,
         }
         communicationLog.value.push(entry)
     }
@@ -855,7 +1084,9 @@ export default function useCommunicationsEngine() {
         nextCandidates,
         activeFrequency,
         communicationLog: readonly(communicationLog),
-        clearCommunicationLog: () => { communicationLog.value = [] },
+        clearCommunicationLog: () => { assignCommunicationLog([]) },
+        activeFlow,
+        availableFlows,
 
         // pm_alt.vue integration
         flightContext: readonly(flightContext),
@@ -865,7 +1096,9 @@ export default function useCommunicationsEngine() {
         initializeFlight,
         updateFrequencyVariables,
         loadRuntimeTree,
+        loadRuntimeSystem,
         fetchRuntimeTree,
+        setActiveFlow,
         isReady,
 
         // Communication

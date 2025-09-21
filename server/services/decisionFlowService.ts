@@ -9,6 +9,7 @@ import type {
   RuntimeDecisionAutoTransition,
   RuntimeDecisionState,
   RuntimeDecisionTree,
+  RuntimeDecisionSystem,
 } from '~~/shared/types/decision'
 
 export function serializeFlowDocument(doc: DecisionFlowDocument, nodeCount = 0): DecisionFlowModel {
@@ -176,21 +177,20 @@ function serializeRuntimeState(node: DecisionNodeDocument): RuntimeDecisionState
   }
 }
 
-export async function buildRuntimeDecisionTree(slug: string): Promise<RuntimeDecisionTree> {
-  const flowDoc = await DecisionFlow.findOne({ slug })
-  if (!flowDoc) {
-    throw createError({ statusCode: 404, statusMessage: 'Decision flow not found' })
-  }
-
-  const nodes = await DecisionNode.find({ flow: flowDoc._id })
+async function buildRuntimeTreeForDoc(
+  flowDoc: DecisionFlowDocument,
+  nodeDocs?: DecisionNodeDocument[]
+): Promise<RuntimeDecisionTree> {
+  const nodes = nodeDocs ?? (await DecisionNode.find({ flow: flowDoc._id }))
   const states = nodes.reduce<Record<string, RuntimeDecisionState>>((acc, node) => {
     acc[node.stateId] = serializeRuntimeState(node)
     return acc
   }, {})
 
   return {
+    slug: flowDoc.slug,
     schema_version: flowDoc.schemaVersion || '1.0',
-    name: flowDoc.slug,
+    name: flowDoc.name || flowDoc.slug,
     description: flowDoc.description || undefined,
     start_state: flowDoc.startState,
     end_states: Array.isArray(flowDoc.endStates) ? flowDoc.endStates : [],
@@ -201,5 +201,53 @@ export async function buildRuntimeDecisionTree(slug: string): Promise<RuntimeDec
     roles: Array.isArray(flowDoc.roles) ? flowDoc.roles : [],
     phases: Array.isArray(flowDoc.phases) ? flowDoc.phases : [],
     states,
+  }
+}
+
+export async function buildRuntimeDecisionTree(slug: string): Promise<RuntimeDecisionTree> {
+  const flowDoc = await DecisionFlow.findOne({ slug })
+  if (!flowDoc) {
+    throw createError({ statusCode: 404, statusMessage: 'Decision flow not found' })
+  }
+
+  return buildRuntimeTreeForDoc(flowDoc)
+}
+
+export async function buildRuntimeDecisionSystem(): Promise<RuntimeDecisionSystem> {
+  const flowDocs = await DecisionFlow.find().sort({ updatedAt: -1 })
+  if (!flowDocs.length) {
+    throw createError({ statusCode: 404, statusMessage: 'No decision flows available' })
+  }
+
+  const flowIds = flowDocs.map((doc) => doc._id)
+
+  const nodeDocs = await DecisionNode.find({ flow: { $in: flowIds } })
+  const groupedNodes = nodeDocs.reduce<Record<string, DecisionNodeDocument[]>>((acc, node) => {
+    const key = String(node.flow)
+    if (!acc[key]) {
+      acc[key] = []
+    }
+    acc[key].push(node)
+    return acc
+  }, {})
+
+  const runtimeTrees: RuntimeDecisionTree[] = []
+  for (const doc of flowDocs) {
+    const nodes = groupedNodes[String(doc._id)] || []
+    runtimeTrees.push(await buildRuntimeTreeForDoc(doc, nodes))
+  }
+
+  const flows = runtimeTrees.reduce<Record<string, RuntimeDecisionTree>>((acc, tree) => {
+    acc[tree.slug] = tree
+    return acc
+  }, {})
+
+  const order = runtimeTrees.map((tree) => tree.slug)
+  const main = flows['icao_atc_decision_tree'] ? 'icao_atc_decision_tree' : order[0]
+
+  return {
+    main,
+    order,
+    flows,
   }
 }

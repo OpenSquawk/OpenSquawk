@@ -325,7 +325,7 @@
         <div class="flex flex-1 overflow-hidden">
           <section class="relative flex-1 overflow-hidden bg-[#070d1a]">
             <DecisionNodeCanvas
-              v-if="flowDetail"
+              v-if="flowDetail && flowDetail.nodes.length"
               ref="canvasComponent"
               :nodes="canvasNodes"
               :zoom="canvasState.zoom"
@@ -341,6 +341,17 @@
               @update:pan="onUpdatePan"
               @update:zoom="onUpdateZoom"
             />
+            <div
+              v-else-if="flowDetail"
+              class="flex h-full items-center justify-center px-6 text-center text-white/60"
+            >
+              <div class="space-y-4">
+                <p class="text-sm">Dieser Flow enthält noch keine Nodes.</p>
+                <v-btn color="cyan" variant="tonal" prepend-icon="mdi-plus-circle" @click="createInitialNode">
+                  Ersten Node anlegen
+                </v-btn>
+              </div>
+            </div>
             <div v-else class="flex h-full items-center justify-center text-white/60">
               <div class="space-y-3 text-center">
                 <v-progress-circular v-if="flowLoading" indeterminate color="cyan" class="mx-auto" />
@@ -1580,7 +1591,8 @@ async function loadFlows() {
     const response = await api.get<DecisionFlowSummary[]>('/api/editor/flows')
     flows.value = response
     if (!selectedFlowSlug.value && response.length) {
-      selectedFlowSlug.value = response[0].slug
+      const preferred = response.find((flow) => flow.slug === 'icao_atc_decision_tree')?.slug
+      selectedFlowSlug.value = preferred || response[0].slug
     }
   } catch (error) {
     console.error('Failed to load flows', error)
@@ -1649,6 +1661,52 @@ function openCreateFlow() {
 
 function closeCreateFlow() {
   showCreateFlowDialog.value = false
+}
+
+async function createInitialNode() {
+  if (!flowDetail.value) return
+  const slug = flowDetail.value.flow.slug
+  const baseStart = flowDetail.value.flow.startState || 'START'
+  const stateId = baseStart.trim().length ? baseStart.trim().toUpperCase() : 'START'
+  const role = flowDetail.value.flow.roles?.[0] || 'pilot'
+  const phase = flowDetail.value.flow.phases?.[0] || 'General'
+
+  const payload = {
+    stateId,
+    title: flowDetail.value.flow.name ? `${flowDetail.value.flow.name} Start` : 'Erster Node',
+    summary: '',
+    role,
+    phase,
+    transitions: [],
+    triggers: [],
+    conditions: [],
+    layout: { x: 320, y: 180 },
+  }
+
+  try {
+    const created = await api.post<DecisionNodeModel>(`/api/editor/flows/${slug}/nodes`, payload)
+    flowDetail.value.nodes.push(created)
+    flowDetail.value.flow.startState = created.stateId
+    if (!Array.isArray(flowDetail.value.flow.endStates) || !flowDetail.value.flow.endStates.length) {
+      flowDetail.value.flow.endStates = [created.stateId]
+      flowForm.endStates = [created.stateId]
+    }
+    flowForm.startState = created.stateId
+    selectedNodeId.value = created.stateId
+    showSnack('Erster Node erstellt.')
+    const summaryIndex = flows.value.findIndex((flow) => flow.slug === slug)
+    if (summaryIndex !== -1) {
+      const previous = flows.value[summaryIndex]
+      flows.value.splice(summaryIndex, 1, {
+        ...previous,
+        startState: created.stateId,
+        nodeCount: (previous.nodeCount || 0) + 1,
+      })
+    }
+  } catch (error) {
+    console.error('Failed to create initial node', error)
+    showSnack('Erster Node konnte nicht erstellt werden.', 'red')
+  }
 }
 
 async function createFlow() {

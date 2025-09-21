@@ -233,6 +233,7 @@ export interface RuntimeDecisionState {
 }
 
 export interface RuntimeDecisionTree {
+  slug: string
   schema_version: string
   name: string
   description?: string
@@ -245,6 +246,12 @@ export interface RuntimeDecisionTree {
   roles: DecisionNodeRole[]
   phases: string[]
   states: Record<string, RuntimeDecisionState>
+}
+
+export interface RuntimeDecisionSystem {
+  main: string
+  order: string[]
+  flows: Record<string, RuntimeDecisionTree>
 }
 
 export interface DecisionFlowSummary {
