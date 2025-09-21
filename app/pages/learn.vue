@@ -650,7 +650,6 @@
               <div class="hero-detail">
                 <span class="hero-detail-label">Delivery</span>
                 <span class="hero-detail-value">{{ briefingSnapshot.departure.freq }}</span>
-                <span class="hero-detail-sub">{{ briefingSnapshot.departure.freqWords }}</span>
               </div>
               <div class="hero-detail">
                 <span class="hero-detail-label">Push</span>
@@ -662,49 +661,6 @@
               </div>
             </div>
           </div>
-        </section>
-
-        <section class="briefing-summary">
-          <article class="briefing-summary-card">
-            <div class="summary-icon summary-icon--primary">
-              <v-icon size="20">mdi-airplane</v-icon>
-            </div>
-            <div class="summary-body">
-              <span class="summary-label">Callsign</span>
-              <span class="summary-value">{{ briefingSnapshot.callsign }}</span>
-              <span class="summary-sub">{{ briefingSnapshot.radioCall }}</span>
-            </div>
-          </article>
-          <article class="briefing-summary-card">
-            <div class="summary-icon summary-icon--departure">
-              <v-icon size="20">mdi-airplane-takeoff</v-icon>
-            </div>
-            <div class="summary-body">
-              <span class="summary-label">Departure</span>
-              <span class="summary-value">{{ briefingSnapshot.departure.icao }} · RWY {{ briefingSnapshot.departure.runway }}</span>
-              <span class="summary-sub">{{ briefingSnapshot.departure.city }}</span>
-            </div>
-          </article>
-          <article class="briefing-summary-card">
-            <div class="summary-icon summary-icon--arrival">
-              <v-icon size="20">mdi-airplane-landing</v-icon>
-            </div>
-            <div class="summary-body">
-              <span class="summary-label">Arrival</span>
-              <span class="summary-value">{{ briefingSnapshot.arrival.icao }} · RWY {{ briefingSnapshot.arrival.runway }}</span>
-              <span class="summary-sub">{{ briefingSnapshot.arrival.city }}</span>
-            </div>
-          </article>
-          <article class="briefing-summary-card">
-            <div class="summary-icon summary-icon--codes">
-              <v-icon size="20">mdi-radar</v-icon>
-            </div>
-            <div class="summary-body">
-              <span class="summary-label">Codes</span>
-              <span class="summary-value">Squawk {{ briefingSnapshot.codes.squawk }}</span>
-              <span class="summary-sub">Push {{ briefingSnapshot.codes.push }}</span>
-            </div>
-          </article>
         </section>
 
         <div class="briefing-layout">
@@ -4327,7 +4283,6 @@ onMounted(() => {
 
 /* Play */
 .play.has-lesson-actions {
-  padding-bottom: 200px;
 }
 
 .play .play-head {
@@ -4554,9 +4509,10 @@ onMounted(() => {
   text-align: left;
   border: 1px solid var(--border);
   padding: 20px;
+  margin-top: 5px;
   background: color-mix(in srgb, var(--text) 6%, transparent);
   cursor: pointer;
-  border-radius: 16px;
+  border-radius: 6px;
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
   box-shadow: 0 10px 20px rgba(0, 0, 0, .18)
 }
@@ -4567,7 +4523,7 @@ onMounted(() => {
 
 .lesson.active {
   outline: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
-  box-shadow: 0 18px 32px rgba(34, 211, 238, .22)
+  box-shadow: 0 1px 12px rgba(34, 211, 238, .22)
 }
 
 .lesson.ok {
@@ -4910,17 +4866,14 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 20px 24px;
-  border-radius: 24px;
   border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--bg2) 82%, transparent));
   box-shadow: 0 24px 44px rgba(2, 6, 23, .5);
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(calc(100% - 40px), 1100px);
   z-index: 40;
+  padding: 16px 24px;
 }
 
 .lesson-actions-meta {
@@ -5276,7 +5229,6 @@ onMounted(() => {
 }
 
 .footer {
-  margin: 60px 0 24px;
   font-size: 13px;
   color: var(--t3);
 }
