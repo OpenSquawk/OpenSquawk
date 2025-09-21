@@ -1890,4 +1890,8 @@ onMounted(async () => {
     padding: 0.5rem 0.6rem;
   }
 }
+
+.chip.absolute {
+  background: #434752;
+}
 </style>
