@@ -40,7 +40,7 @@
     color-mix(in srgb, var(--bg) 85%, transparent) 60%),
     var(--glass-noise);
     border-bottom: 1px solid var(--glass-border);
-    border-radius: 0 0 14px 14px;
+    border-radius: 0;
 }
 
 /* Panels with extra breathing room */
