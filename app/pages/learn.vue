@@ -117,9 +117,14 @@
             v-for="m in modules"
             :key="m.id"
             class="tile"
-            :class="{ locked: !isModuleUnlocked(m.id) }"
+            :class="tileClass(m.id)"
         >
-          <div class="tile-media" :style="{ backgroundImage: `url(${m.art})` }"></div>
+          <div class="tile-media" :style="{ backgroundImage: `url(${m.art})` }">
+            <span v-if="isFreshModule(m.id)" class="tile-badge">
+              <v-icon size="16">mdi-star-four-points</v-icon>
+              New briefing
+            </span>
+          </div>
           <div class="tile-body">
             <div class="tile-top">
               <div class="tile-title">
@@ -149,6 +154,15 @@
                 {{ modulePrimaryLabel(m.id) }}
               </button>
 
+            </div>
+          </div>
+          <div v-if="!isModuleUnlocked(m.id)" class="tile-overlay">
+            <div class="tile-overlay-inner">
+              <v-icon size="26">mdi-lock-alert</v-icon>
+              <div class="tile-overlay-text">
+                <div class="tile-overlay-title">Clearance pending</div>
+                <div class="tile-overlay-sub">Complete earlier missions to unlock this briefing.</div>
+              </div>
             </div>
           </div>
         </div>
@@ -1207,6 +1221,19 @@ function moduleHasProgress(modId: string) {
   })
 }
 
+function isFreshModule(modId: string) {
+  return isModuleUnlocked(modId) && !moduleHasProgress(modId) && !moduleCompleted(modId)
+}
+
+function tileClass(modId: string) {
+  return {
+    'is-locked': !isModuleUnlocked(modId),
+    'is-complete': moduleCompleted(modId),
+    'is-active': moduleHasProgress(modId) && !moduleCompleted(modId),
+    'is-fresh': isFreshModule(modId),
+  }
+}
+
 function moduleCompleted(modId: string) {
   const module = modules.value.find(item => item.id === modId)
   if (!module) return false
@@ -1241,13 +1268,15 @@ function handleModulePrimary(modId: string) {
 }
 
 function modulePrimaryLabel(modId: string) {
-  if (!moduleHasProgress(modId)) return 'Start'
-  return moduleCompleted(modId) ? 'Review' : 'Continue'
+  if (moduleCompleted(modId)) return 'Replay mission'
+  if (!moduleHasProgress(modId)) return 'Launch mission'
+  return 'Resume mission'
 }
 
 function modulePrimaryIcon(modId: string) {
-  if (!moduleHasProgress(modId)) return 'mdi-play'
-  return moduleCompleted(modId) ? 'mdi-refresh' : 'mdi-skip-next'
+  if (moduleCompleted(modId)) return 'mdi-history'
+  if (!moduleHasProgress(modId)) return 'mdi-rocket-launch'
+  return 'mdi-progress-clock'
 }
 
 function moduleSecondaryLabel(modId: string) {
@@ -1259,24 +1288,24 @@ function moduleSecondaryIcon(modId: string) {
 }
 
 function moduleStatusText(modId: string) {
-  if (!isModuleUnlocked(modId)) return 'Locked'
-  if (moduleCompleted(modId)) return 'Complete'
-  if (moduleHasProgress(modId)) return 'Progress'
-  return 'Ready'
+  if (!isModuleUnlocked(modId)) return 'Clearance pending'
+  if (moduleCompleted(modId)) return 'Mission complete'
+  if (moduleHasProgress(modId)) return 'In progress'
+  return 'Ready to launch'
 }
 
 function moduleStatusIcon(modId: string) {
-  if (!isModuleUnlocked(modId)) return 'mdi-lock'
-  if (moduleCompleted(modId)) return 'mdi-check-decagram'
-  if (moduleHasProgress(modId)) return 'mdi-progress-clock'
-  return 'mdi-play-circle'
+  if (!isModuleUnlocked(modId)) return 'mdi-lock-alert'
+  if (moduleCompleted(modId)) return 'mdi-medal-outline'
+  if (moduleHasProgress(modId)) return 'mdi-timer-sand-complete'
+  return 'mdi-rocket-launch-outline'
 }
 
 function tileStatusClass(modId: string) {
   if (!isModuleUnlocked(modId)) return 'is-locked'
   if (moduleCompleted(modId)) return 'is-complete'
-  if (moduleHasProgress(modId)) return 'is-progress'
-  return 'is-ready'
+  if (moduleHasProgress(modId)) return 'is-active'
+  return 'is-fresh'
 }
 
 function lessonScoreLabel(modId: string, lesId: string) {
@@ -2360,7 +2389,8 @@ onMounted(() => {
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px
+  gap: 12px;
+  align-items: stretch
 }
 
 .tile {
@@ -2371,10 +2401,24 @@ onMounted(() => {
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 12px 26px rgba(0, 0, 0, .25);
-  transition: transform .25s ease, box-shadow .25s ease
+  transition: transform .25s ease, box-shadow .25s ease;
+  position: relative;
+  min-height: 360px
 }
 
-.tile.locked {
+.tile.is-fresh {
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent)
+}
+
+.tile.is-active {
+  border-color: color-mix(in srgb, #fbbf24 28%, transparent)
+}
+
+.tile.is-complete {
+  border-color: color-mix(in srgb, #22c55e 32%, transparent)
+}
+
+.tile.is-locked {
   filter: saturate(.7) brightness(.9)
 }
 
@@ -2385,14 +2429,33 @@ onMounted(() => {
 .tile-media {
   height: 140px;
   background-size: cover;
-  background-position: center
+  background-position: center;
+  position: relative
+}
+
+.tile-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 65%, transparent), color-mix(in srgb, var(--accent2) 65%, transparent));
+  color: #f8fafc;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  box-shadow: 0 6px 18px rgba(2, 6, 23, .4)
 }
 
 .tile-body {
   padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px
+  gap: 12px;
+  flex: 1
 }
 
 .tile-top {
@@ -2422,13 +2485,13 @@ onMounted(() => {
   color: var(--t3)
 }
 
-.tile-status.is-ready {
+.tile-status.is-fresh {
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 35%, transparent);
   background: color-mix(in srgb, var(--accent) 12%, transparent)
 }
 
-.tile-status.is-progress {
+.tile-status.is-active {
   color: #fbbf24;
   border-color: color-mix(in srgb, #fbbf24 40%, transparent);
   background: color-mix(in srgb, #fbbf24 12%, transparent)
@@ -2444,6 +2507,39 @@ onMounted(() => {
   color: var(--t3);
   border-color: color-mix(in srgb, var(--text) 14%, transparent);
   background: color-mix(in srgb, var(--text) 4%, transparent)
+}
+
+.tile-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 12, 34, .82);
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 28px;
+  backdrop-filter: blur(4px);
+  pointer-events: none
+}
+
+.tile-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 240px
+}
+
+.tile-overlay-title {
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase
+}
+
+.tile-overlay-sub {
+  font-size: 14px;
+  color: rgba(248, 250, 252, .75)
 }
 
 .line {
@@ -2472,7 +2568,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  align-items: stretch
+  align-items: stretch;
+  margin-top: auto
 }
 
 .tile-actions .btn {
