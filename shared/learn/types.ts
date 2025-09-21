@@ -167,4 +167,5 @@ export type ModuleDef = {
   subtitle: string
   art: string
   lessons: Lesson[]
+  bindsFlight?: boolean
 }
