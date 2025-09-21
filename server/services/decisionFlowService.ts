@@ -53,6 +53,8 @@ export function serializeNodeDocument(doc: DecisionNodeDocument): DecisionNodeMo
     trigger: obj.trigger || undefined,
     frequency: obj.frequency || undefined,
     frequencyName: obj.frequencyName || undefined,
+    triggers: Array.isArray(obj.triggers) ? obj.triggers : [],
+    conditions: Array.isArray(obj.conditions) ? obj.conditions : [],
     transitions: Array.isArray(obj.transitions) ? obj.transitions : [],
     layout: obj.layout || undefined,
     metadata: obj.metadata || undefined,

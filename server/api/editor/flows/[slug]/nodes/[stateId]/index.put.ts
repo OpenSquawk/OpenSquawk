@@ -6,6 +6,8 @@ import {
   sanitizeLayout,
   sanitizeLLMTemplate,
   sanitizeMetadata,
+  sanitizeNodeCondition,
+  sanitizeNodeTrigger,
   sanitizeTransition,
 } from '../../../../../../utils/decisionSanitizer'
 import { serializeNodeDocument } from '../../../../../../services/decisionFlowService'
@@ -114,6 +116,14 @@ export default defineEventHandler(async (event) => {
 
   if (Array.isArray(body.transitions)) {
     node.transitions = body.transitions.map((transition: any, index: number) => sanitizeTransition(transition, index))
+  }
+
+  if (Array.isArray(body.triggers)) {
+    node.triggers = body.triggers.map((trigger: any, index: number) => sanitizeNodeTrigger(trigger, index))
+  }
+
+  if (Array.isArray(body.conditions)) {
+    node.conditions = body.conditions.map((condition: any, index: number) => sanitizeNodeCondition(condition, index))
   }
 
   const layout = sanitizeLayout(body.layout)

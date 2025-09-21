@@ -6,6 +6,8 @@ import {
   sanitizeLayout,
   sanitizeLLMTemplate,
   sanitizeMetadata,
+  sanitizeNodeCondition,
+  sanitizeNodeTrigger,
   sanitizeTransition,
 } from '../../../../utils/decisionSanitizer'
 import { serializeNodeDocument } from '../../../../services/decisionFlowService'
@@ -51,6 +53,14 @@ export default defineEventHandler(async (event) => {
     ? body.transitions.map((transition: any, index: number) => sanitizeTransition(transition, index))
     : []
 
+  const triggers = Array.isArray(body.triggers)
+    ? body.triggers.map((trigger: any, index: number) => sanitizeNodeTrigger(trigger, index))
+    : []
+
+  const conditions = Array.isArray(body.conditions)
+    ? body.conditions.map((condition: any, index: number) => sanitizeNodeCondition(condition, index))
+    : []
+
   const layout = sanitizeLayout(body.layout) || { x: 0, y: 0 }
   const metadata = sanitizeMetadata(body.metadata)
   const llmTemplate = sanitizeLLMTemplate(body.llmTemplate)
@@ -89,6 +99,8 @@ export default defineEventHandler(async (event) => {
     frequency: typeof body.frequency === 'string' ? body.frequency.trim() || undefined : undefined,
     frequencyName:
       typeof body.frequencyName === 'string' ? body.frequencyName.trim() || undefined : undefined,
+    triggers,
+    conditions,
     transitions,
     layout,
     metadata,

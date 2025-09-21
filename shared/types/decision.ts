@@ -33,6 +33,35 @@ export interface DecisionNodeAutoTrigger {
   delayMs?: number
 }
 
+export type DecisionNodeTriggerType = 'auto_time' | 'auto_variable' | 'regex' | 'none'
+
+export interface DecisionNodeTrigger {
+  id: string
+  type: DecisionNodeTriggerType
+  order?: number
+  delaySeconds?: number
+  variable?: string
+  operator?: DecisionComparisonOperator
+  value?: number | string | boolean
+  pattern?: string
+  patternFlags?: string
+  description?: string
+}
+
+export type DecisionNodeConditionType = 'variable_value' | 'regex' | 'regex_not'
+
+export interface DecisionNodeCondition {
+  id: string
+  type: DecisionNodeConditionType
+  order?: number
+  variable?: string
+  operator?: DecisionComparisonOperator
+  value?: number | string | boolean
+  pattern?: string
+  patternFlags?: string
+  description?: string
+}
+
 export interface DecisionTransitionMetadata {
   color?: string
   icon?: string
@@ -114,6 +143,8 @@ export interface DecisionNodeModel {
   trigger?: string
   frequency?: string
   frequencyName?: string
+  triggers?: DecisionNodeTrigger[]
+  conditions?: DecisionNodeCondition[]
   transitions: DecisionNodeTransition[]
   layout?: DecisionNodeLayout
   metadata?: DecisionNodeMetadata

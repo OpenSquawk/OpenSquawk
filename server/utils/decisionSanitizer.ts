@@ -1,15 +1,19 @@
 import { randomUUID } from 'node:crypto'
 import type {
   DecisionNodeAutoTrigger,
+  DecisionNodeCondition,
   DecisionNodeLayout,
   DecisionNodeLLMPlaceholder,
   DecisionNodeLLMTemplate,
   DecisionNodeMetadata,
+  DecisionNodeTrigger,
   DecisionNodeTransition,
 } from '~~/shared/types/decision'
 
 const TRANSITION_TYPES = new Set(['next', 'ok', 'bad', 'timer', 'auto', 'interrupt', 'return'])
 const AUTO_TRIGGER_TYPES = new Set(['telemetry', 'variable', 'expression'])
+const NODE_TRIGGER_TYPES = new Set(['auto_time', 'auto_variable', 'regex', 'none'])
+const NODE_CONDITION_TYPES = new Set(['variable_value', 'regex', 'regex_not'])
 const COMPARISON_OPERATORS = new Set(['>', '>=', '<', '<=', '==', '!='])
 
 function asTrimmedString(input: any): string | undefined {
@@ -195,6 +199,126 @@ export function sanitizeAutoTrigger(raw: any): DecisionNodeAutoTrigger | undefin
   const description = asTrimmedString(raw.description)
   if (description) trigger.description = description
   return trigger
+}
+
+export function sanitizeNodeTrigger(raw: any, index = 0): DecisionNodeTrigger {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Invalid node trigger payload')
+  }
+  const type = asTrimmedString(raw.type)
+  if (!type || !NODE_TRIGGER_TYPES.has(type)) {
+    throw new Error('Invalid node trigger type')
+  }
+
+  const trigger: DecisionNodeTrigger = {
+    id: asTrimmedString(raw.id) || `trigger_${randomUUID()}`,
+    type: type as DecisionNodeTrigger['type'],
+    order: typeof raw.order === 'number' ? raw.order : index,
+  }
+
+  if (trigger.type === 'auto_time') {
+    const delay = asNumber(raw.delaySeconds)
+    if (typeof delay !== 'number') {
+      throw new Error('Auto time trigger requires delaySeconds')
+    }
+    trigger.delaySeconds = delay
+  } else if (trigger.type === 'auto_variable') {
+    const variable = asTrimmedString(raw.variable)
+    if (!variable) {
+      throw new Error('Auto variable trigger requires a variable path')
+    }
+    trigger.variable = variable
+    const operator = asTrimmedString(raw.operator)
+    if (!operator || !COMPARISON_OPERATORS.has(operator)) {
+      throw new Error('Auto variable trigger requires a valid operator')
+    }
+    trigger.operator = operator as DecisionNodeTrigger['operator']
+    if (raw.value === undefined) {
+      throw new Error('Auto variable trigger requires a value')
+    }
+    const numberValue = asNumber(raw.value)
+    if (typeof numberValue === 'number') {
+      trigger.value = numberValue
+    } else if (typeof raw.value === 'boolean') {
+      trigger.value = raw.value
+    } else {
+      const stringValue = asTrimmedString(raw.value)
+      if (stringValue === undefined) {
+        throw new Error('Auto variable trigger requires a comparable value')
+      }
+      trigger.value = stringValue
+    }
+  } else if (trigger.type === 'regex') {
+    const pattern = asTrimmedString(raw.pattern)
+    if (!pattern) {
+      throw new Error('Regex trigger requires a pattern')
+    }
+    trigger.pattern = pattern
+    const flags = asTrimmedString(raw.patternFlags)
+    if (flags) trigger.patternFlags = flags
+  }
+
+  const description = asTrimmedString(raw.description)
+  if (description) trigger.description = description
+
+  return trigger
+}
+
+export function sanitizeNodeCondition(raw: any, index = 0): DecisionNodeCondition {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Invalid node condition payload')
+  }
+  const type = asTrimmedString(raw.type)
+  if (!type || !NODE_CONDITION_TYPES.has(type)) {
+    throw new Error('Invalid node condition type')
+  }
+
+  const condition: DecisionNodeCondition = {
+    id: asTrimmedString(raw.id) || `condition_${randomUUID()}`,
+    type: type as DecisionNodeCondition['type'],
+    order: typeof raw.order === 'number' ? raw.order : index,
+  }
+
+  const description = asTrimmedString(raw.description)
+  if (description) condition.description = description
+
+  if (condition.type === 'variable_value') {
+    const variable = asTrimmedString(raw.variable)
+    if (!variable) {
+      throw new Error('Variable condition requires a variable path')
+    }
+    condition.variable = variable
+    const operator = asTrimmedString(raw.operator)
+    if (!operator || !COMPARISON_OPERATORS.has(operator)) {
+      throw new Error('Variable condition requires a valid operator')
+    }
+    condition.operator = operator as DecisionNodeCondition['operator']
+    if (raw.value === undefined) {
+      throw new Error('Variable condition requires a value')
+    }
+    const numberValue = asNumber(raw.value)
+    if (typeof numberValue === 'number') {
+      condition.value = numberValue
+    } else if (typeof raw.value === 'boolean') {
+      condition.value = raw.value
+    } else {
+      const stringValue = asTrimmedString(raw.value)
+      if (stringValue === undefined) {
+        throw new Error('Variable condition requires a comparable value')
+      }
+      condition.value = stringValue
+    }
+  } else {
+    const pattern = asTrimmedString(raw.pattern)
+    if (!pattern) {
+      throw new Error('Regex condition requires a pattern')
+    }
+    condition.pattern = pattern
+    const flags = asTrimmedString(raw.patternFlags)
+    if (flags) condition.patternFlags = flags
+  }
+
+  return condition
 }
 
 export function sanitizeTransition(raw: any, index = 0): DecisionNodeTransition {
