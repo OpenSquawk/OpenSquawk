@@ -32,6 +32,8 @@ export function serializeFlowDocument(doc: DecisionFlowDocument, nodeCount = 0):
     createdAt: doc.createdAt?.toISOString?.() || new Date().toISOString(),
     updatedAt: doc.updatedAt?.toISOString?.() || new Date().toISOString(),
     nodeCount,
+    entryMode: doc.entryMode || 'parallel',
+    isMain: doc.isMain || false,
   }
 }
 
@@ -91,6 +93,8 @@ export async function listDecisionFlows(): Promise<DecisionFlowSummary[]> {
     nodeCount: countMap[String(flow._id)] || 0,
     updatedAt: flow.updatedAt?.toISOString?.() || new Date().toISOString(),
     createdAt: flow.createdAt?.toISOString?.() || new Date().toISOString(),
+    entryMode: flow.entryMode || 'parallel',
+    isMain: Boolean(flow.isMain),
   }))
 }
 
@@ -157,6 +161,8 @@ function serializeRuntimeState(node: DecisionNodeDocument): RuntimeDecisionState
   return {
     role: obj.role as any,
     phase: obj.phase,
+    name: obj.title || undefined,
+    summary: obj.summary || undefined,
     say_tpl: obj.sayTemplate || undefined,
     utterance_tpl: obj.utteranceTemplate || undefined,
     else_say_tpl: obj.elseSayTemplate || undefined,
@@ -203,6 +209,7 @@ async function buildRuntimeTreeForDoc(
     roles: Array.isArray(flowDoc.roles) ? flowDoc.roles : [],
     phases: Array.isArray(flowDoc.phases) ? flowDoc.phases : [],
     states,
+    entry_mode: flowDoc.isMain ? 'main' : flowDoc.entryMode || 'parallel',
   }
 }
 
@@ -245,7 +252,9 @@ export async function buildRuntimeDecisionSystem(): Promise<RuntimeDecisionSyste
   }, {})
 
   const order = runtimeTrees.map((tree) => tree.slug)
-  const main = flows['icao_atc_decision_tree'] ? 'icao_atc_decision_tree' : order[0]
+  const preferredMain = flowDocs.find((doc) => doc.isMain)?.slug
+  const fallbackMain = flowDocs.find((doc) => doc.slug === 'icao_atc_decision_tree')?.slug
+  const main = preferredMain || fallbackMain || order[0]
 
   return {
     main,

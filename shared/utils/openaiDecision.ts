@@ -1,9 +1,9 @@
 // utils/openaiDecision.ts
-import type { LLMDecision, LLMDecisionInput } from '../types/llm'
+import type { LLMDecisionInput, LLMDecisionResult } from '../types/llm'
 
 /** Client-seitig: ruft den Backend-Endpunkt auf */
-export async function decideNextStateLLM(input: LLMDecisionInput): Promise<LLMDecision> {
-    return await $fetch<LLMDecision>('/api/llm/decide', {
+export async function decideNextStateLLM(input: LLMDecisionInput): Promise<LLMDecisionResult> {
+    return await $fetch<LLMDecisionResult>('/api/llm/decide', {
         method: 'POST',
         body: input
     })

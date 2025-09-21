@@ -7,6 +7,7 @@ import type {
     RuntimeDecisionAutoTransition,
     DecisionNodeAutoTrigger,
 } from '../types/decision'
+import type { FlowActivationInstruction, FlowActivationMode, LLMDecisionTrace } from '../types/llm'
 import { normalizeRadioPhrase } from './radioSpeech'
 
 // --- DecisionTree runtime types ---
@@ -20,6 +21,7 @@ interface EngineFlags {
     stack: string[]
     off_schema_count: number
     radio_checks_done: number
+    session_id: string
     [key: string]: any
 }
 
@@ -120,6 +122,10 @@ type TelemetryState = {
     [key: string]: number
 }
 
+function createSessionId(): string {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 export function normalizeATCText(text: string, context: Record<string, any>): string {
     const rendered = renderTpl(text, context)
     return normalizeRadioPhrase(rendered)
@@ -165,9 +171,12 @@ export default function useCommunicationsEngine() {
     const runtimeSystem = ref<RuntimeDecisionSystem | null>(null)
     const flowOrder = ref<string[]>([])
     const activeFlowSlug = ref<string>('')
+    const sessionId = ref<string>('')
+    const flowStack = ref<string[]>([])
 
     const tree = ref<RuntimeDecisionTree | null>(null)
     const ready = ref(false)
+    const lastDecisionTrace = ref<LLMDecisionTrace | null>(null)
 
     const flowSnapshots = reactive<Record<string, FlowSnapshot>>({})
 
@@ -227,7 +236,18 @@ export default function useCommunicationsEngine() {
         }
     }
 
+    function ensureSessionValue(raw?: string): string {
+        if (raw && typeof raw === 'string' && raw.trim().length) {
+            sessionId.value = raw.trim()
+        } else if (!sessionId.value) {
+            sessionId.value = createSessionId()
+        }
+        return sessionId.value
+    }
+
     function assignActiveFlags(next: EngineFlags) {
+        const normalizedSession = ensureSessionValue(next?.session_id)
+        next.session_id = normalizedSession
         flags.value = next
         if (activeFlowSlug.value && flowSnapshots[activeFlowSlug.value]) {
             flowSnapshots[activeFlowSlug.value].flags = next
@@ -275,10 +295,14 @@ export default function useCommunicationsEngine() {
             stack,
             off_schema_count: Number((baseFlags as any).off_schema_count) || 0,
             radio_checks_done: Number((baseFlags as any).radio_checks_done) || 0,
+            session_id: '',
             ...(baseFlags as EngineFlags),
         }
         if (!Array.isArray(flags.stack)) {
             flags.stack = []
+        }
+        if (typeof flags.session_id !== 'string') {
+            flags.session_id = ''
         }
 
         const telemetry: TelemetryState = {
@@ -340,6 +364,49 @@ export default function useCommunicationsEngine() {
         assignFlightContext(snapshot.flightContext)
         setActiveStateId(snapshot.currentStateId)
         ready.value = snapshot.ready
+    }
+
+    function resolveFlowMode(slug: string | undefined): FlowActivationMode {
+        if (!slug) return 'parallel'
+        const system = runtimeSystem.value
+        if (!system) return 'parallel'
+        if (slug === system.main) return 'main'
+        const treeData = system.flows[slug]
+        if (!treeData) return 'parallel'
+        if (treeData.entry_mode === 'main') return 'main'
+        if (treeData.entry_mode === 'linear') return 'linear'
+        return 'parallel'
+    }
+
+    function normalizeFlowInstruction(target: string | FlowActivationInstruction | null | undefined): FlowActivationInstruction | null {
+        if (!target) return null
+        if (typeof target === 'string') {
+            return { slug: target, mode: resolveFlowMode(target) }
+        }
+        if (!target.slug) return null
+        return { slug: target.slug, mode: target.mode ?? resolveFlowMode(target.slug) }
+    }
+
+    function setActiveFlow(target: string | FlowActivationInstruction, options: { skipStack?: boolean } = {}) {
+        const instruction = normalizeFlowInstruction(target)
+        if (!instruction) {
+            throw new Error(`Flow snapshot not loaded: ${typeof target === 'string' ? target : target?.slug}`)
+        }
+        const slug = instruction.slug
+        if (!slug || !flowSnapshots[slug]) {
+            throw new Error(`Flow snapshot not loaded: ${slug}`)
+        }
+        const previous = activeFlowSlug.value
+        const shouldPush = !options.skipStack
+            && instruction.mode === 'linear'
+            && previous
+            && previous !== slug
+        if (shouldPush) {
+            flowStack.value.push(previous)
+        }
+        activateFlow(slug)
+        ready.value = true
+        queueMicrotask(() => evaluateAutoTransitions())
     }
     const nextCandidates = computed<string[]>(() => {
         const s = currentState.value
@@ -416,6 +483,15 @@ export default function useCommunicationsEngine() {
             flowSnapshots[slug] = createSnapshotFromTree(treeData)
         }
 
+        flowStack.value = []
+        sessionId.value = createSessionId()
+        for (const slug of order) {
+            const snapshot = flowSnapshots[slug]
+            if (snapshot) {
+                snapshot.flags.session_id = sessionId.value
+            }
+        }
+
         const preferred = options.activeSlug && system.flows[options.activeSlug]
             ? options.activeSlug
             : system.main && system.flows[system.main]
@@ -440,6 +516,7 @@ export default function useCommunicationsEngine() {
                 stack: [],
                 off_schema_count: 0,
                 radio_checks_done: 0,
+                session_id: ensureSessionValue(),
             })
             assignActiveTelemetry({
                 altitude_ft: 0,
@@ -466,6 +543,8 @@ export default function useCommunicationsEngine() {
 
     const activeFlow = computed(() => activeFlowSlug.value)
 
+    const mainFlowSlug = computed(() => runtimeSystem.value?.main || '')
+
     const availableFlows = computed(() => {
         if (!runtimeSystem.value) return [] as Array<{ slug: string; name: string; description?: string; start: string }>
         return flowOrder.value
@@ -477,18 +556,10 @@ export default function useCommunicationsEngine() {
                     name: treeData.name || slug,
                     description: treeData.description,
                     start: treeData.start_state,
+                    mode: treeData.entry_mode || (slug === runtimeSystem.value!.main ? 'main' : 'parallel'),
                 }
             })
     })
-
-    function setActiveFlow(slug: string) {
-        if (!slug || !flowSnapshots[slug]) {
-            throw new Error(`Flow snapshot not loaded: ${slug}`)
-        }
-        activateFlow(slug)
-        ready.value = true
-        queueMicrotask(() => evaluateAutoTransitions())
-    }
 
     async function fetchRuntimeTree(slug = 'icao_atc_decision_tree') {
         ready.value = false
@@ -689,7 +760,8 @@ export default function useCommunicationsEngine() {
             current_unit: 'DEL',
             stack: [],
             off_schema_count: 0,
-            radio_checks_done: 0
+            radio_checks_done: 0,
+            session_id: ensureSessionValue(flags.value.session_id)
         }
         assignActiveFlags(nextFlags)
 
@@ -738,10 +810,13 @@ export default function useCommunicationsEngine() {
         }
     }
 
-    function applyLLMDecision(decision: any) {
+    function applyLLMDecision(decision: any, trace?: LLMDecisionTrace | null) {
         if (!decision || typeof decision !== 'object') {
+            lastDecisionTrace.value = null
             return
         }
+
+        lastDecisionTrace.value = trace ?? null
 
         if (decision.updates && typeof decision.updates === 'object') {
             Object.assign(variables.value, decision.updates)
@@ -759,11 +834,14 @@ export default function useCommunicationsEngine() {
             flags.value.stack = decision.stack.slice()
         }
 
-        if (decision.activate_flow && decision.activate_flow !== activeFlowSlug.value) {
-            try {
-                setActiveFlow(decision.activate_flow)
-            } catch (err) {
-                console.warn('[Engine] Failed to activate flow from decision', err)
+        if (decision.activate_flow) {
+            const activation = normalizeFlowInstruction(decision.activate_flow as any)
+            if (activation && (activation.slug !== activeFlowSlug.value || activation.mode === 'main')) {
+                try {
+                    setActiveFlow(activation)
+                } catch (err) {
+                    console.warn('[Engine] Failed to activate flow from decision', err)
+                }
             }
         }
 
@@ -792,7 +870,10 @@ export default function useCommunicationsEngine() {
                 : null
 
         if (resumeFlow) {
-            resumePriorFlow()
+            const resumed = resumeLinearFlow()
+            if (!resumed) {
+                resumeStackedState()
+            }
         } else if (!decision.radio_check && nextState) {
             moveTo(nextState)
         }
@@ -806,31 +887,8 @@ export default function useCommunicationsEngine() {
         if (!ready.value) {
             return null
         }
-        // Log pilot input
         speak('pilot', transcript, currentStateId.value)
-
-        // Radio check detection (fallback if the LLM misses it)
-        const t = transcript.toLowerCase()
-        if (t.includes('radio check') || (t.includes('read') && t.includes('check'))) {
-            const callsign = variables.value.callsign || ''
-            const response = `${callsign}, read you five by five.`
-            flags.value.radio_checks_done++
-
-            setTimeout(() => {
-                speak('atc', response, currentStateId.value, { radioCheck: true })
-            }, 500)
-
-            return response
-        }
-
-        // Emergency Interrupts
-        if (flags.value.in_air && /^(mayday|pan\s*pan)/.test(t)) {
-            const intId = t.startsWith('mayday') ? 'INT_MAYDAY' : 'INT_PANPAN'
-            moveTo(intId)
-            return null
-        }
-
-        return null // Let the LLM decide
+        return null
     }
 
     function processUserTransmission(transcript: string): string | null {
@@ -986,9 +1044,29 @@ export default function useCommunicationsEngine() {
         }
     }
 
-    function resumePriorFlow() {
+    function resumeStackedState() {
         const prev = flags.value.stack.pop()
         if (prev) moveTo(prev)
+    }
+
+    function resumeLinearFlow(): boolean {
+        const previousFlow = flowStack.value.pop()
+        if (previousFlow) {
+            try {
+                setActiveFlow({ slug: previousFlow, mode: resolveFlowMode(previousFlow) }, { skipStack: true })
+                return true
+            } catch (err) {
+                console.warn('[Engine] Failed to resume linear flow', err)
+            }
+        } else if (mainFlowSlug.value && activeFlowSlug.value !== mainFlowSlug.value) {
+            try {
+                setActiveFlow({ slug: mainFlowSlug.value, mode: 'main' }, { skipStack: true })
+                return true
+            } catch (err) {
+                console.warn('[Engine] Failed to restore main flow', err)
+            }
+        }
+        return false
     }
 
     function speak(speaker: Role, tpl: string, stateId: string, options: { radioCheck?: boolean, offSchema?: boolean } = {}) {
@@ -1096,6 +1174,8 @@ export default function useCommunicationsEngine() {
         clearCommunicationLog: () => { assignCommunicationLog([]) },
         activeFlow,
         availableFlows,
+        sessionId: readonly(sessionId),
+        lastDecisionTrace: readonly(lastDecisionTrace),
 
         // pm_alt.vue integration
         flightContext: readonly(flightContext),
@@ -1118,7 +1198,6 @@ export default function useCommunicationsEngine() {
 
         // Flow Control
         moveTo,
-        resumePriorFlow,
 
         // Utilities
         normalizeATCText,

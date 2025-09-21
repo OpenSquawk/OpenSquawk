@@ -13,9 +13,9 @@ export default defineEventHandler(async (event) => {
     }
 
     try {
-        const { decision, trace } = await routeDecision(body)
+        const result = await routeDecision(body)
+        const { decision, trace } = result
 
-        // Log for debugging when off-schema or radio check triggers
         if (decision.off_schema) {
             console.log(`[ATC] Off-schema response for: "${body.pilot_utterance}"`)
         }
@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
             console.log('[ATC] Decision trace captured with', trace.calls.length, 'call(s)')
         }
 
-        return decision
+        return result
     } catch (err: any) {
         console.error('Router failed:', err)
         throw createError({ statusCode: 500, statusMessage: err?.message || 'Router failed' })

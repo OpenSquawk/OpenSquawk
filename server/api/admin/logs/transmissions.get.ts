@@ -17,6 +17,7 @@ type TransmissionListItem = {
   createdAt: string
   metadata?: Record<string, any>
   user?: { id: string; email: string; name?: string; role: string }
+  sessionId?: string
 }
 
 function escapeRegExp(input: string) {
@@ -33,6 +34,7 @@ function mapTransmission(doc: any): TransmissionListItem {
     normalized: doc.normalized || undefined,
     createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : new Date().toISOString(),
     metadata: doc.metadata || undefined,
+    sessionId: doc.sessionId || undefined,
     user: doc.user
       ? {
           id: String(doc.user._id),

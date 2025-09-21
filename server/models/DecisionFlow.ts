@@ -19,6 +19,8 @@ export interface DecisionFlowDocument extends mongoose.Document {
   phases: string[]
   layout?: DecisionFlowLayout
   metadata?: DecisionFlowMetadata
+  entryMode?: 'parallel' | 'linear'
+  isMain?: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -37,6 +39,8 @@ const decisionFlowSchema = new mongoose.Schema<DecisionFlowDocument>(
     hooks: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
     roles: { type: [String], default: () => [] },
     phases: { type: [String], default: () => [] },
+    entryMode: { type: String, enum: ['parallel', 'linear'], default: 'parallel' },
+    isMain: { type: Boolean, default: false },
     layout: {
       type: new mongoose.Schema<DecisionFlowLayout>(
         {
