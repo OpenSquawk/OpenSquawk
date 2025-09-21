@@ -168,7 +168,12 @@
 
     <!-- MODULE -->
 
-    <section v-if="panel==='module' && current" class="container play" aria-label="Module">
+    <section
+        v-if="panel==='module' && current"
+        class="container play"
+        :class="{ 'has-lesson-actions': moduleStage==='lessons' && activeLesson }"
+        aria-label="Module"
+    >
       <div class="play-head">
         <div class="crumbs">
           <button class="link" @click="goToHub">
@@ -186,20 +191,21 @@
             </div>
             <div class="plan-status-body">
               <span class="plan-status-title">
-                {{ currentPlan ? currentPlan.scenario.radioCall : 'Flight plan pending' }}
+                {{ currentPlan ? (currentPlan.scenario.callsign || currentPlan.scenario.radioCall) : 'Flight plan pending' }}
               </span>
               <span class="plan-status-sub" v-if="currentPlan">{{ currentPlanRoute }}</span>
               <span class="plan-status-sub muted" v-else>Select or import a flight to launch.</span>
             </div>
-            <button
-                v-if="currentPlan && moduleStage==='lessons'"
-                class="btn ghost mini"
-                type="button"
-                @click="openMissionBriefing()"
-            >
-              <v-icon size="16">mdi-magnify</v-icon>
-              Briefing
-            </button>
+            <div v-if="currentPlan && moduleStage==='lessons'" class="plan-status-actions">
+              <button class="btn ghost mini" type="button" @click="restartCurrentMission()">
+                <v-icon size="16">mdi-refresh</v-icon>
+                Plan new flight
+              </button>
+              <button class="btn ghost mini" type="button" @click="openMissionBriefing()">
+                <v-icon size="16">mdi-magnify</v-icon>
+                Briefing
+              </button>
+            </div>
           </div>
           <div v-if="moduleStage==='lessons'" class="stats">
             <span class="stat"><v-icon size="18">mdi-check-circle-outline</v-icon> {{ doneCount(current.id) }}/{{ current.lessons.length }}</span>
@@ -838,15 +844,15 @@
                   :class="{ active: activeLesson && activeLesson.id===l.id, ok: bestScore(current.id,l.id)>=80 }"
                   @click="selectLesson(l)"
               >
-                <span class="lesson-score" :class="lessonScoreClass(current.id, l.id)">
-                  <v-icon size="14">{{ lessonScoreIcon(current.id, l.id) }}</v-icon>
-                  {{ lessonScoreLabel(current.id, l.id) }}
-                </span>
                 <div class="lesson-top">
                   <div class="lesson-title">
                     <v-icon size="18">mdi-headset</v-icon>
                     {{ l.title }}
                   </div>
+                  <span class="lesson-score" :class="lessonScoreClass(current.id, l.id)">
+                    <v-icon size="14">{{ lessonScoreIcon(current.id, l.id) }}</v-icon>
+                    {{ lessonScoreLabel(current.id, l.id) }}
+                  </span>
                 </div>
                 <div class="muted small">{{ l.desc }}</div>
                 <div class="tags">
@@ -859,7 +865,7 @@
 
         <div v-if="activeLesson" class="module-detail">
           <div class="console">
-            <div v-if="scenario" class="scenario-bar">
+            <div v-if="scenario && requiresFlightPlan" class="scenario-bar">
               <div class="scenario-item">
                 <span class="scenario-label">Callsign</span>
                 <div class="scenario-value">{{ scenario.callsign }}</div>
@@ -888,26 +894,6 @@
                      class="freq-hint muted small">
                   {{ scenario.frequencyWords[activeFrequency.type] }}
                 </div>
-              </div>
-            </div>
-            <div v-if="requiresFlightPlan" class="mission-controls">
-              <div class="mission-controls-text">
-                <div class="mission-controls-title">Mission controls</div>
-                <p class="muted small">Wrap up, open the briefing again or build a brand-new flight whenever you need.</p>
-              </div>
-              <div class="mission-controls-actions">
-                <button class="btn soft mini" type="button" @click="openMissionBriefing()">
-                  <v-icon size="16">mdi-clipboard-text-outline</v-icon>
-                  View briefing
-                </button>
-                <button class="btn ghost mini" type="button" @click="restartCurrentMission()">
-                  <v-icon size="16">mdi-refresh</v-icon>
-                  Plan new flight
-                </button>
-                <button class="btn ghost mini" type="button" @click="goToHub()">
-                  <v-icon size="16">mdi-home-outline</v-icon>
-                  Return to hub
-                </button>
               </div>
             </div>
             <div class="console-grid">
@@ -1018,10 +1004,6 @@
                     <v-icon size="18">mdi-auto-fix</v-icon>
                     Auto-fill
                   </button>
-                  <button v-if="requiresFlightPlan" class="btn ghost" type="button" @click="openMissionBriefing()">
-                    <v-icon size="18">mdi-magnify</v-icon>
-                    Briefing
-                  </button>
                 </div>
                 <div v-if="result" class="score">
                   <div class="score-num">{{ result.score }}%</div>
@@ -1088,7 +1070,11 @@
     </div>
 
     <!-- FOOTER -->
-    <footer class="footer" role="contentinfo">
+    <footer
+        class="footer"
+        role="contentinfo"
+        :class="{ 'has-lesson-actions': panel==='module' && moduleStage==='lessons' && current && activeLesson }"
+    >
       <div class="container footer-container">
 
         <div
@@ -4340,6 +4326,10 @@ onMounted(() => {
 }
 
 /* Play */
+.play.has-lesson-actions {
+  padding-bottom: 200px;
+}
+
 .play .play-head {
   display: flex;
   justify-content: space-between;
@@ -4402,7 +4392,7 @@ onMounted(() => {
 
 .module-overview {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   border-color: color-mix(in srgb, var(--accent) 38%, transparent);
   background:
       radial-gradient(420px 260px at -10% -20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
@@ -4412,6 +4402,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   border-radius: 28px;
+  isolation: isolate;
 }
 
 .module-overview::before {
@@ -4424,20 +4415,18 @@ onMounted(() => {
   opacity: .4;
   pointer-events: none;
   transform: rotate(-6deg);
+  z-index: 0;
 }
 
 .module-overview::after {
   content: "";
   position: absolute;
-  inset: auto -40px -40px auto;
-  width: 260px;
-  height: 260px;
-  background:
-      repeating-conic-gradient(from 45deg, color-mix(in srgb, var(--text) 6%, transparent) 0deg 15deg, transparent 15deg 30deg);
-  opacity: .2;
+  inset: -20% -30% -60% 40%;
+  background: radial-gradient(520px 360px at 90% 100%, color-mix(in srgb, var(--accent2) 28%, transparent), transparent 75%);
+  opacity: .35;
   pointer-events: none;
-  border-radius: 32px;
-  filter: blur(0.5px);
+  filter: blur(12px);
+  z-index: 0;
 }
 
 .module-overview-header {
@@ -4558,10 +4547,14 @@ onMounted(() => {
 
 .lesson {
   position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   text-align: left;
   border: 1px solid var(--border);
-  padding: 28px 16px 16px;
-  background: color-mix(in srgb, var(--text) 5%, transparent);
+  padding: 20px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
   cursor: pointer;
   border-radius: 16px;
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
@@ -4581,10 +4574,25 @@ onMounted(() => {
   border-color: color-mix(in srgb, #22c55e 50%, transparent)
 }
 
+.lesson-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lesson-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+
 .lesson-score {
-  position: absolute;
-  top: 10px;
-  right: 12px;
+  position: static;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -4596,7 +4604,8 @@ onMounted(() => {
   border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
   color: var(--t3);
   background: color-mix(in srgb, var(--text) 10%, transparent);
-  animation: badgePulse 8s ease-in-out infinite
+  animation: badgePulse 8s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 .lesson-score.is-new {
@@ -4906,6 +4915,12 @@ onMounted(() => {
   border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--bg2) 82%, transparent));
   box-shadow: 0 24px 44px rgba(2, 6, 23, .5);
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(100% - 40px), 1100px);
+  z-index: 40;
 }
 
 .lesson-actions-meta {
@@ -5200,6 +5215,11 @@ onMounted(() => {
     flex-direction: column;
     align-items: stretch;
     gap: 16px;
+    left: 20px;
+    right: 20px;
+    transform: none;
+    bottom: 16px;
+    width: auto;
   }
 
   .lesson-actions-buttons {
@@ -5209,6 +5229,29 @@ onMounted(() => {
   .lesson-actions-buttons .btn {
     flex: 1 1 100%;
     min-width: 0;
+  }
+
+  .play.has-lesson-actions {
+    padding-bottom: 240px;
+  }
+
+  .plan-status {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .plan-status-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .plan-status-actions .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .footer.has-lesson-actions .footer-meta {
+    padding-bottom: 180px;
   }
 }
 
@@ -5248,6 +5291,10 @@ onMounted(() => {
   text-align: center;
 }
 
+.footer.has-lesson-actions .footer-meta {
+  padding-bottom: 120px;
+}
+
 .footer a {
   color: var(--accent);
   text-decoration: none;
@@ -5261,12 +5308,13 @@ onMounted(() => {
 .plan-status {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
+  gap: 16px;
+  padding: 10px 16px;
   border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
   border-radius: 14px;
   background: color-mix(in srgb, var(--text) 5%, transparent);
   box-shadow: 0 12px 24px rgba(2, 6, 23, .32);
+  flex-wrap: wrap;
 }
 
 .plan-status-icon {
@@ -5296,6 +5344,17 @@ onMounted(() => {
 .plan-status-sub {
   font-size: 12px;
   color: var(--t3);
+}
+
+.plan-status-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.plan-status-actions .btn {
+  flex: 0 0 auto;
 }
 
 .plan-status.is-ready {
@@ -5675,44 +5734,6 @@ onMounted(() => {
 .collapse-leave-to {
   opacity: 0;
   transform: translateY(-6px);
-}
-
-.mission-controls {
-  margin-top: 16px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.mission-controls-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-width: 320px;
-}
-
-.mission-controls-title {
-  font-size: 12px;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--t3);
-}
-
-.mission-controls-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.mission-controls-actions .btn {
-  flex: 1 1 140px;
-  justify-content: center;
 }
 
 .form-errors {
@@ -6321,16 +6342,6 @@ onMounted(() => {
   }
   .briefing-sidebar {
     position: static;
-  }
-  .mission-controls {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .mission-controls-actions {
-    width: 100%;
-  }
-  .mission-controls-actions .btn {
-    flex: 1 1 100%;
   }
 }
 
