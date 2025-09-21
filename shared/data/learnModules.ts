@@ -2968,8 +2968,6 @@ export const learnModules: ModuleDef[] = [
       flightPlan: true,
       briefingArt: '/img/learn/missions/full-flight/briefing-hero.png'
     }
-    art: '/img/learn/modules/img12.jpeg',
-    lessons: fullFlightLessons
   }
 ]
 
