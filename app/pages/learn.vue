@@ -516,74 +516,123 @@
         </form>
 
         <div v-else class="plan-panel simbrief-panel">
-          <div class="simbrief-header">
-            <div class="manual-card-icon">
-              <v-icon size="22">mdi-clipboard-text-outline</v-icon>
-            </div>
-            <div>
-              <div class="manual-card-title">Import from SimBrief</div>
-              <p class="muted small">
+          <div class="simbrief-layout">
+            <div class="simbrief-info">
+              <span class="simbrief-tag">Navigraph SimBrief</span>
+              <h3 class="simbrief-title">Import your airline dispatch</h3>
+              <p>
                 SimBrief is a free dispatch planner by Navigraph. Build a flight on their
                 <a href="https://www.simbrief.com/home/flight_planning.html" target="_blank" rel="noopener">Dispatch page</a>
-                and we'll pull the latest OFP straight into your mission.
+                and bring the exact cockpit flow into OpenSquawk.
               </p>
+              <div class="simbrief-highlights">
+                <div class="simbrief-highlight">
+                  <div class="simbrief-highlight-icon">
+                    <v-icon size="20">mdi-radar</v-icon>
+                  </div>
+                  <div>
+                    <div class="simbrief-highlight-title">Live OFP sync</div>
+                    <div class="simbrief-highlight-sub">We fetch your latest release every time you load a mission.</div>
+                  </div>
+                </div>
+                <div class="simbrief-highlight">
+                  <div class="simbrief-highlight-icon">
+                    <v-icon size="20">mdi-airplane-clock</v-icon>
+                  </div>
+                  <div>
+                    <div class="simbrief-highlight-title">Train like the airlines</div>
+                    <div class="simbrief-highlight-sub">Practice clearances, flows, and calls directly from your plan.</div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <ol class="simbrief-steps">
-            <li>
-              <span class="step-number">1</span>
-              <div>Open the SimBrief dispatch page and generate a flight plan with the aircraft you want to train.</div>
-            </li>
-            <li>
-              <span class="step-number">2</span>
-              <div>On the resulting OFP, copy your SimBrief Pilot ID (it's the number shown on the share link).</div>
-            </li>
-            <li>
-              <span class="step-number">3</span>
-              <div>Paste the ID below — we remember it on this device so you can load future plans instantly.</div>
-            </li>
-          </ol>
-          <div class="field-grid compact">
-            <label class="field">
-              <span>SimBrief Pilot ID</span>
-              <input
-                  v-model="simbriefForm.userId"
-                  inputmode="numeric"
-                  placeholder="11860000"
-                  @keyup.enter.prevent="submitSimbriefFromInput"
-              />
-            </label>
-            <button class="btn primary" type="button" @click="loadSimbriefPlan" :disabled="simbriefForm.loading || !simbriefForm.userId.trim()">
-              <v-icon size="18" :class="{ spin: simbriefForm.loading }">mdi-download</v-icon>
-              Load latest dispatch
-            </button>
-          </div>
-          <p class="muted small simbrief-note">
-            New to SimBrief? It's a full airline-style dispatch tool that pairs perfectly with OpenSquawk missions.
-          </p>
-          <div v-if="simbriefForm.loading" class="loading-row">
-            <v-progress-circular indeterminate color="cyan" size="20" />
-            <span class="muted small">Contacting SimBrief…</span>
-          </div>
-          <div v-if="flightPlanError" class="error-banner">
-            <v-icon size="16">mdi-alert</v-icon>
-            {{ flightPlanError }}
-          </div>
-          <div v-if="simbriefPlanMeta" class="simbrief-meta">
-            <v-icon size="16">mdi-airplane</v-icon>
-            <span>{{ simbriefPlanMeta.callsign }} · {{ simbriefPlanMeta.route }}</span>
-            <button class="btn soft mini" type="button" @click="enterBriefingFromSetup()">
-              <v-icon size="16">mdi-clipboard-text-outline</v-icon>
-              Review briefing
-            </button>
+            <div class="simbrief-card">
+              <div class="simbrief-card-head">
+                <div class="simbrief-card-icon">
+                  <v-icon size="22">mdi-clipboard-text-outline</v-icon>
+                </div>
+                <div>
+                  <div class="simbrief-card-title">Load your plan</div>
+                  <p class="muted small">Three quick steps and you're back in the virtual cockpit.</p>
+                </div>
+              </div>
+              <ol class="simbrief-timeline">
+                <li>
+                  <span class="timeline-dot">1</span>
+                  <div>
+                    <div class="timeline-title">Build the dispatch</div>
+                    <p>Generate your flight on SimBrief with the aircraft you want to practice.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="timeline-dot">2</span>
+                  <div>
+                    <div class="timeline-title">Grab your Pilot ID</div>
+                    <p>The OFP share link shows your numeric SimBrief Pilot ID — copy that value.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="timeline-dot">3</span>
+                  <div>
+                    <div class="timeline-title">Paste &amp; load</div>
+                    <p>Drop the ID below. We'll remember it here so future briefs load instantly.</p>
+                  </div>
+                </li>
+              </ol>
+              <div class="simbrief-form-row">
+                <label class="field">
+                  <span>SimBrief Pilot ID</span>
+                  <input
+                      v-model="simbriefForm.userId"
+                      inputmode="numeric"
+                      placeholder="11860000"
+                      @keyup.enter.prevent="submitSimbriefFromInput"
+                  />
+                </label>
+                <button
+                    class="btn primary"
+                    type="button"
+                    @click="loadSimbriefPlan"
+                    :disabled="simbriefForm.loading || !simbriefForm.userId.trim()"
+                >
+                  <v-icon size="18" :class="{ spin: simbriefForm.loading }">mdi-download</v-icon>
+                  Load latest dispatch
+                </button>
+              </div>
+              <p class="muted small simbrief-note">
+                New to SimBrief? It's a full airline-style dispatch tool that pairs perfectly with OpenSquawk missions.
+              </p>
+              <div class="simbrief-status">
+                <div v-if="simbriefForm.loading" class="status loading">
+                  <v-progress-circular indeterminate color="cyan" size="20" />
+                  <span>Contacting SimBrief…</span>
+                </div>
+                <div v-if="flightPlanError" class="status error">
+                  <v-icon size="16">mdi-alert</v-icon>
+                  {{ flightPlanError }}
+                </div>
+                <div v-if="simbriefPlanMeta" class="status meta">
+                  <div class="status-meta-main">
+                    <v-icon size="16">mdi-airplane</v-icon>
+                    <span>{{ simbriefPlanMeta.callsign }} · {{ simbriefPlanMeta.route }}</span>
+                  </div>
+                  <button class="btn soft mini" type="button" @click="enterBriefingFromSetup()">
+                    <v-icon size="16">mdi-clipboard-text-outline</v-icon>
+                    Review briefing
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <div v-else-if="moduleStage==='briefing' && briefingSnapshot" class="module-stage-panel mission-briefing">
-        <div class="briefing-top">
-          <img :src="currentBriefingArt" alt="Mission hero" class="briefing-hero" />
-          <div class="briefing-overview">
+        <div class="briefing-banner">
+          <div class="briefing-banner-media">
+            <img :src="currentBriefingArt" alt="Mission hero" class="briefing-hero" />
+          </div>
+          <div class="briefing-banner-main">
             <span class="plan-tag">Mission briefing</span>
             <div class="briefing-title">{{ briefingSnapshot.radioCall }}</div>
             <div class="briefing-route">{{ briefingSnapshot.route }}</div>
@@ -603,45 +652,48 @@
               </span>
             </div>
           </div>
-        </div>
-
-        <div class="briefing-summary-grid">
-          <div class="summary-card">
-            <v-icon size="20">mdi-airplane</v-icon>
-            <div>
-              <span class="summary-label">Callsign</span>
-              <span class="summary-value">{{ briefingSnapshot.callsign }}</span>
-              <span class="summary-sub muted small">{{ briefingSnapshot.radioCall }}</span>
+          <div class="briefing-banner-meta">
+            <div class="briefing-glance-card">
+              <v-icon size="18">mdi-airplane</v-icon>
+              <div>
+                <div class="glance-label">Callsign</div>
+                <div class="glance-value">{{ briefingSnapshot.callsign }}</div>
+                <div class="glance-sub muted small">{{ briefingSnapshot.radioCall }}</div>
+              </div>
             </div>
-          </div>
-          <div class="summary-card">
-            <v-icon size="20">mdi-airplane-takeoff</v-icon>
-            <div>
-              <span class="summary-label">Departure</span>
-              <span class="summary-value">{{ briefingSnapshot.departure.icao }} · RWY {{ briefingSnapshot.departure.runway }}</span>
-              <span class="summary-sub muted small">{{ briefingSnapshot.departure.city }}</span>
+            <div class="briefing-glance-card">
+              <v-icon size="18">mdi-airplane-takeoff</v-icon>
+              <div>
+                <div class="glance-label">Departure</div>
+                <div class="glance-value">{{ briefingSnapshot.departure.icao }} · RWY {{ briefingSnapshot.departure.runway }}</div>
+                <div class="glance-sub muted small">{{ briefingSnapshot.departure.city }}</div>
+              </div>
             </div>
-          </div>
-          <div class="summary-card">
-            <v-icon size="20">mdi-airplane-landing</v-icon>
-            <div>
-              <span class="summary-label">Arrival</span>
-              <span class="summary-value">{{ briefingSnapshot.arrival.icao }} · RWY {{ briefingSnapshot.arrival.runway }}</span>
-              <span class="summary-sub muted small">{{ briefingSnapshot.arrival.city }}</span>
+            <div class="briefing-glance-card">
+              <v-icon size="18">mdi-airplane-landing</v-icon>
+              <div>
+                <div class="glance-label">Arrival</div>
+                <div class="glance-value">{{ briefingSnapshot.arrival.icao }} · RWY {{ briefingSnapshot.arrival.runway }}</div>
+                <div class="glance-sub muted small">{{ briefingSnapshot.arrival.city }}</div>
+              </div>
             </div>
-          </div>
-          <div class="summary-card">
-            <v-icon size="20">mdi-radar</v-icon>
-            <div>
-              <span class="summary-label">Codes</span>
-              <span class="summary-value">Squawk {{ briefingSnapshot.codes.squawk }}</span>
-              <span class="summary-sub muted small">Push {{ briefingSnapshot.codes.push }}</span>
+            <div class="briefing-glance-card">
+              <v-icon size="18">mdi-shield-airplane</v-icon>
+              <div>
+                <div class="glance-label">Codes</div>
+                <div class="glance-value">Squawk {{ briefingSnapshot.codes.squawk }}</div>
+                <div class="glance-sub muted small">Push {{ briefingSnapshot.codes.push }}</div>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="briefing-columns">
           <div class="briefing-main">
+            <header class="briefing-section-head">
+              <h3>Flight deck overview</h3>
+              <p class="muted small">Review the key flows before you talk to ATC.</p>
+            </header>
             <div class="briefing-grid">
               <div class="briefing-card">
                 <img src="/img/learn/missions/full-flight/briefing-route.png" alt="Route preview" class="briefing-card-art" />
@@ -706,14 +758,14 @@
                 <li>
                   <span class="check-number">1</span>
                   <div>
-                    <div class="check-title">Clearance & push</div>
+                    <div class="check-title">Clearance &amp; push</div>
                     <p class="muted small">Tune delivery, confirm ATIS {{ briefingSnapshot.departure.atis }} and expect push {{ briefingSnapshot.codes.push }}.</p>
                   </div>
                 </li>
                 <li>
                   <span class="check-number">2</span>
                   <div>
-                    <div class="check-title">Taxi & departure</div>
+                    <div class="check-title">Taxi &amp; departure</div>
                     <p class="muted small">Follow taxi {{ briefingSnapshot.departure.taxiRoute || 'as assigned' }} to RWY {{ briefingSnapshot.departure.runway }} and fly the {{ briefingSnapshot.departure.sid }}.</p>
                   </div>
                 </li>
@@ -900,7 +952,7 @@
                   <div class="cloze">
                     <template v-for="(segment, idx) in activeLesson.readback"
                               :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
-                      <span v-if="segment.type === 'text'">
+                      <span v-if="segment.type === 'text'" class="cloze-text">
                         {{ typeof segment.text === 'function' && scenario ? segment.text(scenario) : segment.text }}
                       </span>
                       <label
@@ -4485,29 +4537,57 @@ onMounted(() => {
 }
 
 .readback-panel {
-  padding: 16px;
+  padding: 20px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--bg2) 70%, transparent), color-mix(in srgb, var(--accent) 8%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  box-shadow: 0 24px 46px rgba(4, 10, 28, .4);
 }
 
 .cloze {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  line-height: 1.6;
+  gap: 10px;
+  align-items: stretch;
+  padding: 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
   text-transform: uppercase;
   letter-spacing: .06em;
 }
 
+.cloze-text {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--t3);
+  line-height: 1.2;
+}
+
 .blank {
   position: relative;
-  display: inline-flex;
-  flex-direction: column;
-  background: color-mix(in srgb, var(--text) 4%, transparent);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 10px;
-  min-width: 100px;
-  vertical-align: middle;
-  transition: border-color .2s ease, background .2s ease;
+  display: grid;
+  gap: 6px;
+  align-content: center;
+  background: color-mix(in srgb, var(--bg2) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  border-radius: 12px;
+  padding: 10px 14px;
+  min-width: 110px;
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.blank:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 8px 24px rgba(34, 211, 238, .22);
+  background: color-mix(in srgb, var(--bg2) 80%, transparent);
 }
 
 .blank input {
@@ -4515,7 +4595,8 @@ onMounted(() => {
   border: 0;
   color: var(--text);
   min-width: 60px;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 600;
   outline: none;
   text-transform: uppercase;
 }
@@ -4525,38 +4606,38 @@ onMounted(() => {
 }
 
 .blank.size-xs {
-  min-width: 70px;
+  min-width: 80px;
 }
 
 .blank.size-sm {
-  min-width: 100px;
+  min-width: 120px;
 }
 
 .blank.size-md {
-  min-width: 140px;
+  min-width: 160px;
 }
 
 .blank.size-lg {
-  min-width: 190px;
+  min-width: 210px;
 }
 
 .blank.size-xl {
-  min-width: 240px;
+  min-width: 260px;
 }
 
 .blank.ok {
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .blank.warn {
-  border-color: color-mix(in srgb, #f97316 40%, transparent);
+  border-color: color-mix(in srgb, #f97316 45%, transparent);
 }
 
 .blank-status {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 8px;
+  right: 8px;
 }
 
 .blank-status.ok {
@@ -4568,7 +4649,7 @@ onMounted(() => {
 }
 
 .blank-feedback {
-  margin-top: 4px;
+  margin-top: 2px;
   font-size: 11px;
   color: var(--t3);
   text-transform: none;
@@ -5226,42 +5307,185 @@ onMounted(() => {
 }
 
 .simbrief-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  padding: 24px;
 }
 
-.simbrief-header {
+.simbrief-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.simbrief-info {
+  position: relative;
+  flex: 1 1 280px;
+  min-width: 260px;
+  border-radius: 22px;
+  padding: 24px;
+  background: radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 28%, transparent) 0%, transparent 62%), linear-gradient(160deg, color-mix(in srgb, var(--bg2) 74%, transparent), color-mix(in srgb, var(--text) 6%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 24px 48px rgba(8, 15, 39, .45);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.simbrief-info p {
+  margin: 0;
+  color: var(--t3);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.simbrief-tag {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.simbrief-title {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.simbrief-highlights {
+  display: grid;
+  gap: 12px;
+}
+
+.simbrief-highlight {
   display: flex;
   gap: 12px;
   align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
 }
 
-.simbrief-steps {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.simbrief-highlight-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   display: grid;
-  gap: 12px;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.simbrief-highlight-title {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.simbrief-highlight-sub {
   font-size: 13px;
   color: var(--t3);
 }
 
-.simbrief-steps li {
+.simbrief-card {
+  flex: 1 1 360px;
+  min-width: 300px;
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  padding: 24px;
   display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 22px 44px rgba(4, 10, 30, .42);
+}
+
+.simbrief-card-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.simbrief-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+
+.simbrief-card-title {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 13px;
+}
+
+.simbrief-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.simbrief-timeline li {
+  display: grid;
+  grid-template-columns: 36px 1fr;
   gap: 12px;
   align-items: flex-start;
 }
 
-.step-number {
-  width: 26px;
-  height: 26px;
+.timeline-dot {
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
   display: grid;
   place-items: center;
   font-weight: 600;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
   color: var(--accent);
+}
+
+.timeline-title {
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.simbrief-timeline p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--t3);
+}
+
+.simbrief-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.simbrief-form-row .field {
+  flex: 1 1 220px;
+}
+
+.simbrief-form-row .btn {
+  flex: 0 1 200px;
+  justify-content: center;
 }
 
 .simbrief-note {
@@ -5269,65 +5493,110 @@ onMounted(() => {
   color: var(--t3);
 }
 
-.simbrief-meta {
+.simbrief-status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.simbrief-status .status {
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 13px;
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.simbrief-status .status.loading {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
   color: var(--t3);
 }
 
-.loading-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--t3);
-  font-size: 13px;
-}
-
-.error-banner {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 8px 10px;
-  border-radius: 12px;
+.simbrief-status .status.error {
   background: color-mix(in srgb, #f87171 16%, transparent);
-  border: 1px solid color-mix(in srgb, #f87171 35%, transparent);
-  font-size: 13px;
+  border: 1px solid color-mix(in srgb, #f87171 40%, transparent);
+}
+
+.simbrief-status .status.meta {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.status-meta-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+
+.simbrief-status .status.meta .btn {
+  flex: 0 0 auto;
 }
 
 
 .mission-briefing {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
 }
 
-.briefing-top {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  flex-wrap: wrap;
+.briefing-banner {
+  position: relative;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) minmax(260px, 1fr);
+  align-items: stretch;
+  padding: 24px;
+  border-radius: 26px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--bg2) 78%, transparent), color-mix(in srgb, var(--text) 6%, transparent));
+  box-shadow: 0 30px 58px rgba(4, 12, 30, .5);
+  overflow: hidden;
+}
+
+.briefing-banner::after {
+  content: '';
+  position: absolute;
+  right: -80px;
+  top: -120px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 32%, transparent) 0%, transparent 70%);
+  opacity: .45;
+  pointer-events: none;
+}
+
+.briefing-banner-media {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, .28);
 }
 
 .briefing-hero {
-  width: 180px;
-  height: 120px;
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
   object-fit: cover;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
-  background: color-mix(in srgb, var(--text) 8%, transparent);
+  display: block;
 }
 
-.briefing-overview {
+.briefing-banner-main {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .briefing-title {
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 600;
+  line-height: 1.2;
 }
 
 .briefing-route {
@@ -5347,7 +5616,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--text) 6%, transparent);
   border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
@@ -5356,55 +5625,72 @@ onMounted(() => {
   text-transform: uppercase;
 }
 
-.briefing-summary-grid {
+.briefing-banner-meta {
+  position: relative;
+  z-index: 1;
   display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
-.summary-card {
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
-  background: color-mix(in srgb, var(--text) 5%, transparent);
-  padding: 14px;
+.briefing-glance-card {
   display: flex;
   gap: 12px;
   align-items: flex-start;
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  box-shadow: 0 16px 30px rgba(6, 12, 28, .35);
 }
 
-.summary-label {
+.glance-label {
   font-size: 11px;
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--t3);
 }
 
-.summary-value {
+.glance-value {
+  font-size: 17px;
   font-weight: 600;
-  font-size: 16px;
 }
 
-.summary-sub {
+.glance-sub {
   font-size: 13px;
 }
 
 .briefing-columns {
   display: flex;
-  gap: 20px;
+  gap: 24px;
   align-items: stretch;
   flex-wrap: wrap;
 }
 
 .briefing-main {
   flex: 1 1 0;
-  min-width: 260px;
+  min-width: 280px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+}
+
+.briefing-section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.briefing-section-head h3 {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-weight: 600;
 }
 
 .briefing-sidebar {
-  flex: 0 0 260px;
+  flex: 0 0 280px;
   display: flex;
 }
 
@@ -5412,62 +5698,29 @@ onMounted(() => {
   height: 100%;
 }
 
-.briefing-checklist {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.briefing-checklist li {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.check-number {
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  font-weight: 600;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
-}
-
-.check-title {
-  font-weight: 600;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  font-size: 12px;
-}
-
 .briefing-grid {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .briefing-card {
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
-  background: color-mix(in srgb, var(--text) 4%, transparent);
-  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--bg2) 72%, transparent), color-mix(in srgb, var(--text) 6%, transparent));
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 18px 36px rgba(2, 6, 23, .45);
+  gap: 12px;
+  box-shadow: 0 24px 44px rgba(4, 12, 30, .45);
 }
 
 .briefing-card-art {
   width: 100%;
-  height: 96px;
+  height: 104px;
   object-fit: cover;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
 }
 
 .card-title {
@@ -5491,11 +5744,59 @@ onMounted(() => {
   color: var(--t3);
 }
 
+.briefing-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: relative;
+}
+
+.briefing-checklist::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.briefing-checklist li {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  align-items: flex-start;
+  position: relative;
+}
+
+.check-number {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+  box-shadow: 0 8px 16px rgba(4, 12, 30, .35);
+}
+
+.check-title {
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
 .briefing-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .briefing-actions .btn {
@@ -5525,9 +5826,11 @@ onMounted(() => {
   .manual-preview {
     position: static;
   }
-  .briefing-top {
-    flex-direction: column;
-    align-items: flex-start;
+  .briefing-banner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .briefing-banner-media {
+    height: 200px;
   }
   .briefing-columns {
     flex-direction: column;
