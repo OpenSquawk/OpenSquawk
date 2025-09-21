@@ -2,17 +2,33 @@
   <div class="min-h-screen bg-[#050910] text-white">
     <div class="mx-auto w-full max-w-[420px] px-4 pb-24 pt-6 sm:px-6">
       <!-- Header -->
-      <header class="flex items-center justify-between pb-6">
+      <header class="flex flex-col gap-4 pb-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p class="text-xs uppercase tracking-[0.35em] text-cyan-400/80">OpenSquawk</p>
           <h1 class="text-2xl font-semibold">Pilot Monitoring</h1>
           <p class="mt-1 text-sm text-white/70">Alpha Build • Decision Tree • VATSIM</p>
         </div>
-        <div class="text-right">
-          <v-chip size="small" :color="currentState?.phase === 'Interrupt' ? 'red' : 'cyan'" variant="flat" class="mb-1">
-            {{ currentState?.id || 'INIT' }}
-          </v-chip>
-          <div class="text-xs text-white/50">{{ currentState?.phase || 'Setup' }}</div>
+        <div class="flex flex-col items-stretch gap-2 sm:items-end">
+          <div class="text-right">
+            <v-chip size="small" :color="currentState?.phase === 'Interrupt' ? 'red' : 'cyan'" variant="flat" class="mb-1">
+              {{ currentState?.id || 'INIT' }}
+            </v-chip>
+            <div class="text-xs text-white/50">{{ currentState?.phase || 'Setup' }}</div>
+          </div>
+          <v-select
+            v-model="selectedFlowSlug"
+            :items="flowOptions"
+            item-title="title"
+            item-value="value"
+            label="Flow"
+            variant="outlined"
+            density="compact"
+            hide-details
+            color="cyan"
+            class="min-w-[200px]"
+            :disabled="flowOptions.length <= 1"
+            prepend-inner-icon="mdi-sitemap"
+          />
         </div>
       </header>
 
@@ -696,6 +712,14 @@
                 </div>
                 <p class="text-sm text-white font-mono">{{ entry.message }}</p>
                 <div class="flex items-center gap-2 mt-1">
+                  <v-chip
+                      v-if="entry.flow"
+                      size="x-small"
+                      color="purple"
+                      variant="outlined"
+                  >
+                    {{ entry.flow }}
+                  </v-chip>
                   <v-chip size="x-small" color="cyan" variant="outlined">{{ entry.frequency || 'N/A' }}</v-chip>
                   <span class="text-xs text-white/40">{{ entry.state }}</span>
                 </div>
@@ -953,9 +977,12 @@ const {
   flags,
   flightContext,
   currentStep,
+  availableFlows,
+  activeFlow,
   initializeFlight,
   updateFrequencyVariables,
   fetchRuntimeTree,
+  setActiveFlow,
   isReady: engineReady,
   processPilotTransmission,
   buildLLMContext,
@@ -1021,6 +1048,41 @@ function cancelTransmissionIssue() {
 const clearLog = () => {
   clearCommunicationLog()
   clearLastTransmission()
+}
+
+const selectedFlowSlug = ref('')
+const flowOptions = computed(() =>
+  availableFlows.value.map((flow) => ({
+    title: flow.name,
+    value: flow.slug,
+    subtitle: flow.description,
+  }))
+)
+
+watch(
+  activeFlow,
+  (slug) => {
+    selectedFlowSlug.value = slug || ''
+  },
+  { immediate: true }
+)
+
+watch(selectedFlowSlug, (slug, previous) => {
+  if (!slug || slug === activeFlow.value || slug === previous) {
+    return
+  }
+  handleFlowChange(slug)
+})
+
+function handleFlowChange(slug: string) {
+  if (!slug || slug === activeFlow.value) {
+    return
+  }
+  try {
+    setActiveFlow(slug)
+  } catch (error) {
+    console.error('Failed to activate flow', error)
+  }
 }
 
 // UI State
