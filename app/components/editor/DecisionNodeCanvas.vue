@@ -41,12 +41,80 @@
           @pointerdown.stop="(event) => onNodePointerDown(event, node)"
           @dblclick.prevent="() => emit('select', node.id)"
         >
-          <button class="node-add node-add--top" @click.stop="emit('add-before', node.id)">
-            <v-icon icon="mdi-plus" size="16" />
-          </button>
-          <button class="node-add node-add--bottom" @click.stop="emit('add-after', node.id)">
-            <v-icon icon="mdi-plus" size="16" />
-          </button>
+          <v-tooltip location="top" :open-delay="120">
+            <template #activator="{ props }">
+              <button
+                class="node-add node-add--top"
+                :class="{ 'node-add--connected': connections(node.id, 'incoming').length > 0 }"
+                v-bind="props"
+                @click.stop="emit('add-before', node.id)"
+              >
+                <v-icon icon="mdi-plus" size="16" />
+              </button>
+            </template>
+            <div class="node-connection-tooltip">
+              <p class="node-connection-tooltip__title">Eingehende Verbindungen</p>
+              <p
+                v-if="!connections(node.id, 'incoming').length"
+                class="node-connection-tooltip__empty"
+              >
+                Keine eingehenden Verbindungen
+              </p>
+              <ul v-else class="node-connection-tooltip__list">
+                <li
+                  v-for="connection in connections(node.id, 'incoming')"
+                  :key="connection.key"
+                  class="node-connection-tooltip__item"
+                >
+                  <span class="node-connection-tooltip__id">{{ connection.id }}</span>
+                  <span v-if="connection.title" class="node-connection-tooltip__title-text">— {{ connection.title }}</span>
+                  <span
+                    class="node-connection-tooltip__badge"
+                    :class="{ 'node-connection-tooltip__badge--auto': connection.auto }"
+                  >
+                    {{ connectionLabel(connection) }}
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </v-tooltip>
+          <v-tooltip location="bottom" :open-delay="120">
+            <template #activator="{ props }">
+              <button
+                class="node-add node-add--bottom"
+                :class="{ 'node-add--connected': connections(node.id, 'outgoing').length > 0 }"
+                v-bind="props"
+                @click.stop="emit('add-after', node.id)"
+              >
+                <v-icon icon="mdi-plus" size="16" />
+              </button>
+            </template>
+            <div class="node-connection-tooltip">
+              <p class="node-connection-tooltip__title">Ausgehende Verbindungen</p>
+              <p
+                v-if="!connections(node.id, 'outgoing').length"
+                class="node-connection-tooltip__empty"
+              >
+                Keine ausgehenden Verbindungen
+              </p>
+              <ul v-else class="node-connection-tooltip__list">
+                <li
+                  v-for="connection in connections(node.id, 'outgoing')"
+                  :key="connection.key"
+                  class="node-connection-tooltip__item"
+                >
+                  <span class="node-connection-tooltip__id">{{ connection.id }}</span>
+                  <span v-if="connection.title" class="node-connection-tooltip__title-text">— {{ connection.title }}</span>
+                  <span
+                    class="node-connection-tooltip__badge"
+                    :class="{ 'node-connection-tooltip__badge--auto': connection.auto }"
+                  >
+                    {{ connectionLabel(connection) }}
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </v-tooltip>
           <span class="node-connector node-connector--input" />
           <span class="node-connector node-connector--output" />
           <div class="flex h-full flex-col">
@@ -105,10 +173,10 @@
     </div>
     <div
       ref="minimapRef"
-      class="pointer-events-auto absolute bottom-4 right-4 rounded-xl border border-white/10 bg-black/40 p-3 shadow-lg"
+      class="pointer-events-auto absolute bottom-4 right-4 z-20 rounded-xl border border-white/10 bg-black/40 p-3 shadow-lg"
       @click="onMinimapClick"
     >
-      <svg :width="minimapSize.width" :height="minimapSize.height" class="text-white/70">
+      <svg :width="minimapSize.width" :height="minimapSize.height" class="block text-white/70">
         <g>
           <rect
             v-for="node in preparedNodes"
@@ -152,6 +220,8 @@ const NODE_HEIGHT = 160
 const WORKSPACE_PADDING = 800
 const MIN_WORKSPACE_WIDTH = 4000
 const MIN_WORKSPACE_HEIGHT = 2800
+const MIN_NODE_MARGIN_X = 200
+const MIN_NODE_MARGIN_Y = 120
 const DRAG_MARGIN = 200
 
 interface CanvasNodePreviewTransition {
@@ -177,6 +247,16 @@ interface CanvasNodeInput {
   autopCount: number
   accent: string
 }
+
+interface NodeConnectionPreview {
+  key: string
+  id: string
+  title?: string
+  type: DecisionNodeTransition['type']
+  auto: boolean
+}
+
+type ConnectionDirection = 'incoming' | 'outgoing'
 
 interface CanvasPan {
   x: number
@@ -219,6 +299,18 @@ const MINIMAP_HEIGHT = 160
 const MINIMAP_PADDING = 200
 
 let resizeObserver: ResizeObserver | null = null
+
+const workspaceOffset = computed(() => {
+  if (!props.nodes.length) {
+    return { x: MIN_NODE_MARGIN_X, y: MIN_NODE_MARGIN_Y }
+  }
+  const minX = Math.min(...props.nodes.map((node) => node.layout?.x ?? 0))
+  const minY = Math.min(...props.nodes.map((node) => node.layout?.y ?? 0))
+  return {
+    x: Math.max(0, MIN_NODE_MARGIN_X - minX),
+    y: Math.max(0, MIN_NODE_MARGIN_Y - minY),
+  }
+})
 
 watch(
   () => props.pan,
@@ -304,8 +396,9 @@ const viewportRect = computed(() => {
   }
 })
 
-const preparedNodes = computed(() =>
-  props.nodes.map((node) => {
+const preparedNodes = computed(() => {
+  const offset = workspaceOffset.value
+  return props.nodes.map((node) => {
     const width = node.layout?.width ?? NODE_WIDTH
     const height = node.layout?.height ?? NODE_HEIGHT
     const accent = node.layout?.color || props.roleColors[node.role] || '#22d3ee'
@@ -316,15 +409,25 @@ const preparedNodes = computed(() =>
       class: transitionClass(transition),
     }))
 
+    const baseLayout: DecisionNodeLayout = { ...(node.layout || {}) }
+    const displayLayout: DecisionNodeLayout = {
+      ...baseLayout,
+      x: (baseLayout.x ?? 0) + offset.x,
+      y: (baseLayout.y ?? 0) + offset.y,
+      width,
+      height,
+    }
+
     return {
       ...node,
       width,
       height,
       accent,
+      layout: displayLayout,
       previewTransitions: transitions as CanvasNodePreviewTransition[],
     }
   })
-)
+})
 
 const canvasBounds = computed(() => {
   const defaultWidth = MIN_WORKSPACE_WIDTH - WORKSPACE_PADDING
@@ -341,6 +444,46 @@ const canvasBounds = computed(() => {
     width: Math.max(maxX + WORKSPACE_PADDING, MIN_WORKSPACE_WIDTH),
     height: Math.max(maxY + WORKSPACE_PADDING, MIN_WORKSPACE_HEIGHT),
   }
+})
+
+const nodeConnections = computed(() => {
+  const lookup = new Map<string, CanvasNodeInput>()
+  const result = new Map<string, { incoming: NodeConnectionPreview[]; outgoing: NodeConnectionPreview[] }>()
+
+  for (const node of props.nodes) {
+    lookup.set(node.id, node)
+    result.set(node.id, { incoming: [], outgoing: [] })
+  }
+
+  for (const node of props.nodes) {
+    const transitions = node.model.transitions || []
+    for (const transition of transitions) {
+      const key = transition.key || `${node.id}_${transition.target}_${transition.type}`
+      const outgoingEntry = result.get(node.id)
+      if (outgoingEntry) {
+        outgoingEntry.outgoing.push({
+          key: `out-${key}`,
+          id: transition.target,
+          title: lookup.get(transition.target)?.title,
+          type: transition.type,
+          auto: Boolean(transition.autoTrigger || transition.type === 'auto'),
+        })
+      }
+
+      const targetEntry = result.get(transition.target)
+      if (targetEntry) {
+        targetEntry.incoming.push({
+          key: `in-${key}`,
+          id: node.id,
+          title: node.title,
+          type: transition.type,
+          auto: Boolean(transition.autoTrigger || transition.type === 'auto'),
+        })
+      }
+    }
+  }
+
+  return result
 })
 
 interface EdgeDefinition {
@@ -473,6 +616,19 @@ function transitionColor(transition: DecisionNodeTransition) {
     default:
       return '#7dd3fc'
   }
+}
+
+function connections(nodeId: string, direction: ConnectionDirection) {
+  const entry = nodeConnections.value.get(nodeId)
+  if (!entry) return []
+  return entry[direction]
+}
+
+function connectionLabel(connection: NodeConnectionPreview) {
+  if (connection.auto) {
+    return 'AUTO'
+  }
+  return connection.type.toUpperCase()
 }
 
 type PathPoint = { x: number; y: number }
@@ -673,7 +829,8 @@ function onNodePointerMove(event: PointerEvent) {
     width: dragState.width,
     height: dragState.height,
   })
-  emit('node-move', { stateId: dragState.nodeId, x: clamped.x, y: clamped.y })
+  const actual = toActualPosition(clamped)
+  emit('node-move', { stateId: dragState.nodeId, x: actual.x, y: actual.y })
 }
 
 function onNodePointerUp(event: PointerEvent) {
@@ -688,18 +845,30 @@ function onNodePointerUp(event: PointerEvent) {
       width: dragState.width,
       height: dragState.height,
     })
-    emit('node-drop', { stateId: dragState.nodeId, x: clamped.x, y: clamped.y })
+    const actual = toActualPosition(clamped)
+    emit('node-drop', { stateId: dragState.nodeId, x: actual.x, y: actual.y })
   }
   dragState = null
   window.removeEventListener('pointermove', onNodePointerMove)
 }
 
-function clampToWorkspace(x: number, y: number, size: { width: number; height: number }) {
-  const maxX = Math.max(0, canvasBounds.value.width - size.width - DRAG_MARGIN)
-  const maxY = Math.max(0, canvasBounds.value.height - size.height - DRAG_MARGIN)
+function toActualPosition(position: { x: number; y: number }) {
+  const offset = workspaceOffset.value
   return {
-    x: Math.min(Math.max(0, x), maxX),
-    y: Math.min(Math.max(0, y), maxY),
+    x: Math.max(0, position.x - offset.x),
+    y: Math.max(0, position.y - offset.y),
+  }
+}
+
+function clampToWorkspace(x: number, y: number, size: { width: number; height: number }) {
+  const offset = workspaceOffset.value
+  const minX = offset.x
+  const minY = offset.y
+  const maxX = Math.max(minX, canvasBounds.value.width - size.width - DRAG_MARGIN)
+  const maxY = Math.max(minY, canvasBounds.value.height - size.height - DRAG_MARGIN)
+  return {
+    x: Math.min(Math.max(minX, x), maxX),
+    y: Math.min(Math.max(minY, y), maxY),
   }
 }
 
@@ -719,13 +888,17 @@ function resetView() {
 function onMinimapClick(event: MouseEvent) {
   const container = minimapRef.value
   if (!container) return
-  const rect = container.getBoundingClientRect()
+  const svgElement = container.querySelector('svg')
+  const target = svgElement || container
+  const rect = target.getBoundingClientRect()
   const offsetX = event.clientX - rect.left
   const offsetY = event.clientY - rect.top
+  const clampedX = Math.min(Math.max(0, offsetX), rect.width)
+  const clampedY = Math.min(Math.max(0, offsetY), rect.height)
   const bounds = minimapBounds.value
   const scale = minimapScale.value || 1
-  const worldX = offsetX / scale + bounds.minX
-  const worldY = offsetY / scale + bounds.minY
+  const worldX = clampedX / scale + bounds.minX
+  const worldY = clampedY / scale + bounds.minY
   const zoom = currentZoom.value || 1
   const panX = viewportSize.value.width / 2 - worldX * zoom
   const panY = viewportSize.value.height / 2 - worldY * zoom
@@ -779,6 +952,10 @@ onBeforeUnmount(() => {
   @apply pointer-events-auto absolute z-10 flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white opacity-0 transition;
 }
 
+.node-add--connected {
+  @apply border-cyan-400/60 bg-cyan-500/20 text-cyan-100;
+}
+
 .group:hover .node-add {
   @apply opacity-100;
 }
@@ -809,5 +986,41 @@ onBeforeUnmount(() => {
   bottom: 0;
   left: 50%;
   transform: translate(-50%, 50%);
+}
+
+.node-connection-tooltip {
+  @apply max-w-[240px] space-y-2 text-left;
+}
+
+.node-connection-tooltip__title {
+  @apply text-xs font-semibold uppercase tracking-[0.35em] text-white/60;
+}
+
+.node-connection-tooltip__empty {
+  @apply text-xs text-white/50;
+}
+
+.node-connection-tooltip__list {
+  @apply space-y-1;
+}
+
+.node-connection-tooltip__item {
+  @apply flex flex-wrap items-center gap-1 text-xs text-white/80;
+}
+
+.node-connection-tooltip__id {
+  @apply font-mono text-cyan-200;
+}
+
+.node-connection-tooltip__title-text {
+  @apply text-white/60;
+}
+
+.node-connection-tooltip__badge {
+  @apply rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.25em] text-white/60;
+}
+
+.node-connection-tooltip__badge--auto {
+  @apply bg-cyan-500/25 text-cyan-200;
 }
 </style>

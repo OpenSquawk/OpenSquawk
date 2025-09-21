@@ -16,11 +16,11 @@
                 href="/"
                 target="_blank"
                 rel="noopener"
-                class="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/40 bg-cyan-500/10 transition hover:border-cyan-300 hover:bg-cyan-500/20"
+                class="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/40 bg-cyan-500/10 transition hover:border-cyan-300 hover:bg-cyan-500/20"
               >
                 <v-icon icon="mdi-radar" size="22" color="cyan" />
               </a>
-              <div class="hidden h-10 w-px bg-white/10 lg:block" />
+              <div class="hidden h-11 w-px bg-white/10 lg:block" />
               <div class="flex min-w-0 items-center gap-2">
                 <v-menu v-model="flowMenuOpen" transition="scale-transition" offset-y>
                   <template #activator="{ props }">
@@ -29,7 +29,7 @@
                       color="cyan"
                       variant="tonal"
                       prepend-icon="mdi-sitemap"
-                      class="rounded-lg px-4 font-semibold tracking-wide text-white"
+                      class="app-bar-button px-4 font-semibold tracking-wide text-white"
                       :loading="flowsLoading"
                     >
                       {{ currentFlowLabel }}
@@ -103,13 +103,13 @@
             <div class="flex min-w-0 flex-1 items-center gap-3">
               <v-text-field
                 v-model="nodeFilter.search"
-                density="compact"
+                density="comfortable"
                 variant="solo"
                 hide-details
                 clearable
                 prepend-inner-icon="mdi-magnify"
                 placeholder="Nodes durchsuchen"
-                class="max-w-[260px] rounded-xl bg-white/5 text-sm text-white/80"
+                class="app-bar-field flex-1 min-w-[200px] text-sm text-white/80"
               />
               <v-menu v-model="filtersMenuOpen" transition="scale-transition" :close-on-content-click="false" offset-y>
                 <template #activator="{ props }">
@@ -122,11 +122,10 @@
                   >
                     <v-btn
                       v-bind="props"
-                      size="small"
                       variant="outlined"
                       color="cyan"
                       prepend-icon="mdi-tune"
-                      class="rounded-lg border-white/20 text-xs font-semibold uppercase tracking-[0.3em]"
+                      class="app-bar-button border-white/20 text-xs font-semibold uppercase tracking-[0.3em]"
                     >
                       Filter
                     </v-btn>
@@ -187,7 +186,7 @@
                 icon
                 variant="tonal"
                 color="white"
-                class="rounded-lg border border-white/10 bg-white/5 text-white/80 hover:border-cyan-200"
+                class="app-bar-button app-bar-icon-button border border-white/10 bg-white/5 text-white/80 hover:border-cyan-200"
                 @click="inspectorOpen = !inspectorOpen"
               >
                 <v-icon :icon="inspectorOpen ? 'mdi-dock-right' : 'mdi-dock-left'" />
@@ -195,9 +194,8 @@
               <v-btn
                 color="white"
                 variant="tonal"
-                size="small"
                 prepend-icon="mdi-auto-fix"
-                class="rounded-lg px-4 font-semibold tracking-wide text-white"
+                class="app-bar-button px-4 font-semibold tracking-wide text-white"
                 :disabled="!flowDetail"
                 @click="autoLayoutNodes"
               >
@@ -356,13 +354,7 @@
               v-if="inspectorOpen && flowDetail"
               class="w-[380px] shrink-0 overflow-y-auto border-l border-white/10 bg-[#0b1224]/85 backdrop-blur"
             >
-              <div class="border-b border-white/10 px-5 py-4">
-                <h2 class="text-lg font-semibold">Node Inspector</h2>
-                <p class="text-xs text-white/50">
-                  {{ nodeForm ? 'Bearbeite Knoten und Auto-Trigger' : 'Wähle einen Node auf der Canvas aus' }}
-                </p>
-              </div>
-              <div v-if="nodeForm" class="space-y-5 px-5 py-5">
+              <div v-if="nodeForm" class="space-y-5 px-5 py-6">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <div class="flex items-center gap-2">
@@ -426,10 +418,9 @@
                     <v-icon icon="mdi-tag-text-outline" />
                   </v-tab>
                 </v-tabs>
-              <v-window v-model="inspectorTab" class="rounded-xl border border-white/10 bg-white/5 p-4">
+                <v-window v-model="inspectorTab" class="rounded-xl border border-white/10 bg-white/5 p-4">
                 <v-window-item value="general">
                   <div class="space-y-4">
-                    <v-text-field v-model="nodeForm.title" label="Titel" hide-details color="cyan" />
                     <v-textarea v-model="nodeForm.summary" label="Kurzbeschreibung" rows="2" hide-details color="cyan" />
                     <div class="grid grid-cols-2 gap-3">
                       <v-select
@@ -657,10 +648,10 @@
                     <v-text-field v-model="nodeForm.layout.icon" label="Icon" hide-details color="cyan" />
                   </div>
                 </v-window-item>
-              </v-window>
+                </v-window>
             </div>
-            <div v-else class="px-5 py-8 text-sm text-white/50">
-              Kein Node ausgewählt.
+            <div v-else class="px-5 py-6 text-sm text-white/50">
+              Wähle einen Node auf der Canvas aus.
             </div>
           </aside>
           </transition>
@@ -1040,6 +1031,22 @@ watch(selectedNodeId, (stateId) => {
 })
 
 watch(
+  inspectorOpen,
+  (open) => {
+    if (!open || !flowDetail.value) return
+    if (selectedNodeId.value) return
+    const preferred =
+      flowDetail.value.flow.startState &&
+      flowDetail.value.nodes.some((node) => node.stateId === flowDetail.value!.flow.startState)
+        ? flowDetail.value.flow.startState
+        : flowDetail.value.nodes[0]?.stateId
+    if (preferred) {
+      selectedNodeId.value = preferred
+    }
+  }
+)
+
+watch(
   nodeForm,
   (value) => {
     if (!value || !flowDetail.value) return
@@ -1054,18 +1061,6 @@ watch(
     scheduleNodeSave()
   },
   { deep: true }
-)
-
-watch(
-  () => nodeForm.value?.title,
-  (title) => {
-    if (!nodeForm.value) return
-    const suggestion = buildNodeKeyFromText(title || nodeForm.value.stateId)
-    if (!nodeRenaming && nodeIdDraft.value === lastTitleSuggestion) {
-      nodeIdDraft.value = suggestion
-    }
-    lastTitleSuggestion = suggestion
-  }
 )
 
 watch(
@@ -2183,5 +2178,51 @@ function removePlaceholder(index: number) {
 
 .sidebar-button {
   @apply w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-cyan-400;
+}
+
+.app-bar-button {
+  height: 44px;
+  min-height: 44px;
+  border-radius: 0.75rem;
+}
+
+.app-bar-button :deep(.v-btn__overlay) {
+  border-radius: 0.75rem;
+}
+
+.app-bar-icon-button {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+}
+
+.app-bar-icon-button :deep(.v-btn__content) {
+  height: 100%;
+  align-items: center;
+}
+
+.app-bar-field {
+  @apply rounded-xl;
+}
+
+.app-bar-field :deep(.v-field) {
+  border-radius: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.08);
+  min-height: 44px;
+}
+
+.app-bar-field :deep(.v-field__overlay) {
+  opacity: 0;
+  border-radius: 0.75rem;
+}
+
+.app-bar-field :deep(.v-field__input) {
+  min-height: 44px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.app-bar-field :deep(.v-field__prepend-inner) {
+  align-items: center;
 }
 </style>
