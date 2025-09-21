@@ -1195,6 +1195,7 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
 import {useApi} from '~/composables/useApi'
 import {createDefaultLearnConfig} from '~~/shared/learn/config'
 import type {LearnConfig, LearnProgress, LearnState} from '~~/shared/learn/config'
@@ -1355,6 +1356,178 @@ const manualBaseScenario = ref<Scenario | null>(null)
 const briefingReturnStage = ref<'setup' | 'lessons'>('setup')
 const pendingAutoStart = ref(false)
 const SIMBRIEF_STORAGE_KEY = 'opensquawk:last-simbrief-id'
+
+const router = useRouter()
+const route = useRoute()
+
+const ROUTE_QUERY_KEYS = ['panel', 'module', 'stage', 'lesson', 'planMode'] as const
+type RouteQueryKey = (typeof ROUTE_QUERY_KEYS)[number]
+type RouteQueryState = Partial<Record<RouteQueryKey, string>>
+
+const routeHydrated = ref(false)
+let isApplyingRoute = false
+let isReplacingRoute = false
+
+function extractQueryValue(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed ? trimmed : undefined
+  }
+  if (Array.isArray(value)) {
+    const first = value[0]
+    if (typeof first === 'string') {
+      const trimmed = first.trim()
+      return trimmed ? trimmed : undefined
+    }
+  }
+  return undefined
+}
+
+function getQueryParam(key: RouteQueryKey): string | undefined {
+  return extractQueryValue((route.query as Record<string, unknown>)[key])
+}
+
+function parsePanelParam(value?: string): 'hub' | 'module' {
+  if (!value) return 'hub'
+  return value.toLowerCase() === 'module' ? 'module' : 'hub'
+}
+
+function parseStageParam(value?: string): 'lessons' | 'setup' | 'briefing' | null {
+  if (!value) return null
+  const normalized = value.toLowerCase()
+  return normalized === 'lessons' || normalized === 'setup' || normalized === 'briefing' ? normalized : null
+}
+
+function parsePlanModeParam(value?: string): FlightPlanMode | null {
+  if (!value) return null
+  const normalized = value.toLowerCase()
+  return normalized === 'random' || normalized === 'manual' || normalized === 'simbrief' ? normalized : null
+}
+
+function currentRouteQueryState(): RouteQueryState {
+  const state: RouteQueryState = {}
+  for (const key of ROUTE_QUERY_KEYS) {
+    const value = getQueryParam(key)
+    if (value) state[key] = value
+  }
+  return state
+}
+
+function buildRouteStateFromUi(): RouteQueryState {
+  const state: RouteQueryState = {}
+  if (panel.value === 'module' && current.value) {
+    state.panel = 'module'
+    state.module = current.value.id
+    state.stage = moduleStage.value
+    if (moduleStage.value === 'lessons' && activeLesson.value) {
+      state.lesson = activeLesson.value.id
+    }
+    if (moduleStage.value === 'setup') {
+      state.planMode = flightPlanMode.value
+    }
+  }
+  return state
+}
+
+function managedQueryEqual(a: RouteQueryState, b: RouteQueryState): boolean {
+  for (const key of ROUTE_QUERY_KEYS) {
+    if ((a[key] ?? '') !== (b[key] ?? '')) {
+      return false
+    }
+  }
+  return true
+}
+
+function applyRouteStateFromQuery() {
+  if (isApplyingRoute || isReplacingRoute) return
+
+  const panelParam = parsePanelParam(getQueryParam('panel'))
+  const moduleParam = getQueryParam('module')
+  const stageParam = parseStageParam(getQueryParam('stage'))
+  const lessonParam = getQueryParam('lesson')
+  const planModeParam = parsePlanModeParam(getQueryParam('planMode'))
+  const wantsModule = panelParam === 'module' || Boolean(moduleParam)
+
+  isApplyingRoute = true
+  try {
+    if (wantsModule && moduleParam) {
+      if (current.value?.id !== moduleParam || panel.value !== 'module') {
+        openModule(moduleParam)
+      } else {
+        panel.value = 'module'
+      }
+
+      if (current.value) {
+        if (stageParam) {
+          const requiresPlan = Boolean(current.value.meta?.flightPlan)
+          const storedPlan = current.value.id ? missionPlans[current.value.id] : undefined
+          const hasStoredPlan = Boolean(storedPlan?.scenario)
+
+          if (stageParam === 'setup') {
+            moduleStage.value = requiresPlan ? 'setup' : 'lessons'
+          } else if (stageParam === 'briefing') {
+            if (draftPlanScenario.value) {
+              moduleStage.value = 'briefing'
+            } else if (requiresPlan) {
+              moduleStage.value = hasStoredPlan ? 'lessons' : 'setup'
+            } else {
+              moduleStage.value = 'lessons'
+            }
+          } else if (stageParam === 'lessons') {
+            moduleStage.value = !requiresPlan || hasStoredPlan ? 'lessons' : 'setup'
+          }
+        }
+
+        if (moduleStage.value === 'setup' && planModeParam) {
+          flightPlanMode.value = planModeParam
+        }
+
+        if (moduleStage.value === 'lessons') {
+          if (lessonParam) {
+            const lesson = current.value.lessons.find(item => item.id === lessonParam)
+            if (lesson) {
+              activeLesson.value = lesson
+            } else if (!activeLesson.value) {
+              startLessonsForCurrent()
+            }
+          } else if (!activeLesson.value) {
+            startLessonsForCurrent()
+          }
+        }
+      }
+    } else if (panel.value !== 'hub') {
+      goToHub()
+    } else {
+      panel.value = 'hub'
+    }
+  } finally {
+    routeHydrated.value = true
+    isApplyingRoute = false
+  }
+}
+
+function syncRouteToState() {
+  if (!isClient || !routeHydrated.value || isApplyingRoute || isReplacingRoute) return
+
+  const currentState = currentRouteQueryState()
+  const desiredState = buildRouteStateFromUi()
+  if (managedQueryEqual(currentState, desiredState)) return
+
+  const nextQuery: Record<string, any> = {...route.query}
+  for (const key of ROUTE_QUERY_KEYS) {
+    const value = desiredState[key]
+    if (value) {
+      nextQuery[key] = value
+    } else {
+      delete nextQuery[key]
+    }
+  }
+
+  isReplacingRoute = true
+  router.replace({query: nextQuery, hash: route.hash}).finally(() => {
+    isReplacingRoute = false
+  })
+}
 
 const manualForm = reactive<ManualForm>({
   airlineCode: '',
@@ -2085,6 +2258,22 @@ const showSettings = ref(false)
 const api = useApi()
 
 const isClient = typeof window !== 'undefined'
+
+applyRouteStateFromQuery()
+
+if (isClient) {
+  syncRouteToState()
+  watch(() => route.fullPath, () => {
+    if (isReplacingRoute) return
+    applyRouteStateFromQuery()
+    syncRouteToState()
+  })
+}
+
+watch([panel, () => current.value?.id, moduleStage, () => activeLesson.value?.id, flightPlanMode], () => {
+  syncRouteToState()
+})
+
 const defaultCfg = createDefaultLearnConfig()
 const cfg = ref<LearnConfig>({...defaultCfg})
 audioReveal.value = !cfg.value.audioChallenge
