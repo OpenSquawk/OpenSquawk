@@ -644,7 +644,6 @@
               <div class="hero-detail">
                 <span class="hero-detail-label">Delivery</span>
                 <span class="hero-detail-value">{{ briefingSnapshot.departure.freq }}</span>
-                <span class="hero-detail-sub" v-if="false">{{ briefingSnapshot.departure.freqWords }}</span>
               </div>
               <div class="hero-detail">
                 <span class="hero-detail-label">Push</span>
@@ -656,49 +655,6 @@
               </div>
             </div>
           </div>
-        </section>
-
-        <section class="briefing-summary" v-if="false">
-          <article class="briefing-summary-card">
-            <div class="summary-icon summary-icon--primary">
-              <v-icon size="20">mdi-airplane</v-icon>
-            </div>
-            <div class="summary-body">
-              <span class="summary-label">Callsign</span>
-              <span class="summary-value">{{ briefingSnapshot.callsign }}</span>
-              <span class="summary-sub">{{ briefingSnapshot.radioCall }}</span>
-            </div>
-          </article>
-          <article class="briefing-summary-card">
-            <div class="summary-icon summary-icon--departure">
-              <v-icon size="20">mdi-airplane-takeoff</v-icon>
-            </div>
-            <div class="summary-body">
-              <span class="summary-label">Departure</span>
-              <span class="summary-value">{{ briefingSnapshot.departure.icao }} · RWY {{ briefingSnapshot.departure.runway }}</span>
-              <span class="summary-sub">{{ briefingSnapshot.departure.city }}</span>
-            </div>
-          </article>
-          <article class="briefing-summary-card">
-            <div class="summary-icon summary-icon--arrival">
-              <v-icon size="20">mdi-airplane-landing</v-icon>
-            </div>
-            <div class="summary-body">
-              <span class="summary-label">Arrival</span>
-              <span class="summary-value">{{ briefingSnapshot.arrival.icao }} · RWY {{ briefingSnapshot.arrival.runway }}</span>
-              <span class="summary-sub">{{ briefingSnapshot.arrival.city }}</span>
-            </div>
-          </article>
-          <article class="briefing-summary-card">
-            <div class="summary-icon summary-icon--codes">
-              <v-icon size="20">mdi-radar</v-icon>
-            </div>
-            <div class="summary-body">
-              <span class="summary-label">Codes</span>
-              <span class="summary-value">Squawk {{ briefingSnapshot.codes.squawk }}</span>
-              <span class="summary-sub">Push {{ briefingSnapshot.codes.push }}</span>
-            </div>
-          </article>
         </section>
 
         <div class="briefing-layout">
