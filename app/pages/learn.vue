@@ -4,10 +4,16 @@
     <header class="hud" role="banner">
       <nav class="hud-inner" aria-label="Global">
         <div class="hud-left">
-          <!-- 9-Dots App-Icon → Dashboard -->
-          <button class="icon-btn" title="Dashboard" @click="panel='hub'">
-            <v-icon size="22" class="text-accent">mdi-view-grid</v-icon>
+          <button
+              class="app-logo"
+              type="button"
+              title="Mission hub"
+              aria-label="Mission hub"
+              @click="panel='hub'"
+          >
+            <v-icon icon="mdi-radar" size="22" class="app-logo-icon" />
           </button>
+          <div class="hud-divider" aria-hidden="true"></div>
           <span class="brand">OpenSquawk</span>
           <span class="sep">|</span>
           <span class="mode">Pilot Voice Prep</span>
@@ -836,6 +842,15 @@
                         {{ sayButtonLabel }}
                       </button>
                       <button
+                          v-if="audioPlaying"
+                          class="btn ghost mini"
+                          type="button"
+                          @click="stopAudio"
+                      >
+                        <v-icon size="16">mdi-stop</v-icon>
+                        Stop
+                      </button>
+                      <button
                           v-if="audioContentHidden"
                           class="btn ghost mini"
                           type="button"
@@ -981,28 +996,19 @@
     <footer
         class="footer"
         role="contentinfo"
-        :class="{ 'has-lesson-actions': panel==='module' && moduleStage==='lessons' && current && activeLesson }"
+        :class="{
+          'has-lesson-actions': panel==='module' && moduleStage==='lessons' && current && activeLesson,
+          'is-mission': panel==='module'
+        }"
     >
-      <div class="container footer-container">
-
-        <div
-            v-if="panel==='module' && moduleStage==='lessons' && current && activeLesson"
-            class="lesson-actions"
-        >
-          <div class="lesson-actions-meta">
-            <div v-if="nextLessonMeta" class="lesson-actions-hint">
-              Next: {{ nextLessonMeta.lesson.title }} · Lesson {{ nextLessonMeta.position }} of
-              {{ nextLessonMeta.total }}
-            </div>
-            <div v-else-if="nextMissionMeta" class="lesson-actions-hint">
-              Next mission: {{ nextMissionMeta.module.title }} · Mission {{ nextMissionMeta.position }} of
-              {{ nextMissionMeta.total }}
-            </div>
-            <div v-else class="lesson-actions-hint">
-              Last lesson in this mission.
-            </div>
+      <div
+          v-if="panel==='module' && moduleStage==='lessons' && current && activeLesson"
+          class="lesson-footer"
+      >
+        <div class="lesson-footer-inner">
+          <div class="lesson-footer-left">
             <button
-                class="btn ghost lesson-actions-prev"
+                class="btn ghost lesson-footer-prev"
                 type="button"
                 :disabled="!hasPreviousAction"
                 @click="goToPreviousLesson"
@@ -1011,7 +1017,20 @@
               {{ previousActionLabel }}
             </button>
           </div>
-          <div class="lesson-actions-buttons">
+          <div class="lesson-footer-center">
+            <div v-if="nextLessonMeta" class="lesson-footer-text">
+              Next: {{ nextLessonMeta.lesson.title }} · Lesson {{ nextLessonMeta.position }} of
+              {{ nextLessonMeta.total }}
+            </div>
+            <div v-else-if="nextMissionMeta" class="lesson-footer-text">
+              Next mission: {{ nextMissionMeta.module.title }} · Mission {{ nextMissionMeta.position }} of
+              {{ nextMissionMeta.total }}
+            </div>
+            <div v-else class="lesson-footer-text">
+              Last lesson in this mission.
+            </div>
+          </div>
+          <div class="lesson-footer-right">
             <button class="btn soft" type="button" @click="repeatLesson">
               <v-icon size="18">mdi-dice-5</v-icon>
               New scenario
@@ -1027,7 +1046,9 @@
             </button>
           </div>
         </div>
+      </div>
 
+      <div class="container footer-container">
         <div class="footer-meta">
           <span class="muted small">&copy; 2025 OpenSquawk. All rights reserved.</span>
         </div>
@@ -2260,6 +2281,8 @@ const result = ref<ScoreResult | null>(null)
 const evaluating = ref(false)
 const ttsLoading = ref(false)
 const audioElement = ref<HTMLAudioElement | null>(null)
+const audioPlaying = ref(false)
+const activeAudioToken = ref<symbol | null>(null)
 let speechContext: AudioContext | null = null
 let pizzicatoLiteInstance: PizzicatoLite | null = null
 type RadioSoundInstance = Awaited<ReturnType<PizzicatoLite['createSoundFromBase64']>>
@@ -3355,7 +3378,11 @@ const providerSupportsNativeSpeed = (model?: string | null) => {
 async function playAudioSource(source: CachedAudio, targetRate: number) {
   if (!source?.base64) return
 
+  const playbackToken = Symbol('audio-playback')
+
   audioElement.value = null
+  activeAudioToken.value = null
+  audioPlaying.value = false
 
   const readability = Math.max(1, Math.min(5, cfg.value.radioLevel || 3))
   const mime = source.mime || 'audio/wav'
@@ -3374,19 +3401,33 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
     const audio = new Audio(dataUrl)
     audio.playbackRate = playbackRate
     audioElement.value = audio
+    activeAudioToken.value = playbackToken
+    audioPlaying.value = true
     audio.onended = () => {
       if (audioElement.value === audio) {
         audioElement.value = null
+      }
+      if (activeAudioToken.value === playbackToken) {
+        activeAudioToken.value = null
+        audioPlaying.value = false
       }
     }
     audio.onerror = () => {
       if (audioElement.value === audio) {
         audioElement.value = null
       }
+      if (activeAudioToken.value === playbackToken) {
+        activeAudioToken.value = null
+        audioPlaying.value = false
+      }
     }
     try {
       await audio.play()
     } catch (err) {
+      if (activeAudioToken.value === playbackToken) {
+        activeAudioToken.value = null
+        audioPlaying.value = false
+      }
       console.error('Audio playback failed', err)
     }
   }
@@ -3447,10 +3488,16 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
 
     activeRadioSound = sound
     activeRadioCleanup = noiseStops
+    activeAudioToken.value = playbackToken
+    audioPlaying.value = true
 
     try {
       await sound.play()
     } finally {
+      if (activeAudioToken.value === playbackToken) {
+        activeAudioToken.value = null
+        audioPlaying.value = false
+      }
       if (activeRadioSound === sound) {
         activeRadioSound = null
       }
@@ -3593,8 +3640,31 @@ async function say(text: string) {
       const voice = synth.getVoices().find(item => item.name.toLowerCase().includes(voiceName))
       if (voice) utterance.voice = voice
     }
-    synth.cancel()
-    synth.speak(utterance)
+    const speechToken = Symbol('speech')
+    activeAudioToken.value = speechToken
+    audioPlaying.value = true
+    utterance.onend = () => {
+      if (activeAudioToken.value === speechToken) {
+        activeAudioToken.value = null
+        audioPlaying.value = false
+      }
+    }
+    utterance.onerror = () => {
+      if (activeAudioToken.value === speechToken) {
+        activeAudioToken.value = null
+        audioPlaying.value = false
+      }
+    }
+    try {
+      synth.cancel()
+      synth.speak(utterance)
+    } catch (err) {
+      if (activeAudioToken.value === speechToken) {
+        activeAudioToken.value = null
+        audioPlaying.value = false
+      }
+      console.error('Browser speech synthesis failed', err)
+    }
     return
   }
 
@@ -3663,6 +3733,8 @@ function stopAudio() {
     }
     audioElement.value = null
   }
+  activeAudioToken.value = null
+  audioPlaying.value = false
 }
 
 onMounted(() => {
@@ -3754,11 +3826,49 @@ onMounted(() => {
 .hud-left {
   display: flex;
   align-items: center;
-  gap: 10px
+  gap: 14px
+}
+
+.app-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  padding: 0;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.app-logo:hover,
+.app-logo:focus-visible {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  transform: translateY(-1px);
+}
+
+.app-logo:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  outline-offset: 3px;
+}
+
+.app-logo-icon {
+  color: inherit;
+}
+
+.hud-divider {
+  width: 1px;
+  height: 44px;
+  background: color-mix(in srgb, var(--text) 12%, transparent);
 }
 
 .brand {
-  font-weight: 600
+  font-weight: 600;
+  font-size: 18px;
 }
 
 .mode {
@@ -3829,19 +3939,6 @@ onMounted(() => {
   color: var(--t3);
   letter-spacing: .06em;
   text-transform: uppercase;
-}
-
-.icon-btn {
-  border: 1px solid var(--border);
-  background: transparent;
-  padding: 6px;
-  display: inline-flex;
-  align-items: center
-}
-
-.icon-btn:hover {
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-  transform: scale(1.05);
 }
 
 /* Chips/Controls */
@@ -4385,9 +4482,6 @@ onMounted(() => {
 }
 
 /* Play */
-.play.has-lesson-actions {
-}
-
 .play .play-head {
   display: flex;
   justify-content: space-between;
@@ -5055,52 +5149,72 @@ onMounted(() => {
   line-height: 1.4;
 }
 
-.lesson-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
-  border-radius: 16px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--bg2) 82%, transparent));
-  box-shadow: 0 24px 44px rgba(2, 6, 23, .5);
-  z-index: 40;
-  padding: 16px 24px;
+.lesson-footer {
+  border-top: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 -18px 40px rgba(2, 6, 23, .45);
 }
 
-.lesson-actions-meta {
-  flex: 1 1 280px;
+.lesson-footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 16px;
 }
 
-.lesson-actions-hint {
+.lesson-footer-left,
+.lesson-footer-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lesson-footer-center {
+  text-align: center;
+}
+
+.lesson-footer-text {
   font-size: 13px;
   letter-spacing: .06em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--t3) 80%, transparent);
 }
 
-.lesson-actions-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.lesson-actions-prev {
-  align-self: flex-start;
+.lesson-footer-prev {
   min-width: 150px;
   justify-content: center;
 }
 
-.lesson-actions-buttons .btn {
+.lesson-footer-right .btn {
   min-width: 150px;
   justify-content: center;
+}
+
+@media (min-width: 900px) {
+  .lesson-footer-inner {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .lesson-footer-left {
+    justify-content: flex-start;
+    flex: 0 0 auto;
+  }
+
+  .lesson-footer-center {
+    flex: 1 1 auto;
+  }
+
+  .lesson-footer-right {
+    justify-content: flex-end;
+    flex: 0 0 auto;
+  }
 }
 
 .row.wrap {
@@ -5365,28 +5479,19 @@ onMounted(() => {
     font-size: 16px;
   }
 
-  .lesson-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-    left: 20px;
-    right: 20px;
-    transform: none;
-    bottom: 16px;
-    width: auto;
+  .lesson-footer-inner {
+    padding: 16px;
   }
 
-  .lesson-actions-buttons {
-    justify-content: stretch;
+  .lesson-footer-left,
+  .lesson-footer-right {
+    width: 100%;
   }
 
-  .lesson-actions-buttons .btn {
-    flex: 1 1 100%;
+  .lesson-footer-prev,
+  .lesson-footer-right .btn {
     min-width: 0;
-  }
-
-  .play.has-lesson-actions {
-    padding-bottom: 240px;
+    flex: 1 1 100%;
   }
 
   .plan-status {
@@ -5404,8 +5509,8 @@ onMounted(() => {
     justify-content: center;
   }
 
-  .footer.has-lesson-actions .footer-meta {
-    padding-bottom: 180px;
+  .footer-container {
+    padding: 16px 20px;
   }
 }
 
@@ -5432,20 +5537,27 @@ onMounted(() => {
 .footer {
   font-size: 13px;
   color: var(--t3);
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 -20px 38px rgba(2, 6, 23, .42);
+  margin-top: 60px;
+}
+
+.footer.is-mission {
+  border-top: none;
+  margin-top: 40px;
 }
 
 .footer-container {
   display: flex;
-  flex-direction: column;
-  gap: 24px;
+  justify-content: center;
+  padding: 20px 20px 24px;
 }
 
 .footer-meta {
   text-align: center;
-}
-
-.footer.has-lesson-actions .footer-meta {
-  padding-bottom: 120px;
 }
 
 .footer a {
