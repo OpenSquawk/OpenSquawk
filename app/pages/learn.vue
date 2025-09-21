@@ -644,7 +644,7 @@
               <div class="hero-detail">
                 <span class="hero-detail-label">Delivery</span>
                 <span class="hero-detail-value">{{ briefingSnapshot.departure.freq }}</span>
-                <span class="hero-detail-sub">{{ briefingSnapshot.departure.freqWords }}</span>
+                <span class="hero-detail-sub" v-if="false">{{ briefingSnapshot.departure.freqWords }}</span>
               </div>
               <div class="hero-detail">
                 <span class="hero-detail-label">Push</span>
@@ -658,7 +658,7 @@
           </div>
         </section>
 
-        <section class="briefing-summary">
+        <section class="briefing-summary" v-if="false">
           <article class="briefing-summary-card">
             <div class="summary-icon summary-icon--primary">
               <v-icon size="20">mdi-airplane</v-icon>
