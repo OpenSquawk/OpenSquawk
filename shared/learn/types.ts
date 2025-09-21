@@ -161,10 +161,16 @@ export type Lesson = {
   generate: () => Scenario
 }
 
+export type ModuleMeta = {
+  flightPlan?: boolean
+  briefingArt?: string
+}
+
 export type ModuleDef = {
   id: string
   title: string
   subtitle: string
   art: string
   lessons: Lesson[]
+  meta?: ModuleMeta
 }

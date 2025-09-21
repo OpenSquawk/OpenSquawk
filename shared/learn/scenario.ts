@@ -198,7 +198,7 @@ function generateSquawk(): string {
   return code
 }
 
-function digitsToWords(value: string): string {
+export function digitsToWords(value: string): string {
   return value
     .split('')
     .map(char => atcNumberWords[char] ?? char)
@@ -207,7 +207,7 @@ function digitsToWords(value: string): string {
     .trim()
 }
 
-function lettersToNato(value: string): string {
+export function lettersToNato(value: string): string {
   return value
     .toUpperCase()
     .split('')
@@ -215,7 +215,7 @@ function lettersToNato(value: string): string {
     .join(' ')
 }
 
-function runwayToWords(runway: string): string {
+export function runwayToWords(runway: string): string {
   const digits = runway.replace(/[^0-9]/g, '').padStart(2, '0')
   const suffix = runway.replace(/[0-9]/g, '')
   const base = digits
@@ -274,17 +274,17 @@ function visibilityToWords(vis: string): string {
   return vis
 }
 
-function minutesToWords(minutes: number): string {
+export function minutesToWords(minutes: number): string {
   const value = Math.max(1, Math.round(minutes))
   const unit = value === 1 ? 'minute' : 'minutes'
   return `${digitsToWords(value.toString())} ${unit}`
 }
 
-function speedToWords(speed: number): string {
+export function speedToWords(speed: number): string {
   return `${digitsToWords(Math.round(speed).toString())} knots`
 }
 
-function altitudeToWords(value: number): string {
+export function altitudeToWords(value: number): string {
   const thousands = Math.floor(value / 1000)
   const remainder = value % 1000
   let words = thousands ? `${digitsToWords(thousands.toString())} thousand` : ''
@@ -491,18 +491,38 @@ function cloneScenario(scenario: Scenario): Scenario {
   return JSON.parse(JSON.stringify(scenario)) as Scenario
 }
 
-export type ScenarioGenerator = (() => Scenario) & { reset: () => void }
+export type ScenarioGenerator = (() => Scenario) & {
+  reset: () => void
+  setScenario: (scenario: Scenario | null) => void
+  peek: () => Scenario | null
+}
 
-export function createScenarioSeries(): ScenarioGenerator {
+export function createScenarioSeries(source?: () => Scenario): ScenarioGenerator {
   let cached: Scenario | null = null
-  const generator = () => {
+  let override: Scenario | null = null
+  const resolveSource = () => {
+    if (override) {
+      return cloneScenario(override)
+    }
+    return source ? source() : createBaseScenario()
+  }
+  const generator = (() => {
     if (!cached) {
-      cached = createBaseScenario()
+      cached = resolveSource()
     }
     return cloneScenario(cached)
-  }
+  }) as ScenarioGenerator
   generator.reset = () => {
-    cached = null
+    cached = override ? cloneScenario(override) : null
+  }
+  generator.setScenario = (scenario: Scenario | null) => {
+    override = scenario ? cloneScenario(scenario) : null
+    cached = override ? cloneScenario(override) : null
+  }
+  generator.peek = () => {
+    if (cached) return cloneScenario(cached)
+    if (override) return cloneScenario(override)
+    return null
   }
   return generator
 }
