@@ -771,7 +771,7 @@
         <div class="module-overview">
           <div v-if="current" class="module-overview-header">
             <div class="module-overview-meta">
-              <span class="module-overview-chip">Mission overview</span>
+              <span class="chip module-overview-chip">Mission overview</span>
               <h3 class="module-overview-title">{{ current.title }}</h3>
               <p class="module-overview-sub">{{ current.subtitle }}</p>
             </div>
@@ -4402,16 +4402,17 @@ onMounted(() => {
 }
 
 .module-overview-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
   padding: 4px 12px;
   border-radius: 999px;
-  font-size: 11px;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
-  color: color-mix(in srgb, var(--accent) 80%, white 10%);
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: color-mix(in srgb, var(--accent) 80%, white 12%);
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
 }
 
 .module-overview-title {
