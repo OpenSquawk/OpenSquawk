@@ -491,18 +491,289 @@ function cloneScenario(scenario: Scenario): Scenario {
   return JSON.parse(JSON.stringify(scenario)) as Scenario
 }
 
-export type ScenarioGenerator = (() => Scenario) & { reset: () => void }
+export type ScenarioGenerator = (() => Scenario) & {
+  reset: () => void
+  configure: (factory: () => Scenario) => void
+}
 
-export function createScenarioSeries(): ScenarioGenerator {
+export function createScenarioSeries(initialFactory: () => Scenario = createBaseScenario): ScenarioGenerator {
   let cached: Scenario | null = null
+  let factory = initialFactory
   const generator = () => {
     if (!cached) {
-      cached = createBaseScenario()
+      cached = factory()
     }
     return cloneScenario(cached)
   }
   generator.reset = () => {
     cached = null
   }
+  generator.configure = (nextFactory: () => Scenario) => {
+    factory = nextFactory
+    cached = null
+  }
   return generator
+}
+
+function cloneAirportData(airport: AirportData): AirportData {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(airport)
+  }
+  return JSON.parse(JSON.stringify(airport)) as AirportData
+}
+
+function resolveAirport(icao?: string): AirportData | undefined {
+  if (!icao) return undefined
+  const normalized = icao.trim().toUpperCase()
+  return airportsData.find(item => item.icao === normalized)
+}
+
+export type FlightPlanOverrides = {
+  callsign?: string
+  airlineCode?: string
+  airlineCall?: string
+  flightNumber?: string
+  departure?: Partial<AirportData> & { icao?: string }
+  destination?: Partial<AirportData> & { icao?: string }
+  runway?: string
+  stand?: string
+  taxiRoute?: string
+  sid?: string
+  transition?: string
+  approach?: string
+  initialAltitude?: number
+  climbAltitude?: number
+  squawk?: string
+  qnh?: number
+  atisCode?: string
+  arrivalRunway?: string
+  arrivalTaxiRoute?: string
+  arrivalStand?: string
+  arrivalStar?: string
+  arrivalTransition?: string
+  arrivalQnh?: number
+  arrivalWind?: string
+  pushDelayMinutes?: number
+  speedRestriction?: number
+  vectorHeading?: string
+  emergencyHeading?: string
+  remarks?: string
+}
+
+function sanitizeRunway(value?: string): string | undefined {
+  if (!value) return undefined
+  return value.trim().toUpperCase()
+}
+
+function sanitizeText(value?: string): string | undefined {
+  if (!value) return undefined
+  const trimmed = value.trim()
+  return trimmed ? trimmed : undefined
+}
+
+function sanitizeCallsignData(callSign?: string) {
+  if (!callSign) return { callsign: undefined, airlineCode: undefined, flightNumber: undefined }
+  const normalized = callSign.trim().toUpperCase()
+  if (!normalized) return { callsign: undefined, airlineCode: undefined, flightNumber: undefined }
+  const prefix = normalized.replace(/[^A-Z]/g, '').slice(0, 3)
+  const digits = normalized.replace(/[^0-9]/g, '')
+  return { callsign: normalized, airlineCode: prefix || undefined, flightNumber: digits || undefined }
+}
+
+function rebuildFrequencies(scenario: Scenario) {
+  const airport = scenario.airport
+  const frequencies: Frequency[] = [
+    { type: 'ATIS', label: 'ATIS', value: airport.freqs.atis },
+    { type: 'DEL', label: 'Delivery', value: airport.freqs.delivery },
+    { type: 'GND', label: 'Ground', value: airport.freqs.ground },
+    { type: 'TWR', label: 'Tower', value: airport.freqs.tower },
+    { type: 'DEP', label: 'Departure', value: airport.freqs.departure },
+    { type: 'APP', label: 'Approach', value: airport.freqs.approach },
+    { type: 'CTR', label: 'Center', value: airport.freqs.center }
+  ]
+  scenario.frequencies = frequencies
+  scenario.frequencyWords = frequencies.reduce((acc, freq) => {
+    acc[freq.type] = frequencyToSpeech(freq.value)
+    return acc
+  }, {} as Record<FrequencyType, string>)
+  scenario.atisFreq = airport.freqs.atis
+  scenario.deliveryFreq = airport.freqs.delivery
+  scenario.groundFreq = airport.freqs.ground
+  scenario.towerFreq = airport.freqs.tower
+  scenario.departureFreq = airport.freqs.departure
+  scenario.approachFreq = airport.freqs.approach
+  scenario.centerFreq = airport.freqs.center
+}
+
+export function createScenarioFromPlan(overrides: FlightPlanOverrides): Scenario {
+  const scenario = createBaseScenario()
+
+  const callData = sanitizeCallsignData(overrides.callsign)
+  const airlineCode = sanitizeText(overrides.airlineCode) || callData.airlineCode || scenario.airlineCode
+  const flightNumber = sanitizeText(overrides.flightNumber) || callData.flightNumber || scenario.flightNumber
+  const airlineCall = sanitizeText(overrides.airlineCall) || scenario.airlineCall
+  const fallbackCallsign = airlineCode && flightNumber ? `${airlineCode}${flightNumber}` : scenario.callsign
+  const callsign = sanitizeText(overrides.callsign) || fallbackCallsign
+
+  scenario.callsign = callsign
+  scenario.airlineCode = airlineCode || scenario.airlineCode
+  scenario.airlineCall = airlineCall || scenario.airlineCall
+  scenario.flightNumber = flightNumber || scenario.flightNumber
+  scenario.flightNumberWords = digitsToWords(scenario.flightNumber)
+  scenario.callsignNato = lettersToNato(scenario.airlineCode)
+  scenario.radioCall = `${scenario.airlineCall} ${digitsToWords(scenario.flightNumber)}`
+
+  const departureOverride = overrides.departure
+  if (departureOverride?.icao) {
+    const airport = resolveAirport(departureOverride.icao)
+    if (airport) {
+      scenario.airport = cloneAirportData(airport)
+    } else {
+      scenario.airport = { ...scenario.airport, icao: departureOverride.icao.trim().toUpperCase() }
+    }
+  }
+  if (departureOverride?.name) {
+    scenario.airport.name = departureOverride.name
+  }
+  if (departureOverride?.city) {
+    scenario.airport.city = departureOverride.city
+  }
+
+  const destinationOverride = overrides.destination
+  if (destinationOverride?.icao) {
+    const airport = resolveAirport(destinationOverride.icao)
+    if (airport) {
+      scenario.destination = cloneAirportData(airport)
+    } else {
+      scenario.destination = { ...scenario.destination, icao: destinationOverride.icao.trim().toUpperCase() }
+    }
+  }
+  if (destinationOverride?.name) {
+    scenario.destination.name = destinationOverride.name
+  }
+  if (destinationOverride?.city) {
+    scenario.destination.city = destinationOverride.city
+  }
+
+  if (overrides.runway) {
+    scenario.runway = sanitizeRunway(overrides.runway) ?? scenario.runway
+    scenario.runwayWords = runwayToWords(scenario.runway)
+    scenario.atisSummary.runway = scenario.runway
+  }
+  if (overrides.stand) {
+    scenario.stand = overrides.stand.trim()
+  }
+  if (overrides.taxiRoute) {
+    scenario.taxiRoute = overrides.taxiRoute.trim()
+  }
+  if (overrides.sid) {
+    scenario.sid = overrides.sid.trim()
+  }
+  if (overrides.transition) {
+    scenario.transition = overrides.transition.trim()
+  }
+  if (overrides.approach) {
+    scenario.approach = overrides.approach.trim()
+  }
+
+  const initialAltitude = Number.isFinite(overrides.initialAltitude)
+    ? Math.max(0, Number(overrides.initialAltitude))
+    : scenario.altitudes.initial
+  const climbAltitude = Number.isFinite(overrides.climbAltitude)
+    ? Math.max(initialAltitude, Number(overrides.climbAltitude))
+    : scenario.altitudes.climb
+  scenario.altitudes = {
+    initial: initialAltitude,
+    climb: climbAltitude,
+    initialWords: altitudeToWords(initialAltitude),
+    climbWords: altitudeToWords(climbAltitude)
+  }
+
+  if (overrides.squawk) {
+    const cleaned = overrides.squawk.replace(/[^0-7]/g, '').slice(0, 4)
+    if (cleaned) {
+      scenario.squawk = cleaned
+      scenario.squawkWords = digitsToWords(cleaned)
+    }
+  }
+
+  if (Number.isFinite(overrides.qnh)) {
+    scenario.qnh = Math.round(Number(overrides.qnh))
+    scenario.qnhWords = qnhToWords(scenario.qnh)
+    scenario.atisSummary.qnh = `QNH ${scenario.qnh}`
+    scenario.metarSegments.qnh = `Q${scenario.qnh.toString().padStart(4, '0')}`
+  }
+
+  if (overrides.atisCode) {
+    scenario.atisCode = overrides.atisCode.trim().toUpperCase().slice(0, 1)
+  }
+
+  if (overrides.arrivalRunway) {
+    scenario.arrivalRunway = sanitizeRunway(overrides.arrivalRunway) ?? scenario.arrivalRunway
+    scenario.arrivalRunwayWords = runwayToWords(scenario.arrivalRunway)
+  }
+  if (overrides.arrivalTaxiRoute) {
+    scenario.arrivalTaxiRoute = overrides.arrivalTaxiRoute.trim()
+  }
+  if (overrides.arrivalStand) {
+    scenario.arrivalStand = overrides.arrivalStand.trim()
+  }
+  if (overrides.arrivalStar) {
+    scenario.arrivalStar = overrides.arrivalStar.trim()
+  }
+  if (overrides.arrivalTransition) {
+    scenario.arrivalTransition = overrides.arrivalTransition.trim()
+  }
+  if (Number.isFinite(overrides.arrivalQnh)) {
+    scenario.arrivalQnh = Math.round(Number(overrides.arrivalQnh))
+    scenario.arrivalQnhWords = qnhToWords(scenario.arrivalQnh)
+  }
+  if (overrides.arrivalWind) {
+    const normalized = overrides.arrivalWind.trim()
+    if (normalized) {
+      scenario.arrivalWind = normalized
+      const [dir, speed] = normalized.split('/')
+      const dirNum = Number(dir)
+      const spdNum = Number(speed)
+      if (!Number.isNaN(dirNum) && !Number.isNaN(spdNum)) {
+        scenario.arrivalWindWords = windToWords(dirNum, spdNum)
+      }
+    }
+  }
+
+  if (Number.isFinite(overrides.pushDelayMinutes)) {
+    const minutes = Math.max(0, Number(overrides.pushDelayMinutes))
+    scenario.pushDelayMinutes = minutes
+    scenario.pushDelayWords = minutesToWords(minutes)
+  }
+  if (Number.isFinite(overrides.speedRestriction)) {
+    const speed = Math.max(0, Number(overrides.speedRestriction))
+    scenario.speedRestriction = speed
+    scenario.speedRestrictionWords = speedToWords(speed)
+  }
+  if (overrides.vectorHeading) {
+    const normalized = overrides.vectorHeading.replace(/[^0-9]/g, '').padStart(3, '0')
+    scenario.vectorHeading = normalized
+    scenario.vectorHeadingWords = digitsToWords(normalized)
+  }
+  if (overrides.emergencyHeading) {
+    const normalized = overrides.emergencyHeading.replace(/[^0-9]/g, '').padStart(3, '0')
+    scenario.emergencyHeading = normalized
+    scenario.emergencyHeadingWords = digitsToWords(normalized)
+  }
+  if (overrides.remarks) {
+    scenario.remarks = overrides.remarks
+  }
+
+  rebuildFrequencies(scenario)
+  return scenario
+}
+
+export function listScenarioAirports() {
+  return airportsData.map(airport => ({ icao: airport.icao, name: airport.name, city: airport.city }))
+}
+
+export function getScenarioAirport(icao: string): AirportData | undefined {
+  const found = resolveAirport(icao)
+  return found ? cloneAirportData(found) : undefined
 }

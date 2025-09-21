@@ -161,10 +161,19 @@ export type Lesson = {
   generate: () => Scenario
 }
 
+export type ModuleMissionOptions = {
+  /**
+   * Allows the learner to prepare a bespoke flight before entering the mission.
+   * Used for gate-to-gate style flows that should stay on a single scenario across lessons.
+   */
+  flightConfigurable?: boolean
+}
+
 export type ModuleDef = {
   id: string
   title: string
   subtitle: string
   art: string
   lessons: Lesson[]
+  missionOptions?: ModuleMissionOptions
 }
