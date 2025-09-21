@@ -940,6 +940,18 @@
             </div>
 
           </div>
+          <div v-if="showScenarioPracticeHint" class="lesson-tip" role="note">
+            <div class="lesson-tip-icon">
+              <v-icon size="20">mdi-dice-multiple</v-icon>
+            </div>
+            <div class="lesson-tip-body">
+              <div class="lesson-tip-title">Schon gewusst?</div>
+              <p class="muted small">
+                Mit dem Würfel-Icon „New scenario“ kannst du denselben Call sofort mit neuen Daten üben. Einfach anklicken und du
+                bekommst andere Werte – wenn du das pro Lesson 5–10x wiederholst, sitzt der Funkspruch wirklich.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -2632,6 +2644,11 @@ function fieldExpectedValue(key: string): string {
 
 const targetPhrase = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.phrase(scenario.value) : ''))
 const lessonInfo = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.info(scenario.value) : []))
+const showScenarioPracticeHint = computed(() => {
+  if (!current.value || !activeLesson.value) return false
+  const index = modules.value.findIndex(module => module.id === current.value?.id)
+  return index > -1 && index < 2
+})
 const sayButtonLabel = computed(() => (hasSpokenTarget.value ? 'Say again' : 'Say'))
 const nextLessonMeta = computed(() => {
   if (!current.value || !activeLesson.value) return null
@@ -4684,6 +4701,39 @@ onMounted(() => {
 
 .module-detail .console {
   margin-top: 0;
+}
+
+.lesson-tip {
+  margin-top: 24px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px 20px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.lesson-tip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 36%, transparent);
+  color: color-mix(in srgb, var(--accent) 90%, white 10%);
+}
+
+.lesson-tip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lesson-tip-title {
+  font-weight: 600;
+  letter-spacing: .02em;
 }
 
 .lesson-track {
