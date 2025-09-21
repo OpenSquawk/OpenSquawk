@@ -4376,8 +4376,8 @@ onMounted(() => {
 .module-overview::after {
   content: "";
   position: absolute;
-  inset: -20% -30% -60% 40%;
-  background: radial-gradient(520px 360px at 90% 100%, color-mix(in srgb, var(--accent2) 28%, transparent), transparent 75%);
+  inset: -20% 0 -60% 40%;
+  background: radial-gradient(520px 360px at 110% 100%, color-mix(in srgb, var(--accent2) 28%, transparent), transparent 75%);
   opacity: .35;
   pointer-events: none;
   filter: blur(12px);
@@ -4481,7 +4481,7 @@ onMounted(() => {
 .lesson-track {
   overflow-x: auto;
   padding-bottom: 12px;
-  margin: 0 -6px;
+  margin: 0;
   padding-left: 6px;
   padding-right: 6px;
   scroll-snap-type: x proximity;
