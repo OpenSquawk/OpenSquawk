@@ -694,7 +694,17 @@
       </div>
 
       <div v-else class="module-content">
-        <div class="module-overview">
+        <div
+            class="module-overview"
+            :class="{
+              'is-expanded': moduleOverviewHoldOpen,
+              'is-active': moduleOverviewIsOpen
+            }"
+            @mouseenter="handleModuleOverviewHover(true)"
+            @mouseleave="handleModuleOverviewHover(false)"
+            @focusin="handleModuleOverviewFocusIn"
+            @focusout="handleModuleOverviewFocusOut"
+        >
           <div v-if="current" class="module-overview-header">
             <div class="module-overview-meta">
               <div>
@@ -703,22 +713,34 @@
               <h3 class="module-overview-title">{{ current.title }}</h3>
               <p class="module-overview-sub">{{ current.subtitle }}</p>
             </div>
-            <div
-                class="module-overview-progress"
-                role="progressbar"
-                aria-label="Mission progress"
-                :aria-valuenow="pct(current.id)"
-                aria-valuemin="0"
-                aria-valuemax="100"
-            >
-              <span class="module-overview-progress-label">Progress</span>
-              <div class="module-overview-progress-bar">
-                <div class="module-overview-progress-fill" :style="{ width: pct(current.id) + '%' }"></div>
+            <div class="module-overview-tools">
+              <button
+                  class="module-overview-toggle"
+                  type="button"
+                  @click="toggleModuleOverview"
+                  :aria-expanded="moduleOverviewIsOpen ? 'true' : 'false'"
+                  :aria-controls="moduleOverviewTrackId"
+              >
+                <span class="module-overview-toggle-label">Mission lessons</span>
+                <v-icon size="16" class="module-overview-toggle-icon">mdi-chevron-down</v-icon>
+              </button>
+              <div
+                  class="module-overview-progress"
+                  role="progressbar"
+                  aria-label="Mission progress"
+                  :aria-valuenow="pct(current.id)"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+              >
+                <span class="module-overview-progress-label">Progress</span>
+                <div class="module-overview-progress-bar">
+                  <div class="module-overview-progress-fill" :style="{ width: pct(current.id) + '%' }"></div>
+                </div>
+                <span class="module-overview-progress-meta">{{ doneCount(current.id) }}/{{ current.lessons.length }} lessons</span>
               </div>
-              <span class="module-overview-progress-meta">{{ doneCount(current.id) }}/{{ current.lessons.length }} lessons</span>
             </div>
           </div>
-          <div class="lesson-track" ref="lessonTrack">
+          <div class="lesson-track" ref="lessonTrack" :id="moduleOverviewTrackId">
             <div class="lesson-grid">
               <button
                   v-for="l in current.lessons"
@@ -977,6 +999,15 @@
             <div v-else class="lesson-actions-hint">
               Last lesson in this mission.
             </div>
+            <button
+                class="btn ghost lesson-actions-prev"
+                type="button"
+                :disabled="!hasPreviousAction"
+                @click="goToPreviousLesson"
+            >
+              <v-icon size="18">mdi-arrow-left</v-icon>
+              {{ previousActionLabel }}
+            </button>
           </div>
           <div class="lesson-actions-buttons">
             <button class="btn soft" type="button" @click="repeatLesson">
@@ -1292,6 +1323,13 @@ const flightPlanError = ref<string | null>(null)
 const simbriefForm = reactive({ userId: '', loading: false })
 const simbriefPlanMeta = ref<{ callsign: string; route: string } | null>(null)
 const lessonTrack = ref<HTMLElement | null>(null)
+const moduleOverviewExpanded = ref(false)
+const moduleOverviewHovering = ref(false)
+const moduleOverviewFocusWithin = ref(false)
+const isHoverCapable = ref(false)
+const moduleOverviewTrackId = computed(() => current.value ? `module-${current.value.id}-lesson-track` : 'module-lesson-track')
+const moduleOverviewHoldOpen = computed(() => !isHoverCapable.value || moduleOverviewExpanded.value)
+const moduleOverviewIsOpen = computed(() => moduleOverviewHoldOpen.value || moduleOverviewHovering.value || moduleOverviewFocusWithin.value)
 type ManualSection = 'departure' | 'arrival' | 'procedures'
 const manualSectionsOpen = reactive<Record<ManualSection, boolean>>({
   departure: false,
@@ -2237,6 +2275,46 @@ const showSettings = ref(false)
 const api = useApi()
 
 const isClient = typeof window !== 'undefined'
+let hoverCapabilityCleanup: (() => void) | null = null
+
+function resetModuleOverviewExpansion() {
+  moduleOverviewHovering.value = false
+  moduleOverviewFocusWithin.value = false
+  moduleOverviewExpanded.value = !isHoverCapable.value
+}
+
+if (import.meta.client) {
+  const mediaQuery = window.matchMedia('(hover: hover)')
+  const applyHoverCapability = (matches: boolean) => {
+    isHoverCapable.value = matches
+    resetModuleOverviewExpansion()
+  }
+  applyHoverCapability(mediaQuery.matches)
+  const handleHoverCapabilityChange = (event: MediaQueryListEvent) => {
+    applyHoverCapability(event.matches)
+  }
+  if (typeof mediaQuery.addEventListener === 'function') {
+    mediaQuery.addEventListener('change', handleHoverCapabilityChange)
+    hoverCapabilityCleanup = () => {
+      mediaQuery.removeEventListener('change', handleHoverCapabilityChange)
+    }
+  } else if (typeof mediaQuery.addListener === 'function') {
+    mediaQuery.addListener(handleHoverCapabilityChange)
+    hoverCapabilityCleanup = () => {
+      mediaQuery.removeListener(handleHoverCapabilityChange)
+    }
+  }
+
+  watch([panel, moduleStage], ([panelValue, stage]) => {
+    if (panelValue !== 'module' || stage !== 'lessons') {
+      resetModuleOverviewExpansion()
+    }
+  })
+
+  watch(() => current.value?.id, () => {
+    resetModuleOverviewExpansion()
+  })
+}
 const defaultCfg = createDefaultLearnConfig()
 const cfg = ref<LearnConfig>({...defaultCfg})
 audioReveal.value = !cfg.value.audioChallenge
@@ -2431,6 +2509,10 @@ if (isClient) {
 }
 
 onBeforeUnmount(() => {
+  if (hoverCapabilityCleanup) {
+    hoverCapabilityCleanup()
+    hoverCapabilityCleanup = null
+  }
   if (persistTimer) {
     clearTimeout(persistTimer)
     persistTimer = null
@@ -2551,6 +2633,20 @@ const nextLessonMeta = computed(() => {
   }
 })
 
+const prevLessonMeta = computed(() => {
+  if (!current.value || !activeLesson.value) return null
+  const lessons = current.value.lessons
+  const activeId = activeLesson.value.id
+  const idx = lessons.findIndex(lesson => lesson.id === activeId)
+  if (idx <= 0) return null
+  const previousLesson = lessons[idx - 1]
+  return {
+    lesson: previousLesson,
+    position: idx,
+    total: lessons.length
+  }
+})
+
 const nextMissionMeta = computed(() => {
   if (!current.value) return null
   const currentIndex = modules.value.findIndex(module => module.id === current.value?.id)
@@ -2569,11 +2665,36 @@ const nextMissionMeta = computed(() => {
   return null
 })
 
+const prevMissionMeta = computed(() => {
+  if (!current.value) return null
+  const currentIndex = modules.value.findIndex(module => module.id === current.value?.id)
+  if (currentIndex <= 0) return null
+  for (let idx = currentIndex - 1; idx >= 0; idx--) {
+    const module = modules.value[idx]
+    if (isModuleUnlocked(module.id)) {
+      return {
+        module,
+        position: idx + 1,
+        total: modules.value.length
+      }
+    }
+  }
+  return null
+})
+
 const nextActionLabel = computed(() => {
   if (nextLessonMeta.value) return 'Next lesson'
   if (nextMissionMeta.value) return 'Next mission'
   return 'Next lesson'
 })
+
+const previousActionLabel = computed(() => {
+  if (prevLessonMeta.value) return 'Previous lesson'
+  if (prevMissionMeta.value) return 'Previous module'
+  return 'Previous lesson'
+})
+
+const hasPreviousAction = computed(() => Boolean(prevLessonMeta.value || prevMissionMeta.value))
 
 watch(activeLesson, lesson => {
   if (lesson) {
@@ -2650,8 +2771,60 @@ function rollScenario(clear = false) {
   queueAutoSay()
 }
 
+function toggleModuleOverview() {
+  if (!isHoverCapable.value) return
+  moduleOverviewExpanded.value = !moduleOverviewExpanded.value
+  if (moduleOverviewExpanded.value) {
+    moduleOverviewHovering.value = false
+    void nextTick(() => {
+      const activeId = activeLesson.value?.id
+      const selector = activeId ? `[data-lesson='${activeId}']` : 'button.lesson'
+      const target = lessonTrack.value?.querySelector<HTMLElement>(selector)
+      target?.focus()
+    })
+  } else {
+    moduleOverviewHovering.value = false
+    moduleOverviewFocusWithin.value = false
+  }
+}
+
+function handleModuleOverviewHover(state: boolean) {
+  if (!isHoverCapable.value) return
+  moduleOverviewHovering.value = state
+}
+
+function handleModuleOverviewFocusIn(event: FocusEvent) {
+  if (!isHoverCapable.value) return
+  const target = event.target as HTMLElement | null
+  if (target?.classList?.contains('module-overview-toggle') && !moduleOverviewExpanded.value) {
+    moduleOverviewFocusWithin.value = false
+    return
+  }
+  moduleOverviewFocusWithin.value = true
+}
+
+function handleModuleOverviewFocusOut(event: FocusEvent) {
+  if (!isHoverCapable.value) return
+  const currentTarget = event.currentTarget as HTMLElement | null
+  const related = event.relatedTarget as Node | null
+  if (currentTarget && related && currentTarget.contains(related)) return
+  moduleOverviewFocusWithin.value = false
+}
+
 function repeatLesson() {
   rollScenario(true)
+}
+
+function goToPreviousLesson() {
+  const meta = prevLessonMeta.value
+  if (meta) {
+    activeLesson.value = meta.lesson
+    return
+  }
+  const previousMission = prevMissionMeta.value
+  if (previousMission) {
+    quickContinue(previousMission.module.id)
+  }
 }
 
 function goToNextLesson() {
@@ -4280,9 +4453,15 @@ onMounted(() => {
   background:
       radial-gradient(420px 260px at -10% -20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
       linear-gradient(150deg, color-mix(in srgb, var(--bg2) 82%, transparent), color-mix(in srgb, var(--text) 6%, transparent));
-  gap: 28px;
+  --module-overview-gap: 28px;
+  --lesson-track-max-height: 400px;
+  --lesson-track-opacity: 1;
+  --lesson-track-pointer-events: auto;
+  --lesson-track-padding-bottom: 12px;
+  --lesson-track-offset: 0px;
   display: flex;
   flex-direction: column;
+  gap: var(--module-overview-gap);
   border-radius: 28px;
   isolation: isolate;
 }
@@ -4326,6 +4505,50 @@ onMounted(() => {
   flex-direction: column;
   gap: 10px;
   max-width: 520px;
+}
+
+.module-overview-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+  min-width: 220px;
+}
+
+.module-overview-toggle {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  background: color-mix(in srgb, var(--bg2) 82%, transparent);
+  color: color-mix(in srgb, var(--t3) 30%, white 5%);
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.module-overview-toggle:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: color-mix(in srgb, var(--accent) 85%, white 10%);
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  box-shadow: 0 10px 24px rgba(2, 6, 23, .35);
+}
+
+.module-overview-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, white 12%);
+  outline-offset: 2px;
+}
+
+.module-overview-toggle-label {
+  font-weight: 600;
+}
+
+.module-overview-toggle-icon {
+  transition: transform .25s ease;
 }
 
 .module-overview-chip {
@@ -4393,6 +4616,17 @@ onMounted(() => {
   color: color-mix(in srgb, var(--t3) 70%, transparent);
 }
 
+.module-overview.is-active .module-overview-toggle {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: color-mix(in srgb, var(--accent) 85%, white 10%);
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  box-shadow: 0 10px 24px rgba(2, 6, 23, .35);
+}
+
+.module-overview.is-active .module-overview-toggle-icon {
+  transform: rotate(180deg);
+}
+
 .module-detail {
   border-color: color-mix(in srgb, var(--text) 22%, transparent);
   background: linear-gradient(160deg, color-mix(in srgb, var(--text) 6%, transparent) 0%, color-mix(in srgb, var(--bg2) 70%, transparent) 100%);
@@ -4407,7 +4641,8 @@ onMounted(() => {
 
 .lesson-track {
   overflow-x: auto;
-  padding-bottom: 12px;
+  overflow-y: hidden;
+  padding-bottom: var(--lesson-track-padding-bottom, 12px);
   margin: 0;
   padding-left: 6px;
   padding-right: 6px;
@@ -4415,6 +4650,37 @@ onMounted(() => {
   mask-image: linear-gradient(to right, transparent, rgba(0, 0, 0, .9) 20%, rgba(0, 0, 0, .9) 80%, transparent);
   position: relative;
   z-index: 1;
+  max-height: var(--lesson-track-max-height, 400px);
+  opacity: var(--lesson-track-opacity, 1);
+  pointer-events: var(--lesson-track-pointer-events, auto);
+  transform: translateY(var(--lesson-track-offset, 0px));
+  transition: max-height .3s ease, opacity .3s ease, padding-bottom .3s ease, transform .3s ease;
+}
+
+@media (hover: hover) {
+  .module-overview {
+    --module-overview-gap: 18px;
+    --lesson-track-max-height: 0px;
+    --lesson-track-opacity: 0;
+    --lesson-track-pointer-events: none;
+    --lesson-track-padding-bottom: 0px;
+    --lesson-track-offset: -12px;
+  }
+
+  .module-overview-toggle {
+    display: inline-flex;
+  }
+
+  .module-overview:hover,
+  .module-overview:focus-within,
+  .module-overview.is-expanded {
+    --module-overview-gap: 28px;
+    --lesson-track-max-height: 400px;
+    --lesson-track-opacity: 1;
+    --lesson-track-pointer-events: auto;
+    --lesson-track-padding-bottom: 12px;
+    --lesson-track-offset: 0px;
+  }
 }
 
 .lesson-grid {
@@ -4822,6 +5088,12 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
+}
+
+.lesson-actions-prev {
+  align-self: flex-start;
+  min-width: 150px;
+  justify-content: center;
 }
 
 .lesson-actions-buttons .btn {
