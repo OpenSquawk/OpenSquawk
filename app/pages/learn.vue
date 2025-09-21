@@ -697,7 +697,9 @@
         <div class="module-overview">
           <div v-if="current" class="module-overview-header">
             <div class="module-overview-meta">
-              <span class="module-overview-chip">Mission overview</span>
+              <div>
+                <span class="module-overview-chip">Mission overview</span>
+              </div>
               <h3 class="module-overview-title">{{ current.title }}</h3>
               <p class="module-overview-sub">{{ current.subtitle }}</p>
             </div>
@@ -4278,7 +4280,6 @@ onMounted(() => {
   background:
       radial-gradient(420px 260px at -10% -20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
       linear-gradient(150deg, color-mix(in srgb, var(--bg2) 82%, transparent), color-mix(in srgb, var(--text) 6%, transparent));
-  padding: 32px;
   gap: 28px;
   display: flex;
   flex-direction: column;
