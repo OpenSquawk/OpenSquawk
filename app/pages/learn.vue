@@ -131,10 +131,7 @@
                 <v-icon size="18">mdi-flag-checkered</v-icon>
                 {{ m.title }}
               </div>
-              <div class="tile-status" :class="tileStatusClass(m.id)">
-                <v-icon size="16">{{ moduleStatusIcon(m.id) }}</v-icon>
-                <span>{{ moduleStatusText(m.id) }}</span>
-              </div>
+
             </div>
             <div class="muted small">{{ m.subtitle }}</div>
             <div class="line">
