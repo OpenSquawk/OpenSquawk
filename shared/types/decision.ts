@@ -33,6 +33,35 @@ export interface DecisionNodeAutoTrigger {
   delayMs?: number
 }
 
+export type DecisionNodeTriggerType = 'auto_time' | 'auto_variable' | 'regex' | 'none'
+
+export interface DecisionNodeTrigger {
+  id: string
+  type: DecisionNodeTriggerType
+  order?: number
+  delaySeconds?: number
+  variable?: string
+  operator?: DecisionComparisonOperator
+  value?: number | string | boolean
+  pattern?: string
+  patternFlags?: string
+  description?: string
+}
+
+export type DecisionNodeConditionType = 'variable_value' | 'regex' | 'regex_not'
+
+export interface DecisionNodeCondition {
+  id: string
+  type: DecisionNodeConditionType
+  order?: number
+  variable?: string
+  operator?: DecisionComparisonOperator
+  value?: number | string | boolean
+  pattern?: string
+  patternFlags?: string
+  description?: string
+}
+
 export interface DecisionTransitionMetadata {
   color?: string
   icon?: string
@@ -114,6 +143,8 @@ export interface DecisionNodeModel {
   trigger?: string
   frequency?: string
   frequencyName?: string
+  triggers?: DecisionNodeTrigger[]
+  conditions?: DecisionNodeCondition[]
   transitions: DecisionNodeTransition[]
   layout?: DecisionNodeLayout
   metadata?: DecisionNodeMetadata
@@ -185,6 +216,8 @@ export interface RuntimeDecisionState {
   say_tpl?: string
   utterance_tpl?: string
   else_say_tpl?: string
+  triggers?: DecisionNodeTrigger[]
+  conditions?: DecisionNodeCondition[]
   next?: Array<{ to: string; label?: string; when?: string; guard?: string }>
   ok_next?: Array<{ to: string; label?: string; when?: string; guard?: string }>
   bad_next?: Array<{ to: string; label?: string; when?: string; guard?: string }>
@@ -202,6 +235,7 @@ export interface RuntimeDecisionState {
 }
 
 export interface RuntimeDecisionTree {
+  slug: string
   schema_version: string
   name: string
   description?: string
@@ -214,6 +248,12 @@ export interface RuntimeDecisionTree {
   roles: DecisionNodeRole[]
   phases: string[]
   states: Record<string, RuntimeDecisionState>
+}
+
+export interface RuntimeDecisionSystem {
+  main: string
+  order: string[]
+  flows: Record<string, RuntimeDecisionTree>
 }
 
 export interface DecisionFlowSummary {

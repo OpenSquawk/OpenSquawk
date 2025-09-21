@@ -266,7 +266,8 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
         readback_keys: readbackKeys,
         next: (input.state.next ?? []).map((n: any) => n.to),
         ok_next: (input.state.ok_next ?? []).map((n: any) => n.to),
-        bad_next: (input.state.bad_next ?? []).map((n: any) => n.to)
+        bad_next: (input.state.bad_next ?? []).map((n: any) => n.to),
+        flow: input.active_flow ?? null,
     }
 
     // Relevante Candidate-Daten mit Template-Variablen
@@ -280,6 +281,7 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
             c.id.startsWith('INT_')
         return {
             id: c.id,
+            flow: c.flow ?? null,
             role: c.state.role,
             phase: c.state.phase,
             template_vars: templateVars, // Welche Variablen dieser State verwendet
@@ -315,6 +317,8 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
             has_interrupt_candidate: input.candidates.some(c => c.id.startsWith('INT_')),
             readback_check_state: Boolean(readbackKeys.length)
         },
+        flow_state: input.flow_state || {},
+        active_flow: input.active_flow || null,
         // Current context only without values (to save tokens)
         context: {
             callsign: input.variables.callsign,

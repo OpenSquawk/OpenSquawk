@@ -325,7 +325,7 @@
         <div class="flex flex-1 overflow-hidden">
           <section class="relative flex-1 overflow-hidden bg-[#070d1a]">
             <DecisionNodeCanvas
-              v-if="flowDetail"
+              v-if="flowDetail && flowDetail.nodes.length"
               ref="canvasComponent"
               :nodes="canvasNodes"
               :zoom="canvasState.zoom"
@@ -341,6 +341,17 @@
               @update:pan="onUpdatePan"
               @update:zoom="onUpdateZoom"
             />
+            <div
+              v-else-if="flowDetail"
+              class="flex h-full items-center justify-center px-6 text-center text-white/60"
+            >
+              <div class="space-y-4">
+                <p class="text-sm">Dieser Flow enthält noch keine Nodes.</p>
+                <v-btn color="cyan" variant="tonal" prepend-icon="mdi-plus-circle" @click="createInitialNode">
+                  Ersten Node anlegen
+                </v-btn>
+              </div>
+            </div>
             <div v-else class="flex h-full items-center justify-center text-white/60">
               <div class="space-y-3 text-center">
                 <v-progress-circular v-if="flowLoading" indeterminate color="cyan" class="mx-auto" />
@@ -489,99 +500,354 @@
                   </div>
                 </v-window-item>
                 <v-window-item value="transitions">
-                  <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                      <h3 class="text-sm font-semibold uppercase tracking-widest text-white/70">Transitions</h3>
-                      <div class="flex gap-2">
-                        <v-btn size="small" color="cyan" variant="tonal" prepend-icon="mdi-plus" @click="addTransition()">
-                          Transition
-                        </v-btn>
-                        <v-menu>
-                          <template #activator="{ props: menuProps }">
-                            <v-btn v-bind="menuProps" size="small" color="purple" variant="tonal" prepend-icon="mdi-flash">
-                              Auto Presets
-                            </v-btn>
-                          </template>
-                          <v-list density="compact">
-                            <v-list-item v-for="preset in autoTriggerPresets" :key="preset.id" @click="applyAutoPreset(preset)">
-                              <v-list-item-title>{{ preset.label }}</v-list-item-title>
-                              <v-list-item-subtitle>{{ preset.description }}</v-list-item-subtitle>
-                            </v-list-item>
-                          </v-list>
-                        </v-menu>
-                      </div>
+                  <div class="space-y-6">
+                    <div
+                      v-if="nodeFormError"
+                      class="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+                    >
+                      {{ nodeFormError }}
                     </div>
-                    <v-expansion-panels variant="accordion" multiple>
-                      <v-expansion-panel v-for="(transition, index) in nodeForm.transitions" :key="transition.key || index">
-                        <v-expansion-panel-title>
-                          <div class="flex w-full items-center justify-between text-sm">
-                            <div class="flex items-center gap-2">
-                              <span class="font-mono text-xs text-white/60">{{ transition.type.toUpperCase() }}</span>
-                              <span class="font-semibold">→ {{ transition.target || 'Ziel wählen' }}</span>
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-white/40">
-                              <span v-if="transition.autoTrigger">Auto</span>
-                              <span v-if="transition.timer">Timer {{ transition.timer.afterSeconds }}s</span>
-                              <v-btn size="x-small" icon variant="text" @click.stop="removeTransition(index)">
-                                <v-icon icon="mdi-delete" size="16" />
-                              </v-btn>
-                            </div>
-                          </div>
-                        </v-expansion-panel-title>
-                        <v-expansion-panel-text>
-                          <div class="space-y-3">
-                            <div class="grid grid-cols-2 gap-3">
-                              <v-select v-model="transition.type" :items="transitionTypes" label="Typ" hide-details density="comfortable" color="cyan" />
-                              <v-text-field v-model="transition.target" label="Zielstate" hide-details density="comfortable" color="cyan" />
-                            </div>
-                            <v-text-field v-model="transition.label" label="Label" hide-details density="comfortable" color="cyan" />
-                            <v-textarea v-model="transition.description" label="Beschreibung" rows="2" hide-details color="cyan" />
-                            <v-text-field v-model="transition.condition" label="Bedingung" hide-details density="comfortable" color="cyan" />
-                            <v-text-field v-model="transition.guard" label="Guard" hide-details density="comfortable" color="cyan" />
-                            <v-text-field v-model.number="transition.order" label="Reihenfolge" type="number" hide-details density="comfortable" color="cyan" />
-                            <div v-if="transition.type === 'timer'" class="grid grid-cols-2 gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
-                              <v-text-field v-model.number="transition.timer.afterSeconds" label="Timer Sekunden" type="number" hide-details density="comfortable" color="amber" />
-                              <v-switch v-model="transition.timer.allowManualProceed" label="Manueller Proceed" hide-details inset density="compact" color="amber" />
-                            </div>
-                            <div class="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3">
-                              <div class="flex items-center justify-between">
-                                <h4 class="text-sm font-semibold text-white/80">Auto Trigger</h4>
-                                <v-btn size="x-small" variant="text" color="cyan" @click="toggleAutoTrigger(index)">
-                                  {{ transition.autoTrigger ? 'Entfernen' : 'Hinzufügen' }}
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold uppercase tracking-widest text-white/70">Node Trigger</h3>
+                        <v-btn size="small" color="cyan" variant="tonal" prepend-icon="mdi-plus" @click="addNodeTrigger">
+                          Trigger
+                        </v-btn>
+                      </div>
+                      <p v-if="!nodeForm.triggers?.length" class="text-xs text-white/50">
+                        Keine Trigger definiert.
+                      </p>
+                      <v-expansion-panels
+                        v-else
+                        variant="accordion"
+                        multiple
+                        class="rounded-xl border border-white/10"
+                      >
+                        <v-expansion-panel
+                          v-for="(trigger, index) in nodeForm.triggers"
+                          :key="trigger.id || index"
+                        >
+                          <v-expansion-panel-title>
+                            <div class="flex w-full items-center justify-between text-sm">
+                              <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs text-white/60">
+                                  {{ nodeTriggerTypeLabel(trigger.type) }}
+                                </span>
+                                <span class="font-semibold">{{ nodeTriggerSummary(trigger) }}</span>
+                              </div>
+                              <div class="flex items-center gap-2 text-xs text-white/40">
+                                <v-btn size="x-small" icon variant="text" @click.stop="removeNodeTrigger(index)">
+                                  <v-icon icon="mdi-delete" size="16" />
                                 </v-btn>
                               </div>
-                              <div v-if="transition.autoTrigger" class="space-y-3 pt-2">
-                                <v-select v-model="transition.autoTrigger.type" :items="autoTriggerTypes" label="Trigger Typ" hide-details density="comfortable" color="cyan" />
-                                <div v-if="transition.autoTrigger.type === 'telemetry'" class="grid grid-cols-2 gap-3">
-                                  <v-select v-model="transition.autoTrigger.parameter" :items="telemetryParameters" label="Parameter" hide-details density="comfortable" color="cyan" />
-                                  <v-select v-model="transition.autoTrigger.operator" :items="comparisonOperators" label="Operator" hide-details density="comfortable" color="cyan" />
-                                  <v-text-field v-model.number="transition.autoTrigger.value" label="Wert" type="number" hide-details density="comfortable" color="cyan" />
-                                  <v-text-field v-model="transition.autoTrigger.unit" label="Einheit" hide-details density="comfortable" color="cyan" />
-                                </div>
-                                <div v-else-if="transition.autoTrigger.type === 'variable'" class="grid grid-cols-2 gap-3">
-                                  <v-text-field v-model="transition.autoTrigger.variable" label="Variablenpfad" hide-details density="comfortable" color="cyan" />
-                                  <v-select v-model="transition.autoTrigger.operator" :items="comparisonOperators" label="Operator" hide-details density="comfortable" color="cyan" />
-                                  <v-text-field v-model="transition.autoTrigger.value" label="Vergleichswert" hide-details density="comfortable" color="cyan" />
-                                </div>
-                                <v-textarea
-                                  v-else
-                                  v-model="transition.autoTrigger.expression"
-                                  label="Bedingungsausdruck"
-                                  rows="2"
+                            </div>
+                          </v-expansion-panel-title>
+                          <v-expansion-panel-text>
+                            <div class="space-y-3">
+                              <div class="grid grid-cols-2 gap-3">
+                                <v-select
+                                  v-model="trigger.type"
+                                  :items="nodeTriggerTypeOptions"
+                                  item-title="title"
+                                  item-value="value"
+                                  label="Typ"
                                   hide-details
+                                  density="comfortable"
                                   color="cyan"
                                 />
-                                <v-textarea v-model="transition.autoTrigger.description" label="Beschreibung" rows="2" hide-details color="cyan" />
-                                <div class="grid grid-cols-2 gap-3">
-                                  <v-text-field v-model.number="transition.autoTrigger.delayMs" label="Verzögerung (ms)" type="number" hide-details density="comfortable" color="cyan" />
-                                  <v-switch v-model="transition.autoTrigger.once" label="Nur einmal" hide-details inset density="compact" color="cyan" />
+                                <v-text-field
+                                  v-model.number="trigger.order"
+                                  label="Reihenfolge"
+                                  type="number"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <div v-if="trigger.type === 'auto_time'" class="grid grid-cols-2 gap-3">
+                                <v-text-field
+                                  v-model.number="trigger.delaySeconds"
+                                  label="Verzögerung (Sekunden)"
+                                  type="number"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <div v-else-if="trigger.type === 'auto_variable'" class="grid grid-cols-3 gap-3">
+                                <v-text-field
+                                  v-model="trigger.variable"
+                                  label="Variable"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-select
+                                  v-model="trigger.operator"
+                                  :items="comparisonOperators"
+                                  label="Operator"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-text-field
+                                  v-model="trigger.value"
+                                  label="Vergleichswert"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <div v-else-if="trigger.type === 'regex'" class="grid grid-cols-2 gap-3">
+                                <v-text-field
+                                  v-model="trigger.pattern"
+                                  label="Regex"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-text-field
+                                  v-model="trigger.patternFlags"
+                                  label="Flags"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <p v-else class="text-xs text-white/50">
+                                Dieser Trigger wird genutzt, wenn kein anderer vorher greift.
+                              </p>
+                              <v-textarea
+                                v-model="trigger.description"
+                                label="Beschreibung"
+                                rows="2"
+                                hide-details
+                                color="cyan"
+                              />
+                            </div>
+                          </v-expansion-panel-text>
+                        </v-expansion-panel>
+                      </v-expansion-panels>
+                    </div>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold uppercase tracking-widest text-white/70">Node Bedingungen</h3>
+                        <v-btn size="small" color="cyan" variant="tonal" prepend-icon="mdi-plus" @click="addNodeCondition">
+                          Bedingung
+                        </v-btn>
+                      </div>
+                      <p v-if="!nodeForm.conditions?.length" class="text-xs text-white/50">
+                        Keine Bedingungen definiert.
+                      </p>
+                      <v-expansion-panels
+                        v-else
+                        variant="accordion"
+                        multiple
+                        class="rounded-xl border border-white/10"
+                      >
+                        <v-expansion-panel
+                          v-for="(condition, index) in nodeForm.conditions"
+                          :key="condition.id || index"
+                        >
+                          <v-expansion-panel-title>
+                            <div class="flex w-full items-center justify-between text-sm">
+                              <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs text-white/60">
+                                  {{ nodeConditionTypeLabel(condition.type) }}
+                                </span>
+                                <span class="font-semibold">{{ nodeConditionSummary(condition) }}</span>
+                              </div>
+                              <div class="flex items-center gap-2 text-xs text-white/40">
+                                <v-btn size="x-small" icon variant="text" @click.stop="removeNodeCondition(index)">
+                                  <v-icon icon="mdi-delete" size="16" />
+                                </v-btn>
+                              </div>
+                            </div>
+                          </v-expansion-panel-title>
+                          <v-expansion-panel-text>
+                            <div class="space-y-3">
+                              <div class="grid grid-cols-2 gap-3">
+                                <v-select
+                                  v-model="condition.type"
+                                  :items="nodeConditionTypeOptions"
+                                  item-title="title"
+                                  item-value="value"
+                                  label="Typ"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-text-field
+                                  v-model.number="condition.order"
+                                  label="Reihenfolge"
+                                  type="number"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <div v-if="condition.type === 'variable_value'" class="grid grid-cols-3 gap-3">
+                                <v-text-field
+                                  v-model="condition.variable"
+                                  label="Variable"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-select
+                                  v-model="condition.operator"
+                                  :items="comparisonOperators"
+                                  label="Operator"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-text-field
+                                  v-model="condition.value"
+                                  label="Vergleichswert"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <div v-else class="grid grid-cols-2 gap-3">
+                                <v-text-field
+                                  v-model="condition.pattern"
+                                  label="Regex"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-text-field
+                                  v-model="condition.patternFlags"
+                                  label="Flags"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <v-textarea
+                                v-model="condition.description"
+                                label="Beschreibung"
+                                rows="2"
+                                hide-details
+                                color="cyan"
+                              />
+                            </div>
+                          </v-expansion-panel-text>
+                        </v-expansion-panel>
+                      </v-expansion-panels>
+                    </div>
+                    <div class="space-y-4">
+                      <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold uppercase tracking-widest text-white/70">Transitions</h3>
+                        <div class="flex gap-2">
+                          <v-btn size="small" color="cyan" variant="tonal" prepend-icon="mdi-plus" @click="addTransition()">
+                            Transition
+                          </v-btn>
+                          <v-menu>
+                            <template #activator="{ props: menuProps }">
+                              <v-btn v-bind="menuProps" size="small" color="purple" variant="tonal" prepend-icon="mdi-flash">
+                                Auto Presets
+                              </v-btn>
+                            </template>
+                            <v-list density="compact">
+                              <v-list-item v-for="preset in autoTriggerPresets" :key="preset.id" @click="applyAutoPreset(preset)">
+                                <v-list-item-title>{{ preset.label }}</v-list-item-title>
+                                <v-list-item-subtitle>{{ preset.description }}</v-list-item-subtitle>
+                              </v-list-item>
+                            </v-list>
+                          </v-menu>
+                        </div>
+                      </div>
+                      <v-expansion-panels variant="accordion" multiple>
+                        <v-expansion-panel
+                          v-for="(transition, index) in nodeForm.transitions"
+                          :key="transition.key || index"
+                        >
+                          <v-expansion-panel-title>
+                            <div class="flex w-full items-center justify-between text-sm">
+                              <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs text-white/60">{{ transition.type.toUpperCase() }}</span>
+                                <span class="font-semibold">→ {{ transition.target || 'Ziel wählen' }}</span>
+                              </div>
+                              <div class="flex items-center gap-2 text-xs text-white/40">
+                                <span v-if="transition.autoTrigger">Auto</span>
+                                <span v-if="transition.timer">Timer {{ transition.timer.afterSeconds }}s</span>
+                                <v-btn size="x-small" icon variant="text" @click.stop="removeTransition(index)">
+                                  <v-icon icon="mdi-delete" size="16" />
+                                </v-btn>
+                              </div>
+                            </div>
+                          </v-expansion-panel-title>
+                          <v-expansion-panel-text>
+                            <div class="space-y-3">
+                              <div class="grid grid-cols-2 gap-3">
+                                <v-select
+                                  v-model="transition.type"
+                                  :items="transitionTypes"
+                                  label="Typ"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-text-field
+                                  v-model="transition.target"
+                                  label="Zielstate"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <v-text-field v-model="transition.label" label="Label" hide-details density="comfortable" color="cyan" />
+                              <v-textarea v-model="transition.description" label="Beschreibung" rows="2" hide-details color="cyan" />
+                              <v-text-field v-model="transition.condition" label="Bedingung" hide-details density="comfortable" color="cyan" />
+                              <v-text-field v-model="transition.guard" label="Guard" hide-details density="comfortable" color="cyan" />
+                              <v-text-field v-model.number="transition.order" label="Reihenfolge" type="number" hide-details density="comfortable" color="cyan" />
+                              <div v-if="transition.type === 'timer'" class="grid grid-cols-2 gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+                                <v-text-field v-model.number="transition.timer.afterSeconds" label="Timer Sekunden" type="number" hide-details density="comfortable" color="amber" />
+                                <v-switch v-model="transition.timer.allowManualProceed" label="Manueller Proceed" hide-details inset density="compact" color="amber" />
+                              </div>
+                              <div class="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3">
+                                <div class="flex items-center justify-between">
+                                  <h4 class="text-sm font-semibold text-white/80">Auto Trigger</h4>
+                                  <v-btn size="x-small" variant="text" color="cyan" @click="toggleAutoTrigger(index)">
+                                    {{ transition.autoTrigger ? 'Entfernen' : 'Hinzufügen' }}
+                                  </v-btn>
+                                </div>
+                                <div v-if="transition.autoTrigger" class="space-y-3 pt-2">
+                                  <v-select v-model="transition.autoTrigger.type" :items="autoTriggerTypes" label="Trigger Typ" hide-details density="comfortable" color="cyan" />
+                                  <div v-if="transition.autoTrigger.type === 'telemetry'" class="grid grid-cols-2 gap-3">
+                                    <v-select v-model="transition.autoTrigger.parameter" :items="telemetryParameters" label="Parameter" hide-details density="comfortable" color="cyan" />
+                                    <v-select v-model="transition.autoTrigger.operator" :items="comparisonOperators" label="Operator" hide-details density="comfortable" color="cyan" />
+                                    <v-text-field v-model.number="transition.autoTrigger.value" label="Wert" type="number" hide-details density="comfortable" color="cyan" />
+                                    <v-text-field v-model="transition.autoTrigger.unit" label="Einheit" hide-details density="comfortable" color="cyan" />
+                                  </div>
+                                  <div v-else-if="transition.autoTrigger.type === 'variable'" class="grid grid-cols-2 gap-3">
+                                    <v-text-field v-model="transition.autoTrigger.variable" label="Variablenpfad" hide-details density="comfortable" color="cyan" />
+                                    <v-select v-model="transition.autoTrigger.operator" :items="comparisonOperators" label="Operator" hide-details density="comfortable" color="cyan" />
+                                    <v-text-field v-model="transition.autoTrigger.value" label="Vergleichswert" hide-details density="comfortable" color="cyan" />
+                                  </div>
+                                  <v-textarea
+                                    v-else
+                                    v-model="transition.autoTrigger.expression"
+                                    label="Bedingungsausdruck"
+                                    rows="2"
+                                    hide-details
+                                    color="cyan"
+                                  />
+                                  <v-textarea v-model="transition.autoTrigger.description" label="Beschreibung" rows="2" hide-details color="cyan" />
+                                  <div class="grid grid-cols-2 gap-3">
+                                    <v-text-field v-model.number="transition.autoTrigger.delayMs" label="Verzögerung (ms)" type="number" hide-details density="comfortable" color="cyan" />
+                                    <v-switch v-model="transition.autoTrigger.once" label="Nur einmal" hide-details inset density="compact" color="cyan" />
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </v-expansion-panel-text>
-                      </v-expansion-panel>
-                    </v-expansion-panels>
+                          </v-expansion-panel-text>
+                        </v-expansion-panel>
+                      </v-expansion-panels>
+                    </div>
                   </div>
                 </v-window-item>
                 <v-window-item value="llm">
@@ -697,7 +963,9 @@ import DecisionNodeCanvas from '~/components/editor/DecisionNodeCanvas.vue'
 import type {
   DecisionFlowModel,
   DecisionFlowSummary,
+  DecisionNodeCondition,
   DecisionNodeModel,
+  DecisionNodeTrigger,
   DecisionNodeTransition,
   DecisionNodeLayout,
 } from '~/shared/types/decision'
@@ -770,6 +1038,32 @@ const comparisonOperators = ['>', '>=', '<', '<=', '==', '!=']
 const transitionTypes: DecisionNodeTransition['type'][] = ['next', 'ok', 'bad', 'timer', 'auto', 'interrupt', 'return']
 const autoTriggerTypes = ['telemetry', 'variable', 'expression']
 const roleOptions = ['pilot', 'atc', 'system']
+
+const nodeTriggerTypeOptions = [
+  { value: 'auto_time', title: 'Auto (Zeit)', subtitle: 'Nach einer Verzögerung automatisch aktivieren' },
+  { value: 'auto_variable', title: 'Auto (Variable)', subtitle: 'Aktivieren, sobald eine Variable einen Wert erreicht' },
+  { value: 'regex', title: 'Regex Match', subtitle: 'Kandidat wenn vorheriger Output passt' },
+  { value: 'none', title: 'Fallback', subtitle: 'Kandidat wenn nichts anderes greift' },
+] as const
+
+const nodeConditionTypeOptions = [
+  { value: 'variable_value', title: 'Variable Vergleich', subtitle: 'Prüft Variablenwerte' },
+  { value: 'regex', title: 'Regex Match', subtitle: 'Nur wenn der Output passt' },
+  { value: 'regex_not', title: 'Regex kein Match', subtitle: 'Nur wenn der Output nicht passt' },
+] as const
+
+const nodeTriggerTypeLabels: Record<DecisionNodeTrigger['type'], string> = {
+  auto_time: 'Auto (Zeit)',
+  auto_variable: 'Auto (Variable)',
+  regex: 'Regex Match',
+  none: 'Fallback',
+}
+
+const nodeConditionTypeLabels: Record<DecisionNodeCondition['type'], string> = {
+  variable_value: 'Variable Vergleich',
+  regex: 'Regex Match',
+  regex_not: 'Regex kein Match',
+}
 
 const flows = ref<DecisionFlowSummary[]>([])
 const flowsLoading = ref(false)
@@ -867,6 +1161,7 @@ const nodeSnapshot = ref<DecisionNodeModel | null>(null)
 const nodeSaving = ref(false)
 const nodeActionsText = ref('[]')
 const nodeActionsError = ref('')
+const nodeFormError = ref('')
 const nodeIdDraft = ref('')
 
 let lastTitleSuggestion = ''
@@ -1016,6 +1311,7 @@ watch(selectedNodeId, (stateId) => {
     nodeSnapshot.value = null
     nodeActionsText.value = '[]'
     nodeActionsError.value = ''
+    nodeFormError.value = ''
     nodeIdDraft.value = ''
     return
   }
@@ -1025,6 +1321,7 @@ watch(selectedNodeId, (stateId) => {
     nodeSnapshot.value = null
     nodeActionsText.value = '[]'
     nodeActionsError.value = ''
+    nodeFormError.value = ''
     nodeIdDraft.value = ''
     return
   }
@@ -1034,6 +1331,8 @@ watch(selectedNodeId, (stateId) => {
   if (!clone.layout) clone.layout = { x: 0, y: 0 }
   if (!clone.readbackRequired) clone.readbackRequired = []
   if (!clone.transitions) clone.transitions = []
+  if (!clone.triggers) clone.triggers = []
+  if (!clone.conditions) clone.conditions = []
   if (!clone.metadata) clone.metadata = {}
   if (!clone.llmTemplate) clone.llmTemplate = { placeholders: [] }
   if (!clone.llmTemplate.placeholders) clone.llmTemplate.placeholders = []
@@ -1041,6 +1340,7 @@ watch(selectedNodeId, (stateId) => {
   nodeSnapshot.value = cloneNode(clone)
   nodeActionsText.value = JSON.stringify(clone.actions ?? [], null, 2)
   nodeActionsError.value = ''
+  nodeFormError.value = ''
   nodeIdDraft.value = clone.stateId
   lastTitleSuggestion = buildNodeKeyFromText(clone.title || clone.stateId)
   pendingNodeHistory = null
@@ -1291,7 +1591,8 @@ async function loadFlows() {
     const response = await api.get<DecisionFlowSummary[]>('/api/editor/flows')
     flows.value = response
     if (!selectedFlowSlug.value && response.length) {
-      selectedFlowSlug.value = response[0].slug
+      const preferred = response.find((flow) => flow.slug === 'icao_atc_decision_tree')?.slug
+      selectedFlowSlug.value = preferred || response[0].slug
     }
   } catch (error) {
     console.error('Failed to load flows', error)
@@ -1360,6 +1661,52 @@ function openCreateFlow() {
 
 function closeCreateFlow() {
   showCreateFlowDialog.value = false
+}
+
+async function createInitialNode() {
+  if (!flowDetail.value) return
+  const slug = flowDetail.value.flow.slug
+  const baseStart = flowDetail.value.flow.startState || 'START'
+  const stateId = baseStart.trim().length ? baseStart.trim().toUpperCase() : 'START'
+  const role = flowDetail.value.flow.roles?.[0] || 'pilot'
+  const phase = flowDetail.value.flow.phases?.[0] || 'General'
+
+  const payload = {
+    stateId,
+    title: flowDetail.value.flow.name ? `${flowDetail.value.flow.name} Start` : 'Erster Node',
+    summary: '',
+    role,
+    phase,
+    transitions: [],
+    triggers: [],
+    conditions: [],
+    layout: { x: 320, y: 180 },
+  }
+
+  try {
+    const created = await api.post<DecisionNodeModel>(`/api/editor/flows/${slug}/nodes`, payload)
+    flowDetail.value.nodes.push(created)
+    flowDetail.value.flow.startState = created.stateId
+    if (!Array.isArray(flowDetail.value.flow.endStates) || !flowDetail.value.flow.endStates.length) {
+      flowDetail.value.flow.endStates = [created.stateId]
+      flowForm.endStates = [created.stateId]
+    }
+    flowForm.startState = created.stateId
+    selectedNodeId.value = created.stateId
+    showSnack('Erster Node erstellt.')
+    const summaryIndex = flows.value.findIndex((flow) => flow.slug === slug)
+    if (summaryIndex !== -1) {
+      const previous = flows.value[summaryIndex]
+      flows.value.splice(summaryIndex, 1, {
+        ...previous,
+        startState: created.stateId,
+        nodeCount: (previous.nodeCount || 0) + 1,
+      })
+    }
+  } catch (error) {
+    console.error('Failed to create initial node', error)
+    showSnack('Erster Node konnte nicht erstellt werden.', 'red')
+  }
 }
 
 async function createFlow() {
@@ -1582,6 +1929,7 @@ async function persistNode(options: { silent?: boolean } = {}) {
       nodeInitializing = false
     })
     lastNodeAutosaveError = ''
+    nodeFormError.value = ''
     if (silent) {
       flashAutosaveIndicator()
     } else {
@@ -1589,10 +1937,11 @@ async function persistNode(options: { silent?: boolean } = {}) {
     }
   } catch (error: any) {
     console.error('Failed to save node', error)
-    const message = error?.statusMessage || 'Node konnte nicht gespeichert werden.'
+    const message = error?.data?.formError || error?.statusMessage || 'Node konnte nicht gespeichert werden.'
     if (!silent || message !== lastNodeAutosaveError) {
       showSnack(message, 'red')
     }
+    nodeFormError.value = message
     lastNodeAutosaveError = message
   } finally {
     nodeSaving.value = false
@@ -1814,6 +2163,7 @@ function resetNode() {
   nodeForm.value = cloneNode(nodeSnapshot.value)
   nodeActionsText.value = JSON.stringify(nodeSnapshot.value.actions ?? [], null, 2)
   nodeActionsError.value = ''
+  nodeFormError.value = ''
   syncNodeLayout()
   pendingNodeHistory = null
 }
@@ -2110,6 +2460,90 @@ function generateKey(prefix: string) {
     return `${prefix}_${crypto.randomUUID().slice(0, 8)}`
   }
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`
+}
+
+function nodeTriggerTypeLabel(type: DecisionNodeTrigger['type']) {
+  return nodeTriggerTypeLabels[type] || type
+}
+
+function nodeTriggerSummary(trigger: DecisionNodeTrigger) {
+  switch (trigger.type) {
+    case 'auto_time':
+      return `${trigger.delaySeconds ?? 0}s Verzögerung`
+    case 'auto_variable':
+      return trigger.variable
+        ? `${trigger.variable} ${trigger.operator ?? '=='} ${
+            trigger.value !== undefined && trigger.value !== '' ? trigger.value : '?'
+          }`
+        : 'Variable prüfen'
+    case 'regex':
+      return trigger.pattern ? `/${trigger.pattern}/${trigger.patternFlags || ''}` : 'Regex prüfen'
+    case 'none':
+      return 'Fallback'
+    default:
+      return ''
+  }
+}
+
+function nodeConditionTypeLabel(type: DecisionNodeCondition['type']) {
+  return nodeConditionTypeLabels[type] || type
+}
+
+function nodeConditionSummary(condition: DecisionNodeCondition) {
+  switch (condition.type) {
+    case 'variable_value':
+      return condition.variable
+        ? `${condition.variable} ${condition.operator ?? '=='} ${
+            condition.value !== undefined && condition.value !== '' ? condition.value : '?'
+          }`
+        : 'Variable prüfen'
+    case 'regex':
+      return condition.pattern ? `/${condition.pattern}/${condition.patternFlags || ''}` : 'Regex prüfen'
+    case 'regex_not':
+      return condition.pattern ? `!= /${condition.pattern}/${condition.patternFlags || ''}` : 'Regex darf nicht matchen'
+    default:
+      return ''
+  }
+}
+
+function addNodeTrigger() {
+  if (!nodeForm.value) return
+  if (!nodeForm.value.triggers) nodeForm.value.triggers = []
+  nodeForm.value.triggers.push({
+    id: generateKey('trigger'),
+    type: 'auto_time',
+    delaySeconds: 5,
+    order: nodeForm.value.triggers.length,
+  })
+}
+
+function removeNodeTrigger(index: number) {
+  if (!nodeForm.value?.triggers) return
+  nodeForm.value.triggers.splice(index, 1)
+  nodeForm.value.triggers.forEach((trigger, idx) => {
+    trigger.order = idx
+  })
+}
+
+function addNodeCondition() {
+  if (!nodeForm.value) return
+  if (!nodeForm.value.conditions) nodeForm.value.conditions = []
+  nodeForm.value.conditions.push({
+    id: generateKey('condition'),
+    type: 'variable_value',
+    variable: '',
+    operator: '==',
+    value: '',
+    order: nodeForm.value.conditions.length,
+  })
+}
+
+function removeNodeCondition(index: number) {
+  if (!nodeForm.value?.conditions) return
+  nodeForm.value.conditions.splice(index, 1)
+  nodeForm.value.conditions.forEach((condition, idx) => {
+    condition.order = idx
+  })
 }
 
 function addTransition(type: DecisionNodeTransition['type'] = 'next') {
