@@ -33,3 +33,10 @@ html, body, #__nuxt {
 .panel {
     backdrop-filter: blur(5deg);
 }
+
+/* Tooltip overrides */
+.v-tooltip > .v-overlay__content {
+    background-color: color-mix(in srgb, var(--bg2) 90%, black 10%);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
