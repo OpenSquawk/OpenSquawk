@@ -104,7 +104,7 @@
     >
       <div class="play-head">
         <div class="crumbs">
-          <button class="link" @click="goToHub">
+          <button class="link py-2 " @click="goToHub">
             <v-icon size="16">mdi-arrow-left</v-icon>
             Hub
           </button>
@@ -988,7 +988,7 @@
 
     <!-- FOOTER -->
     <footer
-        class="footer"
+        class="footer footer-fixed"
         role="contentinfo"
         :class="{ 'is-mission': showLessonActions }"
     >
@@ -3771,7 +3771,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px
+  padding: 10px
 }
 
 .hud-left {
@@ -4436,7 +4436,7 @@ onMounted(() => {
 .play .play-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   margin-bottom: 10px
 }
 
@@ -5116,7 +5116,7 @@ onMounted(() => {
   grid-template-columns: minmax(0, auto) 1fr minmax(0, auto);
   align-items: center;
   gap: 18px;
-  padding: 16px 20px;
+  padding: 10px;
 }
 
 .mission-footer-section {
@@ -6548,4 +6548,14 @@ onMounted(() => {
   }
 }
 
+.footer-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: var(--bg);
+  border-top: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
+  box-shadow: 0 -4px 12px rgba(2, 6, 23, .1);
+  z-index: 50;
+}
 </style>
