@@ -109,29 +109,27 @@
               <span class="text-cyan-400">Open-source, low-cost AI ATC</span>
             </h1>
             <p class="mt-4 sm:mt-6 text-white/80 text-base sm:text-lg">
-              We are building an open, affordable AI air traffic control for flight simulators – community-driven, with
-              self-hosted and hosted options in planning.
+              Open, affordable AI air traffic control for flight simulators. Built in public with self-hosted and hosted
+              paths on the roadmap.
             </p>
             <ul class="mt-6 space-y-2 text-white/70 text-sm sm:text-base">
               <li class="flex items-start gap-2">
                 <v-icon icon="mdi-account-group" size="18" class="mt-[3px] text-cyan-300"/>
-                <span>Community roadmap sets the priorities. Features only ship when they truly help you.</span>
+                <span>Community roadmap decides what launches.</span>
               </li>
               <li class="flex items-start gap-2">
                 <v-icon icon="mdi-airplane" size="18" class="mt-[3px] text-cyan-300"/>
-                <span><strong>Simulator support</strong>: MSFS first, X-Plane next – all with VATSIM-ready training in mind.</span>
+                <span><strong>Simulator support</strong>: MSFS first, X-Plane next – all tuned for VATSIM-ready training.</span>
               </li>
             </ul>
             <p class="mt-2 text-sm text-white/70">
-              We are looking for collaborators (Node/Nuxt, ATC SMEs, testers, infra/cost benchmarking). Reach out via
+              Collaborators welcome (Node/Nuxt, ATC SMEs, testers, infra benchmarking). Say hi at
               <a class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
             </p>
             <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
               <NuxtLink to="#cta" class="btn btn-primary text-base">
+                <v-icon icon="mdi-email-fast-outline" size="20"/>
                 Join the waitlist
-              </NuxtLink>
-              <NuxtLink to="/news" class="btn btn-ghost text-base">
-                Read news
               </NuxtLink>
             </div>
           </div>
@@ -1690,6 +1688,7 @@ onMounted(async () => {
 }
 
 .gradient-hero {
+  min-height: 100vh;
   background: radial-gradient(1200px 600px at 10% -10%, rgba(6, 182, 212, .35), transparent),
   radial-gradient(900px 480px at 100% 10%, rgba(59, 130, 246, .25), transparent),
   linear-gradient(180deg, #0b1020 0%, #0b1020 60%, #0a0f1c 100%);
