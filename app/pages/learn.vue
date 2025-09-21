@@ -29,6 +29,7 @@
       </nav>
     </header>
 
+
     <!-- HERO -->
     <section v-if="panel==='hub'" class="hero" role="region" aria-label="Intro">
       <div class="container">
@@ -36,41 +37,10 @@
           <div class="hero-left">
             <h1 class="h1">Pilot Comms Trainer</h1>
             <p class="muted hero-sub">
-              Build confident pilot readbacks with scenario-driven missions, instant scoring, and badges that react to your flying.
+              Build confident pilot readbacks with scenario-driven missions, instant scoring, and badges that react to
+              your flying.
             </p>
 
-            <div class="hero-highlight">
-              <div class="hero-orb" :style="{ '--progress': levelProgress + '%' }">
-                <div class="hero-orb-core">
-                  <span class="hero-orb-level">Lvl {{ level }}</span>
-                  <span class="hero-orb-progress">{{ levelProgress }}%</span>
-                </div>
-              </div>
-              <div class="hero-highlight-meta">
-                <span class="hero-tag">Next objective</span>
-                <div class="hero-highlight-title">
-                  {{ primaryObjective ? primaryObjective.title : 'Choose a mission to begin' }}
-                </div>
-                <p class="muted small">
-                  {{
-                    primaryObjective
-                      ? primaryObjective.description
-                      : 'Open any mission below to start your first readback drills.'
-                  }}
-                </p>
-                <div
-                    v-if="primaryObjective"
-                    class="hero-highlight-bar"
-                    role="progressbar"
-                    :aria-valuenow="primaryObjectiveProgress"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                >
-                  <div class="hero-highlight-fill" :style="{ width: primaryObjectiveProgress + '%' }"></div>
-                </div>
-                <p v-if="primaryObjective" class="muted small">{{ primaryObjective.status }}</p>
-              </div>
-            </div>
 
             <div v-if="missionObjective && !missionObjective.complete" class="objective-callout">
               <div class="objective-body">
@@ -81,7 +51,8 @@
                 <p class="muted small">{{ missionObjective.description }}</p>
                 <div class="objective-progress">
                   <div class="objective-progress-bar">
-                    <div class="objective-progress-fill" :style="{ width: objectiveProgressPct(missionObjective) + '%' }"></div>
+                    <div class="objective-progress-fill"
+                         :style="{ width: objectiveProgressPct(missionObjective) + '%' }"></div>
                   </div>
                   <div class="objective-progress-meta">{{ missionObjective.status }}</div>
                 </div>
@@ -101,21 +72,27 @@
               </div>
               <div class="hero-metrics">
                 <div class="metric-card">
-                  <div class="metric-icon"><v-icon size="20">mdi-headset</v-icon></div>
+                  <div class="metric-icon">
+                    <v-icon size="20">mdi-headset</v-icon>
+                  </div>
                   <div class="metric-main">
                     <div class="metric-value">{{ finishedLessons }}/{{ totalLessons }}</div>
                     <div class="metric-label">Lessons complete</div>
                   </div>
                 </div>
                 <div class="metric-card">
-                  <div class="metric-icon"><v-icon size="20">mdi-target-account</v-icon></div>
+                  <div class="metric-icon">
+                    <v-icon size="20">mdi-target-account</v-icon>
+                  </div>
                   <div class="metric-main">
                     <div class="metric-value">{{ missionCompletionPct }}%</div>
                     <div class="metric-label">Mission progress</div>
                   </div>
                 </div>
                 <div class="metric-card">
-                  <div class="metric-icon"><v-icon size="20">mdi-star-shooting</v-icon></div>
+                  <div class="metric-icon">
+                    <v-icon size="20">mdi-star-shooting</v-icon>
+                  </div>
                   <div class="metric-main">
                     <div class="metric-value">{{ finishedLessons ? globalAccuracy + '%' : '—' }}</div>
                     <div class="metric-label">Avg. best score</div>
@@ -200,12 +177,12 @@
         <div class="module-overview">
           <div class="lesson-grid">
             <button
-              v-for="l in current.lessons"
-              :key="l.id"
-              class="lesson"
-              :class="{ active: activeLesson && activeLesson.id===l.id, ok: bestScore(current.id,l.id)>=80 }"
-              @click="selectLesson(l)"
-              >
+                v-for="l in current.lessons"
+                :key="l.id"
+                class="lesson"
+                :class="{ active: activeLesson && activeLesson.id===l.id, ok: bestScore(current.id,l.id)>=80 }"
+                @click="selectLesson(l)"
+            >
               <span class="lesson-score" :class="lessonScoreClass(current.id, l.id)">
                 <v-icon size="14">{{ lessonScoreIcon(current.id, l.id) }}</v-icon>
                 {{ lessonScoreLabel(current.id, l.id) }}
@@ -241,17 +218,18 @@
                 <span class="scenario-label">Frequencies</span>
                 <div class="freq-chips">
                   <button
-                    v-for="freq in scenario.frequencies"
-                    :key="freq.type"
-                    type="button"
-                    class="freq-chip"
-                    :class="{ active: activeFrequency && activeFrequency.type === freq.type }"
-                    @click="setActiveFrequency(freq)"
-                    >
+                      v-for="freq in scenario.frequencies"
+                      :key="freq.type"
+                      type="button"
+                      class="freq-chip"
+                      :class="{ active: activeFrequency && activeFrequency.type === freq.type }"
+                      @click="setActiveFrequency(freq)"
+                  >
                     {{ freq.label }} {{ freq.value }}
                   </button>
                 </div>
-                <div v-if="activeFrequency && scenario.frequencyWords[activeFrequency.type]" class="freq-hint muted small">
+                <div v-if="activeFrequency && scenario.frequencyWords[activeFrequency.type]"
+                     class="freq-hint muted small">
                   {{ scenario.frequencyWords[activeFrequency.type] }}
                 </div>
               </div>
@@ -264,10 +242,10 @@
                     <div class="target-main">
                       <div class="muted small">{{ activeLesson.desc }}</div>
                       <div
-                        class="target-text"
-                        :class="{ 'audio-blur': audioContentHidden }"
-                        :aria-hidden="audioContentHidden ? 'true' : 'false'"
-                        >
+                          class="target-text"
+                          :class="{ 'audio-blur': audioContentHidden }"
+                          :aria-hidden="audioContentHidden ? 'true' : 'false'"
+                      >
                         {{ targetPhrase }}
                       </div>
                       <div v-if="audioContentHidden" class="audio-note muted small">
@@ -276,21 +254,23 @@
                     </div>
                     <div class="target-actions">
                       <button
-                        class="btn soft mini"
-                        type="button"
-                        :disabled="!targetPhrase || ttsLoading"
-                        :aria-busy="ttsLoading ? 'true' : 'false'"
-                        @click="speakTarget()"
-                        >
-                        <v-icon size="16" :class="{ spin: ttsLoading }">{{ ttsLoading ? 'mdi-loading' : 'mdi-volume-high' }}</v-icon>
+                          class="btn soft mini"
+                          type="button"
+                          :disabled="!targetPhrase || ttsLoading"
+                          :aria-busy="ttsLoading ? 'true' : 'false'"
+                          @click="speakTarget()"
+                      >
+                        <v-icon size="16" :class="{ spin: ttsLoading }">
+                          {{ ttsLoading ? 'mdi-loading' : 'mdi-volume-high' }}
+                        </v-icon>
                         {{ sayButtonLabel }}
                       </button>
                       <button
-                        v-if="audioContentHidden"
-                        class="btn ghost mini"
-                        type="button"
-                        @click="revealAudioContent"
-                        >
+                          v-if="audioContentHidden"
+                          class="btn ghost mini"
+                          type="button"
+                          @click="revealAudioContent"
+                      >
                         <v-icon size="16">mdi-eye</v-icon>
                         Reveal text
                       </button>
@@ -307,11 +287,11 @@
                     {{ hint }}
                   </div>
                   <div
-                    v-for="info in lessonInfo"
-                    :key="info"
-                    :class="['hint', 'secondary', { 'audio-blur': audioContentHidden }]"
-                    :aria-hidden="audioContentHidden ? 'true' : 'false'"
-                    >
+                      v-for="info in lessonInfo"
+                      :key="info"
+                      :class="['hint', 'secondary', { 'audio-blur': audioContentHidden }]"
+                      :aria-hidden="audioContentHidden ? 'true' : 'false'"
+                  >
                     <v-icon size="16">mdi-information-outline</v-icon>
                     {{ info }}
                   </div>
@@ -322,24 +302,26 @@
                 <div class="label">Your readback</div>
                 <div class="panel readback-panel">
                   <div class="cloze">
-                    <template v-for="(segment, idx) in activeLesson.readback" :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
+                    <template v-for="(segment, idx) in activeLesson.readback"
+                              :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
                       <span v-if="segment.type === 'text'">
                         {{ typeof segment.text === 'function' && scenario ? segment.text(scenario) : segment.text }}
                       </span>
                       <label
-                        v-else
-                        class="blank"
-                        :class="[blankSizeClass(segment.key, segment.width), blankStateClass(segment.key)]"
-                        >
+                          v-else
+                          class="blank"
+                          :class="[blankSizeClass(segment.key, segment.width), blankStateClass(segment.key)]"
+                      >
                         <span class="sr-only">{{ fieldLabel(segment.key) }}</span>
                         <input
-                          v-model="userAnswers[segment.key]"
-                          :aria-label="fieldLabel(segment.key)"
-                          :placeholder="fieldPlaceholder(segment.key)"
-                          :inputmode="fieldInputmode(segment.key)"
+                            v-model="userAnswers[segment.key]"
+                            :aria-label="fieldLabel(segment.key)"
+                            :placeholder="fieldPlaceholder(segment.key)"
+                            :inputmode="fieldInputmode(segment.key)"
                         />
                         <v-icon v-if="fieldPass(segment.key)" size="16" class="blank-status ok">mdi-check</v-icon>
-                        <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert</v-icon>
+                        <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert
+                        </v-icon>
                         <small v-if="result" class="blank-feedback">
                           Soll: {{ fieldExpectedValue(segment.key) }}
                         </small>
@@ -364,7 +346,8 @@
                 <div v-if="result" class="score">
                   <div class="score-num">{{ result.score }}%</div>
                   <div class="muted small">
-                    Fields correct: {{ result.hits }}/{{ activeLesson.fields.length }} · Similarity: {{ Math.round(result.sim * 100) }}%
+                    Fields correct: {{ result.hits }}/{{ activeLesson.fields.length }} · Similarity:
+                    {{ Math.round(result.sim * 100) }}%
                   </div>
                 </div>
                 <div v-if="result" class="field-checks">
@@ -380,10 +363,12 @@
             <div v-if="current" class="lesson-actions">
               <div class="lesson-actions-meta">
                 <div v-if="nextLessonMeta" class="muted small">
-                  Next: {{ nextLessonMeta.lesson.title }} · Lesson {{ nextLessonMeta.position }} of {{ nextLessonMeta.total }}
+                  Next: {{ nextLessonMeta.lesson.title }} · Lesson {{ nextLessonMeta.position }} of
+                  {{ nextLessonMeta.total }}
                 </div>
                 <div v-else-if="nextMissionMeta" class="muted small">
-                  Next mission: {{ nextMissionMeta.module.title }} · Mission {{ nextMissionMeta.position }} of {{ nextMissionMeta.total }}
+                  Next mission: {{ nextMissionMeta.module.title }} · Mission {{ nextMissionMeta.position }} of
+                  {{ nextMissionMeta.total }}
                 </div>
                 <div v-else class="muted small">
                   Last lesson in this mission.
@@ -409,6 +394,57 @@
         </div>
       </div>
     </section>
+
+
+    <!-- NEXT OBJECTIVE -->
+    <div class="container" v-if="panel==='hub'">
+      <h2 class="h2">Your progress</h2>
+      <p class="muted">
+        Level up by completing lessons and missions. Earn badges as you improve your pilot readbacks.
+      </p>
+      <div class="hero-highlight" role="region" aria-label="Next objective">
+        <div class="hero-orb" :style="{ '--progress': levelProgress + '%' }">
+          <div class="hero-orb-core">
+            <span class="hero-orb-level">Lvl {{ level }}</span>
+            <span class="hero-orb-progress">{{ levelProgress }}%</span>
+          </div>
+        </div>
+        <div class="hero-highlight-meta">
+          <span class="hero-tag">Next objective</span>
+          <div class="hero-highlight-title">
+            {{ primaryObjective ? primaryObjective.title : 'Choose a mission to begin' }}
+          </div>
+          <p class="muted small">
+            {{
+              primaryObjective
+                  ? primaryObjective.description
+                  : 'Open any mission below to start your first readback drills.'
+            }}
+          </p>
+          <div
+              v-if="primaryObjective"
+              class="hero-highlight-bar"
+              role="progressbar"
+              :aria-valuenow="primaryObjectiveProgress"
+              aria-valuemin="0"
+              aria-valuemax="100"
+          >
+            <div class="hero-highlight-fill" :style="{ width: primaryObjectiveProgress + '%' }"></div>
+          </div>
+          <p v-if="primaryObjective" class="muted small">{{ primaryObjective.status }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer" role="contentinfo">
+      <div class="container">
+
+        <div class="footer-right">
+          <span class="muted small">&copy; 2024 OpenSquawk. All rights reserved.</span>
+        </div>
+      </div>
+    </footer>
 
     <!-- SETTINGS DIALOG -->
     <v-dialog v-model="showSettings" max-width="720">
@@ -438,13 +474,13 @@
               <small class="muted">Simulate readability from barely readable to loud and clear.</small>
             </div>
             <v-slider
-              hide-details
-              v-model="cfg.radioLevel"
-              :min="1"
-              :max="5"
-              :step="1"
-              color="cyan"
-              thumb-label
+                hide-details
+                v-model="cfg.radioLevel"
+                :min="1"
+                :max="5"
+                :step="1"
+                color="cyan"
+                thumb-label
             />
           </div>
 
@@ -454,13 +490,13 @@
               <small class="muted">{{ audioSpeedDisplay }}× — slow practice to rapid live traffic.</small>
             </div>
             <v-slider
-              hide-details
-              v-model="cfg.audioSpeed"
-              :min="0.7"
-              :max="1.3"
-              :step="0.05"
-              color="cyan"
-              thumb-label
+                hide-details
+                v-model="cfg.audioSpeed"
+                :min="0.7"
+                :max="1.3"
+                :step="0.05"
+                color="cyan"
+                thumb-label
             />
           </div>
 
@@ -506,17 +542,17 @@
 
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
-import { useApi } from '~/composables/useApi'
-import { createDefaultLearnConfig } from '~~/shared/learn/config'
-import type { LearnConfig, LearnProgress, LearnState } from '~~/shared/learn/config'
-import { learnModules } from '~~/shared/data/learnModules'
-import type { BlankWidth, Frequency, Lesson, LessonField, ModuleDef, Scenario } from '~~/shared/learn/types'
-import { loadPizzicatoLite } from '~~/shared/utils/pizzicatoLite'
-import type { PizzicatoLite } from '~~/shared/utils/pizzicatoLite'
-import { createNoiseGenerators, getReadabilityProfile } from '~~/shared/utils/radioEffects'
+import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch} from 'vue'
+import {useApi} from '~/composables/useApi'
+import {createDefaultLearnConfig} from '~~/shared/learn/config'
+import type {LearnConfig, LearnProgress, LearnState} from '~~/shared/learn/config'
+import {learnModules} from '~~/shared/data/learnModules'
+import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, Scenario} from '~~/shared/learn/types'
+import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
+import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
+import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
 
-definePageMeta({ middleware: 'require-auth' })
+definePageMeta({middleware: 'require-auth'})
 
 type Objective = {
   id: string
@@ -549,11 +585,11 @@ type ScoreResult = {
 
 function norm(value: string): string {
   return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[^a-z0-9 ]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[^a-z0-9 ]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
 }
 
 function lev(a: string, b: string): number {
@@ -612,13 +648,13 @@ const sayCache = new Map<string, CachedAudio>()
 const pendingSayRequests = new Map<string, Promise<CachedAudio>>()
 const audioReveal = ref(true)
 
-const toast = ref({ show: false, text: '' })
+const toast = ref({show: false, text: ''})
 const showSettings = ref(false)
 const api = useApi()
 
 const isClient = typeof window !== 'undefined'
 const defaultCfg = createDefaultLearnConfig()
-const cfg = ref<LearnConfig>({ ...defaultCfg })
+const cfg = ref<LearnConfig>({...defaultCfg})
 audioReveal.value = !cfg.value.audioChallenge
 
 const XP_PER_LEVEL = 300
@@ -631,10 +667,10 @@ const xpToNextLevel = computed(() => Math.max(0, level.value * XP_PER_LEVEL - xp
 type BadgeTier = { id: string; name: string; xp: number; description: string }
 
 const badgeTrack: BadgeTier[] = [
-  { id: 'rookie', name: 'Runway Rookie', xp: 0, description: 'Complete your first guided mission.' },
-  { id: 'cadet', name: 'Clearance Cadet', xp: 120, description: 'Score three missions with ≥80%.' },
-  { id: 'navigator', name: 'Taxi Navigator', xp: 360, description: 'Keep the flow going with solid readbacks.' },
-  { id: 'tower', name: 'Tower Pro', xp: 720, description: 'Master departures with confident phraseology.' }
+  {id: 'rookie', name: 'Runway Rookie', xp: 0, description: 'Complete your first guided mission.'},
+  {id: 'cadet', name: 'Clearance Cadet', xp: 120, description: 'Score three missions with ≥80%.'},
+  {id: 'navigator', name: 'Taxi Navigator', xp: 360, description: 'Keep the flow going with solid readbacks.'},
+  {id: 'tower', name: 'Tower Pro', xp: 720, description: 'Master departures with confident phraseology.'}
 ]
 
 const currentBadge = computed(() => {
@@ -688,7 +724,7 @@ const audioSpeedDisplay = computed(() => (cfg.value.audioSpeed ?? 1).toFixed(2))
 type LearnStateResponse = LearnState
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
-const dirtyState = reactive({ xp: false, progress: false, config: false })
+const dirtyState = reactive({xp: false, progress: false, config: false})
 const savingState = ref(false)
 const pendingSave = ref(false)
 
@@ -700,11 +736,11 @@ async function loadLearnState() {
     if (response) {
       xp.value = Number.isFinite(response.xp) ? Math.max(0, Math.round(response.xp)) : 0
       progress.value = (response.progress ?? {}) as LearnProgress
-      cfg.value = { ...defaultCfg, ...(response.config || {}) }
+      cfg.value = {...defaultCfg, ...(response.config || {})}
     } else {
       xp.value = 0
       progress.value = {} as LearnProgress
-      cfg.value = { ...defaultCfg }
+      cfg.value = {...defaultCfg}
     }
     dirtyState.xp = false
     dirtyState.progress = false
@@ -713,7 +749,7 @@ async function loadLearnState() {
     console.error('Failed to load learn state', err)
     xp.value = 0
     progress.value = {} as LearnProgress
-    cfg.value = { ...defaultCfg }
+    cfg.value = {...defaultCfg}
   } finally {
     audioReveal.value = !cfg.value.audioChallenge
   }
@@ -750,7 +786,7 @@ async function persistLearnState(force = false) {
   const payload = {
     xp: Math.max(0, Math.round(xp.value)),
     progress: JSON.parse(JSON.stringify(progress.value)),
-    config: { ...cfg.value },
+    config: {...cfg.value},
   }
 
   try {
@@ -782,7 +818,7 @@ if (isClient) {
   watch(progress, () => {
     dirtyState.progress = true
     schedulePersist()
-  }, { deep: true })
+  }, {deep: true})
   watch(xp, () => {
     dirtyState.xp = true
     schedulePersist()
@@ -815,12 +851,14 @@ onBeforeUnmount(() => {
   if (radioNoiseContext) {
     const ctx = radioNoiseContext
     radioNoiseContext = null
-    void ctx.close().catch(() => {})
+    void ctx.close().catch(() => {
+    })
   }
   if (speechContext) {
     const ctx = speechContext
     speechContext = null
-    void ctx.close().catch(() => {})
+    void ctx.close().catch(() => {
+    })
   }
 })
 
@@ -1062,8 +1100,8 @@ function fillSolution() {
 function computeScore(): ScoreResult | null {
   if (!activeLesson.value) return null
   const details = activeLesson.value.fields
-    .map(field => fieldStates.value[field.key])
-    .filter(Boolean) as FieldState[]
+      .map(field => fieldStates.value[field.key])
+      .filter(Boolean) as FieldState[]
   if (!details.length) return null
   const total = details.reduce((sum, item) => sum + item.similarity, 0)
   const hits = details.filter(item => item.pass).length
@@ -1088,12 +1126,12 @@ function evaluate() {
     const modId = current.value.id
     const lesId = activeLesson.value.id
     if (!progress.value[modId]) progress.value[modId] = {}
-    const previous = progress.value[modId][lesId] || { best: 0, done: false }
+    const previous = progress.value[modId][lesId] || {best: 0, done: false}
     const best = Math.max(previous.best || 0, summary.score)
     const passed = summary.passed || summary.score >= 80
     const wasDone = previous.done
 
-    progress.value[modId][lesId] = { best, done: passed }
+    progress.value[modId][lesId] = {best, done: passed}
 
     let gained = 0
     if (passed && !wasDone) gained += 40
@@ -1398,7 +1436,7 @@ function resetAll() {
   if (!isClient) return
   progress.value = {} as LearnProgress
   xp.value = 0
-  cfg.value = { ...defaultCfg }
+  cfg.value = {...defaultCfg}
   audioReveal.value = !cfg.value.audioChallenge
   dirtyState.progress = true
   dirtyState.xp = true
@@ -1412,7 +1450,7 @@ function tilt(event: MouseEvent) {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
   const dx = (event.clientX - (rect.left + rect.width / 2)) / rect.width
   const dy = (event.clientY - (rect.top + rect.height / 2)) / rect.height
-  worldTiltStyle.value = { transform: `perspective(1200px) rotateX(${dy * -3}deg) rotateY(${dx * 3}deg)` }
+  worldTiltStyle.value = {transform: `perspective(1200px) rotateX(${dy * -3}deg) rotateY(${dx * 3}deg)`}
 }
 
 async function ensureSpeechAudioContext(): Promise<AudioContext | null> {
@@ -1507,11 +1545,11 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
   const desiredRate = clampRate(Number.isFinite(targetRate) ? targetRate : 1, 0.5, 2)
   const supportsNativeSpeed = providerSupportsNativeSpeed(source.model)
   const nativeRate = supportsNativeSpeed
-    ? clampRate(typeof source.speed === 'number' && Number.isFinite(source.speed) ? source.speed : desiredRate, 0.5, 2)
-    : 1
+      ? clampRate(typeof source.speed === 'number' && Number.isFinite(source.speed) ? source.speed : desiredRate, 0.5, 2)
+      : 1
   const playbackRate = supportsNativeSpeed
-    ? clampRate(desiredRate / (nativeRate || 1), 0.5, 2)
-    : desiredRate
+      ? clampRate(desiredRate / (nativeRate || 1), 0.5, 2)
+      : desiredRate
 
   const playWithoutEffects = async () => {
     const audio = new Audio(dataUrl)
@@ -1544,7 +1582,7 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
     const sound = await pizzicato.createSoundFromBase64(ctx, source.base64)
     sound.setPlaybackRate(playbackRate)
     const profile = getReadabilityProfile(readability)
-    const { Effects } = pizzicato
+    const {Effects} = pizzicato
 
     const highpass = new Effects.HighPassFilter(ctx, {
       frequency: profile.eq.highpass,
@@ -1560,10 +1598,10 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
 
     if (profile.eq.bandpass) {
       sound.addEffect(
-        new Effects.BandPassFilter(ctx, {
-          frequency: profile.eq.bandpass.frequency,
-          q: profile.eq.bandpass.q
-        })
+          new Effects.BandPassFilter(ctx, {
+            frequency: profile.eq.bandpass.frequency,
+            q: profile.eq.bandpass.q
+          })
       )
     }
 
@@ -1572,7 +1610,7 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
     }
 
     profile.distortions.forEach(amount => {
-      sound.addEffect(new Effects.Distortion(ctx, { amount }))
+      sound.addEffect(new Effects.Distortion(ctx, {amount}))
     })
 
     sound.addEffect(new Effects.Compressor(ctx, profile.compressor))
@@ -1709,9 +1747,9 @@ async function playRadioNoise(level: number) {
 
 function computeSpeechRate(): number {
   const base =
-    typeof cfg.value.audioSpeed === 'number' && Number.isFinite(cfg.value.audioSpeed)
-      ? cfg.value.audioSpeed
-      : 1
+      typeof cfg.value.audioSpeed === 'number' && Number.isFinite(cfg.value.audioSpeed)
+          ? cfg.value.audioSpeed
+          : 1
   const adjustment = (cfg.value.radioLevel - 3) * 0.05
   const rate = base + adjustment
   return Math.min(1.4, Math.max(0.7, Math.round(rate * 100) / 100))
@@ -2942,11 +2980,25 @@ onMounted(() => {
   text-transform: uppercase;
 }
 
-.blank.size-xs { min-width: 70px; }
-.blank.size-sm { min-width: 100px; }
-.blank.size-md { min-width: 140px; }
-.blank.size-lg { min-width: 190px; }
-.blank.size-xl { min-width: 240px; }
+.blank.size-xs {
+  min-width: 70px;
+}
+
+.blank.size-sm {
+  min-width: 100px;
+}
+
+.blank.size-md {
+  min-width: 140px;
+}
+
+.blank.size-lg {
+  min-width: 190px;
+}
+
+.blank.size-xl {
+  min-width: 240px;
+}
 
 .blank.ok {
   border-color: color-mix(in srgb, var(--accent) 50%, transparent);
@@ -3137,5 +3189,22 @@ onMounted(() => {
     transition: none !important;
   }
 }
+
+.footer {
+  margin: 40px 0 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--t3);
+}
+
+.footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
 
 </style>
