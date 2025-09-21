@@ -68,6 +68,27 @@ const pushDelayOptions = [3, 5, 7, 10]
 const defaultSpeedRestrictions = [180, 200, 210, 220]
 const approachAltitudeOptions = [3000, 4000, 5000, 6000]
 
+export type ScenarioOverrides = {
+  departureIcao?: string
+  destinationIcao?: string
+  airlineCode?: string
+  flightNumber?: string
+  callsign?: string
+  radioTelephony?: string
+  radioCall?: string
+  runway?: string
+  stand?: string
+  taxiRoute?: string
+  sid?: string
+  transition?: string
+  arrivalRunway?: string
+  arrivalStand?: string
+  arrivalTaxiRoute?: string
+  arrivalStar?: string
+  arrivalTransition?: string
+  approach?: string
+}
+
 const airlines: AirlineData[] = [
   { code: 'DLH', call: 'Lufthansa' },
   { code: 'BAW', call: 'Speedbird' },
@@ -211,8 +232,43 @@ function lettersToNato(value: string): string {
   return value
     .toUpperCase()
     .split('')
-    .map(char => natoMap[char] ?? char)
+    .map(char => {
+      if (natoMap[char]) return natoMap[char]
+      if (atcNumberWords[char]) return atcNumberWords[char]
+      return char
+    })
     .join(' ')
+}
+
+function sanitizeFlightNumber(value?: string): string | null {
+  if (!value) return null
+  const digits = value.toString().replace(/[^0-9]/g, '')
+  if (!digits) return null
+  return digits.slice(0, 4)
+}
+
+function sanitizeCallsign(value?: string): string | null {
+  if (!value) return null
+  const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  return cleaned ? cleaned.slice(0, 8) : null
+}
+
+function sanitizeTelephony(value?: string): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  return trimmed ? trimmed.slice(0, 40) : null
+}
+
+function sanitizeFreeText(value?: string, max = 80): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  return trimmed ? trimmed.slice(0, max) : null
+}
+
+function matchOption(value: string | undefined, options: string[] | undefined): string | undefined {
+  if (!value || !options?.length) return undefined
+  const normalized = value.trim().toUpperCase()
+  return options.find(option => option.toUpperCase() === normalized)
 }
 
 function runwayToWords(runway: string): string {
@@ -294,24 +350,91 @@ function altitudeToWords(value: number): string {
   return words.trim()
 }
 
-export function createBaseScenario(): Scenario {
-  const airport = choice(airportsData)
-  const possibleDestinations = airportsData.filter(a => a.icao !== airport.icao)
-  const destination = choice(possibleDestinations)
-  const airline = choice(airlines)
-  const flightNumber = randomFlightNumber()
-  const callsign = `${airline.code}${flightNumber}`
-  const runway = choice(airport.runways)
-  const stand = choice(airport.stands)
-  const taxiRoute = choice(airport.taxi)
-  const sid = choice(airport.sids)
-  const transition = choice(airport.transitions)
-  const arrivalRunway = choice(destination.runways)
-  const arrivalStand = choice(destination.stands)
-  const arrivalTaxiRoute = choice(destination.taxiIn ?? destination.taxi)
-  const arrivalStar = choice(destination.stars ?? destination.sids)
-  const arrivalTransition = choice(destination.arrivalTransitions ?? destination.transitions)
-  const approach = choice(destination.approaches)
+function findAirport(icao?: string): AirportData | undefined {
+  if (!icao) return undefined
+  const trimmed = icao.trim().toUpperCase()
+  return airportsData.find(entry => entry.icao === trimmed)
+}
+
+function findAirline(code?: string): AirlineData | undefined {
+  if (!code) return undefined
+  const trimmed = code.trim().toUpperCase().slice(0, 3)
+  return airlines.find(entry => entry.code === trimmed)
+}
+
+export function createBaseScenario(overrides: ScenarioOverrides = {}): Scenario {
+  const airport = findAirport(overrides.departureIcao) ?? choice(airportsData)
+  const destinationChoices = airportsData.filter(entry => entry.icao !== airport.icao)
+  let destination = findAirport(overrides.destinationIcao)
+  if (!destination || destination.icao === airport.icao) {
+    destination = destinationChoices.length ? choice(destinationChoices) : airport
+  }
+
+  let airline = findAirline(overrides.airlineCode)
+  let flightNumber = sanitizeFlightNumber(overrides.flightNumber) ?? ''
+  let callsign = sanitizeCallsign(overrides.callsign) ?? ''
+
+  if (!flightNumber && callsign) {
+    const match = callsign.match(/([0-9]{1,4})$/)
+    if (match) {
+      flightNumber = match[1]
+    }
+  }
+
+  if (!airline && callsign) {
+    const prefix = callsign.replace(/[^A-Z]/g, '').slice(0, 3)
+    airline = findAirline(prefix)
+  }
+
+  if (!flightNumber) {
+    flightNumber = randomFlightNumber()
+  }
+
+  if (!callsign) {
+    if (airline) {
+      callsign = `${airline.code}${flightNumber}`
+    } else if (overrides.airlineCode) {
+      const fallbackCode = overrides.airlineCode.trim().toUpperCase().slice(0, 3)
+      callsign = `${fallbackCode || 'FLT'}${flightNumber}`
+      airline = findAirline(fallbackCode)
+    } else {
+      airline = choice(airlines)
+      callsign = `${airline.code}${flightNumber}`
+    }
+  }
+
+  if (!airline) {
+    const derivedCode = callsign.slice(0, 3)
+    airline = findAirline(derivedCode) ?? choice(airlines)
+  }
+
+  let telephony = sanitizeTelephony(overrides.radioTelephony) ?? airline.call
+  const radioCall = sanitizeFreeText(overrides.radioCall, 80) ?? (flightNumber ? `${telephony} ${digitsToWords(flightNumber)}` : telephony)
+
+  const runway = matchOption(overrides.runway, airport.runways) ?? choice(airport.runways)
+  const standOverride = sanitizeFreeText(overrides.stand, 12)?.toUpperCase()
+  const stand = matchOption(standOverride, airport.stands) ?? standOverride ?? choice(airport.stands)
+  const taxiOverride = sanitizeFreeText(overrides.taxiRoute, 80)
+  const taxiRoute = matchOption(taxiOverride, airport.taxi) ?? taxiOverride ?? choice(airport.taxi)
+  const sid = matchOption(overrides.sid, airport.sids) ?? choice(airport.sids)
+  const transition = matchOption(overrides.transition, airport.transitions) ?? choice(airport.transitions)
+
+  const arrivalRunway = matchOption(overrides.arrivalRunway, destination.runways) ?? choice(destination.runways)
+  const arrivalStandOverride = sanitizeFreeText(overrides.arrivalStand, 12)?.toUpperCase()
+  const arrivalStand = matchOption(arrivalStandOverride, destination.stands) ?? arrivalStandOverride ?? choice(destination.stands)
+  const arrivalTaxiOverride = sanitizeFreeText(overrides.arrivalTaxiRoute, 80)
+  const arrivalTaxiOptions = destination.taxiIn && destination.taxiIn.length ? destination.taxiIn : destination.taxi
+  const arrivalTaxiRoute = matchOption(arrivalTaxiOverride, arrivalTaxiOptions) ?? arrivalTaxiOverride ?? choice(arrivalTaxiOptions)
+  const arrivalStarOptions = destination.stars && destination.stars.length ? destination.stars : destination.sids
+  const arrivalStar = matchOption(overrides.arrivalStar, arrivalStarOptions) ?? choice(arrivalStarOptions)
+  const arrivalTransitionOptions = destination.arrivalTransitions && destination.arrivalTransitions.length
+    ? destination.arrivalTransitions
+    : destination.transitions
+  const arrivalTransition = matchOption(overrides.arrivalTransition, arrivalTransitionOptions) ?? choice(arrivalTransitionOptions)
+  const approach = matchOption(overrides.approach, destination.approaches) ?? choice(destination.approaches)
+
+  const overrideCode = overrides.airlineCode ? overrides.airlineCode.trim().toUpperCase().slice(0, 3) : ''
+  const airlineCode = overrideCode || airline.code
   const altitude = choice([4000, 5000, 6000, 7000])
   const climbAltitude = altitude + 2000
   const squawk = generateSquawk()
@@ -394,10 +517,10 @@ export function createBaseScenario(): Scenario {
 
   return {
     callsign,
-    airlineCode: airline.code,
-    airlineCall: airline.call,
-    radioCall: `${airline.call} ${digitsToWords(flightNumber)}`,
-    callsignNato: lettersToNato(airline.code),
+    airlineCode,
+    airlineCall: telephony,
+    radioCall,
+    callsignNato: lettersToNato(callsign),
     flightNumber,
     flightNumberWords: digitsToWords(flightNumber),
     airport,
@@ -491,18 +614,57 @@ function cloneScenario(scenario: Scenario): Scenario {
   return JSON.parse(JSON.stringify(scenario)) as Scenario
 }
 
-export type ScenarioGenerator = (() => Scenario) & { reset: () => void }
+export type ScenarioGenerator = (() => Scenario) & {
+  reset: () => void
+  prime: (scenario: Scenario) => void
+  clearPrime: () => void
+}
 
 export function createScenarioSeries(): ScenarioGenerator {
   let cached: Scenario | null = null
-  const generator = () => {
+  let primed: Scenario | null = null
+
+  const generator = (() => {
+    if (primed) {
+      return cloneScenario(primed)
+    }
     if (!cached) {
       cached = createBaseScenario()
     }
     return cloneScenario(cached)
-  }
+  }) as ScenarioGenerator
+
   generator.reset = () => {
     cached = null
   }
+
+  generator.prime = (scenario: Scenario) => {
+    primed = cloneScenario(scenario)
+    cached = cloneScenario(scenario)
+  }
+
+  generator.clearPrime = () => {
+    primed = null
+    cached = null
+  }
+
   return generator
+}
+
+export function listScenarioAirports(): Array<Pick<AirportData, 'icao' | 'name' | 'city'>> {
+  return airportsData.map(airport => ({ icao: airport.icao, name: airport.name, city: airport.city }))
+}
+
+export function getScenarioAirport(icao: string): AirportData | null {
+  const airport = findAirport(icao)
+  return airport ? (JSON.parse(JSON.stringify(airport)) as AirportData) : null
+}
+
+export function listScenarioAirlines(): AirlineData[] {
+  return airlines.map(airline => ({ ...airline }))
+}
+
+export function getScenarioAirline(code: string): AirlineData | null {
+  const airline = findAirline(code)
+  return airline ? { ...airline } : null
 }

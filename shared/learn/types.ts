@@ -161,10 +161,49 @@ export type Lesson = {
   generate: () => Scenario
 }
 
+export type MissionSource = 'random' | 'manual' | 'simbrief'
+
+export type MissionContextSummary = {
+  callsign: string
+  radioCall: string
+  route: string
+  departure: {
+    icao: string
+    name: string
+    city: string
+    runway: string
+    stand: string
+    taxi: string
+  }
+  arrival: {
+    icao: string
+    name: string
+    city: string
+    runway: string
+    stand: string
+    taxi: string
+  }
+  sid?: string
+  transition?: string
+  star?: string
+  arrivalTransition?: string
+  approach?: string
+  remarks?: string
+}
+
+export type MissionContext = {
+  source: MissionSource
+  scenario: Scenario
+  summary: MissionContextSummary
+  updatedAt: string
+  metadata?: Record<string, unknown>
+}
+
 export type ModuleDef = {
   id: string
   title: string
   subtitle: string
   art: string
   lessons: Lesson[]
+  requiresFlightContext?: boolean
 }

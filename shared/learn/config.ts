@@ -5,12 +5,15 @@ export interface LessonProgress {
 
 export type LearnProgress = Record<string, Record<string, LessonProgress>>
 
+import type { MissionContext } from '~~/shared/learn/types'
+
 export interface LearnConfig {
   tts: boolean
   radioLevel: number
   voice: string
   audioChallenge: boolean
   audioSpeed: number
+  missionContexts: Record<string, MissionContext>
 }
 
 export interface LearnState {
@@ -25,10 +28,11 @@ export const LEARN_CONFIG_DEFAULTS: LearnConfig = {
   voice: '',
   audioChallenge: true,
   audioSpeed: 1,
+  missionContexts: {},
 }
 
 export function createDefaultLearnConfig(): LearnConfig {
-  return { ...LEARN_CONFIG_DEFAULTS }
+  return { ...LEARN_CONFIG_DEFAULTS, missionContexts: {} }
 }
 
 export function createDefaultLearnState(): LearnState {

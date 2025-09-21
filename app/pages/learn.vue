@@ -112,13 +112,18 @@
         <div class="muted">Start with the ICAO alphabet & numbers, then basics, ground, and more.</div>
       </div>
 
-      <div class="tiles">
+      <div class="tiles-wrap">
         <div
-            v-for="m in modules"
-            :key="m.id"
-            class="tile"
-            :class="tileClass(m.id)"
+            class="tiles"
+            ref="tilesScroller"
         >
+          <div
+              v-for="m in modules"
+              :key="m.id"
+              class="tile"
+              :class="tileClass(m.id)"
+              :ref="el => registerTile(el, m.id)"
+          >
           <div class="tile-media" :style="{ backgroundImage: `url(${m.art})` }">
             <span v-if="isFreshModule(m.id)" class="tile-badge">
               <v-icon size="16">mdi-star-four-points</v-icon>
@@ -162,7 +167,10 @@
               </div>
             </div>
           </div>
+          </div>
         </div>
+        <div class="tiles-fade left" v-if="tileScrollState.left"></div>
+        <div class="tiles-fade right" v-if="tileScrollState.right"></div>
       </div>
     </main>
 
@@ -176,11 +184,35 @@
           </button>
           <span class="muted">/ {{ current.title }}</span>
         </div>
-        <div class="stats">
-          <span class="stat"><v-icon size="18">mdi-progress-check</v-icon> {{
-              doneCount(current.id)
-            }}/{{ current.lessons.length }}</span>
-          <span class="stat"><v-icon size="18">mdi-star</v-icon> Ø {{ avgScore(current.id) }}%</span>
+        <div class="play-head-right">
+          <div class="stats">
+            <span class="stat"><v-icon size="18">mdi-progress-check</v-icon> {{
+                doneCount(current.id)
+              }}/{{ current.lessons.length }}</span>
+            <span class="stat"><v-icon size="18">mdi-star</v-icon> Ø {{ avgScore(current.id) }}%</span>
+          </div>
+          <div
+              v-if="current && moduleRequiresContext(current.id)"
+              class="module-actions"
+          >
+            <button
+                v-if="currentMissionContext"
+                class="btn soft mini"
+                type="button"
+                @click="openMissionBriefingFromModule"
+            >
+              <v-icon size="16">mdi-clipboard-text-outline</v-icon>
+              Briefing
+            </button>
+            <button
+                class="btn ghost mini"
+                type="button"
+                @click="openMissionSetupFromModule"
+            >
+              <v-icon size="16">mdi-airplane-cog</v-icon>
+              {{ currentMissionContext ? 'Change flight' : 'Plan flight' }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -406,6 +438,300 @@
       </div>
     </section>
 
+    <!-- PREFLIGHT SETUP -->
+    <section v-if="panel==='setup' && missionSetup.module" class="container preflight" aria-label="Mission setup">
+      <div class="preflight-head">
+        <button class="link" type="button" @click="closeMissionSetup">
+          <v-icon size="16">mdi-arrow-left</v-icon>
+          Hub
+        </button>
+        <div class="preflight-title">
+          <span class="preflight-subtitle">Mission prep</span>
+          <h2 class="h2">{{ missionSetup.module.title }}</h2>
+          <p class="muted small">Choose how you want to seed this gate-to-gate scenario.</p>
+        </div>
+      </div>
+
+      <div class="mode-select">
+        <button class="mode-card" :class="{ active: missionSetup.mode==='random' }" type="button" @click="missionSetup.mode='random'">
+          <div class="mode-art" style="background-image: url('/img/learn/briefing/preflight-console.png')"></div>
+          <div class="mode-copy">
+            <h3>Random flight</h3>
+            <p>Generate a cohesive training mission across our supported hubs.</p>
+          </div>
+        </button>
+        <button class="mode-card" :class="{ active: missionSetup.mode==='manual' }" type="button" @click="missionSetup.mode='manual'">
+          <div class="mode-art" style="background-image: url('/img/learn/briefing/manual-holo.png')"></div>
+          <div class="mode-copy">
+            <h3>Manual plan</h3>
+            <p>Define airline, procedures, and runways yourself.</p>
+          </div>
+        </button>
+        <button class="mode-card" :class="{ active: missionSetup.mode==='simbrief' }" type="button" @click="missionSetup.mode='simbrief'">
+          <div class="mode-art" style="background-image: url('/img/learn/briefing/simbrief-sync.png')"></div>
+          <div class="mode-copy">
+            <h3>SimBrief import</h3>
+            <p>Pull your latest SimBrief OFP and fly it here.</p>
+          </div>
+        </button>
+      </div>
+
+      <div class="preflight-body">
+        <div v-if="missionSetup.mode==='random'" class="preflight-panel">
+          <h3 class="h3">Randomized training flight</h3>
+          <p class="muted small">
+            We'll chain clearance, taxi, departure, and arrival into one scenario built from your training hubs.
+          </p>
+          <button class="btn primary" type="button" :disabled="missionSetup.loading" @click="prepareRandomFlight">
+            <v-icon size="18" :class="{ spin: missionSetup.loading }">mdi-dice-multiple</v-icon>
+            Roll flight
+          </button>
+        </div>
+
+        <div v-else-if="missionSetup.mode==='manual'" class="preflight-panel">
+          <h3 class="h3">Manual mission plan</h3>
+          <p class="muted small">Supported hubs: {{ supportedAirportCodes.join(', ') }}</p>
+          <div class="form-grid">
+            <label class="field">
+              <span>Airline</span>
+              <select v-model="missionSetup.manual.airlineCode">
+                <option v-for="airline in scenarioAirlines" :key="airline.code" :value="airline.code">
+                  {{ airline.code }} · {{ airline.call }}
+                </option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Flight number</span>
+              <input v-model="missionSetup.manual.flightNumber" type="text" inputmode="numeric" placeholder="1234"/>
+            </label>
+            <label class="field">
+              <span>Departure</span>
+              <select v-model="missionSetup.manual.departure">
+                <option v-for="airport in scenarioAirports" :key="airport.icao" :value="airport.icao">
+                  {{ airport.icao }} · {{ airport.city }}
+                </option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Destination</span>
+              <select v-model="missionSetup.manual.destination">
+                <option v-for="airport in scenarioAirports" :key="airport.icao" :value="airport.icao">
+                  {{ airport.icao }} · {{ airport.city }}
+                </option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Runway</span>
+              <select v-model="missionSetup.manual.runway">
+                <option v-for="runway in manualDepartureOptions.runways" :key="runway" :value="runway">{{ runway }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Stand</span>
+              <select v-model="missionSetup.manual.stand">
+                <option v-for="stand in manualDepartureOptions.stands" :key="stand" :value="stand">{{ stand }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>SID</span>
+              <select v-model="missionSetup.manual.sid">
+                <option v-for="sid in manualDepartureOptions.sids" :key="sid" :value="sid">{{ sid }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Transition</span>
+              <select v-model="missionSetup.manual.transition">
+                <option v-for="transition in manualDepartureOptions.transitions" :key="transition" :value="transition">{{ transition }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Arrival runway</span>
+              <select v-model="missionSetup.manual.arrivalRunway">
+                <option v-for="runway in manualDestinationOptions.runways" :key="runway" :value="runway">{{ runway }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Arrival stand</span>
+              <select v-model="missionSetup.manual.arrivalStand">
+                <option v-for="stand in manualDestinationOptions.stands" :key="stand" :value="stand">{{ stand }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>STAR</span>
+              <select v-model="missionSetup.manual.arrivalStar">
+                <option v-for="star in manualDestinationOptions.stars" :key="star" :value="star">{{ star }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Arrival transition</span>
+              <select v-model="missionSetup.manual.arrivalTransition">
+                <option v-for="transition in manualDestinationOptions.transitions" :key="transition" :value="transition">{{ transition }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Approach</span>
+              <select v-model="missionSetup.manual.approach">
+                <option v-for="approach in manualDestinationOptions.approaches" :key="approach" :value="approach">{{ approach }}</option>
+              </select>
+            </label>
+            <label class="field full">
+              <span>Taxi route (optional)</span>
+              <input v-model="missionSetup.manual.taxiRoute" type="text" placeholder="e.g. N3 U4" />
+            </label>
+            <label class="field full">
+              <span>Arrival taxi (optional)</span>
+              <input v-model="missionSetup.manual.arrivalTaxiRoute" type="text" placeholder="e.g. S N7" />
+            </label>
+          </div>
+          <div class="preflight-actions">
+            <button class="btn primary" type="button" :disabled="!manualFlightReady" @click="prepareManualFlight">
+              <v-icon size="18">mdi-send-check</v-icon>
+              Build mission
+            </button>
+          </div>
+        </div>
+
+        <div v-else class="preflight-panel">
+          <h3 class="h3">SimBrief integration</h3>
+          <p class="muted small">Fetch your latest OFP from <a href="https://www.simbrief.com/home/" target="_blank" rel="noopener" class="simbrief-link">simbrief.com</a>.</p>
+          <div class="simbrief-input">
+            <label class="field">
+              <span>SimBrief ID</span>
+              <input v-model="missionSetup.simbrief.userId" type="text" placeholder="Username or ID" />
+            </label>
+            <button class="btn primary" type="button" :disabled="missionSetup.simbrief.loading" @click="prepareSimbriefFlight">
+              <v-icon size="18" :class="{ spin: missionSetup.simbrief.loading }">mdi-cloud-download</v-icon>
+              {{ missionSetup.simbrief.loading ? 'Loading' : 'Fetch plan' }}
+            </button>
+          </div>
+          <p class="muted tiny">Only flights using {{ supportedAirportCodes.join(', ') }} are supported for now.</p>
+        </div>
+      </div>
+
+      <div v-if="missionSetup.error" class="preflight-error">{{ missionSetup.error }}</div>
+      <div v-if="missionSetup.simbrief.error" class="preflight-error">{{ missionSetup.simbrief.error }}</div>
+
+      <div v-if="missionSetup.preview" class="preflight-preview">
+        <div class="preview-header">
+          <div class="preview-title">
+            <span class="preview-badge">{{ missionSourceLabels[missionSetup.preview.source] }}</span>
+            <h3>{{ missionSetup.preview.summary.callsign }}</h3>
+            <p class="muted small">{{ missionSetup.preview.summary.radioCall }}</p>
+          </div>
+          <button class="btn ghost mini" type="button" @click="clearMissionPreview">
+            <v-icon size="16">mdi-refresh</v-icon>
+            Reset
+          </button>
+        </div>
+        <div class="preview-route">{{ missionSetup.preview.summary.route }}</div>
+        <div class="preview-grid">
+          <div class="preview-card">
+            <span class="preview-label">Departure</span>
+            <div class="preview-main">{{ missionSetup.preview.summary.departure.icao }} · {{ missionSetup.preview.summary.departure.runway }}</div>
+            <span class="preview-sub">Stand {{ missionSetup.preview.summary.departure.stand }} · Taxi {{ missionSetup.preview.summary.departure.taxi }}</span>
+          </div>
+          <div class="preview-card">
+            <span class="preview-label">Arrival</span>
+            <div class="preview-main">{{ missionSetup.preview.summary.arrival.icao }} · {{ missionSetup.preview.summary.arrival.runway }}</div>
+            <span class="preview-sub">Stand {{ missionSetup.preview.summary.arrival.stand }} · Taxi {{ missionSetup.preview.summary.arrival.taxi }}</span>
+          </div>
+          <div class="preview-card" v-if="missionSetup.preview.summary.sid || missionSetup.preview.summary.star">
+            <span class="preview-label">Procedures</span>
+            <div class="preview-main" v-if="missionSetup.preview.summary.sid">SID {{ missionSetup.preview.summary.sid }}</div>
+            <div class="preview-main" v-if="missionSetup.preview.summary.star">STAR {{ missionSetup.preview.summary.star }}</div>
+          </div>
+          <div class="preview-card" v-if="missionSetup.preview.summary.approach">
+            <span class="preview-label">Approach</span>
+            <div class="preview-main">{{ missionSetup.preview.summary.approach }}</div>
+          </div>
+        </div>
+        <div class="preview-meta" v-if="missionSetup.preview.metadata">
+          <span v-for="(value, key) in missionSetup.preview.metadata" :key="key" class="meta-chip">{{ key }}: {{ value }}</span>
+        </div>
+        <div class="preview-actions">
+          <button class="btn primary" type="button" @click="confirmMissionSelection">
+            <v-icon size="18">mdi-check</v-icon>
+            Continue to briefing
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MISSION BRIEFING -->
+    <section v-if="panel==='briefing' && missionBriefing.module && missionBriefing.context" class="container mission-briefing" aria-label="Mission briefing">
+      <div class="briefing-head">
+        <button class="link" type="button" @click="closeMissionBriefing">
+          <v-icon size="16">mdi-arrow-left</v-icon>
+          Hub
+        </button>
+        <div class="briefing-title">
+          <span class="preview-badge">{{ missionSourceLabels[missionBriefing.context.source] }}</span>
+          <h2 class="h2">{{ missionBriefing.module.title }}</h2>
+          <p class="muted small">{{ missionBriefing.module.subtitle }}</p>
+        </div>
+      </div>
+      <div class="briefing-body">
+        <div class="briefing-overview">
+          <div class="overview-card">
+            <span class="overview-label">Callsign</span>
+            <div class="overview-value">{{ missionBriefing.context.summary.callsign }}</div>
+            <span class="overview-sub">{{ missionBriefing.context.summary.radioCall }}</span>
+          </div>
+          <div class="overview-card">
+            <span class="overview-label">Route</span>
+            <div class="overview-value">{{ missionBriefing.context.summary.route }}</div>
+          </div>
+          <div class="overview-card" v-if="missionBriefing.context.summary.remarks">
+            <span class="overview-label">Remarks</span>
+            <div class="overview-value">{{ missionBriefing.context.summary.remarks }}</div>
+          </div>
+          <div class="overview-meta" v-if="missionBriefing.context.metadata">
+            <span v-for="(value, key) in missionBriefing.context.metadata" :key="key" class="meta-chip">{{ key }}: {{ value }}</span>
+          </div>
+        </div>
+        <div class="briefing-grid">
+          <div class="briefing-card">
+            <h3>Departure</h3>
+            <p class="muted small">{{ missionBriefing.context.summary.departure.name }} · {{ missionBriefing.context.summary.departure.city }}</p>
+            <ul class="briefing-list">
+              <li><strong>Runway</strong> {{ missionBriefing.context.summary.departure.runway }}</li>
+              <li><strong>Stand</strong> {{ missionBriefing.context.summary.departure.stand }}</li>
+              <li><strong>Taxi</strong> {{ missionBriefing.context.summary.departure.taxi }}</li>
+              <li v-if="missionBriefing.context.summary.sid"><strong>SID</strong> {{ missionBriefing.context.summary.sid }}</li>
+              <li v-if="missionBriefing.context.summary.transition"><strong>Transition</strong> {{ missionBriefing.context.summary.transition }}</li>
+            </ul>
+          </div>
+          <div class="briefing-card">
+            <h3>Arrival</h3>
+            <p class="muted small">{{ missionBriefing.context.summary.arrival.name }} · {{ missionBriefing.context.summary.arrival.city }}</p>
+            <ul class="briefing-list">
+              <li><strong>Runway</strong> {{ missionBriefing.context.summary.arrival.runway }}</li>
+              <li><strong>Stand</strong> {{ missionBriefing.context.summary.arrival.stand }}</li>
+              <li><strong>Taxi</strong> {{ missionBriefing.context.summary.arrival.taxi }}</li>
+              <li v-if="missionBriefing.context.summary.star"><strong>STAR</strong> {{ missionBriefing.context.summary.star }}</li>
+              <li v-if="missionBriefing.context.summary.arrivalTransition"><strong>Transition</strong> {{ missionBriefing.context.summary.arrivalTransition }}</li>
+              <li v-if="missionBriefing.context.summary.approach"><strong>Approach</strong> {{ missionBriefing.context.summary.approach }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="briefing-art" style="background-image: url('/img/learn/briefing/mission-brief.png')"></div>
+      <div class="briefing-actions">
+        <button class="btn ghost" type="button" @click="openMissionSetup(missionBriefing.module, missionBriefing.context.source)">
+          <v-icon size="18">mdi-tune</v-icon>
+          Change flight
+        </button>
+        <button class="btn soft" type="button" @click="closeMissionBriefing">
+          <v-icon size="18">mdi-arrow-left</v-icon>
+          Back
+        </button>
+        <button class="btn primary" type="button" @click="startMissionFromBriefing">
+          <v-icon size="18">mdi-play</v-icon>
+          Start mission
+        </button>
+      </div>
+    </section>
+
 
     <!-- NEXT OBJECTIVE -->
     <div class="container" v-if="panel==='hub'">
@@ -557,8 +883,10 @@ import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRe
 import {useApi} from '~/composables/useApi'
 import {createDefaultLearnConfig} from '~~/shared/learn/config'
 import type {LearnConfig, LearnProgress, LearnState} from '~~/shared/learn/config'
-import {learnModules} from '~~/shared/data/learnModules'
-import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, Scenario} from '~~/shared/learn/types'
+import {learnModules, primeFullFlightScenario, clearFullFlightScenario} from '~~/shared/data/learnModules'
+import {createBaseScenario, getScenarioAirport, listScenarioAirlines, listScenarioAirports} from '~~/shared/learn/scenario'
+import type {ScenarioOverrides} from '~~/shared/learn/scenario'
+import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, MissionContext, MissionSource, Scenario} from '~~/shared/learn/types'
 import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
@@ -593,6 +921,8 @@ type ScoreResult = {
   passed: boolean
   fields: FieldState[]
 }
+
+type PanelView = 'hub' | 'module' | 'setup' | 'briefing'
 
 function norm(value: string): string {
   return value
@@ -635,7 +965,9 @@ function similarity(a: string, b: string): number {
 
 const modules = shallowRef<ModuleDef[]>(learnModules)
 
-const panel = ref<'hub' | 'module'>('hub')
+const panel = ref<PanelView>('hub')
+const setupReturnPanel = ref<PanelView>('hub')
+const briefingReturnPanel = ref<PanelView>('hub')
 const current = ref<ModuleDef | null>(null)
 const activeLesson = ref<Lesson | null>(null)
 const scenario = ref<Scenario | null>(null)
@@ -662,6 +994,610 @@ const audioReveal = ref(true)
 const toast = ref({show: false, text: ''})
 const showSettings = ref(false)
 const api = useApi()
+
+const scenarioAirports = listScenarioAirports()
+const scenarioAirlines = listScenarioAirlines()
+const supportedAirportCodes = scenarioAirports.map(airport => airport.icao)
+const supportedAirportsLabel = supportedAirportCodes.join(', ')
+
+const missionGeneratorControls: Record<string, { prime?: (scenario: Scenario) => void; clear?: () => void }> = {
+  'full-flight': {
+    prime: scenario => primeFullFlightScenario(scenario),
+    clear: () => clearFullFlightScenario(),
+  },
+}
+
+const missionSourceLabels: Record<MissionSource, string> = {
+  random: 'Training Generator',
+  manual: 'Manual Plan',
+  simbrief: 'SimBrief OFP',
+}
+
+const missionBriefing = reactive<{ module: ModuleDef | null; context: MissionContext | null }>({
+  module: null,
+  context: null,
+})
+
+const missionSetup = reactive({
+  module: null as ModuleDef | null,
+  mode: 'random' as MissionSource,
+  preview: null as MissionContext | null,
+  loading: false,
+  error: '',
+  manual: {
+    airlineCode: scenarioAirlines[0]?.code || '',
+    flightNumber: '',
+    departure: scenarioAirports[0]?.icao || '',
+    destination: scenarioAirports[1]?.icao || scenarioAirports[0]?.icao || '',
+    runway: '',
+    stand: '',
+    taxiRoute: '',
+    sid: '',
+    transition: '',
+    arrivalRunway: '',
+    arrivalStand: '',
+    arrivalTaxiRoute: '',
+    arrivalStar: '',
+    arrivalTransition: '',
+    approach: '',
+  },
+  simbrief: {
+    userId: '',
+    loading: false,
+    error: '',
+    meta: null as Record<string, string> | null,
+  },
+})
+
+const tilesScroller = ref<HTMLDivElement | null>(null)
+const tileRefs = new Map<string, HTMLElement>()
+const tileScrollState = reactive({ left: false, right: false })
+
+const manualDepartureData = computed(() => getScenarioAirport(missionSetup.manual.departure))
+const manualDestinationData = computed(() => getScenarioAirport(missionSetup.manual.destination))
+
+const manualDepartureOptions = computed(() => {
+  const airport = manualDepartureData.value
+  return {
+    runways: airport?.runways ?? [],
+    stands: airport?.stands ?? [],
+    taxi: airport?.taxi ?? [],
+    sids: airport?.sids ?? [],
+    transitions: airport?.transitions ?? [],
+  }
+})
+
+const manualDestinationOptions = computed(() => {
+  const airport = manualDestinationData.value
+  const taxi = airport?.taxiIn && airport.taxiIn.length ? airport.taxiIn : airport?.taxi ?? []
+  const stars = airport?.stars && airport.stars.length ? airport.stars : airport?.sids ?? []
+  const transitions = airport?.arrivalTransitions && airport.arrivalTransitions.length ? airport.arrivalTransitions : airport?.transitions ?? []
+  return {
+    runways: airport?.runways ?? [],
+    stands: airport?.stands ?? [],
+    taxi,
+    stars,
+    transitions,
+    approaches: airport?.approaches ?? [],
+  }
+})
+
+function syncManualDeparture() {
+  const airport = manualDepartureData.value
+  if (!airport) return
+  if (!airport.runways.includes(missionSetup.manual.runway)) {
+    missionSetup.manual.runway = airport.runways[0] || ''
+  }
+  if (!airport.stands.includes(missionSetup.manual.stand)) {
+    missionSetup.manual.stand = airport.stands[0] || ''
+  }
+  if (!airport.taxi.includes(missionSetup.manual.taxiRoute)) {
+    missionSetup.manual.taxiRoute = airport.taxi[0] || ''
+  }
+  if (!airport.sids.includes(missionSetup.manual.sid)) {
+    missionSetup.manual.sid = airport.sids[0] || ''
+  }
+  if (!airport.transitions.includes(missionSetup.manual.transition)) {
+    missionSetup.manual.transition = airport.transitions[0] || ''
+  }
+}
+
+function syncManualArrival() {
+  const airport = manualDestinationData.value
+  if (!airport) return
+  if (!airport.runways.includes(missionSetup.manual.arrivalRunway)) {
+    missionSetup.manual.arrivalRunway = airport.runways[0] || ''
+  }
+  if (!airport.stands.includes(missionSetup.manual.arrivalStand)) {
+    missionSetup.manual.arrivalStand = airport.stands[0] || ''
+  }
+  const taxiOptions = airport.taxiIn && airport.taxiIn.length ? airport.taxiIn : airport.taxi
+  if (!taxiOptions.includes(missionSetup.manual.arrivalTaxiRoute)) {
+    missionSetup.manual.arrivalTaxiRoute = taxiOptions[0] || ''
+  }
+  const starOptions = airport.stars && airport.stars.length ? airport.stars : airport.sids
+  if (!starOptions.includes(missionSetup.manual.arrivalStar)) {
+    missionSetup.manual.arrivalStar = starOptions[0] || ''
+  }
+  const transitionOptions = airport.arrivalTransitions && airport.arrivalTransitions.length
+    ? airport.arrivalTransitions
+    : airport.transitions
+  if (!transitionOptions.includes(missionSetup.manual.arrivalTransition)) {
+    missionSetup.manual.arrivalTransition = transitionOptions[0] || ''
+  }
+  if (!airport.approaches.includes(missionSetup.manual.approach)) {
+    missionSetup.manual.approach = airport.approaches[0] || ''
+  }
+}
+
+function prefillManualFromScenario(seed: Scenario) {
+  missionSetup.manual.airlineCode = seed.airlineCode
+  missionSetup.manual.flightNumber = seed.flightNumber
+  missionSetup.manual.departure = seed.airport.icao
+  missionSetup.manual.destination = seed.destination.icao
+  missionSetup.manual.runway = seed.runway
+  missionSetup.manual.stand = seed.stand
+  missionSetup.manual.taxiRoute = seed.taxiRoute
+  missionSetup.manual.sid = seed.sid
+  missionSetup.manual.transition = seed.transition
+  missionSetup.manual.arrivalRunway = seed.arrivalRunway
+  missionSetup.manual.arrivalStand = seed.arrivalStand
+  missionSetup.manual.arrivalTaxiRoute = seed.arrivalTaxiRoute
+  missionSetup.manual.arrivalStar = seed.arrivalStar
+  missionSetup.manual.arrivalTransition = seed.arrivalTransition
+  missionSetup.manual.approach = seed.approach
+  syncManualDeparture()
+  syncManualArrival()
+}
+
+watch(() => missionSetup.manual.departure, value => {
+  if (missionSetup.manual.destination === value) {
+    const fallback = scenarioAirports.find(airport => airport.icao !== value)
+    if (fallback) {
+      missionSetup.manual.destination = fallback.icao
+    }
+  }
+  syncManualDeparture()
+})
+
+watch(() => missionSetup.manual.destination, () => {
+  syncManualArrival()
+})
+
+syncManualDeparture()
+syncManualArrival()
+
+const manualFlightReady = computed(() => {
+  return Boolean(
+    missionSetup.manual.airlineCode &&
+    missionSetup.manual.flightNumber.trim() &&
+    manualDepartureData.value &&
+    manualDestinationData.value &&
+    missionSetup.manual.runway &&
+    missionSetup.manual.arrivalRunway
+  )
+})
+
+watch(() => missionSetup.mode, () => {
+  missionSetup.error = ''
+  missionSetup.simbrief.error = ''
+  if (missionSetup.mode !== 'simbrief') {
+    missionSetup.simbrief.loading = false
+  }
+  clearMissionPreview()
+})
+
+watch(panel, value => {
+  if (value === 'hub') {
+    nextTick(() => {
+      updateTileScrollState()
+      if (focusModuleId.value) {
+        scrollModuleIntoView(focusModuleId.value, 'auto')
+      }
+    })
+  }
+})
+
+watch(focusModuleId, id => {
+  if (panel.value === 'hub' && id) {
+    nextTick(() => scrollModuleIntoView(id))
+  }
+})
+
+function ensureMissionContextStore(): Record<string, MissionContext> {
+  if (!cfg.value.missionContexts) {
+    cfg.value = { ...cfg.value, missionContexts: {} as Record<string, MissionContext> }
+  }
+  return cfg.value.missionContexts
+}
+
+function cloneMissionContext(input: MissionContext): MissionContext {
+  return {
+    source: input.source,
+    scenario: JSON.parse(JSON.stringify(input.scenario)) as Scenario,
+    summary: JSON.parse(JSON.stringify(input.summary)) as MissionContext['summary'],
+    updatedAt: input.updatedAt,
+    ...(input.metadata ? { metadata: JSON.parse(JSON.stringify(input.metadata)) as Record<string, unknown> } : {}),
+  }
+}
+
+function setMissionContext(modId: string, context: MissionContext | null) {
+  const store = ensureMissionContextStore()
+  const nextStore: Record<string, MissionContext> = { ...store }
+  const control = missionGeneratorControls[modId]
+
+  if (context) {
+    nextStore[modId] = cloneMissionContext(context)
+    control?.prime?.(context.scenario)
+  } else {
+    delete nextStore[modId]
+    control?.clear?.()
+  }
+
+  cfg.value = { ...cfg.value, missionContexts: nextStore }
+  markConfigDirty()
+}
+
+function getMissionContext(modId: string): MissionContext | null {
+  const store = cfg.value.missionContexts || {}
+  return store[modId] || null
+}
+
+const currentMissionContext = computed(() => {
+  const module = current.value
+  if (!module) return null
+  return getMissionContext(module.id)
+})
+
+function applyMissionContextGenerators() {
+  const store = cfg.value.missionContexts || {}
+  for (const [moduleId, context] of Object.entries(store)) {
+    if (context?.scenario) {
+      missionGeneratorControls[moduleId]?.prime?.(context.scenario)
+    }
+  }
+}
+
+function buildMissionContext(
+  seed: Scenario,
+  source: MissionSource,
+  metadata?: Record<string, string | undefined>,
+): MissionContext {
+  const departureTaxi = seed.taxiRoute || 'Assigned'
+  const arrivalTaxi = seed.arrivalTaxiRoute || 'Assigned'
+  const summary = {
+    callsign: seed.callsign,
+    radioCall: seed.radioCall,
+    route: `${seed.airport.icao}/${seed.runway} → ${seed.destination.icao}/${seed.arrivalRunway}`,
+    departure: {
+      icao: seed.airport.icao,
+      name: seed.airport.name,
+      city: seed.airport.city,
+      runway: seed.runway,
+      stand: seed.stand,
+      taxi: departureTaxi,
+    },
+    arrival: {
+      icao: seed.destination.icao,
+      name: seed.destination.name,
+      city: seed.destination.city,
+      runway: seed.arrivalRunway,
+      stand: seed.arrivalStand,
+      taxi: arrivalTaxi,
+    },
+    sid: seed.sid,
+    transition: seed.transition,
+    star: seed.arrivalStar,
+    arrivalTransition: seed.arrivalTransition,
+    approach: seed.approach,
+    remarks: metadata?.remarks?.trim() || undefined,
+  }
+
+  const cleanedMetadata = metadata
+    ? Object.fromEntries(
+        Object.entries(metadata)
+          .filter(([, value]) => typeof value === 'string' && value && value.trim())
+          .map(([key, value]) => [key, (value as string).trim()]),
+      )
+    : undefined
+
+  return {
+    source,
+    scenario: seed,
+    summary,
+    updatedAt: new Date().toISOString(),
+    ...(cleanedMetadata && Object.keys(cleanedMetadata).length ? { metadata: cleanedMetadata } : {}),
+  }
+}
+
+function moduleRequiresContext(modId: string): boolean {
+  const module = modules.value.find(item => item.id === modId)
+  return Boolean(module?.requiresFlightContext)
+}
+
+function registerTile(element: Element | null, id: string) {
+  if (!element) {
+    tileRefs.delete(id)
+    return
+  }
+  tileRefs.set(id, element as HTMLElement)
+}
+
+function updateTileScrollState() {
+  const scroller = tilesScroller.value
+  if (!scroller) return
+  const maxScroll = scroller.scrollWidth - scroller.clientWidth
+  tileScrollState.left = scroller.scrollLeft > 12
+  tileScrollState.right = scroller.scrollLeft < maxScroll - 12
+}
+
+function scrollModuleIntoView(id: string, behavior: ScrollBehavior = 'smooth') {
+  const scroller = tilesScroller.value
+  const tile = tileRefs.get(id)
+  if (!scroller || !tile) return
+  const target = tile.offsetLeft - scroller.clientWidth / 2 + tile.offsetWidth / 2
+  scroller.scrollTo({ left: Math.max(0, target), behavior })
+}
+
+function clearMissionPreview() {
+  missionSetup.preview = null
+  missionSetup.error = ''
+  missionSetup.simbrief.error = ''
+  missionSetup.simbrief.meta = null
+}
+
+function openMissionSetup(module: ModuleDef, mode?: MissionSource) {
+  setupReturnPanel.value = panel.value
+  missionSetup.module = module
+  missionSetup.mode = mode ?? missionSetup.mode ?? 'random'
+  missionSetup.loading = false
+  missionSetup.error = ''
+  missionSetup.simbrief.error = ''
+  missionSetup.simbrief.loading = false
+  missionSetup.simbrief.meta = null
+
+  const existing = getMissionContext(module.id)
+  missionSetup.preview = existing ? cloneMissionContext(existing) : null
+  if (existing) {
+    missionSetup.simbrief.meta = (existing.metadata as Record<string, string>) || null
+    prefillManualFromScenario(existing.scenario)
+  }
+
+  panel.value = 'setup'
+}
+
+function closeMissionSetup() {
+  missionSetup.module = null
+  clearMissionPreview()
+  panel.value = setupReturnPanel.value === 'module' ? 'module' : 'hub'
+}
+
+function showMissionBriefing(module: ModuleDef, context: MissionContext) {
+  briefingReturnPanel.value = panel.value
+  missionBriefing.module = module
+  missionBriefing.context = cloneMissionContext(context)
+  current.value = module
+  activeLesson.value = null
+  panel.value = 'briefing'
+}
+
+function closeMissionBriefing() {
+  missionBriefing.module = null
+  missionBriefing.context = null
+  panel.value = briefingReturnPanel.value === 'module' ? 'module' : 'hub'
+}
+
+function startMissionFromBriefing() {
+  const module = missionBriefing.module
+  if (!module) return
+  quickContinue(module.id)
+}
+
+function openMissionBriefingFromModule() {
+  if (!current.value) return
+  const context = getMissionContext(current.value.id)
+  if (context) {
+    showMissionBriefing(current.value, context)
+  } else {
+    openMissionSetup(current.value)
+  }
+}
+
+function openMissionSetupFromModule() {
+  if (!current.value) return
+  openMissionSetup(current.value)
+}
+
+function prepareRandomFlight() {
+  missionSetup.loading = true
+  try {
+    const scenario = createBaseScenario()
+    missionSetup.preview = buildMissionContext(scenario, 'random', { remarks: 'Generated training flight' })
+    missionSetup.error = ''
+    missionSetup.simbrief.meta = null
+  } finally {
+    missionSetup.loading = false
+  }
+}
+
+function prepareManualFlight() {
+  if (!manualFlightReady.value) {
+    missionSetup.error = 'Bitte alle Pflichtfelder ausfüllen.'
+    return
+  }
+
+  missionSetup.error = ''
+  missionSetup.simbrief.error = ''
+
+  const overrides: ScenarioOverrides = {
+    airlineCode: missionSetup.manual.airlineCode,
+    flightNumber: missionSetup.manual.flightNumber,
+    departureIcao: missionSetup.manual.departure,
+    destinationIcao: missionSetup.manual.destination,
+    runway: missionSetup.manual.runway,
+    stand: missionSetup.manual.stand,
+    taxiRoute: missionSetup.manual.taxiRoute,
+    sid: missionSetup.manual.sid,
+    transition: missionSetup.manual.transition,
+    arrivalRunway: missionSetup.manual.arrivalRunway,
+    arrivalStand: missionSetup.manual.arrivalStand,
+    arrivalTaxiRoute: missionSetup.manual.arrivalTaxiRoute,
+    arrivalStar: missionSetup.manual.arrivalStar,
+    arrivalTransition: missionSetup.manual.arrivalTransition,
+    approach: missionSetup.manual.approach,
+  }
+
+  const scenario = createBaseScenario(overrides)
+
+  if (
+    scenario.airport.icao !== missionSetup.manual.departure ||
+    scenario.destination.icao !== missionSetup.manual.destination
+  ) {
+    missionSetup.error = `Aktuell werden nur Trainingsflughäfen (${supportedAirportsLabel}) unterstützt.`
+    missionSetup.preview = null
+    return
+  }
+
+  prefillManualFromScenario(scenario)
+  missionSetup.preview = buildMissionContext(scenario, 'manual', { remarks: 'Custom flight plan' })
+  missionSetup.simbrief.meta = null
+}
+
+type ParsedSimbriefPlan = {
+  overrides: ScenarioOverrides
+  metadata: Record<string, string>
+}
+
+function parseSimbriefResponse(payload: unknown): ParsedSimbriefPlan | null {
+  if (!payload || typeof payload !== 'object') return null
+  const ofp = (payload as any).OFP || (payload as any).ofp
+  if (!ofp || typeof ofp !== 'object') return null
+
+  const toString = (value: unknown): string | undefined => {
+    if (typeof value !== 'string') return undefined
+    const trimmed = value.trim()
+    return trimmed || undefined
+  }
+
+  const departure = toString(ofp.origin_icao ?? ofp.origin ?? ofp.departure)
+  const destination = toString(ofp.destination_icao ?? ofp.destination ?? ofp.dest)
+  if (!departure || !destination) return null
+
+  const overrides: ScenarioOverrides = {
+    departureIcao: departure,
+    destinationIcao: destination,
+    airlineCode: toString(ofp.airline_icao ?? ofp.icao_airline ?? ofp.airline),
+    flightNumber: toString(ofp.flight_number ?? ofp.fltno ?? ofp.flightnum),
+    callsign: toString(ofp.atc_callsign ?? ofp.callsign),
+    radioTelephony: toString(ofp.atc_airline ?? ofp.callsign_name ?? ofp.callsign_voice),
+    radioCall: toString(ofp.atc_cleared_call ?? ofp.atc_call),
+    runway: toString(ofp.plan_rwy ?? ofp.plan_rwy_dep ?? ofp.plan_rwy_departure),
+    arrivalRunway: toString(ofp.plan_rwy_arrival ?? ofp.plan_rwy_arr ?? ofp.plan_arrival_rwy),
+    sid: toString(ofp.plan_sid ?? ofp.sid),
+    transition: toString(ofp.plan_transition ?? ofp.sid_transition),
+    arrivalStar: toString(ofp.plan_star ?? ofp.star),
+    arrivalTransition: toString(ofp.plan_star_transition ?? ofp.star_transition),
+    approach: toString(ofp.plan_approach ?? ofp.approach),
+  }
+
+  const metadata: Record<string, string> = {}
+  const route = toString(ofp.route ?? ofp.plan_route ?? ofp.atc_route)
+  if (route) metadata.route = route
+  const ete = toString(ofp.ete ?? ofp.est_time_enroute)
+  if (ete) metadata.ete = ete
+  const cruise = toString(ofp.initial_altitude ?? ofp.cruise_altitude)
+  if (cruise) metadata.cruise = cruise
+  const aircraft = toString(ofp.aircraft_icao ?? ofp.aircraft_type ?? ofp.icao_aircraft)
+  if (aircraft) metadata.aircraft = aircraft
+  const dispatcher = toString(ofp.dispatcher ?? ofp.username)
+  if (dispatcher) metadata.dispatcher = dispatcher
+  const remarks = toString(ofp.remarks)
+  if (remarks) metadata.remarks = remarks
+
+  return { overrides, metadata }
+}
+
+async function prepareSimbriefFlight() {
+  if (!isClient) {
+    missionSetup.simbrief.error = 'SimBrief kann nur im Browser geladen werden.'
+    return
+  }
+
+  const userId = missionSetup.simbrief.userId.trim()
+  if (!userId) {
+    missionSetup.simbrief.error = 'Bitte SimBrief-ID eingeben.'
+    return
+  }
+
+  missionSetup.simbrief.loading = true
+  missionSetup.simbrief.error = ''
+  missionSetup.error = ''
+
+  try {
+    const response = await fetch(`https://www.simbrief.com/api/xml.fetcher.php?userid=${encodeURIComponent(userId)}&json=1`)
+    if (!response.ok) {
+      throw new Error('SimBrief request failed')
+    }
+    const payload = await response.json()
+    const parsed = parseSimbriefResponse(payload)
+    if (!parsed) {
+      missionSetup.simbrief.error = 'Kein aktueller Flugplan gefunden.'
+      missionSetup.preview = null
+      return
+    }
+
+    const scenario = createBaseScenario(parsed.overrides)
+    const requestedDeparture = parsed.overrides.departureIcao?.toUpperCase()
+    const requestedDestination = parsed.overrides.destinationIcao?.toUpperCase()
+
+    if (!requestedDeparture || !requestedDestination) {
+      missionSetup.simbrief.error = 'Der Flugplan enthält unvollständige Daten.'
+      missionSetup.preview = null
+      return
+    }
+
+    if (scenario.airport.icao !== requestedDeparture || scenario.destination.icao !== requestedDestination) {
+      missionSetup.simbrief.error = `Dieser Flugplan nutzt Flughäfen außerhalb unserer Trainingshubs (${supportedAirportsLabel}).`
+      missionSetup.preview = null
+      return
+    }
+
+    const adjustments: string[] = []
+    if (parsed.overrides.runway && scenario.runway !== parsed.overrides.runway.toUpperCase()) {
+      adjustments.push('Abflugbahn an lokale Trainingsdaten angepasst.')
+    }
+    if (parsed.overrides.arrivalRunway && scenario.arrivalRunway !== parsed.overrides.arrivalRunway.toUpperCase()) {
+      adjustments.push('Ankunftsbahn an verfügbare Optionen angepasst.')
+    }
+
+    const metadata = {...parsed.metadata}
+    if (adjustments.length) {
+      metadata.remarks = adjustments.join(' ')
+    }
+
+    missionSetup.preview = buildMissionContext(scenario, 'simbrief', metadata)
+    missionSetup.simbrief.meta = metadata
+  } catch (err) {
+    console.error('Failed to load SimBrief plan', err)
+    missionSetup.simbrief.error = 'SimBrief konnte nicht geladen werden.'
+    missionSetup.preview = null
+  } finally {
+    missionSetup.simbrief.loading = false
+  }
+}
+
+function confirmMissionSelection() {
+  if (!missionSetup.module || !missionSetup.preview) return
+  const moduleId = missionSetup.module.id
+  const module = modules.value.find(item => item.id === moduleId) || missionSetup.module
+  setMissionContext(moduleId, missionSetup.preview)
+  const stored = getMissionContext(moduleId)
+  missionSetup.module = null
+  clearMissionPreview()
+  if (stored) {
+    showMissionBriefing(module, stored)
+  }
+}
 
 const isClient = typeof window !== 'undefined'
 const defaultCfg = createDefaultLearnConfig()
@@ -747,11 +1683,16 @@ async function loadLearnState() {
     if (response) {
       xp.value = Number.isFinite(response.xp) ? Math.max(0, Math.round(response.xp)) : 0
       progress.value = (response.progress ?? {}) as LearnProgress
-      cfg.value = {...defaultCfg, ...(response.config || {})}
+      const incomingConfig = response.config || {}
+      cfg.value = {
+        ...defaultCfg,
+        ...incomingConfig,
+        missionContexts: {...(incomingConfig.missionContexts || {})},
+      }
     } else {
       xp.value = 0
       progress.value = {} as LearnProgress
-      cfg.value = {...defaultCfg}
+      cfg.value = {...defaultCfg, missionContexts: {}}
     }
     dirtyState.xp = false
     dirtyState.progress = false
@@ -760,10 +1701,12 @@ async function loadLearnState() {
     console.error('Failed to load learn state', err)
     xp.value = 0
     progress.value = {} as LearnProgress
-    cfg.value = {...defaultCfg}
+    cfg.value = {...defaultCfg, missionContexts: {}}
   } finally {
     audioReveal.value = !cfg.value.audioChallenge
   }
+
+  applyMissionContextGenerators()
 }
 
 function schedulePersist(immediate = false) {
@@ -847,6 +1790,9 @@ if (isClient) {
   })
   watch(() => cfg.value.audioSpeed, markConfigDirty)
   watch(() => cfg.value.voice, markConfigDirty)
+  watch(() => cfg.value.missionContexts, () => {
+    markConfigDirty()
+  }, {deep: true})
 }
 
 onBeforeUnmount(() => {
@@ -870,6 +1816,12 @@ onBeforeUnmount(() => {
     speechContext = null
     void ctx.close().catch(() => {
     })
+  }
+  if (tilesScroller.value) {
+    tilesScroller.value.removeEventListener('scroll', updateTileScrollState)
+  }
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', updateTileScrollState)
   }
 })
 
@@ -1261,19 +2213,39 @@ function avgScore(modId: string) {
 }
 
 function handleModulePrimary(modId: string) {
+  const module = modules.value.find(item => item.id === modId)
+  if (!module) return
+
+  if (moduleRequiresContext(modId)) {
+    const context = getMissionContext(modId)
+    const hasProgress = moduleHasProgress(modId)
+    if (!context && !hasProgress) {
+      openMissionSetup(module)
+      return
+    }
+    if (context) {
+      showMissionBriefing(module, context)
+      return
+    }
+  }
+
   quickContinue(modId)
 }
 
 function modulePrimaryLabel(modId: string) {
   if (moduleCompleted(modId)) return 'Replay mission'
-  if (!moduleHasProgress(modId)) return 'Launch mission'
-  return 'Resume mission'
+  if (!moduleHasProgress(modId)) {
+    return moduleRequiresContext(modId) ? 'Configure mission' : 'Launch mission'
+  }
+  return moduleRequiresContext(modId) ? 'Mission briefing' : 'Resume mission'
 }
 
 function modulePrimaryIcon(modId: string) {
   if (moduleCompleted(modId)) return 'mdi-history'
-  if (!moduleHasProgress(modId)) return 'mdi-rocket-launch'
-  return 'mdi-progress-clock'
+  if (!moduleHasProgress(modId)) {
+    return moduleRequiresContext(modId) ? 'mdi-clipboard-text' : 'mdi-rocket-launch'
+  }
+  return moduleRequiresContext(modId) ? 'mdi-clipboard-text' : 'mdi-progress-clock'
 }
 
 function moduleSecondaryLabel(modId: string) {
@@ -1408,6 +2380,15 @@ const missionObjective = computed<Objective | null>(() => {
   }
 })
 
+const focusModuleId = computed(() => {
+  const mission = missionObjective.value
+  if (mission?.moduleId) return mission.moduleId
+  const active = modules.value.find(module => moduleHasProgress(module.id) && !moduleCompleted(module.id))
+  if (active) return active.id
+  const unlocked = modules.value.find(module => isModuleUnlocked(module.id))
+  return unlocked?.id || modules.value[0]?.id || ''
+})
+
 const badgeObjective = computed<Objective | null>(() => {
   const upcoming = nextBadge.value
   if (!upcoming) return null
@@ -1462,7 +2443,8 @@ function resetAll() {
   if (!isClient) return
   progress.value = {} as LearnProgress
   xp.value = 0
-  cfg.value = {...defaultCfg}
+  cfg.value = {...defaultCfg, missionContexts: {}}
+  Object.values(missionGeneratorControls).forEach(control => control.clear?.())
   audioReveal.value = !cfg.value.audioChallenge
   dirtyState.progress = true
   dirtyState.xp = true
@@ -1876,6 +2858,17 @@ onMounted(() => {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.getVoices()
   }
+
+  if (isClient) {
+    nextTick(() => {
+      const scroller = tilesScroller.value
+      if (scroller) {
+        scroller.addEventListener('scroll', updateTileScrollState)
+        updateTileScrollState()
+      }
+    })
+    window.addEventListener('resize', updateTileScrollState)
+  }
 })
 </script>
 
@@ -1926,6 +2919,10 @@ onMounted(() => {
 
 .small {
   font-size: 13px
+}
+
+.tiny {
+  font-size: 11px;
 }
 
 .strong {
@@ -2383,11 +3380,43 @@ onMounted(() => {
   margin: 6px 0 10px
 }
 
+.tiles-wrap {
+  position: relative;
+  margin-top: 16px;
+  padding: 4px 0 18px;
+}
+
 .tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  align-items: stretch
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  align-items: stretch;
+  padding: 8px 12px 18px;
+  margin: 0 -12px;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text) 14%, transparent) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tiles::after {
+  content: '';
+  flex: 0 0 12px;
+}
+
+.tiles::-webkit-scrollbar {
+  height: 8px;
+}
+
+.tiles::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--bg2) 75%, transparent);
+  border-radius: 999px;
+}
+
+.tiles::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 999px;
 }
 
 .tile {
@@ -2398,9 +3427,30 @@ onMounted(() => {
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 12px 26px rgba(0, 0, 0, .25);
-  transition: transform .25s ease, box-shadow .25s ease;
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
   position: relative;
-  min-height: 360px
+  min-height: 360px;
+  flex: 0 0 clamp(260px, 32vw, 320px);
+  scroll-snap-align: start;
+}
+
+.tiles-fade {
+  position: absolute;
+  top: 8px;
+  bottom: 26px;
+  width: 96px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(90deg, rgba(11, 16, 32, .9) 0%, rgba(11, 16, 32, 0) 100%);
+}
+
+.tiles-fade.right {
+  right: 0;
+  transform: scaleX(-1);
+}
+
+.tiles-fade.left {
+  left: 0;
 }
 
 .tile.is-fresh {
@@ -3026,6 +4076,29 @@ onMounted(() => {
   gap: 8px;
 }
 
+.play-head-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.module-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.module-actions .btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.module-actions .btn .v-icon {
+  font-size: 16px;
+}
+
 .row.wrap {
   flex-wrap: wrap;
 }
@@ -3160,6 +4233,394 @@ onMounted(() => {
   color: var(--t3);
 }
 
+/* Mission setup */
+.preflight {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.preflight-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.preflight-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preflight-subtitle {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  color: var(--t3);
+}
+
+.mode-select {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.mode-card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 22px;
+  min-height: 190px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--text) 6%, transparent) 0%, color-mix(in srgb, var(--bg2) 82%, transparent) 100%);
+  transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+
+.mode-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 65%);
+  opacity: .65;
+  pointer-events: none;
+}
+
+.mode-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 36px rgba(2, 6, 23, .45);
+}
+
+.mode-card.active {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 20px 48px rgba(34, 211, 238, .35);
+}
+
+.mode-art {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: .5;
+  mix-blend-mode: screen;
+  transform: scale(1.05);
+  transition: transform .4s ease, opacity .4s ease;
+}
+
+.mode-card.active .mode-art {
+  transform: scale(1.12);
+  opacity: .65;
+}
+
+.mode-copy {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 240px;
+}
+
+.mode-copy h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.mode-copy p {
+  font-size: 14px;
+  color: var(--t2);
+}
+
+.preflight-body {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.preflight-panel {
+  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: 26px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--text) 8%, transparent) 0%, color-mix(in srgb, var(--bg2) 80%, transparent) 100%);
+  box-shadow: 0 26px 46px rgba(3, 7, 18, .55);
+}
+
+.form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field span {
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.field input,
+.field select {
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.field input::placeholder {
+  color: var(--t3);
+}
+
+.field.full {
+  grid-column: 1 / -1;
+}
+
+.preflight-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.simbrief-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.simbrief-input .field {
+  flex: 1 1 240px;
+}
+
+.simbrief-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.simbrief-link:hover {
+  text-decoration: underline;
+}
+
+.preflight-error {
+  border: 1px solid color-mix(in srgb, #f87171 60%, transparent);
+  background: color-mix(in srgb, #f87171 18%, transparent);
+  color: #fecaca;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 14px;
+}
+
+.preflight-preview {
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 26px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 14%, transparent) 0%, color-mix(in srgb, var(--bg2) 78%, transparent) 100%);
+  box-shadow: 0 30px 58px rgba(14, 165, 233, .35);
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.preview-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--accent) 70%, transparent), color-mix(in srgb, var(--accent2) 70%, transparent));
+  color: #f8fafc;
+  box-shadow: 0 12px 24px rgba(14, 165, 233, .32);
+}
+
+.preview-route {
+  font-size: 14px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--t2);
+}
+
+.preview-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.preview-card {
+  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preview-label,
+.overview-label {
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.preview-main,
+.overview-value {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.preview-sub,
+.overview-sub {
+  font-size: 12px;
+  color: var(--t3);
+}
+
+.preview-meta,
+.overview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--t3);
+}
+
+.preview-actions,
+.briefing-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Mission briefing */
+.mission-briefing {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.briefing-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.briefing-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.briefing-body {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
+}
+
+.briefing-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.overview-card {
+  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.briefing-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.briefing-card {
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: 18px;
+  padding: 18px 20px;
+  background: linear-gradient(170deg, color-mix(in srgb, var(--accent) 12%, transparent) 0%, color-mix(in srgb, var(--bg2) 85%, transparent) 100%);
+  box-shadow: 0 22px 40px rgba(34, 211, 238, .28);
+}
+
+.briefing-card h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.briefing-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--t2);
+}
+
+.briefing-list strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.briefing-art {
+  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
+  border-radius: 24px;
+  min-height: 220px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 30px 60px rgba(2, 6, 23, .6);
+}
+
 .hint.secondary {
   opacity: 0.8;
 }
@@ -3244,6 +4705,36 @@ onMounted(() => {
 }
 
 @media (max-width: 720px) {
+  .tiles {
+    margin: 0 -16px;
+    padding: 8px 16px 18px;
+    gap: 12px;
+  }
+
+  .tiles-fade {
+    display: none;
+  }
+
+  .play .play-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .play-head-right {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .module-actions {
+    justify-content: flex-start;
+  }
+
   .scenario-bar {
     flex-direction: column;
   }
@@ -3261,6 +4752,23 @@ onMounted(() => {
     bottom: auto;
     box-shadow: none;
     backdrop-filter: none;
+  }
+
+  .mode-select {
+    grid-template-columns: 1fr;
+  }
+
+  .preflight-body {
+    grid-template-columns: 1fr;
+  }
+
+  .simbrief-input {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .briefing-body {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -2,6 +2,7 @@ import { readBody } from 'h3'
 import { requireUserSession } from '../../utils/auth'
 import { LearnProfile } from '../../models/LearnProfile'
 import type { LearnConfig, LearnProgress, LessonProgress } from '~~/shared/learn/config'
+import type { MissionContext, MissionContextSummary, MissionSource } from '~~/shared/learn/types'
 import { createDefaultLearnConfig } from '~~/shared/learn/config'
 
 interface LearnStateUpdateBody {
@@ -73,7 +74,124 @@ function sanitizeConfig(input: Partial<LearnConfig> | undefined): LearnConfig | 
     config.voice = input.voice.slice(0, 120)
   }
 
+  const contexts = sanitizeMissionContexts((input as any).missionContexts)
+  if (contexts) {
+    config.missionContexts = contexts
+  }
+
   return config
+}
+
+function sanitizeMissionContexts(input: unknown): Record<string, MissionContext> | undefined {
+  if (!input || typeof input !== 'object') {
+    return undefined
+  }
+
+  const result: Record<string, MissionContext> = {}
+  const now = new Date().toISOString()
+  const entries = Object.entries(input as Record<string, any>).slice(0, 12)
+
+  for (const [moduleId, raw] of entries) {
+    if (!raw || typeof raw !== 'object') {
+      continue
+    }
+
+    const sourceRaw = (raw as any).source
+    const source: MissionSource = sourceRaw === 'manual' || sourceRaw === 'simbrief' ? sourceRaw : 'random'
+
+    const scenarioRaw = (raw as any).scenario
+    const summaryRaw = (raw as any).summary
+    if (!scenarioRaw || typeof scenarioRaw !== 'object' || !summaryRaw || typeof summaryRaw !== 'object') {
+      continue
+    }
+
+    const summary = sanitizeMissionSummary(summaryRaw)
+    if (!summary) {
+      continue
+    }
+
+    const scenario = JSON.parse(JSON.stringify(scenarioRaw))
+    const updatedAt = typeof (raw as any).updatedAt === 'string' ? (raw as any).updatedAt : now
+    const metadata = (raw as any).metadata && typeof (raw as any).metadata === 'object'
+      ? JSON.parse(JSON.stringify((raw as any).metadata))
+      : undefined
+
+    result[moduleId] = {
+      source,
+      scenario,
+      summary,
+      updatedAt,
+      ...(metadata ? { metadata } : {}),
+    }
+  }
+
+  return result
+}
+
+function sanitizeMissionSummary(input: any): MissionContextSummary | undefined {
+  if (!input || typeof input !== 'object') {
+    return undefined
+  }
+
+  const callsign = sanitizeText(input.callsign, 32)
+  const radioCall = sanitizeText(input.radioCall, 64)
+  const route = sanitizeText(input.route, 240)
+
+  const departure = sanitizeMissionPoint(input.departure)
+  const arrival = sanitizeMissionPoint(input.arrival)
+
+  if (!callsign || !radioCall || !route || !departure || !arrival) {
+    return undefined
+  }
+
+  return {
+    callsign,
+    radioCall,
+    route,
+    departure,
+    arrival,
+    sid: sanitizeOptional(input.sid, 40),
+    transition: sanitizeOptional(input.transition, 40),
+    star: sanitizeOptional(input.star, 40),
+    arrivalTransition: sanitizeOptional(input.arrivalTransition, 40),
+    approach: sanitizeOptional(input.approach, 60),
+    remarks: sanitizeOptional(input.remarks, 160),
+  }
+}
+
+function sanitizeMissionPoint(input: any): MissionContextSummary['departure'] | undefined {
+  if (!input || typeof input !== 'object') {
+    return undefined
+  }
+
+  const icao = sanitizeText(input.icao, 8)?.toUpperCase()
+  const name = sanitizeText(input.name, 80)
+  const city = sanitizeText(input.city, 80)
+  const runway = sanitizeText(input.runway, 24)
+  const stand = sanitizeText(input.stand, 24)
+  const taxi = sanitizeText(input.taxi, 120)
+
+  if (!icao || !name || !city || !runway || !stand) {
+    return undefined
+  }
+
+  return { icao, name, city, runway, stand, taxi: taxi ?? '' }
+}
+
+function sanitizeText(value: unknown, max = 120): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined
+  }
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return undefined
+  }
+  return trimmed.slice(0, max)
+}
+
+function sanitizeOptional(value: unknown, max = 80): string | undefined {
+  const sanitized = sanitizeText(value, max)
+  return sanitized ?? undefined
 }
 
 export default defineEventHandler(async (event) => {
