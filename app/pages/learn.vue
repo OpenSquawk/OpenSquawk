@@ -1017,6 +1017,14 @@
             <div v-else class="mission-footer-hint">
               Last lesson in this mission.
             </div>
+            <div v-if="showRepeatLessonTip" class="mission-footer-tip">
+              <span class="mission-footer-tip-title">Schon gewusst?</span>
+              <span class="mission-footer-tip-text">
+                Mit dem Würfel-Icon <strong>New scenario</strong> kannst du den gleichen Call mit neuen Daten üben.
+                Einfach anklicken und du bekommst andere Daten. Wenn du das pro Lesson 5–10× wiederholst, sitzt der Call
+                wirklich.
+              </span>
+            </div>
           </div>
           <div class="mission-footer-section mission-footer-right">
             <button class="btn soft" type="button" @click="repeatLesson">
@@ -1296,6 +1304,11 @@ const moduleStage = ref<'lessons' | 'setup' | 'briefing'>('lessons')
 const showLessonActions = computed(
     () => panel.value === 'module' && moduleStage.value === 'lessons' && !!current.value && !!activeLesson.value
 )
+const showRepeatLessonTip = computed(() => {
+  if (!showLessonActions.value || !current.value) return false
+  const earlyModuleIds = modules.value.slice(0, 2).map(module => module.id)
+  return earlyModuleIds.includes(current.value.id)
+})
 const flightPlanMode = ref<FlightPlanMode>('random')
 const missionPlans = reactive<Record<string, MissionPlanState>>({})
 const draftPlanScenario = ref<Scenario | null>(null)
@@ -5153,6 +5166,26 @@ onMounted(() => {
   letter-spacing: .06em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--t3) 80%, transparent);
+}
+
+.mission-footer-tip {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--t2) 90%, transparent);
+}
+
+.mission-footer-tip-title {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent) 75%, var(--text) 25%);
+}
+
+.mission-footer-tip-text {
+  display: block;
 }
 
 .row.wrap {
