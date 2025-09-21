@@ -182,7 +182,7 @@
         <div class="play-tools">
           <div v-if="requiresFlightPlan" class="plan-status" :class="{ 'is-ready': !!currentPlan }">
             <div class="plan-status-icon">
-              <v-icon size="16">{{ currentPlan ? 'mdi-airplane-check' : 'mdi-airplane-cog' }}</v-icon>
+              <v-icon :icon="currentPlan ? 'mdi-check-circle-outline' : 'mdi-alert-circle-outline'" size="22" />
             </div>
             <div class="plan-status-body">
               <span class="plan-status-title">
@@ -1463,7 +1463,7 @@ const flightPlanModes: Array<{ id: FlightPlanMode; title: string; icon: string; 
   {
     id: 'manual',
     title: 'Manual setup',
-    icon: 'mdi-airplane-cog',
+    icon: 'mdi-pencil-outline',
     desc: 'Enter your own callsign, airports and procedures.'
   },
   {
