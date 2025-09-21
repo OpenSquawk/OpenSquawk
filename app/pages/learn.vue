@@ -941,6 +941,17 @@
 
           </div>
         </div>
+
+        <!-- REPEAT LESSON TIP -->
+        <div v-if="showRepeatLessonTip" class="mission-footer-tip panel p-8 is-mission">
+          <span class="mission-footer-tip-title text-xl mt-2">Schon gewusst?</span>
+          <span class="mission-footer-tip-text m-t1 my-3">
+                Mit dem Würfel-Icon <strong>New scenario</strong> kannst du den gleichen Call mit neuen Daten üben.
+                Einfach anklicken und du bekommst andere Daten. Wenn du das pro Lesson 5–10× wiederholst, sitzt der Call
+                wirklich.
+              </span>
+        </div>
+
       </div>
     </section>
 
@@ -986,6 +997,7 @@
       </div>
     </div>
 
+
     <!-- FOOTER -->
     <footer
         class="footer footer-fixed"
@@ -1017,14 +1029,7 @@
             <div v-else class="mission-footer-hint">
               Last lesson in this mission.
             </div>
-            <div v-if="showRepeatLessonTip" class="mission-footer-tip">
-              <span class="mission-footer-tip-title">Schon gewusst?</span>
-              <span class="mission-footer-tip-text">
-                Mit dem Würfel-Icon <strong>New scenario</strong> kannst du den gleichen Call mit neuen Daten üben.
-                Einfach anklicken und du bekommst andere Daten. Wenn du das pro Lesson 5–10× wiederholst, sitzt der Call
-                wirklich.
-              </span>
-            </div>
+
           </div>
           <div class="mission-footer-section mission-footer-right">
             <button class="btn soft" type="button" @click="repeatLesson">
