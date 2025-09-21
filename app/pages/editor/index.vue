@@ -302,7 +302,7 @@
         </div>
         <div
           v-if="flowsLoading || flowsError"
-          class="border-b border-white/10 bg-[#0b1224]/75 px-4 py-2 backdrop-blur"
+          class="bg-[#0b1224]/70 px-3 py-2 backdrop-blur-sm lg:px-5"
         >
           <v-progress-linear
             v-if="flowsLoading"
@@ -724,6 +724,15 @@ interface CanvasNodeView {
   accent: string
 }
 
+interface FilteredNodeEntry {
+  node: DecisionNodeModel
+  autopCount: number
+  matchesSearch: boolean
+  matchesRole: boolean
+  matchesPhase: boolean
+  matchesAuto: boolean
+}
+
 interface AutoPreset {
   id: string
   label: string
@@ -861,6 +870,8 @@ const activeFilterBadges = computed(() => {
 })
 
 const selectedNodeId = ref<string | null>(null)
+const lastStableSelectionId = ref<string | null>(null)
+const lastSearchFocusId = ref<string | null>(null)
 const inspectorTab = ref<'general' | 'transitions' | 'llm' | 'metadata'>('general')
 const nodeForm = ref<DecisionNodeModel | null>(null)
 const nodeSnapshot = ref<DecisionNodeModel | null>(null)
@@ -921,18 +932,58 @@ const phaseFilterOptions = computed(() => {
   return Array.from(phases)
 })
 
-const nodeSelectorItems = computed(() => {
+const normalizedNodeSearch = computed(() => String(nodeFilter.search ?? '').trim().toLowerCase())
+
+const filteredNodeEntries = computed<FilteredNodeEntry[]>(() => {
   if (!flowDetail.value) return []
-  const query = String(nodeFilter.search ?? '').trim().toLowerCase()
+  const query = normalizedNodeSearch.value
   const role = nodeFilter.role
   const phase = nodeFilter.phase
   const autopOnly = nodeFilter.autopOnly
-  return flowDetail.value.nodes
-    .slice()
-    .sort((a, b) => a.stateId.localeCompare(b.stateId))
-    .map((node) => {
-      const autopCount = (node.transitions || []).filter((t) => t.autoTrigger).length
-      return {
+
+  return flowDetail.value.nodes.map((node) => {
+    const autopCount = (node.transitions || []).filter((transition) => transition.autoTrigger).length
+    const matchesRole = role === 'all' || node.role === role
+    const matchesPhase = phase === 'all' || node.phase === phase
+    const matchesAuto = !autopOnly || autopCount > 0
+    const matchesSearch =
+      !query ||
+      [node.stateId, node.title, node.summary]
+        .filter(Boolean)
+        .some((entry) => entry!.toLowerCase().includes(query))
+
+    return { node, autopCount, matchesSearch, matchesRole, matchesPhase, matchesAuto }
+  })
+})
+
+const activeNodeMatches = computed(() =>
+  filteredNodeEntries.value.filter(
+    (entry) => entry.matchesSearch && entry.matchesRole && entry.matchesPhase && entry.matchesAuto
+  )
+)
+
+const sortedNodeMatches = computed(() =>
+  [...activeNodeMatches.value].sort((a, b) => a.node.stateId.localeCompare(b.node.stateId))
+)
+
+const nodeSelectorItems = computed(() => {
+  if (!flowDetail.value) return []
+  const items = sortedNodeMatches.value.map(({ node, autopCount }) => ({
+    id: node.stateId,
+    title: node.title,
+    summary: node.summary,
+    phase: node.phase,
+    role: node.role,
+    icon: node.layout?.icon,
+    autopCount,
+  }))
+
+  const selectedId = selectedNodeId.value
+  if (selectedId && !items.some((item) => item.id === selectedId)) {
+    const fallback = filteredNodeEntries.value.find((entry) => entry.node.stateId === selectedId)
+    if (fallback) {
+      const { node, autopCount } = fallback
+      items.unshift({
         id: node.stateId,
         title: node.title,
         summary: node.summary,
@@ -940,38 +991,18 @@ const nodeSelectorItems = computed(() => {
         role: node.role,
         icon: node.layout?.icon,
         autopCount,
-        matchesSearch:
-          !query ||
-          [node.stateId, node.title, node.summary]
-            .filter(Boolean)
-            .some((entry) => entry!.toLowerCase().includes(query)),
-        matchesRole: role === 'all' || node.role === role,
-        matchesPhase: phase === 'all' || node.phase === phase,
-        matchesAuto: !autopOnly || autopCount > 0,
-      }
-    })
-    .filter((node) => node.matchesSearch && node.matchesRole && node.matchesPhase && node.matchesAuto)
-    .map(({ matchesSearch, matchesRole, matchesPhase, matchesAuto, ...rest }) => rest)
+      })
+    }
+  }
+
+  return items
 })
 
 const canvasNodes = computed<CanvasNodeView[]>(() => {
   if (!flowDetail.value) return []
   const flow = flowDetail.value.flow
-  const query = String(nodeFilter.search ?? '').trim().toLowerCase()
-  return flowDetail.value.nodes.map((node) => {
-    const autopCount = (node.transitions || []).filter((transition) => transition.autoTrigger).length
-    const matchesRole = nodeFilter.role === 'all' || node.role === nodeFilter.role
-    const matchesPhase = nodeFilter.phase === 'all' || node.phase === nodeFilter.phase
-    const matchesAuto = !nodeFilter.autopOnly || autopCount > 0
-    const matchesSearch =
-      !query ||
-      [node.stateId, node.title, node.summary]
-        .filter(Boolean)
-        .some((entry) => entry!.toLowerCase().includes(query))
-
-    const dimmed = (nodeFilter.role !== 'all' && !matchesRole) ||
-      (nodeFilter.phase !== 'all' && !matchesPhase) ||
-      (nodeFilter.autopOnly && !matchesAuto)
+  return filteredNodeEntries.value.map(({ node, autopCount, matchesSearch, matchesRole, matchesPhase, matchesAuto }) => {
+    const dimmed = (!matchesRole) || (!matchesPhase) || (!matchesAuto)
 
     return {
       id: node.stateId,
@@ -994,9 +1025,13 @@ const canvasNodes = computed<CanvasNodeView[]>(() => {
 
 watch(selectedFlowSlug, (slug) => {
   if (slug) {
+    lastStableSelectionId.value = null
+    lastSearchFocusId.value = null
     void loadFlowDetail(slug)
   } else {
     flowDetail.value = null
+    lastStableSelectionId.value = null
+    lastSearchFocusId.value = null
   }
 })
 
@@ -1011,7 +1046,9 @@ watch(
 )
 
 watch(selectedNodeId, (stateId) => {
-  if (!stateId || !flowDetail.value) {
+  const detail = flowDetail.value
+  if (!detail) {
+    lastStableSelectionId.value = null
     nodeForm.value = null
     nodeSnapshot.value = null
     nodeActionsText.value = '[]'
@@ -1019,15 +1056,58 @@ watch(selectedNodeId, (stateId) => {
     nodeIdDraft.value = ''
     return
   }
-  const source = flowDetail.value.nodes.find((node) => node.stateId === stateId)
+
+  if (!stateId) {
+    nodeForm.value = null
+    nodeSnapshot.value = null
+    nodeActionsText.value = '[]'
+    nodeActionsError.value = ''
+    nodeIdDraft.value = ''
+
+    if (flowInitializing) return
+
+    const fallbackCandidate =
+      (lastStableSelectionId.value &&
+        detail.nodes.some((node) => node.stateId === lastStableSelectionId.value))
+        ? lastStableSelectionId.value
+        : detail.flow.startState &&
+            detail.nodes.some((node) => node.stateId === detail.flow.startState)
+          ? detail.flow.startState
+          : detail.nodes[0]?.stateId ?? null
+
+    if (fallbackCandidate) {
+      nextTick(() => {
+        if (!selectedNodeId.value && !flowInitializing) {
+          selectedNodeId.value = fallbackCandidate
+        }
+      })
+    }
+    return
+  }
+
+  const source = detail.nodes.find((node) => node.stateId === stateId)
   if (!source) {
     nodeForm.value = null
     nodeSnapshot.value = null
     nodeActionsText.value = '[]'
     nodeActionsError.value = ''
     nodeIdDraft.value = ''
+
+    if (flowInitializing) return
+
+    const fallback =
+      detail.flow.startState && detail.nodes.some((node) => node.stateId === detail.flow.startState)
+        ? detail.flow.startState
+        : detail.nodes[0]?.stateId ?? null
+    if (fallback) {
+      nextTick(() => {
+        selectedNodeId.value = fallback
+      })
+    }
     return
   }
+
+  lastStableSelectionId.value = stateId
   nodeInitializing = true
   inspectorOpen.value = true
   const clone = cloneNode(source)
@@ -1048,6 +1128,59 @@ watch(selectedNodeId, (stateId) => {
     nodeInitializing = false
   })
 })
+
+function focusSearchMatch(forceRefocus = false) {
+  if (!flowDetail.value) return
+  const matches = sortedNodeMatches.value
+  if (!matches.length) return
+  const existing = matches.find((entry) => entry.node.stateId === selectedNodeId.value)
+  const target = existing ?? matches[0]
+  if (selectedNodeId.value !== target.node.stateId) {
+    selectNode(target.node.stateId, { focus: true })
+    lastSearchFocusId.value = target.node.stateId
+    return
+  }
+  if (forceRefocus || lastSearchFocusId.value !== target.node.stateId) {
+    focusNodeOnCanvas(target.node.stateId)
+    lastSearchFocusId.value = target.node.stateId
+  }
+}
+
+watch(normalizedNodeSearch, (query) => {
+  if (!flowDetail.value) return
+  if (!query) {
+    lastSearchFocusId.value = null
+    if (!selectedNodeId.value && sortedNodeMatches.value.length) {
+      selectNode(sortedNodeMatches.value[0].node.stateId, { focus: false })
+    }
+    return
+  }
+
+  if (!sortedNodeMatches.value.length) {
+    lastSearchFocusId.value = null
+    return
+  }
+
+  focusSearchMatch(true)
+})
+
+watch(
+  sortedNodeMatches,
+  (matches) => {
+    if (!flowDetail.value) return
+    if (!matches.length) {
+      lastSearchFocusId.value = null
+      return
+    }
+
+    if (normalizedNodeSearch.value) {
+      focusSearchMatch(false)
+    } else if (!selectedNodeId.value) {
+      selectNode(matches[0].node.stateId, { focus: false })
+    }
+  },
+  { flush: 'post' }
+)
 
 watch(
   inspectorOpen,
