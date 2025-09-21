@@ -1,16 +1,29 @@
 import { randomUUID } from 'node:crypto'
 import type {
+  DecisionComparisonOperator,
   DecisionNodeAutoTrigger,
+  DecisionNodeCondition,
   DecisionNodeLayout,
   DecisionNodeLLMPlaceholder,
   DecisionNodeLLMTemplate,
   DecisionNodeMetadata,
+  DecisionNodeTrigger,
   DecisionNodeTransition,
 } from '~~/shared/types/decision'
 
 const TRANSITION_TYPES = new Set(['next', 'ok', 'bad', 'timer', 'auto', 'interrupt', 'return'])
 const AUTO_TRIGGER_TYPES = new Set(['telemetry', 'variable', 'expression'])
+const NODE_TRIGGER_TYPES = new Set(['auto_time', 'auto_variable', 'regex', 'none'])
+const NODE_CONDITION_TYPES = new Set(['variable_value', 'regex', 'regex_not'])
 const COMPARISON_OPERATORS = new Set(['>', '>=', '<', '<=', '==', '!='])
+const TELEMETRY_PARAMETERS = new Set([
+  'altitude_ft',
+  'speed_kts',
+  'groundspeed_kts',
+  'vertical_speed_fpm',
+  'heading_deg',
+  'distance_nm',
+])
 
 function asTrimmedString(input: any): string | undefined {
   if (typeof input === 'string') {
@@ -40,6 +53,42 @@ function asBoolean(input: any, fallback: boolean): boolean {
     if (normalized === 'true') return true
     if (normalized === 'false') return false
   }
+  return fallback
+}
+
+function asComparisonOperatorValue(input: any, fallback: DecisionComparisonOperator = '=='): DecisionComparisonOperator {
+  const operator = asTrimmedString(input)
+  if (operator && COMPARISON_OPERATORS.has(operator)) {
+    return operator as DecisionComparisonOperator
+  }
+  return fallback
+}
+
+function asTelemetryParameter(
+  input: any,
+  fallback: NonNullable<DecisionNodeAutoTrigger['parameter']> = 'altitude_ft'
+): NonNullable<DecisionNodeAutoTrigger['parameter']> {
+  const parameter = asTrimmedString(input)
+  if (parameter && TELEMETRY_PARAMETERS.has(parameter)) {
+    return parameter as NonNullable<DecisionNodeAutoTrigger['parameter']>
+  }
+  return fallback
+}
+
+function asTelemetryValue(input: any, fallback: number | string = 0): number | string {
+  const numeric = asNumber(input)
+  if (typeof numeric === 'number') return numeric
+  const stringValue = asTrimmedString(input)
+  if (stringValue !== undefined) return stringValue
+  return fallback
+}
+
+function asVariableValue(input: any, fallback: number | string | boolean = ''): number | string | boolean {
+  const numeric = asNumber(input)
+  if (typeof numeric === 'number') return numeric
+  if (typeof input === 'boolean') return input
+  const stringValue = asTrimmedString(input)
+  if (stringValue !== undefined) return stringValue
   return fallback
 }
 
@@ -133,68 +182,95 @@ export function sanitizeLLMTemplate(raw: any): DecisionNodeLLMTemplate | undefin
 }
 
 export function sanitizeAutoTrigger(raw: any): DecisionNodeAutoTrigger | undefined {
-  if (!raw || typeof raw !== 'object') return undefined
-  const type = asTrimmedString(raw.type)
-  if (!type || !AUTO_TRIGGER_TYPES.has(type)) {
-    throw new Error('Invalid auto trigger type')
-  }
+  const payload = raw && typeof raw === 'object' ? raw : {}
+  const type = asTrimmedString(payload.type)
+  const normalizedType =
+    type && AUTO_TRIGGER_TYPES.has(type) ? (type as DecisionNodeAutoTrigger['type']) : 'expression'
+
   const trigger: DecisionNodeAutoTrigger = {
-    id: asTrimmedString(raw.id) || `auto_${randomUUID()}`,
-    type: type as DecisionNodeAutoTrigger['type'],
+    id: asTrimmedString(payload.id) || `auto_${randomUUID()}`,
+    type: normalizedType,
   }
 
-  if (type === 'expression') {
-    const expression = asTrimmedString(raw.expression)
-    if (!expression) {
-      throw new Error('Expression trigger requires an expression')
-    }
-    trigger.expression = expression
-  } else if (type === 'telemetry') {
-    const parameter = asTrimmedString(raw.parameter)
-    if (!parameter) {
-      throw new Error('Telemetry trigger requires a parameter')
-    }
-    trigger.parameter = parameter as DecisionNodeAutoTrigger['parameter']
-    const operator = asTrimmedString(raw.operator)
-    if (!operator || !COMPARISON_OPERATORS.has(operator)) {
-      throw new Error('Telemetry trigger requires a valid operator')
-    }
-    trigger.operator = operator as DecisionNodeAutoTrigger['operator']
-    const value = raw.value !== undefined ? raw.value : undefined
-    if (value === undefined) {
-      throw new Error('Telemetry trigger requires a value')
-    }
-    const numericValue = asNumber(value)
-    trigger.value = numericValue !== undefined ? numericValue : value
-    const unit = asTrimmedString(raw.unit)
+  if (normalizedType === 'expression') {
+    trigger.expression = asTrimmedString(payload.expression) ?? ''
+  } else if (normalizedType === 'telemetry') {
+    trigger.parameter = asTelemetryParameter(payload.parameter)
+    trigger.operator = asComparisonOperatorValue(payload.operator)
+    trigger.value = asTelemetryValue(payload.value, 0)
+    const unit = asTrimmedString(payload.unit)
     if (unit) trigger.unit = unit
-  } else if (type === 'variable') {
-    const variable = asTrimmedString(raw.variable)
-    if (!variable) {
-      throw new Error('Variable trigger requires a variable path')
-    }
-    trigger.variable = variable
-    const operator = asTrimmedString(raw.operator)
-    if (!operator || !COMPARISON_OPERATORS.has(operator)) {
-      throw new Error('Variable trigger requires a valid operator')
-    }
-    trigger.operator = operator as DecisionNodeAutoTrigger['operator']
-    const value = raw.value !== undefined ? raw.value : undefined
-    if (value === undefined) {
-      throw new Error('Variable trigger requires a value')
-    }
-    const numericValue = asNumber(value)
-    trigger.value = numericValue !== undefined ? numericValue : value
+  } else if (normalizedType === 'variable') {
+    trigger.variable = asTrimmedString(payload.variable) ?? ''
+    trigger.operator = asComparisonOperatorValue(payload.operator)
+    trigger.value = asVariableValue(payload.value, '')
   }
 
-  if (raw.once !== undefined) {
-    trigger.once = asBoolean(raw.once, true)
-  }
-  const delayMs = asNumber(raw.delayMs)
+  trigger.once = asBoolean(payload.once, true)
+  const delayMs = asNumber(payload.delayMs)
   if (typeof delayMs === 'number') trigger.delayMs = delayMs
-  const description = asTrimmedString(raw.description)
+  const description = asTrimmedString(payload.description)
   if (description) trigger.description = description
+
   return trigger
+}
+
+export function sanitizeNodeTrigger(raw: any, index = 0): DecisionNodeTrigger {
+  const payload = raw && typeof raw === 'object' ? raw : {}
+  const type = asTrimmedString(payload.type)
+  const normalizedType =
+    type && NODE_TRIGGER_TYPES.has(type) ? (type as DecisionNodeTrigger['type']) : 'none'
+
+  const trigger: DecisionNodeTrigger = {
+    id: asTrimmedString(payload.id) || `trigger_${randomUUID()}`,
+    type: normalizedType,
+    order: typeof payload.order === 'number' ? payload.order : index,
+  }
+
+  if (trigger.type === 'auto_time') {
+    trigger.delaySeconds = asNumber(payload.delaySeconds) ?? 0
+  } else if (trigger.type === 'auto_variable') {
+    trigger.variable = asTrimmedString(payload.variable) ?? ''
+    trigger.operator = asComparisonOperatorValue(payload.operator)
+    trigger.value = asVariableValue(payload.value, '')
+  } else if (trigger.type === 'regex') {
+    trigger.pattern = asTrimmedString(payload.pattern) ?? ''
+    trigger.patternFlags = asTrimmedString(payload.patternFlags) ?? ''
+  }
+
+  const description = asTrimmedString(payload.description)
+  if (description) trigger.description = description
+
+  return trigger
+}
+
+export function sanitizeNodeCondition(raw: any, index = 0): DecisionNodeCondition {
+  const payload = raw && typeof raw === 'object' ? raw : {}
+  const type = asTrimmedString(payload.type)
+  const normalizedType =
+    type && NODE_CONDITION_TYPES.has(type)
+      ? (type as DecisionNodeCondition['type'])
+      : 'variable_value'
+
+  const condition: DecisionNodeCondition = {
+    id: asTrimmedString(payload.id) || `condition_${randomUUID()}`,
+    type: normalizedType,
+    order: typeof payload.order === 'number' ? payload.order : index,
+  }
+
+  const description = asTrimmedString(payload.description)
+  if (description) condition.description = description
+
+  if (condition.type === 'variable_value') {
+    condition.variable = asTrimmedString(payload.variable) ?? ''
+    condition.operator = asComparisonOperatorValue(payload.operator)
+    condition.value = asVariableValue(payload.value, '')
+  } else {
+    condition.pattern = asTrimmedString(payload.pattern) ?? ''
+    condition.patternFlags = asTrimmedString(payload.patternFlags) ?? ''
+  }
+
+  return condition
 }
 
 export function sanitizeTransition(raw: any, index = 0): DecisionNodeTransition {

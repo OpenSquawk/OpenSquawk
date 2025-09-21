@@ -2,6 +2,8 @@
 import OpenAI from 'openai'
 import {spellIcaoDigits, toIcaoPhonetic} from '../../shared/utils/radioSpeech'
 import type {LLMDecision, LLMDecisionInput} from '../../shared/types/llm'
+import type { DecisionNodeCondition, DecisionNodeTrigger, RuntimeDecisionState, RuntimeDecisionSystem } from '../../shared/types/decision'
+import { buildRuntimeDecisionSystem } from '../services/decisionFlowService'
 import {getServerRuntimeConfig} from './runtimeConfig'
 
 let openaiClient: OpenAI | null = null
@@ -200,6 +202,319 @@ function fallbackNextState(input: LLMDecisionInput): string {
     return input.candidates[0]?.id || input.state_id || 'GEN_NO_REPLY'
 }
 
+interface IndexedStateEntry {
+    flow: string
+    state: RuntimeDecisionState
+}
+
+interface DecisionCandidate {
+    id: string
+    flow: string
+    state: RuntimeDecisionState
+}
+
+interface PreparedCandidateResult {
+    filteredCandidates: DecisionCandidate[]
+    candidateFlowMap: Map<string, string>
+    activeFlowSlug: string
+}
+
+const RUNTIME_CACHE_TTL_MS = 5_000
+let runtimeSystemCache: { system: RuntimeDecisionSystem; index: Map<string, IndexedStateEntry>; timestamp: number } | null = null
+
+function buildRuntimeIndex(system: RuntimeDecisionSystem): Map<string, IndexedStateEntry> {
+    const index = new Map<string, IndexedStateEntry>()
+    for (const [flowSlug, tree] of Object.entries(system.flows || {})) {
+        const states = tree?.states || {}
+        for (const [stateId, state] of Object.entries(states)) {
+            index.set(stateId, { flow: flowSlug, state })
+        }
+    }
+    return index
+}
+
+async function getRuntimeSystemIndex(): Promise<{ system: RuntimeDecisionSystem; index: Map<string, IndexedStateEntry> }> {
+    const now = Date.now()
+    if (!runtimeSystemCache || now - runtimeSystemCache.timestamp > RUNTIME_CACHE_TTL_MS) {
+        const system = await buildRuntimeDecisionSystem()
+        runtimeSystemCache = {
+            system,
+            index: buildRuntimeIndex(system),
+            timestamp: now,
+        }
+    }
+    return { system: runtimeSystemCache.system, index: runtimeSystemCache.index }
+}
+
+function evaluateRegexPattern(pattern: string | undefined, flags: string | undefined, value: string): boolean {
+    const source = pattern?.trim()
+    if (!source) {
+        return false
+    }
+    const normalizedFlags = flags && flags.trim().length ? flags : 'i'
+    try {
+        const regex = new RegExp(source, normalizedFlags)
+        return regex.test(value)
+    } catch {
+        return false
+    }
+}
+
+function analyzeTriggers(triggers: DecisionNodeTrigger[] | undefined, utterance: string) {
+    if (!Array.isArray(triggers) || triggers.length === 0) {
+        return { matchesRegex: false, matchesNone: true }
+    }
+
+    let matchesRegex = false
+    let hasNone = false
+    for (const trigger of triggers) {
+        if (!trigger) continue
+        if (trigger.type === 'regex') {
+            if (evaluateRegexPattern(trigger.pattern, trigger.patternFlags, utterance)) {
+                matchesRegex = true
+            }
+        } else if (trigger.type === 'none') {
+            hasNone = true
+        }
+    }
+
+    if (!matchesRegex && !hasNone) {
+        hasNone = true
+    }
+
+    return { matchesRegex, matchesNone: hasNone }
+}
+
+function normalizeComparable(value: any): any {
+    if (typeof value === 'number') return value
+    if (typeof value === 'boolean') return value
+    if (typeof value === 'string') {
+        const trimmed = value.trim()
+        if (!trimmed.length) return ''
+        const numeric = Number(trimmed)
+        if (!Number.isNaN(numeric)) return numeric
+        if (trimmed.toLowerCase() === 'true') return true
+        if (trimmed.toLowerCase() === 'false') return false
+        return trimmed
+    }
+    return value
+}
+
+function parseComparable(raw: any): any {
+    if (typeof raw === 'number' || typeof raw === 'boolean') {
+        return raw
+    }
+    if (typeof raw === 'string') {
+        const trimmed = raw.trim()
+        if (!trimmed.length) return ''
+        const numeric = Number(trimmed)
+        if (!Number.isNaN(numeric)) return numeric
+        if (trimmed.toLowerCase() === 'true') return true
+        if (trimmed.toLowerCase() === 'false') return false
+        if (
+            (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+            (trimmed.startsWith('\'') && trimmed.endsWith('\''))
+        ) {
+            return trimmed.slice(1, -1)
+        }
+        return trimmed
+    }
+    return raw
+}
+
+function compareValuesSafe(left: any, operator: string | undefined, right: any): boolean {
+    const normalizedLeft = normalizeComparable(left)
+    const normalizedRight = normalizeComparable(parseComparable(right))
+    switch (operator) {
+        case '>':
+            return typeof normalizedLeft === 'number' && typeof normalizedRight === 'number'
+                ? normalizedLeft > normalizedRight
+                : false
+        case '>=':
+            return typeof normalizedLeft === 'number' && typeof normalizedRight === 'number'
+                ? normalizedLeft >= normalizedRight
+                : false
+        case '<':
+            return typeof normalizedLeft === 'number' && typeof normalizedRight === 'number'
+                ? normalizedLeft < normalizedRight
+                : false
+        case '<=':
+            return typeof normalizedLeft === 'number' && typeof normalizedRight === 'number'
+                ? normalizedLeft <= normalizedRight
+                : false
+        case '!==':
+        case '!=':
+            return normalizedLeft !== normalizedRight
+        case '===':
+        case '==':
+        default:
+            return normalizedLeft === normalizedRight
+    }
+}
+
+function resolveContextPath(
+    path: string | undefined,
+    context: { variables: Record<string, any>; flags: Record<string, any> }
+) {
+    if (!path || typeof path !== 'string') return undefined
+    const segments = path.split('.').map(segment => segment.trim()).filter(Boolean)
+    if (!segments.length) return undefined
+
+    let current: any
+    const [first, ...rest] = segments
+    if (first === 'variables' || first === 'flags') {
+        current = (context as any)[first]
+    } else {
+        current = context.variables
+        rest.unshift(first)
+    }
+
+    for (const segment of rest) {
+        if (current == null) return undefined
+        current = current[segment]
+    }
+    return current
+}
+
+function evaluateConditionEntry(
+    condition: DecisionNodeCondition | undefined,
+    context: { variables: Record<string, any>; flags: Record<string, any> },
+    utterance: string
+): boolean {
+    if (!condition) return true
+    switch (condition.type) {
+        case 'regex':
+            return evaluateRegexPattern(condition.pattern, condition.patternFlags, utterance)
+        case 'regex_not':
+            return !evaluateRegexPattern(condition.pattern, condition.patternFlags, utterance)
+        case 'variable_value':
+        default: {
+            const left = resolveContextPath(condition.variable, context)
+            const operator = condition.operator || '=='
+            return compareValuesSafe(left, operator, condition.value)
+        }
+    }
+}
+
+function evaluateConditionList(
+    conditions: DecisionNodeCondition[] | undefined,
+    context: { variables: Record<string, any>; flags: Record<string, any> },
+    utterance: string
+): boolean {
+    if (!Array.isArray(conditions) || conditions.length === 0) {
+        return true
+    }
+    const ordered = [...conditions].sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0))
+    for (const condition of ordered) {
+        if (!evaluateConditionEntry(condition, context, utterance)) {
+            return false
+        }
+    }
+    return true
+}
+
+function filterDecisionCandidates(
+    candidates: DecisionCandidate[],
+    utterance: string,
+    context: { variables: Record<string, any>; flags: Record<string, any> }
+): DecisionCandidate[] {
+    if (!candidates.length) {
+        return []
+    }
+
+    const regexMatches: DecisionCandidate[] = []
+    const noneMatches: DecisionCandidate[] = []
+
+    for (const candidate of candidates) {
+        const { matchesRegex, matchesNone } = analyzeTriggers(candidate.state?.triggers, utterance)
+        if (matchesRegex) {
+            regexMatches.push(candidate)
+        } else if (matchesNone) {
+            noneMatches.push(candidate)
+        }
+    }
+
+    const pool = regexMatches.length > 0 ? regexMatches : noneMatches
+    if (!pool.length) {
+        return []
+    }
+
+    return pool.filter(candidate =>
+        evaluateConditionList(candidate.state?.conditions, context, utterance)
+    )
+}
+
+async function prepareDecisionCandidates(
+    input: LLMDecisionInput,
+    utterance: string
+): Promise<PreparedCandidateResult> {
+    const { system, index } = await getRuntimeSystemIndex()
+
+    let activeFlowSlug = input.flow_slug && system.flows[input.flow_slug]
+        ? input.flow_slug
+        : undefined
+
+    if (!activeFlowSlug) {
+        const entry = index.get(input.state_id)
+        if (entry) {
+            activeFlowSlug = entry.flow
+        }
+    }
+
+    if (!activeFlowSlug) {
+        activeFlowSlug = system.main || Object.keys(system.flows)[0] || ''
+    }
+
+    const uniqueCandidates = new Map<string, DecisionCandidate>()
+
+    const addCandidate = (candidate: DecisionCandidate | null | undefined) => {
+        if (!candidate || !candidate.id || !candidate.state) return
+        if (uniqueCandidates.has(candidate.id)) return
+        uniqueCandidates.set(candidate.id, candidate)
+    }
+
+    for (const raw of input.candidates || []) {
+        if (!raw?.id) continue
+        const indexed = index.get(raw.id)
+        const flow = raw.flow || indexed?.flow || activeFlowSlug
+        const state = indexed?.state ? { ...indexed.state } : raw.state
+        if (!state) continue
+        addCandidate({ id: raw.id, flow: flow || activeFlowSlug, state })
+    }
+
+    for (const raw of input.candidates || []) {
+        if (!raw?.id || !raw.state) continue
+        if (!uniqueCandidates.has(raw.id)) {
+            addCandidate({ id: raw.id, flow: raw.flow || activeFlowSlug, state: raw.state })
+        }
+    }
+
+    for (const [flowSlug, tree] of Object.entries(system.flows || {})) {
+        const startStateId = tree.start_state
+        if (!startStateId) continue
+        const indexed = index.get(startStateId)
+        if (!indexed) continue
+        addCandidate({ id: startStateId, flow: flowSlug, state: { ...indexed.state } })
+    }
+
+    const candidates = Array.from(uniqueCandidates.values())
+    const context = { variables: input.variables || {}, flags: input.flags || {} }
+    const filteredCandidates = filterDecisionCandidates(candidates, utterance, context)
+
+    const candidateFlowMap = new Map<string, string>()
+    for (const candidate of filteredCandidates) {
+        if (candidate.flow) {
+            candidateFlowMap.set(candidate.id, candidate.flow)
+        }
+    }
+
+    return {
+        filteredCandidates,
+        candidateFlowMap,
+        activeFlowSlug,
+    }
+}
+
 function resolveReadbackValue(key: string, input: LLMDecisionInput): string | null {
     const rawValue = input.variables?.[key]
     if (rawValue !== undefined && rawValue !== null) {
@@ -329,8 +644,29 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
     const pilotUtterance = (input.pilot_utterance || '').trim()
     const pilotText = pilotUtterance.toLowerCase()
     const trace: LLMDecisionTrace = {calls: []}
+    let candidateFlowMap = new Map<string, string>()
+    let activeFlowSlug = input.flow_slug || ''
+
+    const prepared = await prepareDecisionCandidates(input, pilotUtterance)
+    candidateFlowMap = prepared.candidateFlowMap
+    if (prepared.activeFlowSlug) {
+        activeFlowSlug = prepared.activeFlowSlug
+        input.flow_slug = prepared.activeFlowSlug
+    }
+    input.candidates = prepared.filteredCandidates.map(candidate => ({
+        id: candidate.id,
+        state: candidate.state,
+        flow: candidate.flow,
+    }))
 
     const finalize = (decision: LLMDecision): LLMDecisionResult => {
+        const targetState = decision.next_state
+        if (targetState) {
+            const targetFlow = candidateFlowMap.get(targetState)
+            if (targetFlow && targetFlow !== activeFlowSlug) {
+                decision.activate_flow = targetFlow
+            }
+        }
         if (!trace.calls.length && !trace.fallback) {
             return {decision}
         }

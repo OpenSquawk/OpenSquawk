@@ -6,9 +6,16 @@ import {
   sanitizeLayout,
   sanitizeLLMTemplate,
   sanitizeMetadata,
+  sanitizeNodeCondition,
+  sanitizeNodeTrigger,
   sanitizeTransition,
 } from '../../../../utils/decisionSanitizer'
 import { serializeNodeDocument } from '../../../../services/decisionFlowService'
+import type {
+  DecisionNodeCondition,
+  DecisionNodeTrigger,
+  DecisionNodeTransition,
+} from '~~/shared/types/decision'
 
 const ROLE_SET = new Set(['pilot', 'atc', 'system'])
 
@@ -47,9 +54,44 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'phase is required' })
   }
 
-  const transitions = Array.isArray(body.transitions)
-    ? body.transitions.map((transition: any, index: number) => sanitizeTransition(transition, index))
-    : []
+  let transitions: DecisionNodeTransition[] = []
+  try {
+    transitions = Array.isArray(body.transitions)
+      ? body.transitions.map((transition: any, index: number) => sanitizeTransition(transition, index))
+      : []
+  } catch (error: any) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: error?.message || 'Transition ungültig',
+      data: { formError: error?.message || 'Transition ungültig', field: 'transitions' },
+    })
+  }
+
+  let triggers: DecisionNodeTrigger[] = []
+  try {
+    triggers = Array.isArray(body.triggers)
+      ? body.triggers.map((trigger: any, index: number) => sanitizeNodeTrigger(trigger, index))
+      : []
+  } catch (error: any) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: error?.message || 'Trigger ungültig',
+      data: { formError: error?.message || 'Trigger ungültig', field: 'triggers' },
+    })
+  }
+
+  let conditions: DecisionNodeCondition[] = []
+  try {
+    conditions = Array.isArray(body.conditions)
+      ? body.conditions.map((condition: any, index: number) => sanitizeNodeCondition(condition, index))
+      : []
+  } catch (error: any) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: error?.message || 'Bedingung ungültig',
+      data: { formError: error?.message || 'Bedingung ungültig', field: 'conditions' },
+    })
+  }
 
   const layout = sanitizeLayout(body.layout) || { x: 0, y: 0 }
   const metadata = sanitizeMetadata(body.metadata)
@@ -89,6 +131,8 @@ export default defineEventHandler(async (event) => {
     frequency: typeof body.frequency === 'string' ? body.frequency.trim() || undefined : undefined,
     frequencyName:
       typeof body.frequencyName === 'string' ? body.frequencyName.trim() || undefined : undefined,
+    triggers,
+    conditions,
     transitions,
     layout,
     metadata,
