@@ -31,14 +31,8 @@ interface PTTRequest {
 interface PTTResponse {
     success: boolean;
     transcription: string;
-    decision?: {
-        next_state: string;
-        controller_say_tpl?: string;
-        off_schema?: boolean;
-        radio_check?: boolean;
-        activate_flow?: string;
-        resume_previous?: boolean;
-    };
+    decision?: LLMDecisionResult['decision'];
+    trace?: LLMDecisionResult['trace'];
 }
 
 async function sh(cmd: string, args: string[]) {
@@ -228,6 +222,7 @@ export default defineEventHandler(async (event) => {
 
                       return {
                           id: candidate.id,
+                          flow: candidate.flow || undefined,
                           state: candidateState
                       };
                   })
@@ -235,12 +230,17 @@ export default defineEventHandler(async (event) => {
 
             const selectedCandidate = contextCandidates?.find(c => c.id === decision?.next_state);
 
+            const sessionId = typeof body.context?.flags?.session_id === 'string'
+                ? body.context.flags.session_id
+                : undefined;
+
             await TransmissionLog.create({
                 user: user?._id,
                 role: "pilot",
                 channel: "ptt",
                 direction: "incoming",
                 text: transcribedText,
+                sessionId,
                 metadata: {
                     moduleId: body.moduleId,
                     lessonId: body.lessonId,
@@ -269,6 +269,9 @@ export default defineEventHandler(async (event) => {
 
         if (decision) {
             result.decision = decision;
+        }
+        if (decisionResult?.trace) {
+            result.trace = decisionResult.trace;
         }
 
         return result;

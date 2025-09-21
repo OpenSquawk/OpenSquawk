@@ -126,6 +126,8 @@ export interface DecisionNodeMetadata {
   complexity?: 'low' | 'medium' | 'high'
 }
 
+export type DecisionFlowEntryMode = 'parallel' | 'linear'
+
 export interface DecisionNodeModel {
   stateId: string
   title?: string
@@ -197,6 +199,8 @@ export interface DecisionFlowModel {
   createdAt: string
   updatedAt: string
   nodeCount?: number
+  entryMode?: DecisionFlowEntryMode
+  isMain?: boolean
 }
 
 export interface RuntimeDecisionAutoTransition {
@@ -213,6 +217,8 @@ export interface RuntimeDecisionAutoTransition {
 export interface RuntimeDecisionState {
   role: DecisionNodeRole
   phase: string
+  name?: string
+  summary?: string
   say_tpl?: string
   utterance_tpl?: string
   else_say_tpl?: string
@@ -248,6 +254,7 @@ export interface RuntimeDecisionTree {
   roles: DecisionNodeRole[]
   phases: string[]
   states: Record<string, RuntimeDecisionState>
+  entry_mode?: 'main' | DecisionFlowEntryMode
 }
 
 export interface RuntimeDecisionSystem {
@@ -265,4 +272,6 @@ export interface DecisionFlowSummary {
   nodeCount: number
   updatedAt: string
   createdAt: string
+  entryMode?: DecisionFlowEntryMode
+  isMain?: boolean
 }

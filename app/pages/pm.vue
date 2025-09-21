@@ -9,26 +9,19 @@
           <p class="mt-1 text-sm text-white/70">Alpha Build • Decision Tree • VATSIM</p>
         </div>
         <div class="flex flex-col items-stretch gap-2 sm:items-end">
-          <div class="text-right">
-            <v-chip size="small" :color="currentState?.phase === 'Interrupt' ? 'red' : 'cyan'" variant="flat" class="mb-1">
+          <div class="text-right space-y-1">
+            <v-chip size="small" :color="currentState?.phase === 'Interrupt' ? 'red' : 'cyan'" variant="flat">
               {{ currentState?.id || 'INIT' }}
             </v-chip>
             <div class="text-xs text-white/50">{{ currentState?.phase || 'Setup' }}</div>
+            <div class="flex items-center justify-end gap-2 text-[11px] text-white/60">
+              <v-chip size="x-small" color="cyan" variant="outlined">{{ activeFlowInfo.name }}</v-chip>
+              <v-chip size="x-small" color="purple" variant="text">{{ activeFlowInfo.modeLabel }}</v-chip>
+            </div>
+            <p v-if="activeFlowInfo.description" class="text-[10px] text-white/40">
+              {{ activeFlowInfo.description }}
+            </p>
           </div>
-          <v-select
-            v-model="selectedFlowSlug"
-            :items="flowOptions"
-            item-title="title"
-            item-value="value"
-            label="Flow"
-            variant="outlined"
-            density="compact"
-            hide-details
-            color="cyan"
-            class="min-w-[200px]"
-            :disabled="flowOptions.length <= 1"
-            prepend-inner-icon="mdi-sitemap"
-          />
         </div>
       </header>
 
@@ -617,6 +610,21 @@
               <v-chip size="small" color="grey" variant="outlined">LLM</v-chip>
             </div>
 
+            <div class="flex items-center justify-between text-[11px] text-white/50">
+              <span>Session: {{ sessionLabel }}</span>
+              <div class="flex flex-wrap gap-2" v-if="traceAutoSelection || (traceFallback?.used) || timelineUsedFallback">
+                <v-chip v-if="traceAutoSelection" size="x-small" color="cyan" variant="outlined">
+                  Auto: {{ traceAutoSelection.id }}
+                </v-chip>
+                <v-chip v-if="timelineUsedFallback" size="x-small" color="orange" variant="tonal">
+                  Fallback candidates
+                </v-chip>
+                <v-chip v-if="traceFallback?.used" size="x-small" color="red" variant="tonal">
+                  Fallback: {{ traceFallback.reason || 'triggered' }}
+                </v-chip>
+              </div>
+            </div>
+
             <div class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
               <p class="text-xs uppercase tracking-[0.3em] text-white/40">Current node</p>
               <p class="font-mono text-sm text-white">{{ debugState?.id || '—' }}</p>
@@ -667,6 +675,57 @@
                 </div>
               </div>
               <p v-else class="text-xs text-white/50">No further decisions available.</p>
+            </div>
+
+            <div class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+              <p class="text-xs uppercase tracking-[0.3em] text-white/40">Decision timeline</p>
+              <div v-if="timelineSteps.length" class="space-y-3">
+                <div
+                  v-for="(step, index) in timelineSteps"
+                  :key="`${step.stage}-${index}`"
+                  class="space-y-2 rounded-xl border border-white/10 bg-black/40 p-3"
+                >
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <p class="font-semibold text-sm text-white">{{ step.label }}</p>
+                      <p class="text-[11px] text-white/50 uppercase tracking-[0.2em]">{{ step.stage }}</p>
+                    </div>
+                    <v-chip size="x-small" color="cyan" variant="outlined">
+                      {{ step.candidates.length }} candidates
+                    </v-chip>
+                  </div>
+                  <p v-if="step.note" class="text-[11px] text-white/50">{{ step.note }}</p>
+                  <div v-if="step.candidates.length" class="space-y-2">
+                    <div
+                      v-for="candidate in step.candidates"
+                      :key="candidate.id"
+                      class="rounded-lg border border-white/10 bg-black/30 p-2"
+                    >
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="font-mono text-sm text-white">{{ candidate.id }}</span>
+                        <span class="text-[11px] text-white/50">{{ candidate.flow || 'current' }}</span>
+                      </div>
+                      <p v-if="candidate.summary" class="text-[11px] text-white/60 mt-1">{{ candidate.summary }}</p>
+                    </div>
+                  </div>
+                  <div v-if="step.eliminated?.length" class="space-y-2">
+                    <p class="text-[11px] text-red-200/80 uppercase tracking-[0.25em]">Eliminated</p>
+                    <div
+                      v-for="elim in step.eliminated"
+                      :key="`${step.stage}-${elim.candidate.id}`"
+                      class="space-y-1 rounded-lg border border-red-400/30 bg-red-500/10 p-2 text-xs text-red-100"
+                    >
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="font-mono text-sm">{{ elim.candidate.id }}</span>
+                        <span class="text-[11px] text-red-200/80">{{ elim.kind }}</span>
+                      </div>
+                      <p class="text-[11px] text-red-100/80">{{ elim.reason }}</p>
+                      <p v-if="describeElimination(elim)" class="text-[10px] text-red-100/70">{{ describeElimination(elim) }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="text-[11px] text-white/50">No decision timeline available yet.</p>
             </div>
           </v-card-text>
         </v-card>
@@ -979,10 +1038,11 @@ const {
   currentStep,
   availableFlows,
   activeFlow,
+  sessionId: engineSessionId,
+  lastDecisionTrace,
   initializeFlight,
   updateFrequencyVariables,
   fetchRuntimeTree,
-  setActiveFlow,
   isReady: engineReady,
   processPilotTransmission,
   buildLLMContext,
@@ -1050,39 +1110,49 @@ const clearLog = () => {
   clearLastTransmission()
 }
 
-const selectedFlowSlug = ref('')
-const flowOptions = computed(() =>
-  availableFlows.value.map((flow) => ({
-    title: flow.name,
-    value: flow.slug,
-    subtitle: flow.description,
-  }))
-)
-
-watch(
-  activeFlow,
-  (slug) => {
-    selectedFlowSlug.value = slug || ''
-  },
-  { immediate: true }
-)
-
-watch(selectedFlowSlug, (slug, previous) => {
-  if (!slug || slug === activeFlow.value || slug === previous) {
-    return
-  }
-  handleFlowChange(slug)
+const activeFlowInfo = computed(() => {
+  const slug = activeFlow.value
+  const flows = availableFlows.value
+  const entry = (slug ? flows.find((flow) => flow.slug === slug) : undefined) || flows.find((flow) => flow.mode === 'main') || flows[0]
+  const resolvedSlug = entry?.slug || slug || ''
+  const name = entry?.name || resolvedSlug || 'Main Flow'
+  const description = entry?.description || ''
+  const mode = entry?.mode || (resolvedSlug && resolvedSlug === slug ? 'parallel' : 'parallel')
+  const modeLabel = mode === 'main' ? 'Main' : mode === 'linear' ? 'Linear' : 'Parallel'
+  return { slug: resolvedSlug, name, description, mode, modeLabel }
 })
 
-function handleFlowChange(slug: string) {
-  if (!slug || slug === activeFlow.value) {
-    return
+const decisionTrace = computed(() => lastDecisionTrace.value)
+const timelineSteps = computed(() => decisionTrace.value?.candidateTimeline?.steps ?? [])
+const timelineUsedFallback = computed(() => Boolean(decisionTrace.value?.candidateTimeline?.fallbackUsed))
+const traceAutoSelection = computed(() => decisionTrace.value?.autoSelection ?? null)
+const traceFallback = computed(() => decisionTrace.value?.fallback ?? null)
+const sessionLabel = computed(() => engineSessionId.value || flags.session_id || '-')
+
+function describeElimination(entry: any): string {
+  if (!entry || typeof entry !== 'object') {
+    return ''
   }
-  try {
-    setActiveFlow(slug)
-  } catch (error) {
-    console.error('Failed to activate flow', error)
+  if (entry.kind === 'regex' && entry.context?.patterns?.length) {
+    const patterns = entry.context.patterns
+      .map((pattern: any) => pattern?.pattern)
+      .filter((value: string | undefined) => Boolean(value))
+      .join(', ')
+    return patterns ? `Patterns: ${patterns}` : entry.reason
   }
+  if (entry.kind === 'condition' && entry.context?.condition) {
+    const condition = entry.context.condition
+    if (condition.type === 'regex' || condition.type === 'regex_not') {
+      const flag = condition.pattern ? `/${condition.pattern}/${condition.patternFlags || 'i'}` : ''
+      return flag ? `Condition: ${condition.type} ${flag}` : entry.reason
+    }
+    const variable = condition.variable || 'value'
+    const operator = condition.operator || '=='
+    const expected = entry.context?.expectedValue ?? condition.value ?? '—'
+    const actual = entry.context?.actualValue ?? '—'
+    return `${variable} ${operator} ${expected} (actual: ${actual})`
+  }
+  return entry.reason
 }
 
 // UI State
@@ -1538,7 +1608,8 @@ const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = 
       speed,
       moduleId: 'pilot-monitoring',
       lessonId: currentState.value?.id || 'general',
-      tag: options.tag || 'controller-reply'
+      tag: options.tag || 'controller-reply',
+      sessionId: engineSessionId.value || flags.session_id || undefined,
     })
 
     if (response.success && response.audio) {
@@ -1581,7 +1652,8 @@ const speakPlainText = (text: string, options: SpeechOptions = {}) => {
         speed,
         moduleId: 'pilot-monitoring',
         lessonId,
-        tag: options.tag || 'announcement'
+        tag: options.tag || 'announcement',
+        sessionId: engineSessionId.value || flags.session_id || undefined,
       })
 
       if (response.success && response.audio) {
@@ -1624,23 +1696,18 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   const prefix = source === 'ptt' ? 'Pilot (PTT)' : 'Pilot'
   setLastTransmission(`${prefix}: ${transcript}`)
 
-  const quickResponse = processPilotTransmission(transcript)
+  processPilotTransmission(transcript)
 
   if (readbackEnabled.value) {
     speakPilotReadback(transcript)
   }
 
-  if (quickResponse) {
-    scheduleControllerSpeech(quickResponse)
-    return
-  }
-
   const ctx = buildLLMContext(transcript)
 
   try {
-    const decision = await api.post('/api/llm/decide', ctx)
+    const { decision, trace } = await api.post('/api/llm/decide', ctx)
 
-    applyLLMDecision(decision)
+    applyLLMDecision(decision, trace)
 
     if (decision.controller_say_tpl && !decision.radio_check) {
       scheduleControllerSpeech(decision.controller_say_tpl)
