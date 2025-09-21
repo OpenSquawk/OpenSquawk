@@ -11,6 +11,11 @@ import {
   sanitizeTransition,
 } from '../../../../../../utils/decisionSanitizer'
 import { serializeNodeDocument } from '../../../../../../services/decisionFlowService'
+import type {
+  DecisionNodeCondition,
+  DecisionNodeTrigger,
+  DecisionNodeTransition,
+} from '~~/shared/types/decision'
 
 const ROLE_SET = new Set(['pilot', 'atc', 'system'])
 
@@ -115,15 +120,49 @@ export default defineEventHandler(async (event) => {
   }
 
   if (Array.isArray(body.transitions)) {
-    node.transitions = body.transitions.map((transition: any, index: number) => sanitizeTransition(transition, index))
+    let sanitizedTransitions: DecisionNodeTransition[]
+    try {
+      sanitizedTransitions = body.transitions.map((transition: any, index: number) =>
+        sanitizeTransition(transition, index)
+      )
+    } catch (error: any) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: error?.message || 'Transition ungültig',
+        data: { formError: error?.message || 'Transition ungültig', field: 'transitions' },
+      })
+    }
+    node.transitions = sanitizedTransitions
   }
 
   if (Array.isArray(body.triggers)) {
-    node.triggers = body.triggers.map((trigger: any, index: number) => sanitizeNodeTrigger(trigger, index))
+    let sanitizedTriggers: DecisionNodeTrigger[]
+    try {
+      sanitizedTriggers = body.triggers.map((trigger: any, index: number) => sanitizeNodeTrigger(trigger, index))
+    } catch (error: any) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: error?.message || 'Trigger ungültig',
+        data: { formError: error?.message || 'Trigger ungültig', field: 'triggers' },
+      })
+    }
+    node.triggers = sanitizedTriggers
   }
 
   if (Array.isArray(body.conditions)) {
-    node.conditions = body.conditions.map((condition: any, index: number) => sanitizeNodeCondition(condition, index))
+    let sanitizedConditions: DecisionNodeCondition[]
+    try {
+      sanitizedConditions = body.conditions.map((condition: any, index: number) =>
+        sanitizeNodeCondition(condition, index)
+      )
+    } catch (error: any) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: error?.message || 'Bedingung ungültig',
+        data: { formError: error?.message || 'Bedingung ungültig', field: 'conditions' },
+      })
+    }
+    node.conditions = sanitizedConditions
   }
 
   const layout = sanitizeLayout(body.layout)

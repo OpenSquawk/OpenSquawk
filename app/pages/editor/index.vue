@@ -490,6 +490,12 @@
                 </v-window-item>
                 <v-window-item value="transitions">
                   <div class="space-y-6">
+                    <div
+                      v-if="nodeFormError"
+                      class="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+                    >
+                      {{ nodeFormError }}
+                    </div>
                     <div class="space-y-3">
                       <div class="flex items-center justify-between">
                         <h3 class="text-sm font-semibold uppercase tracking-widest text-white/70">Node Trigger</h3>
@@ -1144,6 +1150,7 @@ const nodeSnapshot = ref<DecisionNodeModel | null>(null)
 const nodeSaving = ref(false)
 const nodeActionsText = ref('[]')
 const nodeActionsError = ref('')
+const nodeFormError = ref('')
 const nodeIdDraft = ref('')
 
 let lastTitleSuggestion = ''
@@ -1293,6 +1300,7 @@ watch(selectedNodeId, (stateId) => {
     nodeSnapshot.value = null
     nodeActionsText.value = '[]'
     nodeActionsError.value = ''
+    nodeFormError.value = ''
     nodeIdDraft.value = ''
     return
   }
@@ -1302,6 +1310,7 @@ watch(selectedNodeId, (stateId) => {
     nodeSnapshot.value = null
     nodeActionsText.value = '[]'
     nodeActionsError.value = ''
+    nodeFormError.value = ''
     nodeIdDraft.value = ''
     return
   }
@@ -1320,6 +1329,7 @@ watch(selectedNodeId, (stateId) => {
   nodeSnapshot.value = cloneNode(clone)
   nodeActionsText.value = JSON.stringify(clone.actions ?? [], null, 2)
   nodeActionsError.value = ''
+  nodeFormError.value = ''
   nodeIdDraft.value = clone.stateId
   lastTitleSuggestion = buildNodeKeyFromText(clone.title || clone.stateId)
   pendingNodeHistory = null
@@ -1861,6 +1871,7 @@ async function persistNode(options: { silent?: boolean } = {}) {
       nodeInitializing = false
     })
     lastNodeAutosaveError = ''
+    nodeFormError.value = ''
     if (silent) {
       flashAutosaveIndicator()
     } else {
@@ -1868,10 +1879,11 @@ async function persistNode(options: { silent?: boolean } = {}) {
     }
   } catch (error: any) {
     console.error('Failed to save node', error)
-    const message = error?.statusMessage || 'Node konnte nicht gespeichert werden.'
+    const message = error?.data?.formError || error?.statusMessage || 'Node konnte nicht gespeichert werden.'
     if (!silent || message !== lastNodeAutosaveError) {
       showSnack(message, 'red')
     }
+    nodeFormError.value = message
     lastNodeAutosaveError = message
   } finally {
     nodeSaving.value = false
@@ -2093,6 +2105,7 @@ function resetNode() {
   nodeForm.value = cloneNode(nodeSnapshot.value)
   nodeActionsText.value = JSON.stringify(nodeSnapshot.value.actions ?? [], null, 2)
   nodeActionsError.value = ''
+  nodeFormError.value = ''
   syncNodeLayout()
   pendingNodeHistory = null
 }
