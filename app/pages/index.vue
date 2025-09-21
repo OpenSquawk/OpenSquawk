@@ -100,8 +100,8 @@
         <div class="absolute -top-24 right-0 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-3xl"/>
       </div>
 
-      <div class="container-outer relative z-10 pt-14 pb-10 sm:pt-20 sm:pb-16 md:pt-24 md:pb-20 lg:mt-12">
-        <div class="hero-grid grid gap-10 xl:gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-center">
+      <div class="container-outer relative z-10 mt-8 pt-14 pb-10 sm:pt-20 sm:pb-16 md:pt-24 md:pb-20">
+        <div class="hero-grid grid gap-10 lg:my-20 xl:gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-center">
           <div class="hero-copy max-w-2xl" data-aos="fade-up">
             <span class="chip mb-4">Alpha · Open-Source AI ATC</span>
             <h1 class="text-3xl sm:text-5xl md:text-6xl font-semibold leading-tight">
@@ -128,23 +128,26 @@
             </p>
             <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
               <NuxtLink to="#cta" class="btn btn-primary text-base">
-                <v-icon icon="mdi-email-fast-outline" size="20"/>
+                <!-- enque apply for access icon -->
+                <v-icon icon="mdi-account-plus" size="20"/>
                 Join the waitlist
               </NuxtLink>
             </div>
           </div>
-          <div class="hero-form w-full max-w-xl lg:justify-self-end" data-aos="fade-left" data-aos-delay="140">
+          <div class="hero-form w-full max-w-xl lg:justify-self-end
+         backdrop-blur-md
+" data-aos="fade-left" data-aos-delay="140">
             <form class="rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-5 space-y-4"
                   @submit.prevent="submitUpdates">
-              <div class="space-y-1">
-                <h3 class="text-lg font-semibold">
-                  Hear about new features first
+              <div class="space-y-3">
+                <h3 class="text-2xl font-semibold">
+                  Hear about new features first!
                 </h3>
                 <p class="text-sm text-white/70">
                   Join the feature list and get updates on releases, drops & learning content.
                 </p>
               </div>
-              <div class="flex flex-col gap-3 sm:flex-row">
+              <div class="flex flex-col gap-3 py-2 sm:flex-row">
                 <input
                     v-model.trim="updatesForm.email"
                     type="email"
@@ -162,7 +165,7 @@
                     <v-progress-circular indeterminate size="16" width="2" color="white"/>
                     Saving…
                   </span>
-                  <span v-else class="flex items-center gap-2">
+                  <span v-else class="flex items-center gap-2 w-28 justify-center">
                     <v-icon icon="mdi-bell-ring" size="18"/>
                     Notify me
                   </span>
@@ -1688,7 +1691,6 @@ onMounted(async () => {
 }
 
 .gradient-hero {
-  min-height: 100vh;
   background: radial-gradient(1200px 600px at 10% -10%, rgba(6, 182, 212, .35), transparent),
   radial-gradient(900px 480px at 100% 10%, rgba(59, 130, 246, .25), transparent),
   linear-gradient(180deg, #0b1020 0%, #0b1020 60%, #0a0f1c 100%);
@@ -1698,14 +1700,14 @@ onMounted(async () => {
   content: '';
   position: absolute;
   inset: 0;
-  background: url('/img/learn/modules/img3.jpeg') center/cover no-repeat;
-  opacity: 0.25;
+  background: url('/img/learn/modules/img6.jpeg') center/cover no-repeat;
+  opacity: 0.45;
   pointer-events: none;
   z-index: 0;
 }
 
 .hero-overlay {
-  background: linear-gradient(90deg, rgba(11, 16, 32, 0.95) 0%, rgba(11, 16, 32, 0.78) 45%, rgba(11, 16, 32, 0.35) 100%);
+  background: linear-gradient(90deg, rgba(11, 16, 32, 0.9) 0%, rgba(11, 16, 32, 0.68) 45%, rgba(11, 16, 32, 0.15) 100%);
   z-index: 1;
 }
 
