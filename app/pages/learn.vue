@@ -30,85 +30,11 @@
     </header>
 
 
-    <!-- HERO -->
-    <section v-if="panel==='hub'" class="hero" role="region" aria-label="Intro">
-      <div class="container">
-        <div class="panel hero-panel" :style="worldTiltStyle" @mousemove="tilt">
-          <div class="hero-left">
-            <h1 class="h1">Pilot Comms Trainer</h1>
-            <p class="muted hero-sub">
-              Build confident pilot readbacks with scenario-driven missions, instant scoring, and badges that react to
-              your flying.
-            </p>
-
-
-            <div v-if="missionObjective && !missionObjective.complete" class="objective-callout">
-              <div class="objective-body">
-                <div class="objective-title-row">
-                  <v-icon size="18">{{ missionObjective.icon }}</v-icon>
-                  <span class="objective-title">{{ missionObjective.title }}</span>
-                </div>
-                <p class="muted small">{{ missionObjective.description }}</p>
-                <div class="objective-progress">
-                  <div class="objective-progress-bar">
-                    <div class="objective-progress-fill"
-                         :style="{ width: objectiveProgressPct(missionObjective) + '%' }"></div>
-                  </div>
-                  <div class="objective-progress-meta">{{ missionObjective.status }}</div>
-                </div>
-              </div>
-              <button class="btn primary" type="button" @click="resumeMissionObjective">
-                <v-icon size="18">mdi-play</v-icon>
-                Resume
-              </button>
-            </div>
-          </div>
-
-          <div class="hero-right">
-            <div class="hero-stats">
-              <div class="hero-stats-title">
-                <v-icon size="18">mdi-chart-line</v-icon>
-                Mission stats
-              </div>
-              <div class="hero-metrics">
-                <div class="metric-card">
-                  <div class="metric-icon">
-                    <v-icon size="20">mdi-headset</v-icon>
-                  </div>
-                  <div class="metric-main">
-                    <div class="metric-value">{{ finishedLessons }}/{{ totalLessons }}</div>
-                    <div class="metric-label">Lessons complete</div>
-                  </div>
-                </div>
-                <div class="metric-card">
-                  <div class="metric-icon">
-                    <v-icon size="20">mdi-target</v-icon>
-                  </div>
-                  <div class="metric-main">
-                    <div class="metric-value">{{ missionCompletionPct }}%</div>
-                    <div class="metric-label">Mission progress</div>
-                  </div>
-                </div>
-                <div class="metric-card">
-                  <div class="metric-icon">
-                    <v-icon size="20">mdi-star-shooting</v-icon>
-                  </div>
-                  <div class="metric-main">
-                    <div class="metric-value">{{ finishedLessons ? globalAccuracy + '%' : '—' }}</div>
-                    <div class="metric-label">Avg. best score</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
 
     <!-- HUB -->
     <main v-if="panel==='hub'" class="container" role="main">
       <div class="hub-head">
-        <h2 class="h2">Mission Hub</h2>
+        <h2 class="h2">Training Mission Hub</h2>
         <div class="muted">Start with the ICAO alphabet & numbers, then basics, ground, and more.</div>
       </div>
 
