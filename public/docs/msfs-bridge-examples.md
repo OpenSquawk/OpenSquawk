@@ -14,8 +14,8 @@ on_ground: true,
 eng_on: true,
 n1_pct: 19.8,
 transponder_code: 0,
-com1_active_freq: 143654912,
-com1_standby_freq_hz: 1400000 }
+com_active_frequency: 118.000,
+com_standby_frequency: 118.000,
 MSFS Telemetry: { status: 'idle', ts: 1758407248, sim_connected: false, flight_loaded: false }                                                                       12:27:22 AM
 MSFS Telemetry: { status: 'idle', ts: 1758407293, sim_connected: false, flight_loaded: false }                                                                       12:28:07 AM
 MSFS Telemetry: { status: 'idle', ts: 1758407338, sim_connected: false, flight_loaded: false }           
