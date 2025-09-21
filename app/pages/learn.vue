@@ -1194,6 +1194,7 @@
 
 
 <script setup lang="ts">
+import {useRoute, useRouter} from '#imports'
 import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch} from 'vue'
 import {useApi} from '~/composables/useApi'
 import {createDefaultLearnConfig} from '~~/shared/learn/config'
@@ -2085,6 +2086,162 @@ const showSettings = ref(false)
 const api = useApi()
 
 const isClient = typeof window !== 'undefined'
+const route = useRoute()
+const router = useRouter()
+
+const navSyncReady = ref(false)
+let lastRouteFromState: string | null = null
+let isApplyingRouteState = false
+
+const NAV_QUERY_KEYS = ['panel', 'module', 'stage', 'lesson', 'mode', 'briefReturn'] as const
+type NavQueryKey = typeof NAV_QUERY_KEYS[number]
+type NavQueryState = Partial<Record<NavQueryKey, string>>
+const FLIGHT_PLAN_MODE_VALUES = ['random', 'manual', 'simbrief'] as const
+const BRIEFING_RETURN_VALUES = ['setup', 'lessons'] as const
+
+function normalizeNavQuery(source: Record<string, any>): NavQueryState {
+  const normalized: NavQueryState = {}
+  for (const key of NAV_QUERY_KEYS) {
+    const raw = source?.[key]
+    const value = Array.isArray(raw) ? raw[raw.length - 1] : raw
+    if (value === undefined || value === null) continue
+    normalized[key] = typeof value === 'string' ? value : String(value)
+  }
+  return normalized
+}
+
+function navQueriesEqual(a: NavQueryState, b: NavQueryState): boolean {
+  const keys = new Set<NavQueryKey>([
+    ...(Object.keys(a) as NavQueryKey[]),
+    ...(Object.keys(b) as NavQueryKey[])
+  ])
+  for (const key of keys) {
+    if ((a[key] ?? undefined) !== (b[key] ?? undefined)) {
+      return false
+    }
+  }
+  return true
+}
+
+function buildNavQueryFromState(): NavQueryState {
+  const query: NavQueryState = {}
+  if (panel.value === 'module' && current.value) {
+    query.panel = 'module'
+    query.module = current.value.id
+    query.stage = moduleStage.value
+    if (moduleStage.value === 'lessons') {
+      if (activeLesson.value) {
+        query.lesson = activeLesson.value.id
+      }
+    } else if (current.value.meta?.flightPlan) {
+      query.mode = flightPlanMode.value
+      if (moduleStage.value === 'briefing') {
+        query.briefReturn = briefingReturnStage.value
+      }
+    }
+  }
+  return query
+}
+
+function moduleSupportsStage(mod: ModuleDef | null, stage: string): stage is 'lessons' | 'setup' | 'briefing' {
+  if (stage === 'lessons') return true
+  if (!mod?.meta?.flightPlan) return false
+  return stage === 'setup' || stage === 'briefing'
+}
+
+function isFlightPlanModeCandidate(value: string | undefined): value is FlightPlanMode {
+  return Boolean(value && (FLIGHT_PLAN_MODE_VALUES as readonly string[]).includes(value))
+}
+
+function isBriefingReturnCandidate(value: string | undefined): value is (typeof BRIEFING_RETURN_VALUES)[number] {
+  return Boolean(value && (BRIEFING_RETURN_VALUES as readonly string[]).includes(value))
+}
+
+function applyRouteState() {
+  if (!isClient) return
+  const queryState = normalizeNavQuery(route.query as Record<string, any>)
+  isApplyingRouteState = true
+  try {
+    if (queryState.panel === 'module' && queryState.module) {
+      const module = modules.value.find(item => item.id === queryState.module) || null
+      if (!module) {
+        goToHub()
+        return
+      }
+
+      if (current.value?.id !== module.id) {
+        openModule(module.id)
+      } else {
+        panel.value = 'module'
+      }
+
+      let desiredStage: 'lessons' | 'setup' | 'briefing' = moduleStage.value
+      if (queryState.stage && moduleSupportsStage(module, queryState.stage)) {
+        desiredStage = queryState.stage
+      } else if (queryState.stage) {
+        desiredStage = module.meta?.flightPlan ? 'setup' : 'lessons'
+      }
+
+      if (desiredStage === 'lessons' && module.meta?.flightPlan && !missionPlans[module.id]?.scenario) {
+        desiredStage = 'setup'
+      }
+
+      moduleStage.value = desiredStage
+
+      if (module.meta?.flightPlan) {
+        if ((moduleStage.value === 'setup' || moduleStage.value === 'briefing') && isFlightPlanModeCandidate(queryState.mode)) {
+          flightPlanMode.value = queryState.mode
+        }
+        if (moduleStage.value === 'briefing') {
+          briefingReturnStage.value = isBriefingReturnCandidate(queryState.briefReturn) ? queryState.briefReturn : 'setup'
+        }
+      }
+
+      if (moduleStage.value === 'lessons') {
+        if (queryState.lesson) {
+          const lesson = module.lessons.find(item => item.id === queryState.lesson)
+          if (lesson) {
+            activeLesson.value = lesson
+          }
+        }
+        if (!activeLesson.value) {
+          startLessonsForCurrent()
+        }
+      }
+
+      return
+    }
+
+    goToHub()
+  } finally {
+    isApplyingRouteState = false
+  }
+}
+
+function updateRouteFromState() {
+  if (!isClient || !navSyncReady.value || isApplyingRouteState) return
+  const target = buildNavQueryFromState()
+  const currentNav = normalizeNavQuery(route.query as Record<string, any>)
+  if (navQueriesEqual(currentNav, target)) return
+
+  const nextQuery: Record<string, any> = {}
+  for (const [key, value] of Object.entries(route.query)) {
+    if (!NAV_QUERY_KEYS.includes(key as NavQueryKey)) {
+      nextQuery[key] = value
+    }
+  }
+  for (const [key, value] of Object.entries(target)) {
+    if (value !== undefined && value !== null && value !== '') {
+      nextQuery[key] = value
+    }
+  }
+
+  lastRouteFromState = JSON.stringify(target)
+  router.replace({ query: nextQuery }).catch(() => {
+    lastRouteFromState = null
+  })
+}
+
 const defaultCfg = createDefaultLearnConfig()
 const cfg = ref<LearnConfig>({...defaultCfg})
 audioReveal.value = !cfg.value.audioChallenge
@@ -2276,6 +2433,43 @@ if (isClient) {
   })
   watch(() => cfg.value.audioSpeed, markConfigDirty)
   watch(() => cfg.value.voice, markConfigDirty)
+
+  onMounted(async () => {
+    applyRouteState()
+    navSyncReady.value = true
+    await nextTick()
+    updateRouteFromState()
+  })
+
+  watch(
+    () => route.fullPath,
+    () => {
+      if (!navSyncReady.value) return
+      const currentNav = normalizeNavQuery(route.query as Record<string, any>)
+      const encoded = JSON.stringify(currentNav)
+      if (lastRouteFromState && encoded === lastRouteFromState) {
+        lastRouteFromState = null
+        return
+      }
+      lastRouteFromState = null
+      applyRouteState()
+    }
+  )
+
+  watch(
+    () => [
+      panel.value,
+      current.value?.id ?? '',
+      moduleStage.value,
+      activeLesson.value?.id ?? '',
+      flightPlanMode.value,
+      briefingReturnStage.value
+    ],
+    () => {
+      if (!navSyncReady.value) return
+      updateRouteFromState()
+    }
+  )
 }
 
 onBeforeUnmount(() => {
