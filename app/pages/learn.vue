@@ -186,20 +186,27 @@
             </div>
             <div class="plan-status-body">
               <span class="plan-status-title">
-                {{ currentPlan ? currentPlan.scenario.radioCall : 'Flight plan pending' }}
+                {{ currentPlan ? currentPlan.scenario.callsign : 'Flight plan pending' }}
               </span>
-              <span class="plan-status-sub" v-if="currentPlan">{{ currentPlanRoute }}</span>
-              <span class="plan-status-sub muted" v-else>Select or import a flight to launch.</span>
+              <span v-if="currentPlanTagline" class="plan-status-sub" v-text="currentPlanTagline"></span>
+              <span v-if="currentPlanRoute" class="plan-status-sub" v-text="currentPlanRoute"></span>
+              <span v-else class="plan-status-sub muted">Select or import a flight to launch.</span>
             </div>
-            <button
-                v-if="currentPlan && moduleStage==='lessons'"
-                class="btn ghost mini"
-                type="button"
-                @click="openMissionBriefing()"
-            >
-              <v-icon size="16">mdi-magnify</v-icon>
-              Briefing
-            </button>
+            <div v-if="currentPlan" class="plan-status-actions">
+              <button
+                  v-if="moduleStage==='lessons'"
+                  class="btn ghost mini"
+                  type="button"
+                  @click="openMissionBriefing()"
+              >
+                <v-icon size="16">mdi-magnify</v-icon>
+                Briefing
+              </button>
+              <button class="btn ghost mini" type="button" @click="restartCurrentMission()">
+                <v-icon size="16">mdi-refresh</v-icon>
+                Plan new flight
+              </button>
+            </div>
           </div>
           <div v-if="moduleStage==='lessons'" class="stats">
             <span class="stat"><v-icon size="18">mdi-check-circle-outline</v-icon> {{ doneCount(current.id) }}/{{ current.lessons.length }}</span>
@@ -859,7 +866,7 @@
 
         <div v-if="activeLesson" class="module-detail">
           <div class="console">
-            <div v-if="scenario" class="scenario-bar">
+            <div v-if="scenario && requiresFlightPlan && currentPlan" class="scenario-bar">
               <div class="scenario-item">
                 <span class="scenario-label">Callsign</span>
                 <div class="scenario-value">{{ scenario.callsign }}</div>
@@ -888,26 +895,6 @@
                      class="freq-hint muted small">
                   {{ scenario.frequencyWords[activeFrequency.type] }}
                 </div>
-              </div>
-            </div>
-            <div v-if="requiresFlightPlan" class="mission-controls">
-              <div class="mission-controls-text">
-                <div class="mission-controls-title">Mission controls</div>
-                <p class="muted small">Wrap up, open the briefing again or build a brand-new flight whenever you need.</p>
-              </div>
-              <div class="mission-controls-actions">
-                <button class="btn soft mini" type="button" @click="openMissionBriefing()">
-                  <v-icon size="16">mdi-clipboard-text-outline</v-icon>
-                  View briefing
-                </button>
-                <button class="btn ghost mini" type="button" @click="restartCurrentMission()">
-                  <v-icon size="16">mdi-refresh</v-icon>
-                  Plan new flight
-                </button>
-                <button class="btn ghost mini" type="button" @click="goToHub()">
-                  <v-icon size="16">mdi-home-outline</v-icon>
-                  Return to hub
-                </button>
               </div>
             </div>
             <div class="console-grid">
@@ -1017,10 +1004,6 @@
                   <button class="btn ghost" type="button" @click="fillSolution">
                     <v-icon size="18">mdi-auto-fix</v-icon>
                     Auto-fill
-                  </button>
-                  <button v-if="requiresFlightPlan" class="btn ghost" type="button" @click="openMissionBriefing()">
-                    <v-icon size="18">mdi-magnify</v-icon>
-                    Briefing
                   </button>
                 </div>
                 <div v-if="result" class="score">
@@ -4387,6 +4370,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 24px;
   margin-top: 20px;
+  padding-bottom: 160px;
 }
 
 .module-overview,
@@ -4417,27 +4401,26 @@ onMounted(() => {
 .module-overview::before {
   content: "";
   position: absolute;
-  inset: -40% 30% auto 10%;
-  height: 320px;
-  width: 320px;
-  background: radial-gradient(180px 180px at center, color-mix(in srgb, var(--accent2) 24%, transparent), transparent 70%);
-  opacity: .4;
+  inset: -55% -20% auto 40%;
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--accent) 24%, transparent) 0%, transparent 70%);
+  opacity: .35;
   pointer-events: none;
-  transform: rotate(-6deg);
+  filter: blur(12px);
+  transform: rotate(-12deg);
 }
 
 .module-overview::after {
   content: "";
   position: absolute;
-  inset: auto -40px -40px auto;
-  width: 260px;
-  height: 260px;
-  background:
-      repeating-conic-gradient(from 45deg, color-mix(in srgb, var(--text) 6%, transparent) 0deg 15deg, transparent 15deg 30deg);
-  opacity: .2;
+  inset: -25% -30% auto auto;
+  width: 640px;
+  height: 640px;
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--accent2) 28%, transparent) 0%, transparent 75%);
+  opacity: .28;
   pointer-events: none;
-  border-radius: 32px;
-  filter: blur(0.5px);
+  filter: blur(38px);
 }
 
 .module-overview-header {
@@ -4534,9 +4517,11 @@ onMounted(() => {
   margin-top: 0;
 }
 
+
 .lesson-track {
   overflow-x: auto;
-  padding-bottom: 12px;
+  overflow-y: visible;
+  padding-bottom: 28px;
   margin: 0 -6px;
   padding-left: 6px;
   padding-right: 6px;
@@ -4548,8 +4533,9 @@ onMounted(() => {
 
 .lesson-grid {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   min-width: max-content;
+  padding: 12px 0;
 }
 
 .lesson {
@@ -4558,14 +4544,20 @@ onMounted(() => {
 
 .lesson {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   text-align: left;
   border: 1px solid var(--border);
-  padding: 28px 16px 16px;
+  padding: 36px 20px 20px;
   background: color-mix(in srgb, var(--text) 5%, transparent);
   cursor: pointer;
-  border-radius: 16px;
+  border-radius: 18px;
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, .18)
+  box-shadow: 0 16px 30px rgba(0, 0, 0, .18);
+  min-width: 260px;
+  flex: 0 0 280px;
+  overflow: visible;
 }
 
 .lesson:hover {
@@ -4583,12 +4575,12 @@ onMounted(() => {
 
 .lesson-score {
   position: absolute;
-  top: 10px;
-  right: 12px;
+  top: -14px;
+  right: 24px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 999px;
   font-size: 12px;
   letter-spacing: .08em;
@@ -4596,7 +4588,9 @@ onMounted(() => {
   border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
   color: var(--t3);
   background: color-mix(in srgb, var(--text) 10%, transparent);
-  animation: badgePulse 8s ease-in-out infinite
+  box-shadow: 0 12px 24px rgba(2, 6, 23, .35);
+  animation: badgePulse 8s ease-in-out infinite;
+  z-index: 2;
 }
 
 .lesson-score.is-new {
@@ -4906,6 +4900,12 @@ onMounted(() => {
   border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--bg2) 82%, transparent));
   box-shadow: 0 24px 44px rgba(2, 6, 23, .5);
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 32px;
+  width: min(960px, calc(100% - 48px));
+  z-index: 90;
 }
 
 .lesson-actions-meta {
@@ -5200,6 +5200,9 @@ onMounted(() => {
     flex-direction: column;
     align-items: stretch;
     gap: 16px;
+    bottom: 16px;
+    width: calc(100% - 24px);
+    padding: 18px;
   }
 
   .lesson-actions-buttons {
@@ -5209,6 +5212,31 @@ onMounted(() => {
   .lesson-actions-buttons .btn {
     flex: 1 1 100%;
     min-width: 0;
+  }
+
+  .plan-status {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .plan-status-body {
+    flex: 1 1 100%;
+  }
+
+  .plan-status-actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: stretch;
+    flex-wrap: wrap;
+  }
+
+  .plan-status-actions .btn {
+    flex: 1 1 50%;
+  }
+
+  .lesson {
+    flex: 0 0 calc(100% - 32px);
+    min-width: calc(100% - 32px);
   }
 }
 
@@ -5236,6 +5264,7 @@ onMounted(() => {
   margin: 60px 0 24px;
   font-size: 13px;
   color: var(--t3);
+  padding-bottom: 120px;
 }
 
 .footer-container {
@@ -5259,12 +5288,13 @@ onMounted(() => {
 
 
 .plan-status {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 16px;
   border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
-  border-radius: 14px;
+  border-radius: 16px;
   background: color-mix(in srgb, var(--text) 5%, transparent);
   box-shadow: 0 12px 24px rgba(2, 6, 23, .32);
 }
@@ -5272,8 +5302,8 @@ onMounted(() => {
 .plan-status-icon {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: color-mix(in srgb, var(--accent) 20%, transparent);
   color: var(--accent);
@@ -5282,20 +5312,32 @@ onMounted(() => {
 .plan-status-body {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 160px;
+  gap: 4px;
+  min-width: 180px;
+  flex: 1 1 220px;
 }
 
 .plan-status-title {
   font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .plan-status-sub {
   font-size: 12px;
   color: var(--t3);
+}
+
+.plan-status-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.plan-status-actions .btn {
+  white-space: nowrap;
 }
 
 .plan-status.is-ready {
@@ -5675,44 +5717,6 @@ onMounted(() => {
 .collapse-leave-to {
   opacity: 0;
   transform: translateY(-6px);
-}
-
-.mission-controls {
-  margin-top: 16px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.mission-controls-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-width: 320px;
-}
-
-.mission-controls-title {
-  font-size: 12px;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--t3);
-}
-
-.mission-controls-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.mission-controls-actions .btn {
-  flex: 1 1 140px;
-  justify-content: center;
 }
 
 .form-errors {
@@ -6321,16 +6325,6 @@ onMounted(() => {
   }
   .briefing-sidebar {
     position: static;
-  }
-  .mission-controls {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .mission-controls-actions {
-    width: 100%;
-  }
-  .mission-controls-actions .btn {
-    flex: 1 1 100%;
   }
 }
 
