@@ -4,10 +4,10 @@
     <header class="hud" role="banner">
       <nav class="hud-inner" aria-label="Global">
         <div class="hud-left">
-          <!-- 9-Dots App-Icon → Dashboard -->
-          <button class="icon-btn" title="Dashboard" @click="panel='hub'">
-            <v-icon size="22" class="text-accent">mdi-view-grid</v-icon>
+          <button class="hud-logo" type="button" title="Mission hub" @click="panel='hub'">
+            <v-icon size="22" class="hud-logo-icon">mdi-radar</v-icon>
           </button>
+          <div class="hud-divider" aria-hidden="true"></div>
           <span class="brand">OpenSquawk</span>
           <span class="sep">|</span>
           <span class="mode">Pilot Voice Prep</span>
@@ -99,7 +99,7 @@
     <section
         v-if="panel==='module' && current"
         class="container play"
-        :class="{ 'has-lesson-actions': moduleStage==='lessons' && activeLesson }"
+        :class="{ 'has-mission-footer': showLessonActions }"
         aria-label="Module"
     >
       <div class="play-head">
@@ -836,6 +836,15 @@
                         {{ sayButtonLabel }}
                       </button>
                       <button
+                          v-if="isSpeaking"
+                          class="btn ghost mini"
+                          type="button"
+                          @click="stopAudio"
+                      >
+                        <v-icon size="16">mdi-stop</v-icon>
+                        Stop
+                      </button>
+                      <button
                           v-if="audioContentHidden"
                           class="btn ghost mini"
                           type="button"
@@ -981,28 +990,13 @@
     <footer
         class="footer"
         role="contentinfo"
-        :class="{ 'has-lesson-actions': panel==='module' && moduleStage==='lessons' && current && activeLesson }"
+        :class="{ 'is-mission': showLessonActions }"
     >
-      <div class="container footer-container">
-
-        <div
-            v-if="panel==='module' && moduleStage==='lessons' && current && activeLesson"
-            class="lesson-actions"
-        >
-          <div class="lesson-actions-meta">
-            <div v-if="nextLessonMeta" class="lesson-actions-hint">
-              Next: {{ nextLessonMeta.lesson.title }} · Lesson {{ nextLessonMeta.position }} of
-              {{ nextLessonMeta.total }}
-            </div>
-            <div v-else-if="nextMissionMeta" class="lesson-actions-hint">
-              Next mission: {{ nextMissionMeta.module.title }} · Mission {{ nextMissionMeta.position }} of
-              {{ nextMissionMeta.total }}
-            </div>
-            <div v-else class="lesson-actions-hint">
-              Last lesson in this mission.
-            </div>
+      <div v-if="showLessonActions" class="mission-footer-bar">
+        <div class="container mission-footer">
+          <div class="mission-footer-section mission-footer-left">
             <button
-                class="btn ghost lesson-actions-prev"
+                class="btn ghost mission-footer-prev"
                 type="button"
                 :disabled="!hasPreviousAction"
                 @click="goToPreviousLesson"
@@ -1011,7 +1005,20 @@
               {{ previousActionLabel }}
             </button>
           </div>
-          <div class="lesson-actions-buttons">
+          <div class="mission-footer-center">
+            <div v-if="nextLessonMeta" class="mission-footer-hint">
+              Next: {{ nextLessonMeta.lesson.title }} · Lesson {{ nextLessonMeta.position }} of
+              {{ nextLessonMeta.total }}
+            </div>
+            <div v-else-if="nextMissionMeta" class="mission-footer-hint">
+              Next mission: {{ nextMissionMeta.module.title }} · Mission {{ nextMissionMeta.position }} of
+              {{ nextMissionMeta.total }}
+            </div>
+            <div v-else class="mission-footer-hint">
+              Last lesson in this mission.
+            </div>
+          </div>
+          <div class="mission-footer-section mission-footer-right">
             <button class="btn soft" type="button" @click="repeatLesson">
               <v-icon size="18">mdi-dice-5</v-icon>
               New scenario
@@ -1027,7 +1034,8 @@
             </button>
           </div>
         </div>
-
+      </div>
+      <div v-else class="container footer-container">
         <div class="footer-meta">
           <span class="muted small">&copy; 2025 OpenSquawk. All rights reserved.</span>
         </div>
@@ -1285,6 +1293,9 @@ const current = ref<ModuleDef | null>(null)
 const activeLesson = ref<Lesson | null>(null)
 const scenario = ref<Scenario | null>(null)
 const moduleStage = ref<'lessons' | 'setup' | 'briefing'>('lessons')
+const showLessonActions = computed(
+    () => panel.value === 'module' && moduleStage.value === 'lessons' && !!current.value && !!activeLesson.value
+)
 const flightPlanMode = ref<FlightPlanMode>('random')
 const missionPlans = reactive<Record<string, MissionPlanState>>({})
 const draftPlanScenario = ref<Scenario | null>(null)
@@ -2259,6 +2270,7 @@ const userAnswers = reactive<Record<string, string>>({})
 const result = ref<ScoreResult | null>(null)
 const evaluating = ref(false)
 const ttsLoading = ref(false)
+const isSpeaking = ref(false)
 const audioElement = ref<HTMLAudioElement | null>(null)
 let speechContext: AudioContext | null = null
 let pizzicatoLiteInstance: PizzicatoLite | null = null
@@ -3593,7 +3605,14 @@ async function say(text: string) {
       const voice = synth.getVoices().find(item => item.name.toLowerCase().includes(voiceName))
       if (voice) utterance.voice = voice
     }
+    utterance.onend = () => {
+      isSpeaking.value = false
+    }
+    utterance.onerror = () => {
+      isSpeaking.value = false
+    }
     synth.cancel()
+    isSpeaking.value = true
     synth.speak(utterance)
     return
   }
@@ -3615,6 +3634,7 @@ async function say(text: string) {
 
   const cacheKey = buildSayCacheKey(trimmed, normalizedRate)
 
+  isSpeaking.value = true
   ttsLoading.value = true
 
   try {
@@ -3627,10 +3647,13 @@ async function say(text: string) {
     console.error('TTS request failed', err)
   } finally {
     ttsLoading.value = false
+    isSpeaking.value = false
   }
 }
 
 function stopAudio() {
+  isSpeaking.value = false
+  ttsLoading.value = false
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.cancel()
   }
@@ -3757,6 +3780,40 @@ onMounted(() => {
   gap: 10px
 }
 
+.hud-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+
+.hud-logo:hover {
+  border-color: color-mix(in srgb, var(--accent) 54%, transparent);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.hud-logo:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 2px;
+}
+
+.hud-logo-icon {
+  color: currentColor;
+}
+
+.hud-divider {
+  width: 1px;
+  height: 44px;
+  background: var(--border);
+  border-radius: 999px;
+}
+
 .brand {
   font-weight: 600
 }
@@ -3829,19 +3886,6 @@ onMounted(() => {
   color: var(--t3);
   letter-spacing: .06em;
   text-transform: uppercase;
-}
-
-.icon-btn {
-  border: 1px solid var(--border);
-  background: transparent;
-  padding: 6px;
-  display: inline-flex;
-  align-items: center
-}
-
-.icon-btn:hover {
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-  transform: scale(1.05);
 }
 
 /* Chips/Controls */
@@ -4385,7 +4429,8 @@ onMounted(() => {
 }
 
 /* Play */
-.play.has-lesson-actions {
+.play.has-mission-footer {
+  padding-bottom: 160px;
 }
 
 .play .play-head {
@@ -5055,52 +5100,59 @@ onMounted(() => {
   line-height: 1.4;
 }
 
-.lesson-actions {
-  display: flex;
-  flex-wrap: wrap;
+.mission-footer-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 45;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 -24px 44px rgba(2, 6, 23, .45);
+}
+
+.mission-footer {
+  display: grid;
+  grid-template-columns: minmax(0, auto) 1fr minmax(0, auto);
   align-items: center;
-  justify-content: space-between;
   gap: 18px;
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
-  border-radius: 16px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--bg2) 82%, transparent));
-  box-shadow: 0 24px 44px rgba(2, 6, 23, .5);
-  z-index: 40;
-  padding: 16px 24px;
+  padding: 16px 20px;
 }
 
-.lesson-actions-meta {
-  flex: 1 1 280px;
+.mission-footer-section {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 12px;
 }
 
-.lesson-actions-hint {
+.mission-footer-left {
+  justify-content: flex-start;
+}
+
+.mission-footer-right {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.mission-footer-right .btn {
+  min-width: 150px;
+  justify-content: center;
+}
+
+.mission-footer-prev {
+  min-width: 150px;
+  justify-content: center;
+}
+
+.mission-footer-center {
+  text-align: center;
+}
+
+.mission-footer-hint {
   font-size: 13px;
   letter-spacing: .06em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--t3) 80%, transparent);
-}
-
-.lesson-actions-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.lesson-actions-prev {
-  align-self: flex-start;
-  min-width: 150px;
-  justify-content: center;
-}
-
-.lesson-actions-buttons .btn {
-  min-width: 150px;
-  justify-content: center;
 }
 
 .row.wrap {
@@ -5365,28 +5417,27 @@ onMounted(() => {
     font-size: 16px;
   }
 
-  .lesson-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-    left: 20px;
-    right: 20px;
-    transform: none;
-    bottom: 16px;
-    width: auto;
+  .mission-footer {
+    grid-template-columns: 1fr;
+    gap: 18px;
   }
 
-  .lesson-actions-buttons {
-    justify-content: stretch;
+  .mission-footer-section {
+    justify-content: center;
   }
 
-  .lesson-actions-buttons .btn {
+  .mission-footer-right {
+    justify-content: center;
+  }
+
+  .mission-footer-right .btn,
+  .mission-footer-prev {
     flex: 1 1 100%;
     min-width: 0;
   }
 
-  .play.has-lesson-actions {
-    padding-bottom: 240px;
+  .play.has-mission-footer {
+    padding-bottom: 260px;
   }
 
   .plan-status {
@@ -5402,10 +5453,6 @@ onMounted(() => {
   .plan-status-actions .btn {
     flex: 1 1 100%;
     justify-content: center;
-  }
-
-  .footer.has-lesson-actions .footer-meta {
-    padding-bottom: 180px;
   }
 }
 
@@ -5429,9 +5476,16 @@ onMounted(() => {
   }
 }
 
+
 .footer {
   font-size: 13px;
   color: var(--t3);
+  margin-top: 40px;
+}
+
+.footer.is-mission {
+  margin-top: 0;
+  padding: 0;
 }
 
 .footer-container {
@@ -5442,10 +5496,6 @@ onMounted(() => {
 
 .footer-meta {
   text-align: center;
-}
-
-.footer.has-lesson-actions .footer-meta {
-  padding-bottom: 120px;
 }
 
 .footer a {
