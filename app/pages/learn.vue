@@ -44,8 +44,10 @@
             :key="m.id"
             class="tile"
             :class="tileClass(m.id)"
+            @click="isModuleUnlocked(m.id) && handleModulePrimary(m.id)"
         >
-          <div class="tile-media" :style="{ backgroundImage: `url(${m.art})` }">
+          <div class="tile-media"
+               :style="{ backgroundImage: `url(${m.art})` }">
             <span v-if="isFreshModule(m.id)" class="tile-badge">
               <v-icon size="16">mdi-star</v-icon>
               New briefing
@@ -3017,8 +3019,8 @@ function tileClass(modId: string) {
   return {
     'is-locked': !isModuleUnlocked(modId),
     'is-complete': moduleCompleted(modId),
-    'is-active': moduleHasProgress(modId) && !moduleCompleted(modId),
-    'is-fresh': isFreshModule(modId),
+    'is-active squash': moduleHasProgress(modId) && !moduleCompleted(modId),
+    'is-fresh squash': isFreshModule(modId),
   }
 }
 

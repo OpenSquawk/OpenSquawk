@@ -60,13 +60,17 @@
 }
 
 /* crazy hover effect should be like glas ui 3d transformation with bounced curve without moving */
-.btn:not([disabled]):hover {
+.btn:not([disabled]):hover{
     transform: scaleX(1.03) scaleY(0.98);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12),
     0 14px 26px rgba(0, 0, 0, .36);
     background: linear-gradient(180deg,
     color-mix(in srgb, var(--text) 12%, transparent),
     color-mix(in srgb, var(--text) 6%, transparent));
+}
+.squash:hover {
+    cursor: pointer;
+    transform: scale(1.01);
 }
 
 .btn[disabled] {
