@@ -1195,6 +1195,7 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch} from 'vue'
+import {useRoute, useRouter} from '#imports'
 import {useApi} from '~/composables/useApi'
 import {createDefaultLearnConfig} from '~~/shared/learn/config'
 import type {LearnConfig, LearnProgress, LearnState} from '~~/shared/learn/config'
@@ -1393,6 +1394,235 @@ const manualSectionsOpen = reactive<Record<ManualSection, boolean>>({
   departure: false,
   arrival: false,
   procedures: false
+})
+
+const router = useRouter()
+const route = useRoute()
+
+const ROUTE_STATE_KEYS = ['panel', 'module', 'stage', 'lesson', 'plan'] as const
+type RouteStateKey = typeof ROUTE_STATE_KEYS[number]
+type RouteQueryLike = Record<string, string | string[] | null | undefined>
+const ROUTE_STATE_KEY_SET = new Set<RouteStateKey>(ROUTE_STATE_KEYS)
+
+let isHydratingFromRoute = false
+let isSyncingRoute = false
+let lastSyncedQuerySignature: string | null = null
+
+const normalizeQueryValue = (value: unknown): string | null => {
+  if (Array.isArray(value)) {
+    const [first] = value
+    if (typeof first === 'string') return first
+    if (first == null) return null
+    return String(first)
+  }
+  if (typeof value === 'string') return value
+  if (value == null) return null
+  return String(value)
+}
+
+function normalizeQueryRecord(query: Record<string, unknown>): Record<string, string> {
+  const normalized: Record<string, string> = {}
+  for (const [key, raw] of Object.entries(query)) {
+    const value = normalizeQueryValue(raw)
+    if (value !== null) {
+      normalized[key] = value
+    }
+  }
+  return normalized
+}
+
+function computeQuerySignature(query: Record<string, unknown>): string {
+  const normalized = normalizeQueryRecord(query)
+  const keys = Object.keys(normalized).sort()
+  return keys.map(key => `${key}=${normalized[key]}`).join('&')
+}
+
+const isValidStage = (value: string | null): value is 'lessons' | 'setup' | 'briefing' =>
+  value === 'lessons' || value === 'setup' || value === 'briefing'
+
+const isValidPlanMode = (value: string | null): value is FlightPlanMode =>
+  value === 'random' || value === 'manual' || value === 'simbrief'
+
+function buildStateRouteQuery(): Record<string, string> {
+  const state: Record<string, string> = {}
+  if (panel.value !== 'module' || !current.value) {
+    return state
+  }
+  state.panel = 'module'
+  state.module = current.value.id
+  if (moduleStage.value !== 'lessons') {
+    state.stage = moduleStage.value
+  }
+  if (moduleStage.value === 'lessons' && activeLesson.value) {
+    state.lesson = activeLesson.value.id
+  }
+  if (moduleStage.value === 'setup' && flightPlanMode.value !== 'random') {
+    state.plan = flightPlanMode.value
+  }
+  return state
+}
+
+function createNextRouteQuery(): Record<string, string> {
+  const next: Record<string, string> = {}
+  const currentQuery = route.query as RouteQueryLike
+  for (const [key, raw] of Object.entries(currentQuery)) {
+    if (ROUTE_STATE_KEY_SET.has(key as RouteStateKey)) continue
+    const value = normalizeQueryValue(raw)
+    if (value !== null) {
+      next[key] = value
+    }
+  }
+  return {...next, ...buildStateRouteQuery()}
+}
+
+function queriesEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const normalizedA = normalizeQueryRecord(a)
+  const normalizedB = normalizeQueryRecord(b)
+  const keys = new Set([...Object.keys(normalizedA), ...Object.keys(normalizedB)])
+  for (const key of keys) {
+    if (normalizedA[key] !== normalizedB[key]) {
+      return false
+    }
+  }
+  return true
+}
+
+async function syncRouteFromState(): Promise<void> {
+  if (typeof window === 'undefined' || isHydratingFromRoute) {
+    return
+  }
+  const nextQuery = createNextRouteQuery()
+  if (queriesEqual(route.query as Record<string, unknown>, nextQuery)) {
+    lastSyncedQuerySignature = computeQuerySignature(route.query as Record<string, unknown>)
+    return
+  }
+  const signature = computeQuerySignature(nextQuery)
+  isSyncingRoute = true
+  try {
+    await router.replace({query: nextQuery})
+    lastSyncedQuerySignature = signature
+  } catch (error) {
+    console.error('Failed to sync learn route state', error)
+  } finally {
+    isSyncingRoute = false
+  }
+}
+
+function applyRouteStateFromQuery(query: RouteQueryLike) {
+  isHydratingFromRoute = true
+  try {
+    const panelParam = normalizeQueryValue(query.panel)
+    const moduleParam = normalizeQueryValue(query.module)
+    const stageParam = normalizeQueryValue(query.stage)
+    const lessonParam = normalizeQueryValue(query.lesson)
+    const planParam = normalizeQueryValue(query.plan)
+
+    const targetModuleId = panelParam === 'hub' ? null : moduleParam
+    if (targetModuleId) {
+      const module = modules.value.find(item => item.id === targetModuleId) || null
+      if (!module) {
+        goToHub()
+      } else {
+        panel.value = 'module'
+        if (current.value?.id !== module.id) {
+          openModule(module.id, {autoStart: false})
+        }
+
+        let desiredStage: 'lessons' | 'setup' | 'briefing' = moduleStage.value
+        if (stageParam && isValidStage(stageParam)) {
+          desiredStage = stageParam
+        } else if (!module.meta?.flightPlan) {
+          desiredStage = 'lessons'
+        }
+
+        const needsPlan = Boolean(module.meta?.flightPlan)
+        const storedPlan = missionPlans[module.id]
+
+        if (!needsPlan) {
+          desiredStage = 'lessons'
+        } else {
+          if (desiredStage === 'lessons' && !storedPlan?.scenario) {
+            desiredStage = 'setup'
+          }
+          if (desiredStage === 'briefing') {
+            if (storedPlan?.scenario) {
+              draftPlanScenario.value = cloneScenarioData(storedPlan.scenario)
+              flightPlanMode.value = storedPlan.mode
+              briefingReturnStage.value = 'lessons'
+            } else if (!draftPlanScenario.value) {
+              desiredStage = 'setup'
+            }
+          }
+        }
+
+        const prevStage = moduleStage.value
+        if (moduleStage.value !== desiredStage) {
+          moduleStage.value = desiredStage
+        }
+
+        if (moduleStage.value === 'setup') {
+          briefingReturnStage.value = 'setup'
+          activeLesson.value = null
+          scenario.value = null
+          if (planParam && isValidPlanMode(planParam)) {
+            flightPlanMode.value = planParam
+          }
+          if (prevStage !== 'setup' && draftPlanScenario.value) {
+            initSetupState(draftPlanScenario.value)
+          } else if (!draftPlanScenario.value) {
+            initSetupState(null)
+          }
+        } else if (moduleStage.value === 'lessons') {
+          if (lessonParam) {
+            const lesson = module.lessons.find(item => item.id === lessonParam)
+            if (lesson) {
+              activeLesson.value = lesson
+            }
+          }
+          if (!activeLesson.value) {
+            startLessonsForCurrent()
+          }
+        }
+      }
+    } else {
+      if (panel.value !== 'hub' || current.value) {
+        goToHub()
+      } else {
+        panel.value = 'hub'
+      }
+    }
+  } finally {
+    isHydratingFromRoute = false
+  }
+  void syncRouteFromState()
+}
+
+if (typeof window !== 'undefined') {
+  watch(
+    () => [panel.value, current.value?.id ?? null, moduleStage.value, activeLesson.value?.id ?? null, flightPlanMode.value],
+    () => {
+      void syncRouteFromState()
+    }
+  )
+
+  watch(
+    () => route.query,
+    newQuery => {
+      if (isSyncingRoute) {
+        lastSyncedQuerySignature = computeQuerySignature(newQuery as Record<string, unknown>)
+        return
+      }
+      const signature = computeQuerySignature(newQuery as Record<string, unknown>)
+      if (signature === lastSyncedQuerySignature) {
+        return
+      }
+      applyRouteStateFromQuery(newQuery as RouteQueryLike)
+    }
+  )
+}
+
+onMounted(() => {
+  applyRouteStateFromQuery(route.query as RouteQueryLike)
 })
 
 const manualCallsignPreview = computed(() => {
