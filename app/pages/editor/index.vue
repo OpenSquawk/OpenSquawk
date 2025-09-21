@@ -204,8 +204,8 @@
             </div>
           </div>
         </v-app-bar>
-        <div class="border-b border-white/10 bg-[#070d1a]/70 px-4 py-2 backdrop-blur">
-          <div class="flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
+        <div class="px-3 lg:px-5">
+          <div class="flex flex-col gap-2 py-2 md:flex-row md:items-center md:gap-4">
             <div class="flex flex-1 items-center gap-3">
               <div class="flex shrink-0 items-center gap-2 text-[11px] uppercase tracking-[0.4em] text-white/40">
                 <span class="text-white/70">Nodes</span>
@@ -819,6 +819,25 @@ const nodeFilter = reactive({
 
 const filtersMenuOpen = ref(false)
 
+watch(flowSearch, (value) => {
+  if (value == null) {
+    flowSearch.value = ''
+  } else if (typeof value !== 'string') {
+    flowSearch.value = String(value)
+  }
+})
+
+watch(
+  () => nodeFilter.search,
+  (value) => {
+    if (value == null) {
+      nodeFilter.search = ''
+    } else if (typeof value !== 'string') {
+      nodeFilter.search = String(value)
+    }
+  }
+)
+
 const activeFilterCount = computed(() => {
   let count = 0
   if (nodeFilter.role !== 'all') count += 1
@@ -881,7 +900,7 @@ let lastFlowAutosaveError = ''
 let lastNodeAutosaveError = ''
 
 const filteredFlows = computed(() => {
-  const query = flowSearch.value.trim().toLowerCase()
+  const query = String(flowSearch.value ?? '').trim().toLowerCase()
   if (!query) return flows.value
   return flows.value.filter((flow) =>
     [flow.name, flow.slug, flow.description].some((entry) => entry?.toLowerCase().includes(query))
@@ -904,7 +923,7 @@ const phaseFilterOptions = computed(() => {
 
 const nodeSelectorItems = computed(() => {
   if (!flowDetail.value) return []
-  const query = nodeFilter.search.trim().toLowerCase()
+  const query = String(nodeFilter.search ?? '').trim().toLowerCase()
   const role = nodeFilter.role
   const phase = nodeFilter.phase
   const autopOnly = nodeFilter.autopOnly
@@ -938,7 +957,7 @@ const nodeSelectorItems = computed(() => {
 const canvasNodes = computed<CanvasNodeView[]>(() => {
   if (!flowDetail.value) return []
   const flow = flowDetail.value.flow
-  const query = nodeFilter.search.trim().toLowerCase()
+  const query = String(nodeFilter.search ?? '').trim().toLowerCase()
   return flowDetail.value.nodes.map((node) => {
     const autopCount = (node.transitions || []).filter((transition) => transition.autoTrigger).length
     const matchesRole = nodeFilter.role === 'all' || node.role === nodeFilter.role
