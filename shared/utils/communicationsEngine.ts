@@ -106,7 +106,16 @@ interface FlowSnapshot {
     communicationLog: EngineLog[]
     autoHistory: Map<string, Set<string>>
     flightContext: FlightContext
+    stateEnteredAt: number
     ready: boolean
+}
+
+interface DecisionCandidate {
+    id: string
+    flow: string
+    state: RuntimeDecisionState
+    source: 'transition' | 'entry'
+    active: boolean
 }
 
 type TelemetryState = {
@@ -165,6 +174,7 @@ export default function useCommunicationsEngine() {
     const runtimeSystem = ref<RuntimeDecisionSystem | null>(null)
     const flowOrder = ref<string[]>([])
     const activeFlowSlug = ref<string>('')
+    const flowStack = ref<string[]>([])
 
     const tree = ref<RuntimeDecisionTree | null>(null)
     const ready = ref(false)
@@ -183,6 +193,7 @@ export default function useCommunicationsEngine() {
         radio_checks_done: 0,
     })
     const currentStateId = ref<string>('')
+    const stateEnteredAt = ref<number>(Date.now())
     const communicationLog = ref<EngineLog[]>([])
 
     const telemetry = ref<TelemetryState>({
@@ -222,22 +233,22 @@ export default function useCommunicationsEngine() {
 
     function assignActiveVariables(next: Record<string, any>) {
         variables.value = next
-        if (activeFlowSlug.value && flowSnapshots[activeFlowSlug.value]) {
-            flowSnapshots[activeFlowSlug.value].variables = next
+        for (const snapshot of Object.values(flowSnapshots)) {
+            snapshot.variables = next
         }
     }
 
     function assignActiveFlags(next: EngineFlags) {
         flags.value = next
-        if (activeFlowSlug.value && flowSnapshots[activeFlowSlug.value]) {
-            flowSnapshots[activeFlowSlug.value].flags = next
+        for (const snapshot of Object.values(flowSnapshots)) {
+            snapshot.flags = next
         }
     }
 
     function assignActiveTelemetry(next: TelemetryState) {
         telemetry.value = next
-        if (activeFlowSlug.value && flowSnapshots[activeFlowSlug.value]) {
-            flowSnapshots[activeFlowSlug.value].telemetry = next
+        for (const snapshot of Object.values(flowSnapshots)) {
+            snapshot.telemetry = next
         }
     }
 
@@ -309,6 +320,7 @@ export default function useCommunicationsEngine() {
             communicationLog: log,
             autoHistory,
             flightContext: snapshotContext,
+            stateEnteredAt: Date.now(),
             ready: true,
         }
     }
@@ -323,6 +335,7 @@ export default function useCommunicationsEngine() {
         snapshot.currentStateId = currentStateId.value
         snapshot.communicationLog = communicationLog.value
         snapshot.flightContext = flightContext.value
+        snapshot.stateEnteredAt = stateEnteredAt.value
         snapshot.ready = ready.value
     }
 
@@ -338,9 +351,87 @@ export default function useCommunicationsEngine() {
         assignActiveTelemetry(snapshot.telemetry)
         assignCommunicationLog(snapshot.communicationLog)
         assignFlightContext(snapshot.flightContext)
+        stateEnteredAt.value = snapshot.stateEnteredAt || Date.now()
         setActiveStateId(snapshot.currentStateId)
         ready.value = snapshot.ready
     }
+    function collectTransitionTargets(state?: RuntimeDecisionState | null): string[] {
+        if (!state) return []
+        const ids = new Set<string>()
+        const pushTargets = (entries?: Array<{ to: string }>) => {
+            if (!Array.isArray(entries)) return
+            for (const entry of entries) {
+                const target = entry?.to
+                if (typeof target === 'string' && target.length) {
+                    ids.add(target)
+                }
+            }
+        }
+        pushTargets(state.next)
+        pushTargets(state.ok_next)
+        pushTargets(state.bad_next)
+        if (Array.isArray(state.timer_next)) {
+            for (const timer of state.timer_next) {
+                const target = timer?.to
+                if (typeof target === 'string' && target.length) {
+                    ids.add(target)
+                }
+            }
+        }
+        return Array.from(ids)
+    }
+
+    const decisionCandidates = computed<DecisionCandidate[]>(() => {
+        const system = runtimeSystem.value
+        if (!system) return []
+        const seen = new Set<string>()
+        const results: DecisionCandidate[] = []
+        const order = flowOrder.value.length ? flowOrder.value : Object.keys(system.flows)
+
+        const addCandidate = (
+            flowSlug: string,
+            stateId: string,
+            state: RuntimeDecisionState | undefined,
+            source: DecisionCandidate['source'],
+            active: boolean,
+        ) => {
+            if (!state || typeof stateId !== 'string' || !stateId.length) {
+                return
+            }
+            const key = `${flowSlug}::${stateId}`
+            if (seen.has(key)) {
+                return
+            }
+            seen.add(key)
+            results.push({
+                id: stateId,
+                flow: flowSlug,
+                state: { ...state },
+                source,
+                active,
+            })
+        }
+
+        for (const slug of order) {
+            const treeData = system.flows[slug]
+            if (!treeData) continue
+            const snapshot = flowSnapshots[slug]
+            const active = slug === activeFlowSlug.value
+            const currentId = snapshot?.currentStateId || treeData.start_state
+            const currentState = treeData.states[currentId]
+            const targets = collectTransitionTargets(currentState)
+            for (const targetId of targets) {
+                const targetState = treeData.states[targetId]
+                addCandidate(slug, targetId, targetState, 'transition', active)
+            }
+            const startId = treeData.start_state
+            const startState = treeData.states[startId]
+            addCandidate(slug, startId, startState, 'entry', active)
+        }
+
+        return results
+    })
+
     const nextCandidates = computed<string[]>(() => {
         const s = currentState.value
         if (!s) return []
@@ -405,6 +496,7 @@ export default function useCommunicationsEngine() {
             ? [...system.order]
             : Object.keys(system.flows)
         flowOrder.value = order
+        flowStack.value = []
 
         for (const key of Object.keys(flowSnapshots)) {
             delete flowSnapshots[key]
@@ -427,6 +519,7 @@ export default function useCommunicationsEngine() {
             ready.value = true
             const snapshot = ensureSnapshot(preferred)
             resetAutoHistory(snapshot.currentStateId, preferred)
+            stateEnteredAt.value = snapshot.stateEnteredAt || Date.now()
             evaluateAutoTransitions()
         } else {
             activeFlowSlug.value = ''
@@ -453,6 +546,7 @@ export default function useCommunicationsEngine() {
             assignCommunicationLog([])
             assignFlightContext(createDefaultFlightContext())
             setActiveStateId('')
+            stateEnteredAt.value = Date.now()
         }
     }
 
@@ -696,6 +790,11 @@ export default function useCommunicationsEngine() {
         setActiveStateId(runtime.start_state)
         assignCommunicationLog([])
         resetAutoHistory(runtime.start_state)
+        flowStack.value = []
+        stateEnteredAt.value = Date.now()
+        if (activeFlowSlug.value && flowSnapshots[activeFlowSlug.value]) {
+            flowSnapshots[activeFlowSlug.value].stateEnteredAt = stateEnteredAt.value
+        }
     }
 
     function updateFrequencyVariables(update: Partial<Record<FrequencyVariableKey, string>>) {
@@ -722,18 +821,47 @@ export default function useCommunicationsEngine() {
         if (!s) {
             throw new Error('Decision state unavailable')
         }
-        const candidates = nextCandidates.value
-            .map(id => ({ id, state: states.value[id] }))
-            .filter(candidate => candidate.state)
+        const system = runtimeSystem.value
+        const candidatePayload = decisionCandidates.value.map(candidate => ({
+            id: candidate.id,
+            flow: candidate.flow,
+            state: { ...candidate.state },
+            source: candidate.source,
+            active: candidate.active,
+        }))
+
+        const now = Date.now()
+        const flowStatus = system
+            ? (flowOrder.value.length ? flowOrder.value : Object.keys(system.flows)).map((slug) => {
+                const snapshot = flowSnapshots[slug]
+                const treeData = system.flows[slug]
+                const startState = treeData?.start_state
+                const currentId = snapshot?.currentStateId || startState || ''
+                const enteredAt = snapshot?.stateEnteredAt ?? now
+                return {
+                    slug,
+                    current_state: currentId,
+                    start_state: startState,
+                    active: slug === activeFlowSlug.value,
+                    state_elapsed_ms: Math.max(0, now - enteredAt),
+                }
+            })
+            : []
+
+        const lastAtc = getLastTransmissionBySpeaker('atc')
 
         return {
             state_id: s.id,
             state: { ...s },
-            candidates,
+            flow_slug: activeFlowSlug.value || runtime.slug,
+            flow_stack: flowStack.value.slice(),
+            flows: flowStatus,
+            candidates: candidatePayload,
             variables: { ...variables.value },
             flags: { ...flags.value },
+            telemetry: { ...telemetry.value },
             pilot_utterance: pilotTranscript,
-            tree: runtime.name,
+            last_atc_output: lastAtc?.message || '',
         }
     }
 
@@ -775,14 +903,40 @@ export default function useCommunicationsEngine() {
             })
         }
 
-        const resumeFlow = decision.resume_previous === true
+        const requestedFlow = typeof decision.next_flow === 'string' ? decision.next_flow : null
+        const resumeState = decision.resume_previous === true
+
+        if (resumeState && flowStack.value.length) {
+            const previousFlow = flowStack.value.pop()
+            if (previousFlow && previousFlow !== activeFlowSlug.value) {
+                try {
+                    setActiveFlow(previousFlow)
+                } catch (error) {
+                    console.error('Failed to resume flow', error)
+                }
+            }
+        } else if (requestedFlow && requestedFlow !== activeFlowSlug.value) {
+            const shouldPush = decision.flow_push !== false
+            if (shouldPush && activeFlowSlug.value) {
+                const currentSlug = activeFlowSlug.value
+                if (flowStack.value[flowStack.value.length - 1] !== currentSlug) {
+                    flowStack.value.push(currentSlug)
+                }
+            }
+            try {
+                setActiveFlow(requestedFlow)
+            } catch (error) {
+                console.error('Failed to activate flow', error)
+            }
+        }
+
         const nextState = typeof decision.next_state === 'string'
             ? decision.next_state
             : typeof decision.nextState === 'string'
                 ? decision.nextState
                 : null
 
-        if (resumeFlow) {
+        if (resumeState) {
             resumePriorFlow()
         } else if (!decision.radio_check && nextState) {
             moveTo(nextState)
@@ -922,6 +1076,10 @@ export default function useCommunicationsEngine() {
         }
 
         setActiveStateId(stateId)
+        stateEnteredAt.value = Date.now()
+        if (activeFlowSlug.value && flowSnapshots[activeFlowSlug.value]) {
+            flowSnapshots[activeFlowSlug.value].stateEnteredAt = stateEnteredAt.value
+        }
         resetAutoHistory(stateId)
         const s = currentState.value
         if (!s) return
@@ -980,6 +1138,20 @@ export default function useCommunicationsEngine() {
     function resumePriorFlow() {
         const prev = flags.value.stack.pop()
         if (prev) moveTo(prev)
+    }
+
+    function clearFlowStack() {
+        flowStack.value = []
+    }
+
+    function getLastTransmissionBySpeaker(speaker: Role): EngineLog | null {
+        for (let i = communicationLog.value.length - 1; i >= 0; i--) {
+            const entry = communicationLog.value[i]
+            if (entry?.speaker === speaker) {
+                return entry
+            }
+        }
+        return null
     }
 
     function speak(speaker: Role, tpl: string, stateId: string, options: { radioCheck?: boolean, offSchema?: boolean } = {}) {
@@ -1110,6 +1282,7 @@ export default function useCommunicationsEngine() {
         // Flow Control
         moveTo,
         resumePriorFlow,
+        clearFlowStack,
 
         // Utilities
         normalizeATCText,

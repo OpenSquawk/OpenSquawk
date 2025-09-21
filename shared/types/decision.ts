@@ -229,6 +229,8 @@ export interface RuntimeDecisionState {
   frequency?: string
   frequencyName?: string
   auto_transitions?: RuntimeDecisionAutoTransition[]
+  triggers?: DecisionNodeTrigger[]
+  conditions?: DecisionNodeCondition[]
   metadata?: DecisionNodeMetadata
 }
 

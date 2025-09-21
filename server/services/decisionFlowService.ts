@@ -173,6 +173,8 @@ function serializeRuntimeState(node: DecisionNodeDocument): RuntimeDecisionState
     frequency: obj.frequency || undefined,
     frequencyName: obj.frequencyName || undefined,
     auto_transitions: toRuntimeAutoTransitions(transitions),
+    triggers: Array.isArray(obj.triggers) ? obj.triggers : undefined,
+    conditions: Array.isArray(obj.conditions) ? obj.conditions : undefined,
     metadata: obj.metadata || undefined,
   }
 }

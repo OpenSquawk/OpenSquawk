@@ -983,6 +983,7 @@ const {
   updateFrequencyVariables,
   fetchRuntimeTree,
   setActiveFlow,
+  clearFlowStack,
   isReady: engineReady,
   processPilotTransmission,
   buildLLMContext,
@@ -1079,6 +1080,7 @@ function handleFlowChange(slug: string) {
     return
   }
   try {
+    clearFlowStack()
     setActiveFlow(slug)
   } catch (error) {
     console.error('Failed to activate flow', error)
