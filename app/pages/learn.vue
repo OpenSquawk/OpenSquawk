@@ -82,7 +82,7 @@
                 </div>
                 <div class="metric-card">
                   <div class="metric-icon">
-                    <v-icon size="20">mdi-target-account</v-icon>
+                    <v-icon size="20">mdi-crosshairs-gps</v-icon>
                   </div>
                   <div class="metric-main">
                     <div class="metric-value">{{ missionCompletionPct }}%</div>
@@ -91,7 +91,7 @@
                 </div>
                 <div class="metric-card">
                   <div class="metric-icon">
-                    <v-icon size="20">mdi-star-shooting</v-icon>
+                    <v-icon size="20">mdi-star-circle-outline</v-icon>
                   </div>
                   <div class="metric-main">
                     <div class="metric-value">{{ finishedLessons ? globalAccuracy + '%' : '—' }}</div>
@@ -191,15 +191,35 @@
               <span class="plan-status-sub" v-if="currentPlan">{{ currentPlanRoute }}</span>
               <span class="plan-status-sub muted" v-else>Select or import a flight to launch.</span>
             </div>
-            <button
-                v-if="currentPlan && moduleStage==='lessons'"
-                class="btn ghost mini"
-                type="button"
-                @click="openMissionBriefing()"
-            >
-              <v-icon size="16">mdi-clipboard-text-search</v-icon>
-              Briefing
-            </button>
+            <div v-if="moduleStage==='lessons'" class="plan-status-actions">
+              <button
+                  class="btn ghost mini"
+                  type="button"
+                  @click="openMissionBriefing()"
+                  :disabled="!currentPlan"
+              >
+                <v-icon size="16">mdi-clipboard-text-search</v-icon>
+                Briefing
+              </button>
+              <button
+                  class="btn ghost mini"
+                  type="button"
+                  @click="returnToSetupFromLessons()"
+                  :disabled="!currentPlan"
+              >
+                <v-icon size="16">mdi-repeat</v-icon>
+                Flug anpassen
+              </button>
+              <button
+                  class="btn ghost mini danger"
+                  type="button"
+                  @click="endCurrentFlight()"
+                  :disabled="!currentPlan"
+              >
+                <v-icon size="16">mdi-stop-circle-outline</v-icon>
+                Flug beenden
+              </button>
+            </div>
           </div>
           <div v-if="moduleStage==='lessons'" class="stats">
             <span class="stat"><v-icon size="18">mdi-progress-check</v-icon> {{ doneCount(current.id) }}/{{ current.lessons.length }}</span>
@@ -256,141 +276,203 @@
         </div>
 
         <form v-else-if="flightPlanMode==='manual'" class="plan-panel manual-panel" @submit.prevent="handleManualSubmit">
-          <div class="manual-section">
-            <div class="section-title">
-              <v-icon size="16">mdi-airplane</v-icon>
-              Flight identity
-            </div>
-            <div class="field-grid">
-              <label class="field">
-                <span>Airline ICAO</span>
-                <input v-model="manualForm.airlineCode" maxlength="4" placeholder="DLH" />
-              </label>
-              <label class="field">
-                <span>Spoken call sign</span>
-                <input v-model="manualForm.airlineCall" placeholder="Lufthansa" />
-              </label>
-              <label class="field">
-                <span>Flight number</span>
-                <input v-model="manualForm.flightNumber" placeholder="400" />
-              </label>
-            </div>
+          <div class="manual-grid">
+            <section class="manual-card">
+              <div class="manual-card-head">
+                <div class="manual-card-icon">
+                  <v-icon size="20">mdi-airplane-cog</v-icon>
+                </div>
+                <div class="manual-card-copy">
+                  <div class="manual-card-title">Flight essentials</div>
+                  <p class="manual-card-sub">Nur Callsign, Start und Ziel sind Pflicht. Alles andere kannst du optional ergänzen.</p>
+                </div>
+              </div>
+              <div class="field-grid stretch">
+                <label class="field required">
+                  <span>Callsign</span>
+                  <input v-model="manualForm.callsign" placeholder="DLH400" maxlength="8" />
+                  <small>Wir nutzen ihn für alle Readbacks im Training.</small>
+                </label>
+                <label class="field">
+                  <span>Spoken call sign</span>
+                  <input v-model="manualForm.radioCall" placeholder="Lufthansa four zero zero" />
+                  <small>Leer lassen für eine automatisch erzeugte Aussprache.</small>
+                </label>
+              </div>
+              <div class="field-grid stretch">
+                <label class="field required">
+                  <span>Departure ICAO</span>
+                  <input v-model="manualForm.departureIcao" placeholder="EDDF" maxlength="4" />
+                </label>
+                <label class="field required">
+                  <span>Destination ICAO</span>
+                  <input v-model="manualForm.destinationIcao" placeholder="KJFK" maxlength="4" />
+                </label>
+              </div>
+            </section>
+
+            <aside class="manual-summary">
+              <div class="manual-summary-card">
+                <span class="manual-summary-label">Route preview</span>
+                <div class="manual-summary-route">
+                  {{ manualForm.departureIcao ? manualForm.departureIcao.toUpperCase() : '----' }}
+                  <v-icon size="18">mdi-arrow-right</v-icon>
+                  {{ manualForm.destinationIcao ? manualForm.destinationIcao.toUpperCase() : '----' }}
+                </div>
+                <div class="manual-summary-meta">
+                  <span>{{ manualForm.departureCity || 'Departure city' }}</span>
+                  <v-icon size="16">mdi-dots-horizontal</v-icon>
+                  <span>{{ manualForm.destinationCity || 'Arrival city' }}</span>
+                </div>
+                <p class="muted small">Passe die Details unten an oder lass sie leer, um einen schnellen Standardflug zu starten.</p>
+              </div>
+            </aside>
           </div>
 
-          <div class="manual-section">
-            <div class="section-title">
+          <details class="manual-accordion">
+            <summary>
+              <v-icon size="16">mdi-account-badge-outline</v-icon>
+              Airline identity &amp; phraseology
+            </summary>
+            <div class="manual-accordion-body">
+              <div class="field-grid stretch">
+                <label class="field">
+                  <span>Airline ICAO</span>
+                  <input v-model="manualForm.airlineCode" maxlength="4" placeholder="DLH" />
+                  <small>Hilft beim Funkalphabet und bei automatischen Callsigns.</small>
+                </label>
+                <label class="field">
+                  <span>Airline name</span>
+                  <input v-model="manualForm.airlineCall" placeholder="Lufthansa" />
+                </label>
+                <label class="field">
+                  <span>Flight number</span>
+                  <input v-model="manualForm.flightNumber" placeholder="400" maxlength="6" />
+                </label>
+              </div>
+            </div>
+          </details>
+
+          <details class="manual-accordion">
+            <summary>
               <v-icon size="16">mdi-airplane-takeoff</v-icon>
-              Departure
+              Departure setup
+            </summary>
+            <div class="manual-accordion-body">
+              <div class="field-grid stretch">
+                <label class="field">
+                  <span>City</span>
+                  <input v-model="manualForm.departureCity" placeholder="Frankfurt" />
+                </label>
+                <label class="field">
+                  <span>Airport name</span>
+                  <input v-model="manualForm.departureName" placeholder="Frankfurt/Main" />
+                </label>
+              </div>
+              <div class="field-grid stretch">
+                <label class="field">
+                  <span>Stand / Gate</span>
+                  <input v-model="manualForm.stand" placeholder="A12" />
+                </label>
+                <label class="field">
+                  <span>Runway</span>
+                  <input v-model="manualForm.departureRunway" placeholder="25C" />
+                </label>
+                <label class="field">
+                  <span>Taxi route</span>
+                  <input v-model="manualForm.taxiRoute" placeholder="N3 U4" />
+                </label>
+              </div>
+              <div class="field-grid stretch">
+                <label class="field">
+                  <span>SID</span>
+                  <input v-model="manualForm.sid" placeholder="ANEKI 7S" />
+                </label>
+                <label class="field">
+                  <span>Transition</span>
+                  <input v-model="manualForm.transition" placeholder="ANEKI" />
+                </label>
+              </div>
             </div>
-            <div class="field-grid">
-              <label class="field">
-                <span>ICAO</span>
-                <input v-model="manualForm.departureIcao" placeholder="EDDF" maxlength="4" />
-              </label>
-              <label class="field">
-                <span>City</span>
-                <input v-model="manualForm.departureCity" placeholder="Frankfurt" />
-              </label>
-              <label class="field">
-                <span>Airport name</span>
-                <input v-model="manualForm.departureName" placeholder="Frankfurt/Main" />
-              </label>
-              <label class="field">
-                <span>Runway</span>
-                <input v-model="manualForm.departureRunway" placeholder="25C" />
-              </label>
-              <label class="field">
-                <span>Stand</span>
-                <input v-model="manualForm.stand" placeholder="A12" />
-              </label>
-              <label class="field">
-                <span>Taxi route</span>
-                <input v-model="manualForm.taxiRoute" placeholder="N3 U4" />
-              </label>
-              <label class="field">
-                <span>SID</span>
-                <input v-model="manualForm.sid" placeholder="ANEKI 7S" />
-              </label>
-              <label class="field">
-                <span>Transition</span>
-                <input v-model="manualForm.transition" placeholder="ANEKI" />
-              </label>
-            </div>
-          </div>
+          </details>
 
-          <div class="manual-section">
-            <div class="section-title">
+          <details class="manual-accordion">
+            <summary>
               <v-icon size="16">mdi-airplane-landing</v-icon>
-              Arrival
+              Arrival setup
+            </summary>
+            <div class="manual-accordion-body">
+              <div class="field-grid stretch">
+                <label class="field">
+                  <span>City</span>
+                  <input v-model="manualForm.destinationCity" placeholder="New York" />
+                </label>
+                <label class="field">
+                  <span>Airport name</span>
+                  <input v-model="manualForm.destinationName" placeholder="John F. Kennedy" />
+                </label>
+              </div>
+              <div class="field-grid stretch">
+                <label class="field">
+                  <span>Stand / Gate</span>
+                  <input v-model="manualForm.arrivalStand" placeholder="Gate 5" />
+                </label>
+                <label class="field">
+                  <span>Runway</span>
+                  <input v-model="manualForm.arrivalRunway" placeholder="22R" />
+                </label>
+                <label class="field">
+                  <span>Taxi-in</span>
+                  <input v-model="manualForm.arrivalTaxiRoute" placeholder="B K5" />
+                </label>
+              </div>
+              <div class="field-grid stretch">
+                <label class="field">
+                  <span>STAR</span>
+                  <input v-model="manualForm.arrivalStar" placeholder="ROBER 3" />
+                </label>
+                <label class="field">
+                  <span>Transition</span>
+                  <input v-model="manualForm.arrivalTransition" placeholder="ROBER" />
+                </label>
+                <label class="field">
+                  <span>Approach</span>
+                  <input v-model="manualForm.approach" placeholder="ILS 22R" />
+                </label>
+              </div>
             </div>
-            <div class="field-grid">
-              <label class="field">
-                <span>ICAO</span>
-                <input v-model="manualForm.destinationIcao" placeholder="KJFK" maxlength="4" />
-              </label>
-              <label class="field">
-                <span>City</span>
-                <input v-model="manualForm.destinationCity" placeholder="New York" />
-              </label>
-              <label class="field">
-                <span>Airport name</span>
-                <input v-model="manualForm.destinationName" placeholder="John F. Kennedy" />
-              </label>
-              <label class="field">
-                <span>Runway</span>
-                <input v-model="manualForm.arrivalRunway" placeholder="22R" />
-              </label>
-              <label class="field">
-                <span>Stand</span>
-                <input v-model="manualForm.arrivalStand" placeholder="Gate 5" />
-              </label>
-              <label class="field">
-                <span>Taxi-in</span>
-                <input v-model="manualForm.arrivalTaxiRoute" placeholder="B K5" />
-              </label>
-              <label class="field">
-                <span>STAR</span>
-                <input v-model="manualForm.arrivalStar" placeholder="ROBER 3" />
-              </label>
-              <label class="field">
-                <span>Transition</span>
-                <input v-model="manualForm.arrivalTransition" placeholder="ROBER" />
-              </label>
-              <label class="field wide">
-                <span>Approach</span>
-                <input v-model="manualForm.approach" placeholder="ILS 22R" />
-              </label>
-            </div>
-          </div>
+          </details>
 
-          <div class="manual-section">
-            <div class="section-title">
-              <v-icon size="16">mdi-altimeter</v-icon>
-              Altitudes &amp; codes
-            </div>
-            <div class="field-grid">
+          <details class="manual-accordion">
+            <summary>
+              <v-icon size="16">mdi-tune</v-icon>
+              Codes &amp; extras
+            </summary>
+            <div class="manual-accordion-body">
+              <div class="field-grid stretch">
+                <label class="field">
+                  <span>Initial altitude (ft)</span>
+                  <input v-model="manualForm.initialAltitude" inputmode="numeric" placeholder="5000" />
+                </label>
+                <label class="field">
+                  <span>Climb altitude (ft)</span>
+                  <input v-model="manualForm.climbAltitude" inputmode="numeric" placeholder="7000" />
+                </label>
+                <label class="field">
+                  <span>Squawk</span>
+                  <input v-model="manualForm.squawk" placeholder="4213" />
+                </label>
+                <label class="field">
+                  <span>Push delay (min)</span>
+                  <input v-model="manualForm.pushDelay" inputmode="numeric" placeholder="5" />
+                </label>
+              </div>
               <label class="field">
-                <span>Initial altitude (ft)</span>
-                <input v-model="manualForm.initialAltitude" inputmode="numeric" placeholder="5000" />
-              </label>
-              <label class="field">
-                <span>Climb altitude (ft)</span>
-                <input v-model="manualForm.climbAltitude" inputmode="numeric" placeholder="7000" />
-              </label>
-              <label class="field">
-                <span>Squawk</span>
-                <input v-model="manualForm.squawk" placeholder="4213" />
-              </label>
-              <label class="field">
-                <span>Push delay (min)</span>
-                <input v-model="manualForm.pushDelay" inputmode="numeric" placeholder="5" />
-              </label>
-              <label class="field wide">
                 <span>Briefing notes</span>
                 <input v-model="manualForm.remarks" placeholder="Optional remarks" />
               </label>
             </div>
-          </div>
+          </details>
 
           <div v-if="manualErrors.length" class="form-errors">
             <div v-for="error in manualErrors" :key="error" class="form-error">
@@ -412,58 +494,75 @@
         </form>
 
         <div v-else class="plan-panel simbrief-panel">
-          <div class="simbrief-callout">
-            <v-icon size="20">mdi-clipboard-text-clock</v-icon>
-            <div>
-              <div class="plan-mode-title">SimBrief dispatch</div>
+          <div class="simbrief-header">
+            <div class="simbrief-icon">
+              <v-icon size="26">mdi-clipboard-text-clock</v-icon>
+            </div>
+            <div class="simbrief-copy">
+              <div class="simbrief-title">SimBrief Dispatch import</div>
               <p class="muted small">
-                Import the latest OFP from
-                <a href="https://www.simbrief.com/home/" target="_blank" rel="noopener">SimBrief</a>.
+                SimBrief ist ein kostenloser Flight-Dispatch-Dienst. Erstelle dort einen Flugplan im
+                <a href="https://dispatch.simbrief.com" target="_blank" rel="noopener">SimBrief Dispatch</a>
+                und importiere ihn direkt in OpenSquawk.
               </p>
+              <ol class="simbrief-steps">
+                <li>Erstelle oder aktualisiere deinen OFP im SimBrief Dispatch.</li>
+                <li>Notiere deine Pilot ID (oben rechts in SimBrief).</li>
+                <li>Trage die ID hier ein – wir merken sie uns für das nächste Mal.</li>
+              </ol>
             </div>
           </div>
-          <div class="field-grid compact">
+
+          <div class="simbrief-form">
             <label class="field">
-              <span>SimBrief ID</span>
+              <span>SimBrief Pilot ID</span>
               <input
                   v-model="simbriefForm.userId"
                   inputmode="numeric"
                   placeholder="11860000"
                   @keyup.enter.prevent="submitSimbriefFromInput"
               />
+              <small v-if="savedSimbriefId">Zuletzt genutzt: {{ savedSimbriefId }}</small>
+              <small v-else>Wir speichern die ID nach dem ersten Import automatisch.</small>
             </label>
             <button class="btn primary" type="button" @click="loadSimbriefPlan" :disabled="simbriefForm.loading || !simbriefForm.userId.trim()">
               <v-icon size="18" :class="{ spin: simbriefForm.loading }">mdi-download</v-icon>
-              Load latest plan
+              Neuesten Plan laden
             </button>
           </div>
-          <div v-if="simbriefForm.loading" class="loading-row">
+
+          <div v-if="simbriefForm.loading" class="simbrief-loading">
             <v-progress-circular indeterminate color="cyan" size="20" />
-            <span class="muted small">Contacting SimBrief…</span>
+            <span class="muted small">Kontakt zu SimBrief wird hergestellt…</span>
           </div>
           <div v-if="flightPlanError" class="error-banner">
             <v-icon size="16">mdi-alert</v-icon>
             {{ flightPlanError }}
           </div>
-          <div v-if="simbriefPlanMeta" class="simbrief-meta">
-            <v-icon size="16">mdi-airplane</v-icon>
-            <span>{{ simbriefPlanMeta.callsign }} · {{ simbriefPlanMeta.route }}</span>
+          <div v-if="simbriefPlanMeta" class="simbrief-meta-card">
+            <div class="simbrief-meta-body">
+              <div class="simbrief-meta-title">
+                <v-icon size="18">mdi-airplane</v-icon>
+                {{ simbriefPlanMeta.callsign }}
+              </div>
+              <div class="simbrief-meta-route">{{ simbriefPlanMeta.route }}</div>
+            </div>
             <button class="btn soft mini" type="button" @click="enterBriefingFromSetup()">
               <v-icon size="16">mdi-clipboard-text</v-icon>
-              Review briefing
+              Briefing ansehen
             </button>
           </div>
         </div>
       </div>
 
       <div v-else-if="moduleStage==='briefing' && briefingSnapshot" class="module-stage-panel mission-briefing">
-        <div class="briefing-header">
+        <div class="briefing-top">
           <img :src="currentBriefingArt" alt="Mission hero" class="briefing-hero" />
-          <div class="briefing-overview">
+          <div class="briefing-top-body">
             <span class="plan-tag">Mission briefing</span>
             <div class="briefing-title">{{ briefingSnapshot.radioCall }}</div>
             <div class="briefing-route">{{ briefingSnapshot.route }}</div>
-            <div class="muted small">{{ briefingSnapshot.tagline }}</div>
+            <p class="muted small">{{ briefingSnapshot.tagline }}</p>
             <div class="briefing-pills">
               <span class="pill">
                 <v-icon size="16">mdi-airplane-takeoff</v-icon>
@@ -478,60 +577,86 @@
                 Squawk {{ briefingSnapshot.codes.squawk }}
               </span>
             </div>
+            <div class="briefing-top-meta">
+              <div class="briefing-meta-item">
+                <span class="label">Push</span>
+                <span class="value">{{ briefingSnapshot.codes.push }}</span>
+              </div>
+              <div class="briefing-meta-item">
+                <span class="label">ATIS</span>
+                <span class="value">Information {{ briefingSnapshot.departure.atis }}</span>
+              </div>
+              <div class="briefing-meta-item">
+                <span class="label">Delivery</span>
+                <span class="value">{{ briefingSnapshot.departure.freq }} · {{ briefingSnapshot.departure.freqWords }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="briefing-grid">
-          <div class="briefing-card">
-            <img src="/img/learn/missions/full-flight/briefing-route.png" alt="Route preview" class="briefing-card-art" />
-            <div class="card-title">
-              <v-icon size="16">mdi-map-marker-path</v-icon>
-              Flight deck
+        <div class="briefing-columns">
+          <div class="briefing-column">
+            <div class="briefing-section">
+              <div class="briefing-section-head">
+                <v-icon size="18">mdi-airplane-takeoff</v-icon>
+                Departure flow
+              </div>
+              <ul class="briefing-list">
+                <li><strong>Stand</strong>: {{ briefingSnapshot.departure.stand || 'As assigned' }}</li>
+                <li><strong>Taxi</strong>: {{ briefingSnapshot.departure.taxiRoute || 'As assigned' }}</li>
+                <li><strong>SID</strong>: {{ briefingSnapshot.departure.sid }} · {{ briefingSnapshot.departure.transition }}</li>
+                <li><strong>Initial altitude</strong>: {{ briefingSnapshot.altitudes.initial }}</li>
+              </ul>
             </div>
-            <ul class="briefing-list">
-              <li><strong>Push</strong>: {{ briefingSnapshot.codes.push }}</li>
-              <li><strong>ATIS</strong>: Information {{ briefingSnapshot.departure.atis }}</li>
-              <li><strong>Delivery</strong>: {{ briefingSnapshot.departure.freq }} · {{ briefingSnapshot.departure.freqWords }}</li>
-            </ul>
+            <div class="briefing-section">
+              <div class="briefing-section-head">
+                <v-icon size="18">mdi-map-marker-path</v-icon>
+                Flight deck
+              </div>
+              <ul class="briefing-list">
+                <li><strong>Radio call</strong>: {{ briefingSnapshot.radioCall }}</li>
+                <li><strong>Push clearance</strong>: {{ briefingSnapshot.codes.push }}</li>
+                <li><strong>Transponder</strong>: {{ briefingSnapshot.codes.squawk }}</li>
+              </ul>
+            </div>
           </div>
-          <div class="briefing-card">
-            <img src="/img/learn/missions/full-flight/briefing-departure.png" alt="Departure" class="briefing-card-art" />
-            <div class="card-title">
-              <v-icon size="16">mdi-airplane-takeoff</v-icon>
-              Departure flow
+          <div class="briefing-column">
+            <div class="briefing-section">
+              <div class="briefing-section-head">
+                <v-icon size="18">mdi-airplane-landing</v-icon>
+                Arrival setup
+              </div>
+              <ul class="briefing-list">
+                <li><strong>STAR</strong>: {{ briefingSnapshot.arrival.star }} · {{ briefingSnapshot.arrival.transition }}</li>
+                <li><strong>Approach</strong>: {{ briefingSnapshot.arrival.approach }}</li>
+                <li><strong>Taxi-in</strong>: {{ briefingSnapshot.arrival.taxiRoute || 'As assigned' }}</li>
+                <li><strong>Stand</strong>: {{ briefingSnapshot.arrival.stand || 'As assigned' }}</li>
+              </ul>
             </div>
-            <ul class="briefing-list">
-              <li><strong>Stand</strong>: {{ briefingSnapshot.departure.stand || 'As assigned' }}</li>
-              <li><strong>Taxi</strong>: {{ briefingSnapshot.departure.taxiRoute || 'As assigned' }}</li>
-              <li><strong>SID</strong>: {{ briefingSnapshot.departure.sid }} · {{ briefingSnapshot.departure.transition }}</li>
-              <li><strong>Initial altitude</strong>: {{ briefingSnapshot.altitudes.initial }}</li>
-            </ul>
-          </div>
-          <div class="briefing-card">
-            <img src="/img/learn/missions/full-flight/briefing-arrival.png" alt="Arrival" class="briefing-card-art" />
-            <div class="card-title">
-              <v-icon size="16">mdi-airplane-landing</v-icon>
-              Arrival setup
+            <div class="briefing-section">
+              <div class="briefing-section-head">
+                <v-icon size="18">mdi-weather-cloudy</v-icon>
+                Weather
+              </div>
+              <div class="briefing-weather-grid">
+                <div class="briefing-weather-item">
+                  <span class="label">Departure wind</span>
+                  <span class="value">{{ briefingSnapshot.weather.depWind }}</span>
+                </div>
+                <div class="briefing-weather-item">
+                  <span class="label">Departure QNH</span>
+                  <span class="value">{{ briefingSnapshot.weather.depQnh }}</span>
+                </div>
+                <div class="briefing-weather-item">
+                  <span class="label">Arrival wind</span>
+                  <span class="value">{{ briefingSnapshot.weather.arrWind }}</span>
+                </div>
+                <div class="briefing-weather-item">
+                  <span class="label">Arrival QNH</span>
+                  <span class="value">{{ briefingSnapshot.weather.arrQnh }}</span>
+                </div>
+              </div>
             </div>
-            <ul class="briefing-list">
-              <li><strong>STAR</strong>: {{ briefingSnapshot.arrival.star }} · {{ briefingSnapshot.arrival.transition }}</li>
-              <li><strong>Approach</strong>: {{ briefingSnapshot.arrival.approach }}</li>
-              <li><strong>Taxi-in</strong>: {{ briefingSnapshot.arrival.taxiRoute || 'As assigned' }}</li>
-              <li><strong>Arrival stand</strong>: {{ briefingSnapshot.arrival.stand || 'As assigned' }}</li>
-            </ul>
-          </div>
-          <div class="briefing-card">
-            <img src="/img/learn/missions/full-flight/briefing-weather.png" alt="Weather" class="briefing-card-art" />
-            <div class="card-title">
-              <v-icon size="16">mdi-weather-cloudy</v-icon>
-              Weather
-            </div>
-            <ul class="briefing-list">
-              <li><strong>Departure wind</strong>: {{ briefingSnapshot.weather.depWind }}</li>
-              <li><strong>Departure QNH</strong>: {{ briefingSnapshot.weather.depQnh }}</li>
-              <li><strong>Arrival wind</strong>: {{ briefingSnapshot.weather.arrWind }}</li>
-              <li><strong>Arrival QNH</strong>: {{ briefingSnapshot.weather.arrQnh }}</li>
-            </ul>
           </div>
         </div>
 
@@ -543,11 +668,11 @@
               @click="backToSetupFromBriefing()"
           >
             <v-icon size="18">mdi-arrow-left</v-icon>
-            Adjust plan
+            Plan anpassen
           </button>
           <button class="btn primary" type="button" @click="handleBriefingConfirm()">
             <v-icon size="18">{{ briefingReturnStage==='setup' ? 'mdi-rocket-launch' : 'mdi-play' }}</v-icon>
-            {{ briefingReturnStage==='setup' ? 'Start mission' : 'Return to mission' }}
+            {{ briefingReturnStage==='setup' ? 'Mission starten' : 'Zur Mission' }}
           </button>
         </div>
       </div>
@@ -1051,6 +1176,8 @@ type MissionPlanInput = {
 }
 
 type ManualForm = {
+  callsign: string
+  radioCall: string
   airlineCode: string
   airlineCall: string
   flightNumber: string
@@ -1090,6 +1217,8 @@ const manualBaseScenario = ref<Scenario | null>(null)
 const briefingReturnStage = ref<'setup' | 'lessons'>('setup')
 const pendingAutoStart = ref(false)
 const manualForm = reactive<ManualForm>({
+  callsign: '',
+  radioCall: '',
   airlineCode: '',
   airlineCall: '',
   flightNumber: '',
@@ -1120,6 +1249,8 @@ const manualErrors = ref<string[]>([])
 const flightPlanError = ref<string | null>(null)
 const simbriefForm = reactive({ userId: '', loading: false })
 const simbriefPlanMeta = ref<{ callsign: string; route: string } | null>(null)
+const savedSimbriefId = ref<string | null>(null)
+const SIMBRIEF_ID_STORAGE_KEY = 'opensquawk:simbriefUserId'
 const lessonTrack = ref<HTMLElement | null>(null)
 
 const flightPlanModes: Array<{ id: FlightPlanMode; title: string; icon: string; desc: string }> = [
@@ -1384,6 +1515,8 @@ function applyPlanToScenario(base: Scenario, plan: MissionPlanInput): Scenario {
 }
 
 function hydrateManualForm(base: Scenario) {
+  manualForm.callsign = base.callsign || ''
+  manualForm.radioCall = base.radioCall || ''
   manualForm.airlineCode = base.airlineCode || ''
   manualForm.airlineCall = base.airlineCall || ''
   manualForm.flightNumber = base.flightNumber || ''
@@ -1422,7 +1555,7 @@ function resetManualForm() {
   manualErrors.value = []
 }
 
-function initSetupState(seed: Scenario | null) {
+function initSetupState(seed: Scenario | null, options: { keepMeta?: boolean; mode?: FlightPlanMode } = {}) {
   const base = cloneScenarioData(seed) || createBaseScenario()
   if (!base) return
   draftPlanScenario.value = cloneScenarioData(base)
@@ -1430,7 +1563,17 @@ function initSetupState(seed: Scenario | null) {
   hydrateManualForm(base)
   manualErrors.value = []
   flightPlanError.value = null
-  simbriefPlanMeta.value = null
+  if (options.mode) {
+    flightPlanMode.value = options.mode
+  }
+  if (options.keepMeta && seed) {
+    simbriefPlanMeta.value = {
+      callsign: seed.radioCall,
+      route: scenarioRoute(seed)
+    }
+  } else if (!options.keepMeta) {
+    simbriefPlanMeta.value = null
+  }
 }
 
 function rerollRandomPlan() {
@@ -1449,9 +1592,8 @@ function enterBriefingFromSetup() {
 
 function buildManualScenario(): Scenario | null {
   const errors: string[] = []
-  if (!isNonEmpty(manualForm.airlineCode)) errors.push('Airline ICAO required')
-  if (!isNonEmpty(manualForm.airlineCall)) errors.push('Spoken call sign required')
-  if (!isNonEmpty(manualForm.flightNumber)) errors.push('Flight number required')
+  const callsign = manualForm.callsign.trim()
+  if (!callsign) errors.push('Callsign required')
   if (!isNonEmpty(manualForm.departureIcao)) errors.push('Departure ICAO required')
   if (!isNonEmpty(manualForm.destinationIcao)) errors.push('Destination ICAO required')
 
@@ -1461,7 +1603,11 @@ function buildManualScenario(): Scenario | null {
   const base = cloneScenarioData(manualBaseScenario.value) || createBaseScenario()
   if (!base) return null
 
+  const spokenCall = manualForm.radioCall.trim()
+
   const plan: MissionPlanInput = {
+    callsign,
+    radioCall: spokenCall || undefined,
     airlineCode: manualForm.airlineCode,
     airlineCall: manualForm.airlineCall,
     flightNumber: manualForm.flightNumber,
@@ -1526,6 +1672,10 @@ async function loadSimbriefPlan() {
       callsign: scenario.radioCall,
       route: scenarioRoute(scenario)
     }
+    savedSimbriefId.value = userId
+    if (isClient) {
+      window.localStorage.setItem(SIMBRIEF_ID_STORAGE_KEY, userId)
+    }
     flightPlanMode.value = 'simbrief'
     enterBriefingFromSetup()
   } catch (error: any) {
@@ -1583,8 +1733,37 @@ function backToSetupFromBriefing() {
   }
   moduleStage.value = 'setup'
   if (draftPlanScenario.value) {
-    initSetupState(draftPlanScenario.value)
+    initSetupState(draftPlanScenario.value, { keepMeta: true, mode: flightPlanMode.value })
   }
+}
+
+function returnToSetupFromLessons() {
+  if (!current.value) return
+  const stored = missionPlans[current.value.id]
+  const seed = stored?.scenario || currentPlan.value?.scenario || draftPlanScenario.value || null
+  initSetupState(seed, { keepMeta: Boolean(seed), mode: stored?.mode || flightPlanMode.value })
+  briefingReturnStage.value = 'setup'
+  moduleStage.value = 'setup'
+}
+
+function endCurrentFlight() {
+  if (!current.value) return
+  if (isClient && !window.confirm('Flugplan löschen und neu beginnen?')) {
+    return
+  }
+  const modId = current.value.id
+  if (missionPlans[modId]) {
+    delete missionPlans[modId]
+  }
+  draftPlanScenario.value = null
+  manualBaseScenario.value = null
+  simbriefPlanMeta.value = null
+  seedFullFlightScenario(null)
+  scenario.value = null
+  briefingReturnStage.value = 'setup'
+  moduleStage.value = 'setup'
+  initSetupState(null, { mode: 'manual' })
+  toastNow('Flugplan zurückgesetzt.')
 }
 
 function openMissionBriefing() {
@@ -1882,6 +2061,14 @@ async function persistLearnState(force = false) {
 
 if (isClient) {
   await loadLearnState()
+}
+
+if (isClient) {
+  const storedSimbriefId = window.localStorage.getItem(SIMBRIEF_ID_STORAGE_KEY)
+  if (storedSimbriefId) {
+    simbriefForm.userId = storedSimbriefId
+    savedSimbriefId.value = storedSimbriefId
+  }
 }
 
 const markConfigDirty = () => {
@@ -2395,8 +2582,8 @@ function moduleStatusText(modId: string) {
 function moduleStatusIcon(modId: string) {
   if (!isModuleUnlocked(modId)) return 'mdi-lock-alert'
   if (moduleCompleted(modId)) return 'mdi-medal-outline'
-  if (moduleHasProgress(modId)) return 'mdi-timer-sand-complete'
-  return 'mdi-rocket-launch-outline'
+  if (moduleHasProgress(modId)) return 'mdi-timer-sand'
+  return 'mdi-rocket-launch'
 }
 
 function tileStatusClass(modId: string) {
@@ -2464,7 +2651,7 @@ const dailyObjectives = computed<Objective[]>(() => {
       progress: readbacks,
       goal: 3,
       status: readbacks >= 3 ? 'Goal reached' : `${Math.max(0, 3 - Math.min(readbacks, 3))} more ≥80%`,
-      icon: 'mdi-target-account',
+      icon: 'mdi-target',
       complete: readbacks >= 3
     },
     {
@@ -3474,6 +3661,15 @@ onMounted(() => {
   background: transparent
 }
 
+.btn.danger {
+  border-color: color-mix(in srgb, #f87171 45%, transparent);
+  color: color-mix(in srgb, #fecaca 80%, #fee2e2 20%);
+}
+
+.btn.danger:hover {
+  background: color-mix(in srgb, #f87171 14%, transparent);
+}
+
 .btn.mini {
   padding: 6px 10px;
   font-size: 12px
@@ -4470,6 +4666,18 @@ onMounted(() => {
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--bg2) 80%, transparent));
 }
 
+.plan-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.plan-status-actions .btn {
+  flex: 1 1 120px;
+  justify-content: center;
+}
+
 .module-stage-panel {
   margin-top: 24px;
   border-radius: 24px;
@@ -4610,32 +4818,64 @@ onMounted(() => {
   justify-content: center;
 }
 
-.manual-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.manual-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
 }
 
-.section-title {
+.manual-card {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  box-shadow: 0 16px 34px rgba(2, 6, 23, .45);
+}
+
+.manual-card-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.manual-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+
+.manual-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.manual-card-title {
+  font-size: 18px;
   font-weight: 600;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  font-size: 13px;
+}
+
+.manual-card-sub {
+  color: var(--t3);
+  line-height: 1.4;
 }
 
 .manual-panel .field-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
-.field-grid.compact {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.manual-panel .field-grid.stretch {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .manual-panel .field {
@@ -4663,6 +4903,100 @@ onMounted(() => {
   color: var(--t3);
 }
 
+.manual-panel .field small {
+  font-size: 12px;
+  color: var(--t3);
+}
+
+.manual-panel .field.required span::after {
+  content: ' *';
+  color: var(--accent);
+}
+
+.manual-summary {
+  display: flex;
+  flex-direction: column;
+}
+
+.manual-summary-card {
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  padding: 18px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 16px 32px rgba(2, 6, 23, .45);
+}
+
+.manual-summary-label {
+  font-size: 12px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.manual-summary-route {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: .08em;
+}
+
+.manual-summary-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.manual-accordion {
+  margin-top: 18px;
+  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+  overflow: hidden;
+}
+
+.manual-accordion + .manual-accordion {
+  margin-top: 12px;
+}
+
+.manual-accordion[open] {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 12px 28px rgba(2, 6, 23, .35);
+}
+
+.manual-accordion summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+}
+
+.manual-accordion summary::marker,
+.manual-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.manual-accordion-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 18px 18px;
+}
+
 .form-errors {
   display: flex;
   flex-direction: column;
@@ -4683,24 +5017,67 @@ onMounted(() => {
 .simbrief-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
-.simbrief-callout {
+.simbrief-header {
   display: flex;
-  gap: 12px;
-  align-items: center;
+  gap: 14px;
+  align-items: flex-start;
+  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+  border-radius: 18px;
+  padding: 18px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  box-shadow: 0 16px 34px rgba(2, 6, 23, .45);
 }
 
-.simbrief-meta {
+.simbrief-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+
+.simbrief-copy {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
-  font-size: 13px;
-  color: var(--t3);
 }
 
-.loading-row {
+.simbrief-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.simbrief-steps {
+  display: grid;
+  gap: 6px;
+  padding-left: 18px;
+  color: var(--t3);
+  font-size: 13px;
+  margin: 0;
+}
+
+.simbrief-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.simbrief-form .field {
+  flex: 1 1 220px;
+}
+
+.simbrief-form .btn {
+  flex: 1 1 180px;
+  justify-content: center;
+}
+
+.simbrief-loading {
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -4719,15 +5096,48 @@ onMounted(() => {
   font-size: 13px;
 }
 
+.simbrief-meta-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--bg2) 80%, transparent));
+  padding: 14px 18px;
+  color: var(--text);
+}
+
+.simbrief-meta-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.simbrief-meta-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.simbrief-meta-route {
+  font-size: 13px;
+  color: var(--t3);
+}
+
 .mission-briefing {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.briefing-header {
+
+.briefing-top {
   display: flex;
-  gap: 16px;
+  gap: 18px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -4741,10 +5151,10 @@ onMounted(() => {
   background: color-mix(in srgb, var(--text) 8%, transparent);
 }
 
-.briefing-overview {
+.briefing-top-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .briefing-title {
@@ -4778,38 +5188,64 @@ onMounted(() => {
   text-transform: uppercase;
 }
 
-.briefing-grid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+.briefing-top-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.briefing-card {
+.briefing-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  min-width: 160px;
+}
+
+.briefing-meta-item .label {
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.briefing-meta-item .value {
+  font-weight: 600;
+}
+
+.briefing-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.briefing-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.briefing-section {
   border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
   background: color-mix(in srgb, var(--text) 4%, transparent);
-  padding: 16px;
+  padding: 18px;
+  box-shadow: 0 18px 36px rgba(2, 6, 23, .45);
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: 0 18px 36px rgba(2, 6, 23, .45);
 }
 
-.briefing-card-art {
-  width: 100%;
-  height: 96px;
-  object-fit: cover;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
-}
-
-.card-title {
-  display: flex;
+.briefing-section-head {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: .08em;
+  text-transform: uppercase;
   font-size: 12px;
 }
 
@@ -4822,6 +5258,29 @@ onMounted(() => {
   gap: 6px;
   font-size: 13px;
   color: var(--t3);
+}
+
+.briefing-weather-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.briefing-weather-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.briefing-weather-item .label {
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.briefing-weather-item .value {
+  font-weight: 600;
 }
 
 .briefing-actions {
@@ -4848,11 +5307,14 @@ onMounted(() => {
     width: 100%;
     height: 140px;
   }
+  .manual-grid {
+    grid-template-columns: 1fr;
+  }
   .plan-actions .btn,
   .briefing-actions .btn {
     flex: 1 1 100%;
   }
-  .briefing-header {
+  .briefing-top {
     flex-direction: column;
     align-items: flex-start;
   }
