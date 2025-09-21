@@ -2946,7 +2946,7 @@ export const learnModules: ModuleDef[] = [
   },
   {
     id: 'arc',
-    title: 'Readbacks · Mandatory Acknowledgements',
+    title: 'Readbacks · Essential Calls',
     subtitle: 'Clearances, taxi, approach & landing',
     art: '/img/learn/modules/img11.jpeg',
     lessons: readbackLessons
