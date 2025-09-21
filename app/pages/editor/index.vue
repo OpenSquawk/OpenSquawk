@@ -352,7 +352,7 @@
           <transition name="inspector-slide">
             <aside
               v-if="inspectorOpen && flowDetail"
-              class="w-[380px] shrink-0 overflow-y-auto border-l border-white/10 bg-[#0b1224]/85 backdrop-blur"
+              class="w-[380px] shrink-0 overflow-y-auto border-l border-white/10 bg-[#0b1224]/85 backdrop-blur fixed right-0 bottom-0 top-12"
             >
               <div v-if="nodeForm" class="space-y-5 px-5 py-6">
                 <div class="flex items-start justify-between gap-3">

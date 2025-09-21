@@ -160,7 +160,7 @@
         </div>
       </div>
     </div>
-    <div class="pointer-events-none absolute right-4 top-4 flex flex-col gap-2 text-white">
+    <div class="pointer-events-none fixed left-4 top-20 flex flex-col gap-2 text-white">
       <button class="control-btn" @click.prevent="adjustZoom(1.1)">
         <v-icon icon="mdi-magnify-plus-outline" size="18" />
       </button>
@@ -173,7 +173,8 @@
     </div>
     <div
       ref="minimapRef"
-      class="pointer-events-auto absolute bottom-4 right-4 z-20 rounded-xl border border-white/10 bg-black/40 p-3 shadow-lg"
+      class="pointer-events-auto fixed bottom-4 left-4 z-1000 rounded-xl border border-white/10 bg-black/40 p-3 shadow-lg"
+      style="z-index:1000"
       @click="onMinimapClick"
     >
       <svg :width="minimapSize.width" :height="minimapSize.height" class="block text-white/70">
