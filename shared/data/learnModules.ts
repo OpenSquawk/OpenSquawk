@@ -1,5 +1,5 @@
 import { createBaseScenario, createScenarioSeries, formatTemp } from '~~/shared/learn/scenario'
-import type { ModuleDef } from '~~/shared/learn/types'
+import type { ModuleDef, Scenario } from '~~/shared/learn/types'
 
 function gradientArt(colors: string[]): string {
   const stops = colors
@@ -2194,6 +2194,18 @@ const decisionTreeLessons = [
 
 const fullFlightScenario = createScenarioSeries()
 
+export function seedFullFlightScenario(scenario: Scenario | null) {
+  if (scenario) {
+    fullFlightScenario.setScenario(scenario)
+  } else {
+    fullFlightScenario.setScenario(null)
+  }
+}
+
+export function peekFullFlightScenario(): Scenario | null {
+  return fullFlightScenario.peek()
+}
+
 const makeFullFlightGenerator = (reset = false) => () => {
   if (reset) {
     fullFlightScenario.reset()
@@ -2951,7 +2963,11 @@ export const learnModules: ModuleDef[] = [
     title: 'Full Flight · Gate to Gate',
     subtitle: 'One linked scenario from clearance to taxi-in',
     art: '/img/learn/modules/img6.jpeg',
-    lessons: fullFlightLessons
+    lessons: fullFlightLessons,
+    meta: {
+      flightPlan: true,
+      briefingArt: '/img/learn/missions/full-flight/briefing-hero.png'
+    }
   }
 ]
 
