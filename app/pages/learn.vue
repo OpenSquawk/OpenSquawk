@@ -1187,23 +1187,6 @@ watch(() => missionSetup.mode, () => {
   clearMissionPreview()
 })
 
-watch(panel, value => {
-  if (value === 'hub') {
-    nextTick(() => {
-      updateTileScrollState()
-      if (focusModuleId.value) {
-        scrollModuleIntoView(focusModuleId.value, 'auto')
-      }
-    })
-  }
-})
-
-watch(focusModuleId, id => {
-  if (panel.value === 'hub' && id) {
-    nextTick(() => scrollModuleIntoView(id))
-  }
-})
-
 function ensureMissionContextStore(): Record<string, MissionContext> {
   if (!cfg.value.missionContexts) {
     cfg.value = { ...cfg.value, missionContexts: {} as Record<string, MissionContext> }
@@ -2387,6 +2370,23 @@ const focusModuleId = computed(() => {
   if (active) return active.id
   const unlocked = modules.value.find(module => isModuleUnlocked(module.id))
   return unlocked?.id || modules.value[0]?.id || ''
+})
+
+watch(panel, value => {
+  if (value === 'hub') {
+    nextTick(() => {
+      updateTileScrollState()
+      if (focusModuleId.value) {
+        scrollModuleIntoView(focusModuleId.value, 'auto')
+      }
+    })
+  }
+})
+
+watch(focusModuleId, id => {
+  if (panel.value === 'hub' && id) {
+    nextTick(() => scrollModuleIntoView(id))
+  }
 })
 
 const badgeObjective = computed<Objective | null>(() => {
