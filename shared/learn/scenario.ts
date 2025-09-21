@@ -56,6 +56,18 @@ const readabilityScale = [
   { level: 5, word: 'five', description: 'Perfectly readable' }
 ]
 
+const emergencyProblems = [
+  'engine failure on climb',
+  'smoke in the cabin',
+  'hydraulic failure',
+  'medical emergency on board',
+  'pressurization loss'
+]
+
+const pushDelayOptions = [3, 5, 7, 10]
+const defaultSpeedRestrictions = [180, 200, 210, 220]
+const approachAltitudeOptions = [3000, 4000, 5000, 6000]
+
 const airlines: AirlineData[] = [
   { code: 'DLH', call: 'Lufthansa' },
   { code: 'BAW', call: 'Speedbird' },
@@ -73,9 +85,18 @@ const airportsData: AirportData[] = [
     runways: ['25C', '25R', '07C', '07R', '18'],
     stands: ['V155', 'A12', 'B24', 'G5', 'H43', 'L21'],
     sids: ['ANEKI 7S', 'TOBAK 5Q', 'OBOKA 6N'],
+    stars: ['ANEKI 2A', 'TOBAK 3G', 'UNOKO 1S'],
     transitions: ['ANEKI', 'TOBAK', 'OBOKA'],
+    arrivalTransitions: ['ANEKI', 'TOBAK', 'UNOKO'],
     approaches: ['ILS Z 25C', 'ILS Y 07C'],
+    missedApproaches: [
+      'Climb straight ahead to 3000 feet, then as published.',
+      'As published.'
+    ],
     taxi: ['N3 U4', 'V A', 'N7 K', 'S V12'],
+    taxiIn: ['S N7', 'V12 S1', 'A K5', 'N3 U4'],
+    speedRestrictions: [200, 210],
+    emergencyHeadings: ['180', '220', '270'],
     freqs: {
       atis: '126.350',
       delivery: '121.900',
@@ -94,9 +115,18 @@ const airportsData: AirportData[] = [
     runways: ['26R', '26L', '08R', '08L'],
     stands: ['211', '214', '302', 'N16', 'H45'],
     sids: ['OBAXA 3S', 'MERSI 6S', 'TULSI 5M'],
+    stars: ['OBAXA 4A', 'MERSI 3S', 'TULSI 2M'],
     transitions: ['OBAXA', 'MERSI', 'TULSI'],
+    arrivalTransitions: ['OBAXA', 'MERSI', 'TULSI'],
     approaches: ['ILS Z 26R', 'ILS Y 08R'],
+    missedApproaches: [
+      'Climb to 4000 feet, then as published.',
+      'As published.'
+    ],
     taxi: ['L4 N3', 'P3 W2', 'S1 D2'],
+    taxiIn: ['P3 W2', 'S1 D2', 'L4 N3'],
+    speedRestrictions: [190, 210],
+    emergencyHeadings: ['200', '240', '280'],
     freqs: {
       atis: '122.130',
       delivery: '121.775',
@@ -115,9 +145,18 @@ const airportsData: AirportData[] = [
     runways: ['24', '36L', '18C', '09'],
     stands: ['D14', 'E22', 'F8', 'H4'],
     sids: ['SUGOL 2S', 'ANDIK 2S', 'ARNEM 2V'],
+    stars: ['SUGOL 2A', 'ANDIK 2S', 'ARNEM 2V'],
     transitions: ['SUGOL', 'ANDIK', 'ARNEM'],
+    arrivalTransitions: ['SUGOL', 'ANDIK', 'ARNEM'],
     approaches: ['ILS Z 24', 'ILS Y 18C'],
+    missedApproaches: [
+      'Climb straight ahead to 2000 feet, then left turn ANDIK.',
+      'As published.'
+    ],
     taxi: ['A5 B2', 'K1 V3', 'W4 S8'],
+    taxiIn: ['A5 B2', 'K1 V3', 'W4 S8'],
+    speedRestrictions: [180, 200],
+    emergencyHeadings: ['180', '210', '250'],
     freqs: {
       atis: '136.050',
       delivery: '121.800',
@@ -235,6 +274,16 @@ function visibilityToWords(vis: string): string {
   return vis
 }
 
+function minutesToWords(minutes: number): string {
+  const value = Math.max(1, Math.round(minutes))
+  const unit = value === 1 ? 'minute' : 'minutes'
+  return `${digitsToWords(value.toString())} ${unit}`
+}
+
+function speedToWords(speed: number): string {
+  return `${digitsToWords(Math.round(speed).toString())} knots`
+}
+
 function altitudeToWords(value: number): string {
   const thousands = Math.floor(value / 1000)
   const remainder = value % 1000
@@ -257,7 +306,12 @@ export function createBaseScenario(): Scenario {
   const taxiRoute = choice(airport.taxi)
   const sid = choice(airport.sids)
   const transition = choice(airport.transitions)
-  const approach = choice(airport.approaches)
+  const arrivalRunway = choice(destination.runways)
+  const arrivalStand = choice(destination.stands)
+  const arrivalTaxiRoute = choice(destination.taxiIn ?? destination.taxi)
+  const arrivalStar = choice(destination.stars ?? destination.sids)
+  const arrivalTransition = choice(destination.arrivalTransitions ?? destination.transitions)
+  const approach = choice(destination.approaches)
   const altitude = choice([4000, 5000, 6000, 7000])
   const climbAltitude = altitude + 2000
   const squawk = generateSquawk()
@@ -272,6 +326,26 @@ export function createBaseScenario(): Scenario {
   const dewpoint = Math.max(temperature - randInt(2, 6), -10)
   const atisCode = choice(atisLetters)
   const remarks = choice(['NOSIG', 'BECMG 4000', 'TEMPO -SHRA'])
+  const arrivalQnh = randInt(980, 1035)
+  const arrivalWindDirection = randInt(0, 35) * 10
+  const arrivalWindSpeed = randInt(3, 18)
+  const approachAltitude = choice(approachAltitudeOptions)
+  const speedRestriction = choice(destination.speedRestrictions ?? defaultSpeedRestrictions)
+  const pushDelay = choice(pushDelayOptions)
+  const vectorHeading = (randInt(0, 35) * 10).toString().padStart(3, '0')
+  const emergencyHeadingRaw = destination.emergencyHeadings
+    ? choice(destination.emergencyHeadings)
+    : (randInt(0, 35) * 10).toString()
+  const emergencyHeading = emergencyHeadingRaw.toString().padStart(3, '0')
+  const missedApproach = choice(destination.missedApproaches ?? ['as published'])
+  const emergencyIntentOptions = [
+    `return to ${airport.city}`,
+    `divert to ${destination.city}`,
+    'land at nearest suitable aerodrome',
+    'hold to troubleshoot'
+  ]
+  const emergencyProblem = choice(emergencyProblems)
+  const emergencyIntent = choice(emergencyIntentOptions)
   const now = new Date()
   const minute = Math.floor(now.getUTCMinutes() / 5) * 5
   const timestamp = `${now.getUTCDate().toString().padStart(2, '0')}${now
@@ -283,6 +357,17 @@ export function createBaseScenario(): Scenario {
   const metar = `${airport.icao} ${timestamp} ${metarWindGroup} ${visibility} ${cloud} ${tempGroup} Q${qnh
     .toString()
     .padStart(4, '0')} ${remarks}`
+  const arrivalWind = `${arrivalWindDirection.toString().padStart(3, '0')}/${arrivalWindSpeed
+    .toString()
+    .padStart(2, '0')}`
+  const arrivalRunwayWords = runwayToWords(arrivalRunway)
+  const arrivalWindWords = windToWords(arrivalWindDirection, arrivalWindSpeed)
+  const arrivalQnhWords = qnhToWords(arrivalQnh)
+  const approachAltitudeWords = altitudeToWords(approachAltitude)
+  const speedRestrictionWords = speedToWords(speedRestriction)
+  const pushDelayWords = minutesToWords(pushDelay)
+  const vectorHeadingWords = digitsToWords(vectorHeading)
+  const emergencyHeadingWords = digitsToWords(emergencyHeading)
 
   const frequencies: Frequency[] = [
     { type: 'ATIS', label: 'ATIS', value: airport.freqs.atis },
@@ -324,6 +409,16 @@ export function createBaseScenario(): Scenario {
     sid,
     transition,
     approach,
+    arrivalRunway,
+    arrivalRunwayWords,
+    arrivalTaxiRoute,
+    arrivalStand,
+    arrivalStar,
+    arrivalTransition,
+    arrivalQnh,
+    arrivalQnhWords,
+    arrivalWind,
+    arrivalWindWords,
     altitudes: {
       initial: altitude,
       climb: climbAltitude,
@@ -352,6 +447,17 @@ export function createBaseScenario(): Scenario {
     temperatureWords: temperatureToWords(temperature),
     dewpoint,
     dewpointWords: temperatureToWords(dewpoint),
+    approachAltitude,
+    approachAltitudeWords,
+    pushDelayMinutes: pushDelay,
+    pushDelayWords,
+    speedRestriction,
+    speedRestrictionWords,
+    vectorHeading,
+    vectorHeadingWords,
+    emergencyHeading,
+    emergencyHeadingWords,
+    missedApproach,
     metar,
     metarSegments: {
       wind: metarWindGroup,
@@ -372,6 +478,31 @@ export function createBaseScenario(): Scenario {
     approachFreq: airport.freqs.approach,
     centerFreq: airport.freqs.center,
     transLevel: airport.transLevel,
-    remarks
+    remarks,
+    emergencyProblem,
+    emergencyIntent
   }
+}
+
+function cloneScenario(scenario: Scenario): Scenario {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(scenario)
+  }
+  return JSON.parse(JSON.stringify(scenario)) as Scenario
+}
+
+export type ScenarioGenerator = (() => Scenario) & { reset: () => void }
+
+export function createScenarioSeries(): ScenarioGenerator {
+  let cached: Scenario | null = null
+  const generator = () => {
+    if (!cached) {
+      cached = createBaseScenario()
+    }
+    return cloneScenario(cached)
+  }
+  generator.reset = () => {
+    cached = null
+  }
+  return generator
 }

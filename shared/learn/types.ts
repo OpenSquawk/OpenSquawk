@@ -15,9 +15,15 @@ export type AirportData = {
   runways: string[]
   stands: string[]
   sids: string[]
+  stars?: string[]
   transitions: string[]
+  arrivalTransitions?: string[]
   approaches: string[]
+  missedApproaches?: string[]
   taxi: string[]
+  taxiIn?: string[]
+  speedRestrictions?: number[]
+  emergencyHeadings?: string[]
   freqs: {
     atis: string
     delivery: string
@@ -52,6 +58,16 @@ export type Scenario = {
   sid: string
   transition: string
   approach: string
+  arrivalRunway: string
+  arrivalRunwayWords: string
+  arrivalTaxiRoute: string
+  arrivalStand: string
+  arrivalStar: string
+  arrivalTransition: string
+  arrivalQnh: number
+  arrivalQnhWords: string
+  arrivalWind: string
+  arrivalWindWords: string
   altitudes: {
     initial: number
     climb: number
@@ -80,6 +96,17 @@ export type Scenario = {
   temperatureWords: string
   dewpoint: number
   dewpointWords: string
+  approachAltitude: number
+  approachAltitudeWords: string
+  pushDelayMinutes: number
+  pushDelayWords: string
+  speedRestriction: number
+  speedRestrictionWords: string
+  vectorHeading: string
+  vectorHeadingWords: string
+  emergencyHeading: string
+  emergencyHeadingWords: string
+  missedApproach: string
   metar: string
   metarSegments: {
     wind: string
@@ -101,6 +128,8 @@ export type Scenario = {
   centerFreq: string
   transLevel: string
   remarks: string
+  emergencyProblem: string
+  emergencyIntent: string
 }
 
 export type LessonField = {
