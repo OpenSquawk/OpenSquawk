@@ -34,13 +34,6 @@
       <div class="container">
         <div class="panel hero-panel" :style="worldTiltStyle" @mousemove="tilt">
           <div class="hero-left">
-            <div class="hero-header">
-              <div class="eyebrow">Season 1 · Ground School</div>
-              <div class="hero-pill">
-                <v-icon size="16">mdi-trophy</v-icon>
-                {{ currentBadge.name }}
-              </div>
-            </div>
             <h1 class="h1">Pilot Comms Trainer</h1>
             <p class="muted hero-sub">
               Build confident pilot readbacks with scenario-driven missions, instant scoring, and badges that react to your flying.
@@ -98,96 +91,35 @@
                 Resume
               </button>
             </div>
-
-            <div class="hero-metrics">
-              <div class="metric-card">
-                <div class="metric-icon"><v-icon size="20">mdi-headset</v-icon></div>
-                <div class="metric-main">
-                  <div class="metric-value">{{ finishedLessons }}/{{ totalLessons }}</div>
-                  <div class="metric-label">Lessons complete</div>
-                </div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-icon"><v-icon size="20">mdi-target-account</v-icon></div>
-                <div class="metric-main">
-                  <div class="metric-value">{{ missionCompletionPct }}%</div>
-                  <div class="metric-label">Mission progress</div>
-                </div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-icon"><v-icon size="20">mdi-star-shooting</v-icon></div>
-                <div class="metric-main">
-                  <div class="metric-value">{{ finishedLessons ? globalAccuracy + '%' : '—' }}</div>
-                  <div class="metric-label">Avg. best score</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="season" v-if="primaryObjective">
-              <div class="season-head">
-                <span>Today's focus</span>
-                <span>{{ primaryObjective.status }}</span>
-              </div>
-              <div class="bar">
-                <div class="fill" :style="{ width: primaryObjectiveProgress + '%' }"></div>
-              </div>
-            </div>
           </div>
 
           <div class="hero-right">
-            <div class="badge-stack">
-              <div class="badge-card current">
-                <div class="badge-chip">
-                  <v-icon size="16">mdi-shield-star</v-icon>
-                  Current badge
-                </div>
-                <div class="badge-name">{{ currentBadge.name }}</div>
-                <p class="muted small">{{ currentBadge.description }}</p>
+            <div class="hero-stats">
+              <div class="hero-stats-title">
+                <v-icon size="18">mdi-chart-line</v-icon>
+                Mission stats
               </div>
-              <div v-if="nextBadge" class="badge-card next">
-                <div class="badge-chip accent">
-                  <v-icon size="16">mdi-star-plus</v-icon>
-                  Next badge
-                </div>
-                <div class="badge-name">{{ nextBadge.name }}</div>
-                <p class="muted small">{{ nextBadgeXpRemaining }} XP to unlock</p>
-                <div class="badge-progress" role="progressbar" :aria-valuenow="nextBadgeProgress" aria-valuemin="0" aria-valuemax="100">
-                  <div class="badge-progress-fill" :style="{ width: nextBadgeProgress + '%' }"></div>
-                </div>
-              </div>
-              <div v-else class="badge-card next complete">
-                <div class="badge-chip accent">
-                  <v-icon size="16">mdi-shield-check</v-icon>
-                  All badges unlocked
-                </div>
-                <p class="muted small">Future seasons will add more callsigns and flair.</p>
-              </div>
-            </div>
-
-            <div class="rail-title">
-              <v-icon size="18">mdi-target-account</v-icon>
-              Daily Focus
-            </div>
-            <div class="rail">
-              <div
-                  v-for="objective in dailyObjectives"
-                  :key="objective.id"
-                  class="card challenge-card"
-                  :class="{ done: objective.complete }"
-              >
-                <div class="card-head">
-                  <span class="badge" :class="{ complete: objective.complete }">
-                    {{ objectiveBadgeLabel(objective) }}
-                  </span>
-                  <v-icon size="18">{{ objective.icon }}</v-icon>
-                </div>
-                <div class="card-title">{{ objective.title }}</div>
-                <div class="card-sub muted">{{ objective.description }}</div>
-                <div class="objective-progress">
-                  <div class="objective-progress-bar">
-                    <div class="objective-progress-fill" :style="{ width: objectiveProgressPct(objective) + '%' }"></div>
+              <div class="hero-metrics">
+                <div class="metric-card">
+                  <div class="metric-icon"><v-icon size="20">mdi-headset</v-icon></div>
+                  <div class="metric-main">
+                    <div class="metric-value">{{ finishedLessons }}/{{ totalLessons }}</div>
+                    <div class="metric-label">Lessons complete</div>
                   </div>
-                  <div class="objective-progress-meta">{{ objective.status }}</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-icon"><v-icon size="20">mdi-target-account</v-icon></div>
+                  <div class="metric-main">
+                    <div class="metric-value">{{ missionCompletionPct }}%</div>
+                    <div class="metric-label">Mission progress</div>
+                  </div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-icon"><v-icon size="20">mdi-star-shooting</v-icon></div>
+                  <div class="metric-main">
+                    <div class="metric-value">{{ finishedLessons ? globalAccuracy + '%' : '—' }}</div>
+                    <div class="metric-label">Avg. best score</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2092,36 +2024,6 @@ onMounted(() => {
   box-shadow: 0 30px 80px rgba(0, 0, 0, .35)
 }
 
-.hero-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px
-}
-
-.hero-left .eyebrow {
-  font-size: 12px;
-  letter-spacing: .18em;
-  color: var(--t3);
-  text-transform: uppercase
-}
-
-.hero-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
-  font-size: 12px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  box-shadow: 0 6px 20px rgba(34, 211, 238, .25)
-}
-
 .hero-sub {
   max-width: 520px;
   margin-top: 4px
@@ -2343,197 +2245,38 @@ onMounted(() => {
   margin-top: 16px
 }
 
-.season {
-  margin-top: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px
-}
-
-.season-head {
-  display: flex;
-  justify-content: space-between;
-  color: var(--t3);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: .14em
-}
-
-.bar {
-  height: 8px;
-  background: color-mix(in srgb, var(--text) 8%, transparent);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  overflow: hidden
-}
-
-.fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent2))
-}
-
 .hero-right {
   display: flex;
   flex-direction: column;
   gap: clamp(12px, 2vw, 16px)
 }
 
-.badge-stack {
+.hero-stats {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: clamp(14px, 3vw, 20px);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .26);
   display: flex;
   flex-direction: column;
-  gap: 12px
+  gap: 12px;
+  animation: float 16s ease-in-out infinite
 }
 
-.badge-card {
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 16px;
-  background: color-mix(in srgb, var(--text) 5%, transparent);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, .24);
-  animation: float 14s ease-in-out infinite
-}
-
-.badge-card.current {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 28%, transparent), color-mix(in srgb, var(--accent2) 18%, transparent));
-  color: var(--text)
-}
-
-.badge-card.next.complete {
-  opacity: .9
-}
-
-.badge-chip {
+.hero-stats-title {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
-  background: color-mix(in srgb, var(--text) 12%, transparent);
-  font-size: 11px;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--t2)
-}
-
-.badge-chip.accent {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent)
-}
-
-.badge-name {
-  font-size: 22px;
-  font-weight: 600;
-  margin-top: 10px
-}
-
-.badge-progress {
-  margin-top: 14px;
-  height: 8px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
-  background: color-mix(in srgb, var(--text) 8%, transparent);
-  overflow: hidden
-}
-
-.badge-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  transition: width .4s ease
-}
-
-.hero-right .rail-title {
-  color: var(--t3);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: .14em;
-  font-size: 12px
-}
-
-.rail {
-  display: flex;
-  gap: 12px;
-  overflow: auto;
-  padding-bottom: 4px
-}
-
-.card {
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-  padding: 14px;
-  min-width: 240px;
-  border-radius: 16px
-}
-
-.challenge-card {
-  position: relative;
-  overflow: hidden;
-  transition: transform .3s ease, box-shadow .3s ease
-}
-
-.challenge-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(140% 140% at 0% 100%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%);
-  opacity: 0;
-  transition: opacity .3s ease;
-  pointer-events: none
-}
-
-.challenge-card:hover {
-  box-shadow: 0 16px 34px rgba(0, 0, 0, .28)
-}
-
-.challenge-card:hover::after {
-  opacity: 1
-}
-
-.challenge-card.done {
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, .18);
-}
-
-.challenge-card.done::after {
-  opacity: .4;
-}
-
-.challenge-card.done:hover {
-  transform: none;
-}
-
-.card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center
-}
-
-.badge {
-  border: 1px solid var(--border);
-  padding: 2px 8px;
+  gap: 8px;
   font-size: 12px;
-  color: var(--t2);
-  border-radius: 999px;
-  letter-spacing: .08em;
-  text-transform: uppercase
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--t3)
 }
 
-.badge.complete {
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  color: var(--accent);
+.hero-right .hero-metrics {
+  margin-top: 0
 }
 
-.card-title {
-  font-weight: 600;
-  margin: 6px 0 2px
-}
 
 /* Buttons */
 .btn {
