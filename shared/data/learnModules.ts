@@ -2929,28 +2929,28 @@ export const learnModules: ModuleDef[] = [
     id: 'normalize',
     title: 'Fundamentals · Basics',
     subtitle: 'Alphabet, Call Signs, ATIS & METAR',
-    art: '/img/learn/modules/img10.jpeg',
+    art: '/img/learn/modules/img14.jpeg',
     lessons: fundamentalsLessons
   },
   {
     id: 'arc',
     title: 'Readbacks · Mandatory Acknowledgements',
     subtitle: 'Clearances, taxi, approach & landing',
-    art: '/img/learn/modules/img3.jpeg',
+    art: '/img/learn/modules/img11.jpeg',
     lessons: readbackLessons
   },
   {
     id: 'decision-tree',
-    title: 'ATC Decision Tree · Advanced Flow',
+    title: 'ATC · Advanced Calls',
     subtitle: 'Requests, contingencies & interrupts',
-    art: gradientArt(['#0f172a', '#1e293b', '#38bdf8']),
+    art: '/img/learn/modules/img10.jpeg',
     lessons: decisionTreeLessons
   },
   {
     id: 'full-flight',
     title: 'Full Flight · Gate to Gate',
     subtitle: 'One linked scenario from clearance to taxi-in',
-    art: '/img/learn/modules/img6.jpeg',
+    art: '/img/learn/modules/img12.jpeg',
     lessons: fullFlightLessons
   }
 ]
