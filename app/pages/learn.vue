@@ -29,82 +29,6 @@
       </nav>
     </header>
 
-
-    <!-- HERO -->
-    <section v-if="panel==='hub'" class="hero" role="region" aria-label="Intro">
-      <div class="container">
-        <div class="panel hero-panel" :style="worldTiltStyle" @mousemove="tilt">
-          <div class="hero-left">
-            <h1 class="h1">Pilot Comms Trainer</h1>
-            <p class="muted hero-sub">
-              Build confident pilot readbacks with scenario-driven missions, instant scoring, and badges that react to
-              your flying.
-            </p>
-
-
-            <div v-if="missionObjective && !missionObjective.complete" class="objective-callout">
-              <div class="objective-body">
-                <div class="objective-title-row">
-                  <v-icon size="18">{{ missionObjective.icon }}</v-icon>
-                  <span class="objective-title">{{ missionObjective.title }}</span>
-                </div>
-                <p class="muted small">{{ missionObjective.description }}</p>
-                <div class="objective-progress">
-                  <div class="objective-progress-bar">
-                    <div class="objective-progress-fill"
-                         :style="{ width: objectiveProgressPct(missionObjective) + '%' }"></div>
-                  </div>
-                  <div class="objective-progress-meta">{{ missionObjective.status }}</div>
-                </div>
-              </div>
-              <button class="btn primary" type="button" @click="resumeMissionObjective">
-                <v-icon size="18">mdi-play</v-icon>
-                Resume
-              </button>
-            </div>
-          </div>
-
-          <div class="hero-right">
-            <div class="hero-stats">
-              <div class="hero-stats-title">
-                <v-icon size="18">mdi-chart-line</v-icon>
-                Mission stats
-              </div>
-              <div class="hero-metrics">
-                <div class="metric-card">
-                  <div class="metric-icon">
-                    <v-icon size="20">mdi-headset</v-icon>
-                  </div>
-                  <div class="metric-main">
-                    <div class="metric-value">{{ finishedLessons }}/{{ totalLessons }}</div>
-                    <div class="metric-label">Lessons complete</div>
-                  </div>
-                </div>
-                <div class="metric-card">
-                  <div class="metric-icon">
-                    <v-icon size="20">mdi-target</v-icon>
-                  </div>
-                  <div class="metric-main">
-                    <div class="metric-value">{{ missionCompletionPct }}%</div>
-                    <div class="metric-label">Mission progress</div>
-                  </div>
-                </div>
-                <div class="metric-card">
-                  <div class="metric-icon">
-                    <v-icon size="20">mdi-star-shooting</v-icon>
-                  </div>
-                  <div class="metric-main">
-                    <div class="metric-value">{{ finishedLessons ? globalAccuracy + '%' : '—' }}</div>
-                    <div class="metric-label">Avg. best score</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- HUB -->
     <main v-if="panel==='hub'" class="container" role="main">
       <div class="hub-head">
@@ -528,7 +452,7 @@
                 <span><v-icon size="16">mdi-airplane-cog</v-icon> Real routes</span>
                 <span><v-icon size="16">mdi-clock-fast</v-icon> Instant setup</span>
                 <a
-                    href="https://www.simbrief.com/home/flight_planning.html"
+                    href="https://dispatch.simbrief.com/options/new"
                     target="_blank"
                     rel="noopener"
                     class="simbrief-link"
@@ -644,7 +568,6 @@
               <div class="hero-detail">
                 <span class="hero-detail-label">Delivery</span>
                 <span class="hero-detail-value">{{ briefingSnapshot.departure.freq }}</span>
-                <span class="hero-detail-sub">{{ briefingSnapshot.departure.freqWords }}</span>
               </div>
               <div class="hero-detail">
                 <span class="hero-detail-label">Push</span>
@@ -657,50 +580,6 @@
             </div>
           </div>
         </section>
-
-        <section class="briefing-summary">
-          <article class="briefing-summary-card">
-            <div class="summary-icon summary-icon--primary">
-              <v-icon size="20">mdi-airplane</v-icon>
-            </div>
-            <div class="summary-body">
-              <span class="summary-label">Callsign</span>
-              <span class="summary-value">{{ briefingSnapshot.callsign }}</span>
-              <span class="summary-sub">{{ briefingSnapshot.radioCall }}</span>
-            </div>
-          </article>
-          <article class="briefing-summary-card">
-            <div class="summary-icon summary-icon--departure">
-              <v-icon size="20">mdi-airplane-takeoff</v-icon>
-            </div>
-            <div class="summary-body">
-              <span class="summary-label">Departure</span>
-              <span class="summary-value">{{ briefingSnapshot.departure.icao }} · RWY {{ briefingSnapshot.departure.runway }}</span>
-              <span class="summary-sub">{{ briefingSnapshot.departure.city }}</span>
-            </div>
-          </article>
-          <article class="briefing-summary-card">
-            <div class="summary-icon summary-icon--arrival">
-              <v-icon size="20">mdi-airplane-landing</v-icon>
-            </div>
-            <div class="summary-body">
-              <span class="summary-label">Arrival</span>
-              <span class="summary-value">{{ briefingSnapshot.arrival.icao }} · RWY {{ briefingSnapshot.arrival.runway }}</span>
-              <span class="summary-sub">{{ briefingSnapshot.arrival.city }}</span>
-            </div>
-          </article>
-          <article class="briefing-summary-card">
-            <div class="summary-icon summary-icon--codes">
-              <v-icon size="20">mdi-radar</v-icon>
-            </div>
-            <div class="summary-body">
-              <span class="summary-label">Codes</span>
-              <span class="summary-value">Squawk {{ briefingSnapshot.codes.squawk }}</span>
-              <span class="summary-sub">Push {{ briefingSnapshot.codes.push }}</span>
-            </div>
-          </article>
-        </section>
-
         <div class="briefing-layout">
           <div class="briefing-main-grid">
             <div class="briefing-card">
@@ -3216,15 +3095,6 @@ function resetAll() {
   dirtyState.xp = true
   dirtyState.config = true
   schedulePersist(true)
-}
-
-const worldTiltStyle = ref<any>({})
-
-function tilt(event: MouseEvent) {
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  const dx = (event.clientX - (rect.left + rect.width / 2)) / rect.width
-  const dy = (event.clientY - (rect.top + rect.height / 2)) / rect.height
-  worldTiltStyle.value = {transform: `perspective(1200px) rotateX(${dy * -3}deg) rotateY(${dx * 3}deg)`}
 }
 
 async function ensureSpeechAudioContext(): Promise<AudioContext | null> {
@@ -6079,100 +5949,6 @@ onMounted(() => {
   font-size: 14px;
   letter-spacing: .05em;
   text-transform: uppercase;
-}
-
-.hero-detail-sub {
-  font-size: 12px;
-  color: rgba(226, 232, 240, .7);
-}
-
-.briefing-summary {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-}
-
-.briefing-summary-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 18px;
-  padding: 22px;
-  border-radius: 24px;
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
-  background: linear-gradient(140deg, color-mix(in srgb, var(--bg2) 82%, transparent), color-mix(in srgb, var(--text) 6%, transparent));
-  box-shadow: 0 24px 48px rgba(2, 6, 23, .48);
-  overflow: hidden;
-}
-
-.briefing-summary-card::after {
-  content: "";
-  position: absolute;
-  inset: 18px 18px auto auto;
-  width: 120px;
-  height: 120px;
-  background: radial-gradient(60px 60px at center, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%);
-  opacity: .25;
-  pointer-events: none;
-}
-
-.summary-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
-  display: grid;
-  place-items: center;
-  font-size: 20px;
-  color: white;
-  box-shadow: 0 16px 28px rgba(2, 6, 23, .45);
-  position: relative;
-  z-index: 1;
-}
-
-.summary-icon--primary {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 60%, transparent), color-mix(in srgb, var(--accent2) 50%, transparent));
-}
-
-.summary-icon--departure {
-  background: linear-gradient(135deg, color-mix(in srgb, #60a5fa 60%, transparent), color-mix(in srgb, #2563eb 45%, transparent));
-}
-
-.summary-icon--arrival {
-  background: linear-gradient(135deg, color-mix(in srgb, #f472b6 60%, transparent), color-mix(in srgb, #db2777 45%, transparent));
-}
-
-.summary-icon--codes {
-  background: linear-gradient(135deg, color-mix(in srgb, #fbbf24 60%, transparent), color-mix(in srgb, #d97706 45%, transparent));
-  color: #1f2937;
-}
-
-.summary-body {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  position: relative;
-  z-index: 1;
-}
-
-.summary-label {
-  font-size: 12px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--t3) 80%, transparent);
-}
-
-.summary-value {
-  font-weight: 700;
-  font-size: 20px;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-}
-
-.summary-sub {
-  font-size: 13px;
-  color: color-mix(in srgb, var(--t3) 78%, transparent);
-  letter-spacing: .02em;
 }
 
 .briefing-layout {
