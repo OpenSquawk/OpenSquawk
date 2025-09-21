@@ -94,7 +94,7 @@ const publicEndpoints = [
   { method: 'POST', path: '/api/service/auth/register', description: 'Register with an invitation code and mandatory consents.' },
   { method: 'POST', path: '/api/service/auth/refresh', description: 'Refresh the access token using the refresh cookie.' },
   { method: 'GET', path: '/api/service/invitations/{code}', description: 'Validate an invitation code (valid, expired, already used).' },
-  { method: 'POST', path: '/api/service/invitations/bootstrap', description: 'Generate a bootstrap invitation code (active until 2024-07-01, optional label).' },
+  { method: 'POST', path: '/api/service/invitations/bootstrap', description: 'Generate a bootstrap invitation code (active until 2025-07-01, optional label).' },
   { method: 'POST', path: '/api/service/invitations/manual', description: 'Create a manual invitation code via password-protected endpoint (internal).' },
 ]
 

@@ -994,7 +994,7 @@
         </div>
 
         <div class="footer-meta">
-          <span class="muted small">&copy; 2024 OpenSquawk. All rights reserved.</span>
+          <span class="muted small">&copy; 2025 OpenSquawk. All rights reserved.</span>
         </div>
       </div>
     </footer>
