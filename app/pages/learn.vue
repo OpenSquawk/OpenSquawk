@@ -1195,6 +1195,7 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch} from 'vue'
+import type {LocationQuery, LocationQueryRaw} from 'vue-router'
 import {useApi} from '~/composables/useApi'
 import {createDefaultLearnConfig} from '~~/shared/learn/config'
 import type {LearnConfig, LearnProgress, LearnState} from '~~/shared/learn/config'
@@ -1979,6 +1980,229 @@ function goToHub() {
   seedFullFlightScenario(null)
 }
 
+type LearnNavPanel = 'hub' | 'module'
+type LearnNavStage = 'lessons' | 'setup' | 'briefing'
+type LearnNavReturnStage = 'setup' | 'lessons'
+
+type LearnNavState = {
+  panel: LearnNavPanel
+  moduleId: string | null
+  stage: LearnNavStage | null
+  lessonId: string | null
+  planMode: FlightPlanMode | null
+  returnStage: LearnNavReturnStage | null
+}
+
+const NAV_QUERY_KEYS = new Set(['panel', 'module', 'stage', 'lesson', 'plan', 'returnStage'])
+
+function readQueryParam(query: LocationQuery, key: string): string | null {
+  const value = query[key]
+  if (Array.isArray(value)) {
+    return value.length ? (typeof value[0] === 'string' ? value[0] : null) : null
+  }
+  return typeof value === 'string' ? value : null
+}
+
+function extractNavStateFromRoute(query: LocationQuery): LearnNavState {
+  const moduleIdParam = readQueryParam(query, 'module')
+  const panelParam = readQueryParam(query, 'panel')
+  const panel: LearnNavPanel = panelParam === 'module' || moduleIdParam ? 'module' : 'hub'
+  const stageParam = readQueryParam(query, 'stage')
+  let stage: LearnNavStage | null = null
+  if (panel === 'module') {
+    if (stageParam === 'lessons' || stageParam === 'setup' || stageParam === 'briefing') {
+      stage = stageParam
+    }
+  }
+  const lessonId = panel === 'module' && stage === 'lessons' ? readQueryParam(query, 'lesson') : null
+  let planMode: FlightPlanMode | null = null
+  if (panel === 'module' && stage === 'setup') {
+    const planParam = readQueryParam(query, 'plan')
+    if (planParam === 'random' || planParam === 'manual' || planParam === 'simbrief') {
+      planMode = planParam
+    }
+  }
+  let returnStage: LearnNavReturnStage | null = null
+  if (panel === 'module' && stage === 'briefing') {
+    const returnParam = readQueryParam(query, 'returnStage')
+    if (returnParam === 'setup' || returnParam === 'lessons') {
+      returnStage = returnParam
+    }
+  }
+
+  return {
+    panel,
+    moduleId: panel === 'module' ? moduleIdParam : null,
+    stage,
+    lessonId,
+    planMode,
+    returnStage
+  }
+}
+
+function getCurrentNavState(): LearnNavState {
+  const panelState: LearnNavPanel = panel.value === 'module' ? 'module' : 'hub'
+  const moduleId = panelState === 'module' ? current.value?.id ?? null : null
+  const stageState: LearnNavStage | null = panelState === 'module' ? moduleStage.value : null
+  const lessonId = stageState === 'lessons' ? activeLesson.value?.id ?? null : null
+  const planMode = stageState === 'setup' ? flightPlanMode.value : null
+  const returnStage = stageState === 'briefing' ? briefingReturnStage.value : null
+  return {panel: panelState, moduleId, stage: stageState, lessonId, planMode, returnStage}
+}
+
+function navStatesEqual(a: LearnNavState, b: LearnNavState): boolean {
+  return (
+    a.panel === b.panel &&
+    a.moduleId === b.moduleId &&
+    a.stage === b.stage &&
+    a.lessonId === b.lessonId &&
+    a.planMode === b.planMode &&
+    a.returnStage === b.returnStage
+  )
+}
+
+function buildQueryFromNav(nav: LearnNavState, base: LocationQuery): LocationQueryRaw {
+  const next: LocationQueryRaw = {}
+  for (const [key, value] of Object.entries(base)) {
+    if (!NAV_QUERY_KEYS.has(key)) {
+      next[key] = value as any
+    }
+  }
+  if (nav.panel === 'module' && nav.moduleId) {
+    next.panel = 'module'
+    next.module = nav.moduleId
+    if (nav.stage) {
+      next.stage = nav.stage
+      if (nav.stage === 'lessons' && nav.lessonId) {
+        next.lesson = nav.lessonId
+      } else if (nav.stage === 'setup' && nav.planMode) {
+        next.plan = nav.planMode
+      } else if (nav.stage === 'briefing' && nav.returnStage) {
+        next.returnStage = nav.returnStage
+      }
+    }
+  }
+  return next
+}
+
+let syncingRoute = false
+let pendingRouteSync = false
+
+async function syncRouteFromState() {
+  if (!isClient) return
+  const target = getCurrentNavState()
+  const currentQueryState = extractNavStateFromRoute(route.query)
+  if (navStatesEqual(target, currentQueryState)) {
+    pendingRouteSync = false
+    return
+  }
+  if (syncingRoute) {
+    pendingRouteSync = true
+    return
+  }
+  syncingRoute = true
+  try {
+    const nextQuery = buildQueryFromNav(target, route.query)
+    await router.replace({query: nextQuery})
+  } catch (error) {
+    console.warn('Failed to sync learn navigation state', error)
+  } finally {
+    syncingRoute = false
+    if (pendingRouteSync) {
+      pendingRouteSync = false
+      void syncRouteFromState()
+    }
+  }
+}
+
+function applyRouteState(query: LocationQuery) {
+  const nav = extractNavStateFromRoute(query)
+  if (nav.panel === 'module' && nav.moduleId) {
+    const module = modules.value.find(item => item.id === nav.moduleId) || null
+    if (!module) {
+      goToHub()
+      void syncRouteFromState()
+      return
+    }
+    if (!current.value || current.value.id !== module.id || panel.value !== 'module') {
+      openModule(module.id)
+    } else {
+      panel.value = 'module'
+    }
+
+    let desiredStage: LearnNavStage | null = nav.stage
+
+    if (!requiresFlightPlan.value) {
+      desiredStage = 'lessons'
+    } else {
+      if (!desiredStage) {
+        desiredStage = currentPlan.value?.scenario ? 'lessons' : 'setup'
+      }
+      if (desiredStage === 'lessons' && !currentPlan.value?.scenario) {
+        desiredStage = 'setup'
+      }
+      if (desiredStage === 'briefing') {
+        if (!draftPlanScenario.value && currentPlan.value?.scenario) {
+          draftPlanScenario.value = cloneScenarioData(currentPlan.value.scenario)
+          flightPlanMode.value = currentPlan.value.mode
+        }
+        if (!briefingSnapshot.value) {
+          desiredStage = currentPlan.value?.scenario ? 'lessons' : 'setup'
+        }
+      }
+    }
+
+    if (!desiredStage) {
+      desiredStage = 'lessons'
+    }
+
+    moduleStage.value = desiredStage
+
+    if (desiredStage === 'lessons') {
+      if (nav.lessonId) {
+        const lesson = module.lessons.find(item => item.id === nav.lessonId)
+        if (lesson) {
+          activeLesson.value = lesson
+        }
+      }
+    } else if (desiredStage === 'setup') {
+      if (nav.planMode) {
+        flightPlanMode.value = nav.planMode
+      }
+    } else if (desiredStage === 'briefing') {
+      if (nav.returnStage) {
+        briefingReturnStage.value = nav.returnStage
+      }
+    }
+  } else {
+    if (panel.value !== 'hub') {
+      goToHub()
+    } else {
+      panel.value = 'hub'
+    }
+  }
+
+  void syncRouteFromState()
+}
+
+applyRouteState(route.query)
+
+if (isClient) {
+  watch(
+    [panel, () => current.value?.id ?? null, moduleStage, () => activeLesson.value?.id ?? null, flightPlanMode, briefingReturnStage],
+    () => {
+      void syncRouteFromState()
+    }
+  )
+
+  watch(
+    () => route.query,
+    newQuery => {
+      applyRouteState(newQuery)
+    }
+  )
+}
+
 function readProp(source: any, key: string): any {
   if (!source || typeof source !== 'object') return undefined
   if (key in source) return source[key]
@@ -2083,6 +2307,8 @@ const audioReveal = ref(true)
 const toast = ref({show: false, text: ''})
 const showSettings = ref(false)
 const api = useApi()
+const route = useRoute()
+const router = useRouter()
 
 const isClient = typeof window !== 'undefined'
 const defaultCfg = createDefaultLearnConfig()
