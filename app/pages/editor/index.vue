@@ -2,7 +2,7 @@
   <v-app>
   <div class="min-h-screen bg-[#050910] text-white">
     <div class="flex h-screen overflow-hidden">
-      <main class="flex flex-1 flex-col">
+      <main class="flex flex-1 min-h-0 flex-col">
         <v-app-bar
           flat
           density="comfortable"
@@ -322,8 +322,8 @@
             {{ flowsError }}
           </v-alert>
         </div>
-        <div class="flex flex-1 overflow-hidden">
-          <section class="relative flex-1 overflow-hidden bg-[#070d1a]">
+        <div class="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+          <section class="relative flex-1 min-h-0 min-w-0 overflow-hidden bg-[#070d1a]">
             <DecisionNodeCanvas
               v-if="flowDetail"
               ref="canvasComponent"
@@ -352,7 +352,7 @@
           <transition name="inspector-slide">
             <aside
               v-if="inspectorOpen && flowDetail"
-              class="w-[380px] shrink-0 overflow-y-auto border-l border-white/10 bg-[#0b1224]/85 backdrop-blur"
+              class="flex h-full w-[380px] shrink-0 flex-col overflow-y-auto border-l border-white/10 bg-[#0b1224]/85 backdrop-blur"
             >
               <div v-if="nodeForm" class="space-y-5 px-5 py-6">
                 <div class="flex items-start justify-between gap-3">
