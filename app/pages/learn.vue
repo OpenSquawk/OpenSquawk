@@ -660,35 +660,43 @@
 
         <section class="briefing-summary">
           <article class="briefing-summary-card">
-            <v-icon size="20">mdi-airplane</v-icon>
-            <div>
+            <div class="summary-icon summary-icon--primary">
+              <v-icon size="20">mdi-airplane</v-icon>
+            </div>
+            <div class="summary-body">
               <span class="summary-label">Callsign</span>
               <span class="summary-value">{{ briefingSnapshot.callsign }}</span>
-              <span class="summary-sub muted small">{{ briefingSnapshot.radioCall }}</span>
+              <span class="summary-sub">{{ briefingSnapshot.radioCall }}</span>
             </div>
           </article>
           <article class="briefing-summary-card">
-            <v-icon size="20">mdi-airplane-takeoff</v-icon>
-            <div>
+            <div class="summary-icon summary-icon--departure">
+              <v-icon size="20">mdi-airplane-takeoff</v-icon>
+            </div>
+            <div class="summary-body">
               <span class="summary-label">Departure</span>
               <span class="summary-value">{{ briefingSnapshot.departure.icao }} · RWY {{ briefingSnapshot.departure.runway }}</span>
-              <span class="summary-sub muted small">{{ briefingSnapshot.departure.city }}</span>
+              <span class="summary-sub">{{ briefingSnapshot.departure.city }}</span>
             </div>
           </article>
           <article class="briefing-summary-card">
-            <v-icon size="20">mdi-airplane-landing</v-icon>
-            <div>
+            <div class="summary-icon summary-icon--arrival">
+              <v-icon size="20">mdi-airplane-landing</v-icon>
+            </div>
+            <div class="summary-body">
               <span class="summary-label">Arrival</span>
               <span class="summary-value">{{ briefingSnapshot.arrival.icao }} · RWY {{ briefingSnapshot.arrival.runway }}</span>
-              <span class="summary-sub muted small">{{ briefingSnapshot.arrival.city }}</span>
+              <span class="summary-sub">{{ briefingSnapshot.arrival.city }}</span>
             </div>
           </article>
           <article class="briefing-summary-card">
-            <v-icon size="20">mdi-radar</v-icon>
-            <div>
+            <div class="summary-icon summary-icon--codes">
+              <v-icon size="20">mdi-radar</v-icon>
+            </div>
+            <div class="summary-body">
               <span class="summary-label">Codes</span>
               <span class="summary-value">Squawk {{ briefingSnapshot.codes.squawk }}</span>
-              <span class="summary-sub muted small">Push {{ briefingSnapshot.codes.push }}</span>
+              <span class="summary-sub">Push {{ briefingSnapshot.codes.push }}</span>
             </div>
           </article>
         </section>
@@ -799,6 +807,27 @@
 
       <div v-else class="module-content">
         <div class="module-overview">
+          <div v-if="current" class="module-overview-header">
+            <div class="module-overview-meta">
+              <span class="module-overview-chip">Mission overview</span>
+              <h3 class="module-overview-title">{{ current.title }}</h3>
+              <p class="module-overview-sub">{{ current.subtitle }}</p>
+            </div>
+            <div
+                class="module-overview-progress"
+                role="progressbar"
+                aria-label="Mission progress"
+                :aria-valuenow="pct(current.id)"
+                aria-valuemin="0"
+                aria-valuemax="100"
+            >
+              <span class="module-overview-progress-label">Progress</span>
+              <div class="module-overview-progress-bar">
+                <div class="module-overview-progress-fill" :style="{ width: pct(current.id) + '%' }"></div>
+              </div>
+              <span class="module-overview-progress-meta">{{ doneCount(current.id) }}/{{ current.lessons.length }} lessons</span>
+            </div>
+          </div>
           <div class="lesson-track" ref="lessonTrack">
             <div class="lesson-grid">
               <button
@@ -1011,36 +1040,6 @@
               </div>
             </div>
 
-            <div v-if="current" class="lesson-actions">
-              <div class="lesson-actions-meta">
-                <div v-if="nextLessonMeta" class="muted small">
-                  Next: {{ nextLessonMeta.lesson.title }} · Lesson {{ nextLessonMeta.position }} of
-                  {{ nextLessonMeta.total }}
-                </div>
-                <div v-else-if="nextMissionMeta" class="muted small">
-                  Next mission: {{ nextMissionMeta.module.title }} · Mission {{ nextMissionMeta.position }} of
-                  {{ nextMissionMeta.total }}
-                </div>
-                <div v-else class="muted small">
-                  Last lesson in this mission.
-                </div>
-              </div>
-              <div class="lesson-actions-buttons">
-                <button class="btn soft" type="button" @click="repeatLesson">
-                  <v-icon size="18">mdi-dice-5</v-icon>
-                  New scenario
-                </button>
-                <button
-                    class="btn primary"
-                    type="button"
-                    :disabled="!nextLessonMeta && !nextMissionMeta"
-                    @click="goToNextLesson"
-                >
-                  <v-icon size="18">mdi-arrow-right</v-icon>
-                  {{ nextActionLabel }}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -1090,9 +1089,43 @@
 
     <!-- FOOTER -->
     <footer class="footer" role="contentinfo">
-      <div class="container">
+      <div class="container footer-container">
 
-        <div class="footer-right">
+        <div
+            v-if="panel==='module' && moduleStage==='lessons' && current && activeLesson"
+            class="lesson-actions"
+        >
+          <div class="lesson-actions-meta">
+            <div v-if="nextLessonMeta" class="lesson-actions-hint">
+              Next: {{ nextLessonMeta.lesson.title }} · Lesson {{ nextLessonMeta.position }} of
+              {{ nextLessonMeta.total }}
+            </div>
+            <div v-else-if="nextMissionMeta" class="lesson-actions-hint">
+              Next mission: {{ nextMissionMeta.module.title }} · Mission {{ nextMissionMeta.position }} of
+              {{ nextMissionMeta.total }}
+            </div>
+            <div v-else class="lesson-actions-hint">
+              Last lesson in this mission.
+            </div>
+          </div>
+          <div class="lesson-actions-buttons">
+            <button class="btn soft" type="button" @click="repeatLesson">
+              <v-icon size="18">mdi-dice-5</v-icon>
+              New scenario
+            </button>
+            <button
+                class="btn primary"
+                type="button"
+                :disabled="!nextLessonMeta && !nextMissionMeta"
+                @click="goToNextLesson"
+            >
+              <v-icon size="18">mdi-arrow-right</v-icon>
+              {{ nextActionLabel }}
+            </button>
+          </div>
+        </div>
+
+        <div class="footer-meta">
           <span class="muted small">&copy; 2024 OpenSquawk. All rights reserved.</span>
         </div>
       </div>
@@ -1558,11 +1591,14 @@ type BriefingSnapshot = {
   }
   altitudes: {
     initial: string
+    initialWords: string
     climb: string
+    climbWords: string
   }
   codes: {
     squawk: string
     push: string
+    pushWords: string
   }
   weather: {
     depWind: string
@@ -1602,12 +1638,15 @@ function buildBriefingSnapshot(s: Scenario | null): BriefingSnapshot | null {
       taxiRoute: s.arrivalTaxiRoute
     },
     altitudes: {
-      initial: s.altitudes.initialWords || `${s.altitudes.initial} ft`,
-      climb: s.altitudes.climbWords || `${s.altitudes.climb} ft`
+      initial: formatAltitude(s.altitudes.initial),
+      initialWords: s.altitudes.initialWords,
+      climb: formatAltitude(s.altitudes.climb),
+      climbWords: s.altitudes.climbWords
     },
     codes: {
       squawk: s.squawk,
-      push: s.pushDelayWords
+      push: formatPushDelay(s.pushDelayMinutes),
+      pushWords: s.pushDelayWords
     },
     weather: {
       depWind: s.windWords || s.wind,
@@ -1616,6 +1655,19 @@ function buildBriefingSnapshot(s: Scenario | null): BriefingSnapshot | null {
       arrQnh: s.arrivalQnhWords
     }
   }
+}
+
+function formatAltitude(value?: number | null): string {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return '—'
+  return `${Math.round(value)}ft`
+}
+
+function formatPushDelay(minutes?: number | null): string {
+  if (typeof minutes !== 'number' || !Number.isFinite(minutes) || minutes < 0) return '00:00'
+  const totalMinutes = Math.round(minutes)
+  const hours = Math.floor(totalMinutes / 60)
+  const mins = totalMinutes % 60
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
 }
 
 const parseOptionalNumber = (input: string): number | undefined => {
@@ -4119,19 +4171,125 @@ onMounted(() => {
 }
 
 .module-overview {
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 14%, transparent) 0%, color-mix(in srgb, var(--text) 4%, transparent) 100%);
+  position: relative;
   overflow: hidden;
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  background:
+      radial-gradient(420px 260px at -10% -20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+      linear-gradient(150deg, color-mix(in srgb, var(--bg2) 82%, transparent), color-mix(in srgb, var(--text) 6%, transparent));
+  padding: 32px;
+  gap: 28px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 28px;
 }
 
 .module-overview::before {
   content: "";
   position: absolute;
-  inset: -60% 40% auto -10%;
-  height: 240px;
-  background: radial-gradient(160px 160px at center, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%);
-  opacity: .5;
+  inset: -40% 30% auto 10%;
+  height: 320px;
+  width: 320px;
+  background: radial-gradient(180px 180px at center, color-mix(in srgb, var(--accent2) 24%, transparent), transparent 70%);
+  opacity: .4;
   pointer-events: none;
+  transform: rotate(-6deg);
+}
+
+.module-overview::after {
+  content: "";
+  position: absolute;
+  inset: auto -40px -40px auto;
+  width: 260px;
+  height: 260px;
+  background:
+      repeating-conic-gradient(from 45deg, color-mix(in srgb, var(--text) 6%, transparent) 0deg 15deg, transparent 15deg 30deg);
+  opacity: .2;
+  pointer-events: none;
+  border-radius: 32px;
+  filter: blur(0.5px);
+}
+
+.module-overview-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+
+.module-overview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 520px;
+}
+
+.module-overview-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: color-mix(in srgb, var(--accent) 80%, white 10%);
+}
+
+.module-overview-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.module-overview-sub {
+  margin: 0;
+  font-size: 15px;
+  color: color-mix(in srgb, var(--t3) 82%, transparent);
+  line-height: 1.5;
+}
+
+.module-overview-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+  min-width: 220px;
+  position: relative;
+  z-index: 1;
+}
+
+.module-overview-progress-label {
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--t3) 80%, transparent);
+}
+
+.module-overview-progress-bar {
+  width: 220px;
+  height: 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--bg2) 82%, transparent);
+  overflow: hidden;
+}
+
+.module-overview-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: inherit;
+}
+
+.module-overview-progress-meta {
+  font-size: 12px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--t3) 70%, transparent);
 }
 
 .module-detail {
@@ -4154,6 +4312,8 @@ onMounted(() => {
   padding-right: 6px;
   scroll-snap-type: x proximity;
   mask-image: linear-gradient(to right, transparent, rgba(0, 0, 0, .9) 20%, rgba(0, 0, 0, .9) 80%, transparent);
+  position: relative;
+  z-index: 1;
 }
 
 .lesson-grid {
@@ -4344,6 +4504,20 @@ onMounted(() => {
     padding: 18px;
   }
 
+  .module-overview {
+    gap: 20px;
+  }
+
+  .module-overview-progress {
+    align-items: flex-start;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .module-overview-progress-bar {
+    width: 100%;
+  }
+
   .console-grid {
     grid-template-columns: 1fr
   }
@@ -4496,29 +4670,38 @@ onMounted(() => {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--text) 4%, transparent);
-  border-radius: 12px;
-  position: sticky;
-  bottom: 20px;
-  z-index: 5;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 16px 28px rgba(0, 0, 0, .28)
+  gap: 18px;
+  padding: 20px 24px;
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--bg2) 82%, transparent));
+  box-shadow: 0 24px 44px rgba(2, 6, 23, .5);
 }
 
 .lesson-actions-meta {
-  flex: 1 1 220px;
-  color: var(--t3);
-  font-size: 12px;
-  line-height: 1.4;
+  flex: 1 1 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lesson-actions-hint {
+  font-size: 13px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--t3) 80%, transparent);
 }
 
 .lesson-actions-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.lesson-actions-buttons .btn {
+  min-width: 150px;
+  justify-content: center;
 }
 
 .row.wrap {
@@ -4784,10 +4967,18 @@ onMounted(() => {
   }
 
   .lesson-actions {
-    position: static;
-    bottom: auto;
-    box-shadow: none;
-    backdrop-filter: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .lesson-actions-buttons {
+    justify-content: stretch;
+  }
+
+  .lesson-actions-buttons .btn {
+    flex: 1 1 100%;
+    min-width: 0;
   }
 }
 
@@ -4812,10 +5003,19 @@ onMounted(() => {
 }
 
 .footer {
-  margin: 40px 0 20px;
-  text-align: center;
+  margin: 60px 0 24px;
   font-size: 13px;
   color: var(--t3);
+}
+
+.footer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.footer-meta {
+  text-align: center;
 }
 
 .footer a {
@@ -5658,36 +5858,91 @@ onMounted(() => {
 
 .briefing-summary {
   display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .briefing-summary-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  background: linear-gradient(140deg, color-mix(in srgb, var(--bg2) 82%, transparent), color-mix(in srgb, var(--text) 6%, transparent));
+  box-shadow: 0 24px 48px rgba(2, 6, 23, .48);
+  overflow: hidden;
+}
+
+.briefing-summary-card::after {
+  content: "";
+  position: absolute;
+  inset: 18px 18px auto auto;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(60px 60px at center, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%);
+  opacity: .25;
+  pointer-events: none;
+}
+
+.summary-icon {
+  width: 52px;
+  height: 52px;
   border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-  padding: 18px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  color: white;
+  box-shadow: 0 16px 28px rgba(2, 6, 23, .45);
+  position: relative;
+  z-index: 1;
+}
+
+.summary-icon--primary {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 60%, transparent), color-mix(in srgb, var(--accent2) 50%, transparent));
+}
+
+.summary-icon--departure {
+  background: linear-gradient(135deg, color-mix(in srgb, #60a5fa 60%, transparent), color-mix(in srgb, #2563eb 45%, transparent));
+}
+
+.summary-icon--arrival {
+  background: linear-gradient(135deg, color-mix(in srgb, #f472b6 60%, transparent), color-mix(in srgb, #db2777 45%, transparent));
+}
+
+.summary-icon--codes {
+  background: linear-gradient(135deg, color-mix(in srgb, #fbbf24 60%, transparent), color-mix(in srgb, #d97706 45%, transparent));
+  color: #1f2937;
+}
+
+.summary-body {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  box-shadow: 0 20px 40px rgba(2, 6, 23, .45);
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
 }
 
 .summary-label {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: .08em;
   text-transform: uppercase;
-  color: var(--t3);
+  color: color-mix(in srgb, var(--t3) 80%, transparent);
 }
 
 .summary-value {
-  font-weight: 600;
-  font-size: 18px;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
 }
 
 .summary-sub {
   font-size: 13px;
-  color: var(--t3);
+  color: color-mix(in srgb, var(--t3) 78%, transparent);
+  letter-spacing: .02em;
 }
 
 .briefing-layout {
