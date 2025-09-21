@@ -95,43 +95,43 @@
     </header>
 
     <!-- HERO -->
-    <section class="gradient-hero relative overflow-hidden">
+    <section class="gradient-hero relative flex min-h-screen items-center overflow-hidden">
       <div class="hero-overlay absolute inset-0 pointer-events-none">
         <div class="absolute -top-24 right-0 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-3xl"/>
       </div>
 
-      <div class="container-outer relative z-10 pt-14 pb-10 sm:pt-20 sm:pb-16 md:pt-24 md:pb-20 lg:mt-12">
+      <div class="container-outer relative z-10 w-full py-24 sm:py-28 lg:py-32">
         <div class="hero-grid grid gap-10 xl:gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-center">
           <div class="hero-copy max-w-2xl" data-aos="fade-up">
             <span class="chip mb-4">Alpha · Open-Source AI ATC</span>
             <h1 class="text-3xl sm:text-5xl md:text-6xl font-semibold leading-tight">
               OpenSquawk<br/>
-              <span class="text-cyan-400">Open-source, low-cost AI ATC</span>
+              <span class="text-cyan-400">Open-source AI ATC for sim pilots</span>
             </h1>
             <p class="mt-4 sm:mt-6 text-white/80 text-base sm:text-lg">
-              We are building an open, affordable AI air traffic control for flight simulators – community-driven, with
-              self-hosted and hosted options in planning.
+              Open, affordable AI controllers for your simulator — community-built and self-hostable.
             </p>
             <ul class="mt-6 space-y-2 text-white/70 text-sm sm:text-base">
               <li class="flex items-start gap-2">
                 <v-icon icon="mdi-account-group" size="18" class="mt-[3px] text-cyan-300"/>
-                <span>Community roadmap sets the priorities. Features only ship when they truly help you.</span>
+                <span>Community roadmap decides what ships.</span>
               </li>
               <li class="flex items-start gap-2">
                 <v-icon icon="mdi-airplane" size="18" class="mt-[3px] text-cyan-300"/>
-                <span><strong>Simulator support</strong>: MSFS first, X-Plane next – all with VATSIM-ready training in mind.</span>
+                <span><strong>MSFS now, X-Plane next</strong> — tuned for VATSIM training.</span>
               </li>
             </ul>
-            <p class="mt-2 text-sm text-white/70">
-              We are looking for collaborators (Node/Nuxt, ATC SMEs, testers, infra/cost benchmarking). Reach out via
+            <p class="mt-4 text-sm text-white/70">
+              Collaborators welcome (Node/Nuxt, ATC SMEs, testers, benchmarking) —
               <a class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
             </p>
-            <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
-              <NuxtLink to="#cta" class="btn btn-primary text-base">
+            <div class="mt-6">
+              <NuxtLink
+                  to="#cta"
+                  class="btn btn-primary inline-flex items-center gap-2 text-base"
+              >
+                <v-icon icon="mdi-account-plus" size="18"/>
                 Join the waitlist
-              </NuxtLink>
-              <NuxtLink to="/news" class="btn btn-ghost text-base">
-                Read news
               </NuxtLink>
             </div>
           </div>
@@ -143,7 +143,7 @@
                   Hear about new features first
                 </h3>
                 <p class="text-sm text-white/70">
-                  Join the feature list and get updates on releases, drops & learning content.
+                  Get releases and waitlist drops straight to your inbox.
                 </p>
               </div>
               <div class="flex flex-col gap-3 sm:flex-row">
@@ -174,13 +174,13 @@
                 <label class="flex items-start gap-3">
                   <input type="checkbox" v-model="updatesForm.consentMarketing" class="mt-1" required/>
                   <span>
-                    Yes, email me when new features, waitlist drops or learning content go live.
+                    Yes, send me release and learning updates.
                   </span>
                 </label>
                 <label class="flex items-start gap-3">
                   <input type="checkbox" v-model="updatesForm.consentPrivacy" class="mt-1" required/>
                   <span>
-                    I have read the
+                    I agree to the
                     <NuxtLink to="/datenschutz" class="text-cyan-300 underline">privacy policy</NuxtLink>.
                   </span>
                 </label>
