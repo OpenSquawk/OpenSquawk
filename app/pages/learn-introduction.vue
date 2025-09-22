@@ -74,7 +74,7 @@
               <div class="rounded-3xl border border-white/10 bg-[#0b1328]/90 p-6 shadow-xl shadow-cyan-500/10">
                 <div class="flex items-center gap-4">
                   <img
-                    src="/img/logo.jpeg"
+                    src="/img/learn/instructor.png"
                     alt="Avery, the Learn instructor"
                     class="h-14 w-14 rounded-2xl border border-cyan-400/40 object-cover"
                   />
@@ -316,13 +316,13 @@
                   <div class="rounded-2xl border border-white/10 bg-[#0c162c]/80 p-4 sm:p-5">
                     <div class="flex items-start gap-4">
                       <img
-                        src="/img/logo.jpeg"
+                        src="/img/learn/instructor.png"
                         alt="Avery instructor avatar"
-                        class="h-12 w-12 rounded-2xl border border-cyan-400/40 object-cover"
+                        class="h-24 w-24 rounded-2xl border border-cyan-400/40 object-cover"
                       />
                       <div class="flex-1 space-y-3">
                         <div class="flex flex-wrap items-center gap-2">
-                          <p class="text-sm font-semibold text-white">Avery on comms</p>
+                          <p class="text-xl font-semibold text-white">Avery on comms</p>
                           <span
                             v-if="voiceMode === 'radio' && speechPlaying"
                             class="inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-200"
@@ -332,7 +332,7 @@
                           </span>
                         </div>
                         <p class="text-sm text-white/70">
-                          {{ activeStage.voiceLine }}
+                          "{{ activeStage.voiceLine }}"
                         </p>
                         <div v-if="voiceMode === 'radio'" class="flex flex-wrap items-center gap-3">
                           <button
@@ -436,7 +436,7 @@ const stages: StageStop[] = [
       'Use “Continue” to jump back into the last lesson you touched.'
     ],
     tip: 'Hover or tap a tile for a quick brief before opening it.',
-    image: '/img/learn/modules/img7.jpeg',
+    image: '/img/learn/modules/img11.jpeg',
     imageAlt: 'Learn mission hub interface with highlighted modules',
     voiceLine:
       'First stop is the mission hub. This is our briefing room before any AI frequency opens. Pick the module you want and you are two clicks from a lesson.'
@@ -450,7 +450,7 @@ const stages: StageStop[] = [
       'Confirm the callsign, runway notes and weather before starting the lesson.'
     ],
     tip: 'Full Flight missions always start here, while most drills jump straight into the console.',
-    image: '/img/learn/modules/img9.jpeg',
+    image: '/img/learn/modules/img3.jpeg',
     imageAlt: 'Pilots preparing a flight plan on a tablet',
     voiceLine:
       'When a mission asks for a plan, choose Random, Manual or SimBrief. Try the random generator at least once—it is the fastest way to get airborne.'
@@ -492,7 +492,7 @@ const stages: StageStop[] = [
       'Use the summary to decide whether to repeat, advance or swap to another module.'
     ],
     tip: 'Bookmark /learn so a quick refresher is always a tab away.',
-    image: '/img/learn/modules/img11.jpeg',
+    image: '/img/learn/modules/img7.jpeg',
     imageAlt: 'Pilot reviewing a scorecard summary',
     voiceLine:
       'That is the full loop. Check the scorecard for anything to repeat, then head back to the hub and pick your next practice hop.'
