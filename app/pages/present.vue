@@ -1,0 +1,1015 @@
+<template>
+  <div class="presentation" ref="presentationEl" @click="handleClick">
+    <button
+      v-if="canFullscreen && !isFullscreen"
+      type="button"
+      class="fullscreen-toggle"
+      @click.stop="toggleFullscreen"
+    >
+      <span>Go fullscreen</span>
+      <kbd>F</kbd>
+    </button>
+    <div class="frame">
+      <Transition name="fade" mode="out-in">
+        <section class="slide" :key="currentIndex">
+          <div class="kicker" v-if="currentSlide.kicker">{{ currentSlide.kicker }}</div>
+          <h1 v-if="currentSlide.layout === 'title'">{{ currentSlide.title }}</h1>
+          <h2 v-else>{{ currentSlide.title }}</h2>
+          <p v-if="currentSlide.subtitle" class="subtitle">{{ currentSlide.subtitle }}</p>
+
+          <div
+            v-if="currentSlide.fullscreenPrompt && !isFullscreen && canFullscreen"
+            class="fullscreen-callout"
+          >
+            <div class="callout-card">
+              <p>For the full experience, please go fullscreen.</p>
+              <button type="button" @click.stop="toggleFullscreen">
+                Enter fullscreen
+                <span class="key-hint">F</span>
+              </button>
+            </div>
+          </div>
+
+          <p
+            v-for="(line, idx) in currentSlide.text || []"
+            :key="`text-${idx}`"
+            class="lead"
+          >
+            {{ line }}
+          </p>
+
+          <ul v-if="currentSlide.bullets" class="bullet-list">
+            <li v-for="(bullet, idx) in currentSlide.bullets" :key="`bullet-${idx}`">
+              <span class="marker"></span>
+              <span>{{ bullet }}</span>
+            </li>
+          </ul>
+
+          <div v-if="currentSlide.columns" class="columns">
+            <div v-for="(column, cIdx) in currentSlide.columns" :key="`col-${cIdx}`" class="column">
+              <h3 v-if="column.heading">{{ column.heading }}</h3>
+              <p v-for="(line, lIdx) in column.text || []" :key="`col-text-${cIdx}-${lIdx}`">{{ line }}</p>
+              <ul v-if="column.items">
+                <li v-for="(item, iIdx) in column.items" :key="`col-item-${cIdx}-${iIdx}`">{{ item }}</li>
+              </ul>
+            </div>
+          </div>
+
+          <blockquote v-if="currentSlide.quote" class="quote">
+            “{{ currentSlide.quote }}”
+          </blockquote>
+
+          <div v-if="currentSlide.image" class="media" @click.stop>
+            <img :src="currentSlide.image" :alt="currentSlide.imageAlt || ''" loading="lazy" />
+            <p v-if="currentSlide.imageCredit" class="image-caption">{{ currentSlide.imageCredit }}</p>
+          </div>
+
+          <p v-if="currentSlide.note" class="note">{{ currentSlide.note }}</p>
+
+          <div v-if="currentSlide.qr" class="qr-wrapper" @click.stop>
+            <img v-if="qrCode" :src="qrCode" alt="QR code linking to the project" />
+            <div v-else class="qr-placeholder">QR code is rendering…</div>
+            <p>{{ currentSlide.qr }}</p>
+          </div>
+
+          <footer v-if="currentSlide.footer" class="slide-footer">{{ currentSlide.footer }}</footer>
+        </section>
+      </Transition>
+      <div class="meta">
+        <div class="meta-top">
+          <div class="progress-label">{{ currentIndex + 1 }} / {{ totalSlides }}</div>
+          <div class="hint" :class="{ hidden: !showHint }">Press ←/→, space, or click · F toggles fullscreen</div>
+        </div>
+        <div class="section-outline" v-if="sectionStates.length">
+          <div class="section-track">
+            <div class="section-progress" :style="{ width: `${progress}%` }"></div>
+            <div
+              v-for="section in sectionStates"
+              :key="section.label"
+              class="section-node"
+              :class="{ active: section.isActive, passed: section.isPassed }"
+            >
+              <div class="dot"></div>
+              <span>{{ section.label }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { renderSVG } from 'uqr'
+
+const slides = [
+  {
+    layout: 'title',
+    section: 'Intro',
+    kicker: 'Nick Danner · systems tinkerer & radio nerd',
+    title: 'OpenSquawk',
+    subtitle: 'Trying to share aviation awareness in the open',
+    text: ['Thanks for giving a small indie builder your attention for the next 45 minutes.'],
+    fullscreenPrompt: true,
+    note: 'Press F or use the button to enter fullscreen whenever you like.'
+  },
+  {
+    section: 'Intro',
+    title: "Hello, I'm Nick",
+    bullets: [
+      'One-person systems engineer who loves turning radio noise into context.',
+      'Based in Hamburg, working from a tiny desk and a lot of coffee.',
+      "Still figuring out public speaking—thanks for the patience tonight."
+    ],
+    footer: 'nick.danner@opensquawk.dev · @nickcodes'
+  },
+  {
+    section: 'Intro',
+    title: 'Where I usually help out',
+    bullets: [
+      "Built telemetry tools for small ops teams that can't afford airline-scale software.",
+      'Spend time translating between pilots, dispatch, and messy data feeds.',
+      'Picked up enough frontend, backend, and infra to be useful—still learning daily.'
+    ],
+    image: 'https://picsum.photos/seed/opensquawk-desk/1200/675',
+    imageAlt: 'placeholder photo of a desk with multiple screens glowing at night',
+    imageCredit: 'Photo placeholder via Lorem Picsum'
+  },
+  {
+    section: 'Story',
+    title: 'Where this spark started',
+    text: [
+      'Last autumn I joined a community night shift at the “Hack the Skies” meetup in Berlin.',
+      'We tried to line up ATC audio with NOTAM changes and ended up juggling screenshots at 3 a.m.'
+    ],
+    image: 'https://picsum.photos/seed/opensquawk-nightshift/1200/675',
+    imageAlt: 'placeholder photo of city lights at night seen from above',
+    imageCredit: 'Photo placeholder via Lorem Picsum'
+  },
+  {
+    section: 'Story',
+    title: 'What felt broken in that room',
+    bullets: [
+      'Important changes lived in separate chats, PDFs, and whispered heads-ups.',
+      'Nobody wanted another silo, but nobody had time to stitch the feeds together.',
+      'Everyone around me knew far more than I did—we just lacked shared tooling.'
+    ],
+    quote: 'We trust the data. We just never see it in the same place when it matters.'
+  },
+  {
+    section: 'Story',
+    title: "Why I couldn't let it go",
+    bullets: [
+      'Small operators rarely get tools tuned for them.',
+      'Open data projects exist, yet wiring them into live ops feels intimidating.',
+      'I wanted to try building a gentle starting point and ask smarter people for help.'
+    ],
+    image: 'https://picsum.photos/seed/opensquawk-airfield/1200/675',
+    imageAlt: 'placeholder photo of a small airfield at dawn with soft light',
+    imageCredit: 'Photo placeholder via Lorem Picsum'
+  },
+  {
+    section: 'Vision',
+    title: 'So… what is OpenSquawk?',
+    text: [
+      "It's my first attempt at an open-source stream that listens to public ATC audio, turns it into events, and shares them in real time.",
+      'Think of it as a community-friendly way to watch the same timeline without vendor lock-in.'
+    ]
+  },
+  {
+    section: 'Vision',
+    title: 'Vision in three words',
+    columns: [
+      {
+        heading: 'Open',
+        items: ['Use public sources, document every step, and welcome scrutiny.']
+      },
+      {
+        heading: 'Helpful',
+        items: ['Deliver context quickly instead of burying people in dashboards.']
+      },
+      {
+        heading: 'Welcoming',
+        items: ['Keep contributions bite-sized so newcomers can land safely.']
+      }
+    ]
+  },
+  {
+    section: 'Vision',
+    title: 'Principles keeping me honest',
+    bullets: [
+      'Plain-text configs and readable event schemas first.',
+      'If automation acts, it leaves a trail you can replay.',
+      'APIs I use internally stay the same ones everyone else gets.',
+      'Shipping slowly is fine if the community understands what exists.'
+    ]
+  },
+  {
+    section: 'Progress',
+    title: 'What already runs (on a good day)',
+    bullets: [
+      'Transcribes six European frequencies with Whisper small on a home lab GPU.',
+      'Fetches NOTAM and METAR updates into a shared event bus every minute.',
+      'Tags events with a lightweight rules engine so people know why something pinged.',
+      'Shows a humble dashboard that streams a timeline for testing together.'
+    ],
+    image: 'https://picsum.photos/seed/opensquawk-dashboard/1200/675',
+    imageAlt: 'placeholder photo of dashboard screens glowing with charts',
+    imageCredit: 'Photo placeholder via Lorem Picsum'
+  },
+  {
+    section: 'Tech',
+    title: 'System sketch',
+    columns: [
+      {
+        heading: 'Capture',
+        items: [
+          'Edge radios publish Opus audio over QUIC to a small relay.',
+          'Scheduled scrapers pull NOTAM and METAR diffs about every 60 seconds.'
+        ]
+      },
+      {
+        heading: 'Decode',
+        items: [
+          'Whisper small-v3 handles multilingual transcripts on consumer GPUs.',
+          'Keyword matcher spots callsigns, runway states, and weather codes.'
+        ]
+      },
+      {
+        heading: 'Enrich',
+        items: [
+          'Temporal database stitches events with aircraft position feeds.',
+          'Geo-fencing adds airport and sector context on the fly.'
+        ]
+      },
+      {
+        heading: 'Deliver',
+        items: ['WebSockets and SSE push curated alerts.', 'Supabase mirror keeps data queryable for BI tools.']
+      }
+    ]
+  },
+  {
+    section: 'Tech',
+    title: 'Technology stack',
+    columns: [
+      {
+        heading: 'Ingestion & compute',
+        items: [
+          'Rust microservices handle radio capture and buffering.',
+          'Python workers orchestrated by Temporal for transcription jobs.',
+          'Go-based enrichment service with gRPC interfaces.'
+        ]
+      },
+      {
+        heading: 'Data & storage',
+        items: [
+          'Apache Kafka for event streaming with exactly-once semantics.',
+          'Materialize for low-latency materialized views.',
+          'PostgreSQL for metadata, Supabase for auth and row-level security.'
+        ]
+      },
+      {
+        heading: 'Experience layer',
+        items: [
+          'Nuxt 4 SPA served via edge CDN.',
+          'Tailwind + custom visual language for readability in dim ops rooms.',
+          'OpenAPI-defined endpoints with generated TypeScript clients.'
+        ]
+      },
+      {
+        heading: 'Ops & tooling',
+        items: ['Nix flakes for deterministic builds.', 'GitHub Actions pipelines with ephemeral staging environments.', 'Grafana Cloud for metrics and alerting.']
+      }
+    ]
+  },
+  {
+    section: 'Tech',
+    title: 'Ingestion focus',
+    bullets: [
+      'Multi-tenant radio capture agents publish Opus streams over QUIC.',
+      'Temporal workflows batch frames into 20-second jobs for transcription.',
+      'Language detection auto-selects acoustic models per frequency.',
+      'Manual review UI appears when confidence dips below 70%.'
+    ]
+  },
+  {
+    section: 'Tech',
+    title: 'Making sense of signals',
+    bullets: [
+      'Vector search surfaces similar past events for faster triage.',
+      'Rules DSL compiled to WebAssembly so dispatchers can extend it.',
+      'Confidence weighting blends transcript certainty with sensor agreement.',
+      'Alert fatigue guardrails throttle repeated low-value pings.'
+    ]
+  },
+  {
+    section: 'Tech',
+    title: 'Sharing the data',
+    bullets: [
+      'GraphQL gateway for historical queries and analytics.',
+      'SSE endpoints for lightweight clients and cockpit tablets.',
+      'Plug-in hooks for sending events to Mattermost, Slack, or MS Teams.',
+      'CLI toolkit generates JSON Lines for quick downstream prototyping.'
+    ]
+  },
+  {
+    section: 'Tech',
+    title: 'DX and docs hopes',
+    bullets: [
+      'Devcontainer scripts spin up the stack with sample data in under five minutes.',
+      'Storybook-style playground for testing rule evaluations.',
+      'Observability dashboards versioned alongside the code.',
+      'Docs site built with Nuxt Content—PRs preview instantly via GitHub Actions.'
+    ]
+  },
+  {
+    section: 'Tech',
+    title: 'Keeping things safe-ish',
+    bullets: [
+      'End-to-end tests replay anonymized traffic nightly.',
+      'OPA policies guard radio streams and redact sensitive fields.',
+      'Grafana Loki captures raw transcripts for 24 hours before purging.',
+      'Incident playbooks live in-repo with checklists and runbooks.'
+    ]
+  },
+  {
+    section: 'Roadmap',
+    title: 'Near-term roadmap (next 90 days)',
+    bullets: [
+      'Expand capture network with five community-hosted radios in Spain and Portugal.',
+      'Release v0.2 of the rules DSL with a friendlier visual editor.',
+      'Ship first-class integration for the open-source EFB tool SkyPad.',
+      'Publish contribution guidelines and a lightweight governance RFC.'
+    ],
+    image: 'https://picsum.photos/seed/opensquawk-roadmap/1200/675',
+    imageAlt: 'placeholder photo of notes and roadmap sketches on a desk',
+    imageCredit: 'Photo placeholder via Lorem Picsum'
+  },
+  {
+    section: 'Roadmap',
+    title: 'Longer-term dreams (late 2025?)',
+    bullets: [
+      'Global frequency directory with health checks and uptime badges.',
+      'Incident review workspace with collaborative tagging.',
+      'Edge ML experiments for on-device noise reduction.',
+      'Federated deployments for operators with strict data residency needs.'
+    ]
+  },
+  {
+    section: 'Together',
+    title: 'Where I need the most help',
+    bullets: [
+      'This is my first open-source repo—feedback on structure and tone is gold to me.',
+      'Please sanity check the event model: does it match the ops reality you live in?',
+      'Looking for testers willing to run a capture node for a week.',
+      'Pointers to communities who might benefit would mean a lot.'
+    ]
+  },
+  {
+    section: 'Together',
+    title: 'Ways to join in',
+    bullets: [
+      'Review the architecture docs and call out blind spots.',
+      'Try the setup script and let me know where it hurts.',
+      'Pair-program on the rules editor—frontend or backend welcome.',
+      'Even short notes on how you start open-source communities help.'
+    ]
+  },
+  {
+    section: 'Together',
+    title: 'Thank you',
+    text: [
+      "I'm opening the repo tonight and would love to grow it with folks who know more than I do.",
+      'Scan to star the repo, file an issue, or grab the starter kit.'
+    ],
+    qr: 'https://github.com/nickmakes/opensquawk',
+    footer: 'Reach out anytime: nick.danner@opensquawk.dev · Thanks again for any guidance!'
+  }
+]
+
+const totalSlides = slides.length
+const currentIndex = ref(0)
+const qrCode = ref('')
+const showHint = ref(true)
+const presentationEl = ref(null)
+const isFullscreen = ref(false)
+const canFullscreen = ref(false)
+const qrTarget = 'https://github.com/nickmakes/opensquawk'
+
+const sectionOrder = ['Intro', 'Story', 'Vision', 'Progress', 'Tech', 'Roadmap', 'Together']
+const sectionDetails = sectionOrder
+  .map((label) => {
+    const indices = slides
+      .map((slide, idx) => (slide.section === label ? idx : -1))
+      .filter((idx) => idx !== -1)
+    if (!indices.length) {
+      return null
+    }
+    return {
+      label,
+      firstIndex: indices[0],
+      lastIndex: indices[indices.length - 1]
+    }
+  })
+  .filter((section) => section !== null)
+
+const currentSlide = computed(() => slides[currentIndex.value])
+const progress = computed(() => ((currentIndex.value + 1) / totalSlides) * 100)
+const currentSection = computed(() => currentSlide.value.section)
+const sectionStates = computed(() =>
+  sectionDetails.map((section) => ({
+    ...section,
+    isActive: section.label === currentSection.value,
+    isPassed: currentIndex.value > section.lastIndex
+  }))
+)
+
+const goToSlide = (index) => {
+  const nextIndex = Math.min(Math.max(index, 0), totalSlides - 1)
+  showHint.value = false
+  currentIndex.value = nextIndex
+}
+
+const nextSlide = () => {
+  if (currentIndex.value < totalSlides - 1) {
+    goToSlide(currentIndex.value + 1)
+  }
+}
+
+const previousSlide = () => {
+  if (currentIndex.value > 0) {
+    goToSlide(currentIndex.value - 1)
+  }
+}
+
+const toggleFullscreen = async () => {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  try {
+    if (!document.fullscreenElement) {
+      const el = presentationEl.value || document.documentElement
+      if (el && el.requestFullscreen) {
+        await el.requestFullscreen()
+      }
+    } else if (document.exitFullscreen) {
+      await document.exitFullscreen()
+    }
+  } catch (error) {
+    console.error('Failed to toggle fullscreen', error)
+  }
+}
+
+const onFullscreenChange = () => {
+  if (typeof document === 'undefined') {
+    return
+  }
+  isFullscreen.value = Boolean(document.fullscreenElement)
+}
+
+const fullscreenEvents = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
+
+const onKeydown = (event) => {
+  if (
+    ['ArrowRight', 'ArrowDown', 'PageDown'].includes(event.key) ||
+    event.key === ' ' ||
+    event.key === 'Space'
+  ) {
+    event.preventDefault()
+    nextSlide()
+  } else if (
+    ['ArrowLeft', 'ArrowUp', 'PageUp'].includes(event.key) ||
+    event.key === 'Backspace'
+  ) {
+    event.preventDefault()
+    previousSlide()
+  } else if (event.key === 'Home') {
+    event.preventDefault()
+    goToSlide(0)
+  } else if (event.key === 'End') {
+    event.preventDefault()
+    goToSlide(totalSlides - 1)
+  } else if (event.key === 'f' || event.key === 'F') {
+    event.preventDefault()
+    toggleFullscreen()
+  }
+}
+
+const handleClick = (event) => {
+  const target = event.target
+  const element = target instanceof Element ? target : null
+  if (
+    element &&
+    (element.closest('.qr-wrapper') ||
+      element.closest('.fullscreen-callout') ||
+      element.closest('.fullscreen-toggle') ||
+      element.closest('.section-outline') ||
+      element.closest('.meta'))
+  ) {
+    return
+  }
+  nextSlide()
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+
+  if (typeof document !== 'undefined') {
+    canFullscreen.value = document.fullscreenEnabled !== false
+    fullscreenEvents.forEach((eventName) => {
+      document.addEventListener(eventName, onFullscreenChange)
+    })
+    onFullscreenChange()
+  }
+
+  try {
+    const svg = renderSVG(qrTarget, {
+      ecc: 'M',
+      border: 2,
+      pixelSize: 10,
+      whiteColor: '#ffffff',
+      blackColor: '#020617'
+    })
+    qrCode.value = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+  } catch (error) {
+    console.error('Failed to generate QR code', error)
+  }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown)
+  if (typeof document !== 'undefined') {
+    fullscreenEvents.forEach((eventName) => {
+      document.removeEventListener(eventName, onFullscreenChange)
+    })
+  }
+})
+</script>
+
+<style scoped>
+:global(html, body, #__nuxt) {
+  margin: 0;
+  height: 100%;
+  background: radial-gradient(circle at top left, #0f172a, #020617 65%);
+  color: #f8fafc;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+}
+
+.presentation {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5vh;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.fullscreen-toggle {
+  position: fixed;
+  top: 20px;
+  right: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.85);
+  color: rgba(226, 232, 240, 0.92);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease, border 180ms ease;
+  z-index: 10;
+}
+
+.fullscreen-toggle:hover {
+  background: rgba(30, 41, 59, 0.95);
+  color: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.6);
+}
+
+.fullscreen-toggle kbd {
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: rgba(15, 23, 42, 0.65);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+.frame {
+  width: min(92vw, 160vh);
+  aspect-ratio: 16 / 9;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 24px;
+  box-shadow: 0 30px 80px rgba(2, 6, 23, 0.7);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+}
+
+.slide {
+  flex: 1;
+  padding: 64px 72px 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+}
+
+.kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  font-size: 0.85rem;
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+h1 {
+  font-size: clamp(3.2rem, 5vw, 4.6rem);
+  margin: 0;
+  line-height: 1.05;
+}
+
+h2 {
+  font-size: clamp(2.6rem, 3.8vw, 3.4rem);
+  margin: 0;
+  line-height: 1.1;
+}
+
+.subtitle {
+  font-size: 1.5rem;
+  max-width: 28ch;
+  color: rgba(241, 245, 249, 0.85);
+  margin: 0;
+}
+
+.fullscreen-callout {
+  margin-top: 12px;
+}
+
+.callout-card {
+  padding: 20px 24px;
+  border-radius: 18px;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 16px 40px rgba(2, 6, 23, 0.45);
+}
+
+.callout-card p {
+  margin: 0;
+  font-size: 1.05rem;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.callout-card button {
+  align-self: flex-start;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 150ms ease;
+}
+
+.callout-card button:hover {
+  transform: translateY(-1px);
+}
+
+.key-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+.lead {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  color: rgba(241, 245, 249, 0.9);
+  margin: 0;
+  max-width: 70ch;
+}
+
+.bullet-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 70ch;
+}
+
+.bullet-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: start;
+  font-size: 1.18rem;
+  line-height: 1.6;
+  color: rgba(226, 232, 240, 0.95);
+}
+
+.marker {
+  width: 10px;
+  height: 10px;
+  margin-top: 12px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 32px;
+  max-width: 100%;
+}
+
+.column h3 {
+  font-size: 1.2rem;
+  margin: 0 0 12px;
+  color: #a5b4fc;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.column p {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.column ul {
+  list-style: disc;
+  padding-left: 16px;
+  margin: 0;
+}
+
+.quote {
+  font-size: 1.4rem;
+  line-height: 1.6;
+  color: rgba(148, 163, 184, 0.95);
+  border-left: 3px solid rgba(148, 163, 184, 0.4);
+  padding-left: 18px;
+  margin: 0;
+}
+
+.media {
+  max-width: min(70ch, 100%);
+}
+
+.media img {
+  width: 100%;
+  border-radius: 18px;
+  box-shadow: 0 22px 55px rgba(2, 6, 23, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.image-caption {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.8);
+}
+
+.note {
+  font-size: 1rem;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.slide-footer {
+  margin-top: auto;
+  font-size: 0.95rem;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.qr-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.qr-wrapper img {
+  width: min(260px, 40vh);
+  border-radius: 12px;
+  box-shadow: 0 12px 35px rgba(8, 47, 73, 0.45);
+  background: #fff;
+  padding: 12px;
+}
+
+.qr-placeholder {
+  width: 220px;
+  height: 220px;
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.2);
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.meta {
+  padding: 18px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.meta-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.progress-label {
+  font-size: 0.9rem;
+  color: rgba(148, 163, 184, 0.85);
+  min-width: 64px;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.7);
+  transition: opacity 200ms ease;
+  text-align: right;
+}
+
+.hint.hidden {
+  opacity: 0;
+}
+
+.section-outline {
+  padding: 4px 4px 0;
+}
+
+.section-track {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.section-track::before {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(148, 163, 184, 0.25);
+  z-index: 0;
+}
+
+.section-progress {
+  position: absolute;
+  top: 18px;
+  left: 0;
+  width: 0;
+  max-width: 100%;
+  height: 2px;
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  border-radius: 999px;
+  transition: width 220ms ease;
+  z-index: 0;
+}
+
+.section-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(148, 163, 184, 0.7);
+  z-index: 1;
+}
+
+.section-node .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.5);
+  border: 2px solid rgba(15, 23, 42, 0.9);
+  transition: all 180ms ease;
+}
+
+.section-node.active .dot {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  border-color: rgba(15, 23, 42, 0.95);
+}
+
+.section-node.passed .dot {
+  background: rgba(148, 163, 184, 0.9);
+}
+
+.section-node span {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.section-node.active span {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.section-node.passed span {
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 200ms ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@media (max-width: 1280px) {
+  .fullscreen-toggle {
+    top: 14px;
+    right: 16px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .slide {
+    padding: 48px 44px 36px;
+  }
+
+  h1 {
+    font-size: clamp(2.6rem, 7vw, 3.6rem);
+  }
+
+  h2 {
+    font-size: clamp(2.2rem, 5vw, 3rem);
+  }
+
+  .lead,
+  .bullet-list li,
+  .column ul,
+  .column p {
+    font-size: 1.05rem;
+  }
+
+  .meta {
+    padding: 16px 20px 20px;
+  }
+
+  .section-node {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .presentation {
+    padding: 1.5vh;
+  }
+
+  .slide {
+    padding: 40px 28px 28px;
+  }
+
+  .frame {
+    border-radius: 16px;
+  }
+
+  .fullscreen-toggle {
+    top: 12px;
+    right: 12px;
+  }
+}
+</style>
