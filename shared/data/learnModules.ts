@@ -24,7 +24,7 @@ const fundamentalsLessons = [
         key: 'letters',
         label: 'Letters',
         expected: scenario => scenario.callsignNato,
-        placeholder: 'Delta Lima Hotel',
+        placeholder: 'Type the ICAO spelling',
         width: 'xl',
         threshold: 0.9
       },
@@ -32,7 +32,7 @@ const fundamentalsLessons = [
         key: 'digits',
         label: 'Numbers',
         expected: scenario => scenario.flightNumberWords,
-        placeholder: 'one two three',
+        placeholder: 'Spell the numbers',
         width: 'lg',
         threshold: 0.88
       }
@@ -118,7 +118,7 @@ const fundamentalsLessons = [
           scenario.atisCode.toLowerCase(),
           `Information ${scenario.atisCode}`
         ],
-        placeholder: 'Letter',
+        placeholder: 'Type the ATIS letter',
         width: 'xs',
         threshold: 0.9
       },
@@ -219,7 +219,7 @@ const fundamentalsLessons = [
         label: 'Visibility',
         expected: scenario => scenario.metarSegments.visibility,
         alternatives: scenario => [scenario.visibility],
-        placeholder: '9999',
+        placeholder: 'Visibility in meters',
         width: 'sm',
         inputmode: 'numeric'
       },
@@ -277,7 +277,7 @@ const fundamentalsLessons = [
           `${scenario.airlineCall} ${scenario.flightNumber}`,
           scenario.callsign
         ],
-        placeholder: 'Lufthansa one two three',
+        placeholder: 'Type your call sign',
         width: 'lg'
       },
       {
@@ -285,7 +285,7 @@ const fundamentalsLessons = [
         label: 'Readability',
         expected: scenario => scenario.readabilityWord,
         alternatives: scenario => [scenario.readability.toString(), scenario.readabilityWord],
-        placeholder: 'five',
+        placeholder: 'Readability 1-5',
         width: 'sm'
       }
     ],
