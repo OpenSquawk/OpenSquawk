@@ -2423,6 +2423,7 @@ let persistTimer: ReturnType<typeof setTimeout> | null = null
 const dirtyState = reactive({xp: false, progress: false, config: false})
 const savingState = ref(false)
 const pendingSave = ref(false)
+const configHydrated = ref(false)
 
 async function loadLearnState() {
   if (!isClient) return
@@ -2448,6 +2449,7 @@ async function loadLearnState() {
     cfg.value = {...defaultCfg}
   } finally {
     audioReveal.value = !cfg.value.audioChallenge
+    configHydrated.value = true
   }
 }
 
@@ -2476,22 +2478,58 @@ async function persistLearnState(force = false) {
     pendingSave.value = true
     return
   }
+
+  const includeXp = force || dirtyState.xp
+  const includeProgress = force || dirtyState.progress
+  const includeConfig = force || dirtyState.config
+
+  if (!includeXp && !includeProgress && !includeConfig) {
+    return
+  }
+
+  const payload: Partial<LearnState> = {}
+  if (includeXp) {
+    payload.xp = Math.max(0, Math.round(xp.value))
+  }
+  if (includeProgress) {
+    payload.progress = JSON.parse(JSON.stringify(progress.value)) as LearnProgress
+  }
+  if (includeConfig) {
+    payload.config = {...cfg.value}
+  }
+
   savingState.value = true
   pendingSave.value = false
 
-  const payload = {
-    xp: Math.max(0, Math.round(xp.value)),
-    progress: JSON.parse(JSON.stringify(progress.value)),
-    config: {...cfg.value},
+  const previousDirty = {
+    xp: dirtyState.xp,
+    progress: dirtyState.progress,
+    config: dirtyState.config,
+  }
+
+  if (includeXp) {
+    dirtyState.xp = false
+  }
+  if (includeProgress) {
+    dirtyState.progress = false
+  }
+  if (includeConfig) {
+    dirtyState.config = false
   }
 
   try {
     await api.put('/api/learn/state', payload)
-    dirtyState.xp = false
-    dirtyState.progress = false
-    dirtyState.config = false
   } catch (err) {
     console.error('Failed to persist learn state', err)
+    if (includeXp) {
+      dirtyState.xp = dirtyState.xp || previousDirty.xp
+    }
+    if (includeProgress) {
+      dirtyState.progress = dirtyState.progress || previousDirty.progress
+    }
+    if (includeConfig) {
+      dirtyState.config = dirtyState.config || previousDirty.config
+    }
   } finally {
     savingState.value = false
     if (pendingSave.value) {
@@ -2506,6 +2544,7 @@ if (isClient) {
 }
 
 const markConfigDirty = () => {
+  if (!configHydrated.value) return
   dirtyState.config = true
   schedulePersist()
 }
