@@ -941,13 +941,6 @@
                     {{ Math.round(result.sim * 100) }}%
                   </div>
                 </div>
-                <div v-if="result" class="field-checks">
-                  <div v-for="field in result.fields" :key="field.key" class="field-check" :class="{ ok: field.pass }">
-                    <div class="field-name">{{ field.label }}</div>
-                    <div class="field-answer">{{ field.answer || '—' }}</div>
-                    <div class="field-expected">Expected: {{ field.expected }}</div>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -1205,6 +1198,8 @@ type ScoreResult = {
   fields: FieldState[]
 }
 
+type FrequencyMatchResult = 'match' | 'mismatch' | 'none'
+
 function norm(value: string): string {
   return value
       .toLowerCase()
@@ -1242,6 +1237,24 @@ function similarity(a: string, b: string): number {
   const distance = lev(normA, normB)
   const maxLen = Math.max(normA.length, normB.length, 1)
   return 1 - distance / maxLen
+}
+
+function extractDigits(value: string): string {
+  return (value.match(/\d/g) || []).join('')
+}
+
+function isFrequencyField(field: LessonField): boolean {
+  return field.key.includes('freq')
+}
+
+function frequencyMatchStatus(answer: string, options: string[]): FrequencyMatchResult {
+  const answerDigits = extractDigits(answer)
+  if (!answerDigits) return 'none'
+  const expectedDigits = options
+      .map(extractDigits)
+      .filter(Boolean)
+  if (!expectedDigits.length) return 'none'
+  return expectedDigits.includes(answerDigits) ? 'match' : 'mismatch'
 }
 
 const modules = shallowRef<ModuleDef[]>(learnModules)
@@ -2611,10 +2624,24 @@ const fieldStates = computed<Record<string, FieldState>>(() => {
     const expected = field.expected(scenario.value).trim()
     const answer = (userAnswers[field.key] ?? '').trim()
     const alternatives = field.alternatives?.(scenario.value) ?? []
-    const options = [expected, ...alternatives].map(norm).filter(Boolean)
-    const normalizedAnswer = norm(answer)
-    const best = options.length ? Math.max(...options.map(option => similarity(normalizedAnswer, option))) : 0
-    const pass = answer ? best >= (field.threshold ?? 0.82) : false
+    const options = [expected, ...alternatives.map(option => option.trim())].filter(Boolean)
+    const best = options.length ? Math.max(...options.map(option => similarity(answer, option))) : 0
+    let pass = false
+    if (answer) {
+      const threshold = field.threshold ?? 0.82
+      if (isFrequencyField(field)) {
+        const matchResult = frequencyMatchStatus(answer, options)
+        if (matchResult === 'match') {
+          pass = true
+        } else if (matchResult === 'mismatch') {
+          pass = false
+        } else {
+          pass = best >= threshold
+        }
+      } else {
+        pass = best >= threshold
+      }
+    }
     map[field.key] = {
       key: field.key,
       label: field.label,
@@ -5424,43 +5451,6 @@ onMounted(() => {
   color: var(--t3);
   text-transform: none;
   letter-spacing: normal;
-}
-
-.field-checks {
-  margin-top: 12px;
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-
-.field-check {
-  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
-  padding: 12px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--text) 4%, transparent);
-  box-shadow: 0 12px 26px rgba(2, 6, 23, .28);
-}
-
-.field-check.ok {
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-
-.field-name {
-  font-size: 12px;
-  letter-spacing: .08em;
-  color: var(--t3);
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-
-.field-answer {
-  font-weight: 600;
-}
-
-.field-expected {
-  font-size: 12px;
-  color: var(--t3);
 }
 
 .hint.secondary {

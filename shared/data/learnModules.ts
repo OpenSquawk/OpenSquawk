@@ -803,7 +803,7 @@ const readbackLessons = [
     keywords: ['Departure', 'Handoff'],
     hints: [
       'Repeat the frequency exactly, either as digits or spoken form.',
-      'Append the call sign at the end.'
+      'Confirm the handoff with the frequency – your call sign is shown.'
     ],
     fields: [
       {
@@ -816,24 +816,12 @@ const readbackLessons = [
           scenario.frequencyWords.DEP
         ],
         width: 'md'
-      },
-      {
-        key: 'dep-callsign',
-        label: 'Callsign',
-        expected: scenario => scenario.radioCall,
-        alternatives: scenario => [
-          scenario.radioCall,
-          `${scenario.airlineCall} ${scenario.flightNumber}`,
-          scenario.callsign
-        ],
-        width: 'lg'
       }
     ],
     readback: [
       { type: 'text', text: 'Contact departure ' },
       { type: 'field', key: 'dep-freq', width: 'md' },
-      { type: 'text', text: ', ' },
-      { type: 'field', key: 'dep-callsign', width: 'lg' }
+      { type: 'text', text: scenario => `, ${scenario.radioCall}` }
     ],
     defaultFrequency: 'DEP',
     phrase: scenario => `${scenario.radioCall}, contact departure ${scenario.departureFreq}.`,
