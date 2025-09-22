@@ -17,6 +17,7 @@ export interface LearnState {
   xp: number
   progress: LearnProgress
   config: LearnConfig
+  unlockedModules: string[]
 }
 
 export const LEARN_CONFIG_DEFAULTS: LearnConfig = {
@@ -36,5 +37,6 @@ export function createDefaultLearnState(): LearnState {
     xp: 0,
     progress: {} as LearnProgress,
     config: createDefaultLearnConfig(),
+    unlockedModules: [],
   }
 }

@@ -15,10 +15,14 @@ export default defineEventHandler(async (event) => {
     profile.progress && typeof profile.progress === 'object'
       ? JSON.parse(JSON.stringify(profile.progress))
       : {}
+  const unlockedModules = Array.isArray(profile.unlockedModules)
+    ? Array.from(new Set((profile.unlockedModules as unknown[]).filter(item => typeof item === 'string').map(item => item.trim())))
+    : []
 
   return {
     xp: typeof profile.xp === 'number' ? profile.xp : 0,
     progress,
     config,
+    unlockedModules,
   }
 })

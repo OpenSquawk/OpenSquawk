@@ -8,6 +8,7 @@ interface LearnStateUpdateBody {
   xp?: number
   progress?: LearnProgress
   config?: Partial<LearnConfig>
+  unlockedModules?: string[]
 }
 
 function sanitizeProgress(input: LearnProgress | undefined): LearnProgress | undefined {
@@ -76,6 +77,19 @@ function sanitizeConfig(input: Partial<LearnConfig> | undefined): LearnConfig | 
   return config
 }
 
+function sanitizeUnlockedModules(input: string[] | undefined): string[] | undefined {
+  if (!Array.isArray(input)) {
+    return undefined
+  }
+
+  const sanitized = input
+    .filter(value => typeof value === 'string')
+    .map(value => value.trim())
+    .filter(value => value.length > 0)
+
+  return Array.from(new Set(sanitized))
+}
+
 export default defineEventHandler(async (event) => {
   const user = await requireUserSession(event)
   const body = await readBody<LearnStateUpdateBody>(event)
@@ -99,6 +113,11 @@ export default defineEventHandler(async (event) => {
     profile.config = config
   }
 
+  const unlockedModules = sanitizeUnlockedModules(body.unlockedModules)
+  if (unlockedModules !== undefined) {
+    profile.unlockedModules = unlockedModules
+  }
+
   await profile.save()
 
   const responseConfig = { ...createDefaultLearnConfig(), ...(profile.config || {}) }
@@ -106,10 +125,14 @@ export default defineEventHandler(async (event) => {
     profile.progress && typeof profile.progress === 'object'
       ? JSON.parse(JSON.stringify(profile.progress))
       : {}
+  const responseUnlockedModules = Array.isArray(profile.unlockedModules)
+    ? Array.from(new Set((profile.unlockedModules as unknown[]).filter(item => typeof item === 'string').map(item => item.trim())))
+    : []
 
   return {
     xp: typeof profile.xp === 'number' ? profile.xp : 0,
     progress: responseProgress,
     config: responseConfig,
+    unlockedModules: responseUnlockedModules,
   }
 })
