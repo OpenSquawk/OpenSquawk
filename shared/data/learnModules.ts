@@ -410,6 +410,7 @@ const fundamentalsLessons = [
         key: 'freq-contact-frequency',
         label: 'Frequency',
         expected: scenario => scenario.handoff.frequency,
+        threshold: 0.99,
         alternatives: scenario => {
           const freq = scenario.handoff.frequency
           const trimmed = freq.replace(/\.?0+$/, '')
@@ -439,34 +440,12 @@ const fundamentalsLessons = [
         },
         placeholder: '125.35',
         width: 'md'
-      },
-      {
-        key: 'freq-contact-callsign',
-        label: 'Callsign',
-        expected: scenario => scenario.radioCall,
-        alternatives: scenario => {
-          const variants = new Set<string>()
-          const add = (value?: string) => {
-            if (!value) return
-            variants.add(value)
-            variants.add(value.toLowerCase())
-          }
-          add(scenario.radioCall)
-          add(`${scenario.airlineCall} ${scenario.flightNumber}`)
-          add(`${scenario.airlineCall} ${scenario.flightNumberWords}`)
-          add(scenario.callsign)
-          add(`${scenario.airlineCode} ${scenario.flightNumber}`)
-          add(`${scenario.callsignNato} ${scenario.flightNumberWords}`)
-          return Array.from(variants)
-        },
-        width: 'lg'
       }
     ],
     readback: [
       { type: 'text', text: scenario => `Contact ${scenario.handoff.facility} on ` },
       { type: 'field', key: 'freq-contact-frequency', width: 'md' },
-      { type: 'text', text: ', ' },
-      { type: 'field', key: 'freq-contact-callsign', width: 'lg' }
+      { type: 'text', text: scenario => `, ${scenario.radioCall}` }
     ],
     defaultFrequency: 'TWR',
     phrase: scenario => `${scenario.radioCall}, contact ${scenario.handoff.facility} on ${scenario.handoff.frequencyWords}.`,
