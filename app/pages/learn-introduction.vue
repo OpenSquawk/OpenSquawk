@@ -13,12 +13,9 @@
             <p class="text-sm text-white/60">Guided preflight briefing</p>
           </div>
         </div>
-        <NuxtLink
-          to="/learn"
-          class="inline-flex items-center gap-2 rounded-xl bg-cyan-400/90 px-4 py-2 text-sm font-semibold text-[#07111f] shadow-lg shadow-cyan-500/30 transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070d1a]"
-        >
+        <NuxtLink to="/learn" class="btn primary hero-enter">
           Enter Learn hub
-          <v-icon icon="mdi-launch" size="18" class="text-[#07111f]" />
+          <v-icon icon="mdi-launch" size="18" />
         </NuxtLink>
       </div>
     </header>
@@ -96,20 +93,20 @@
                     <div class="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
-                        class="voice-toggle"
+                        class="btn soft mini voice-toggle"
                         :class="{ active: voiceMode === 'text' }"
                         @click="setVoiceMode('text')"
                       >
-                        <v-icon icon="mdi-text" size="18" class="text-cyan-200" />
+                        <v-icon icon="mdi-text" size="18" class="voice-toggle__icon" />
                         Text only
                       </button>
                       <button
                         type="button"
-                        class="voice-toggle"
+                        class="btn soft mini voice-toggle"
                         :class="{ active: voiceMode === 'radio' }"
                         @click="setVoiceMode('radio')"
                       >
-                        <v-icon icon="mdi-radio-handheld" size="18" class="text-cyan-200" />
+                        <v-icon icon="mdi-radio-handheld" size="18" class="voice-toggle__icon" />
                         Radio voice
                       </button>
                     </div>
@@ -140,14 +137,13 @@
                     <div class="flex flex-wrap items-center gap-3">
                       <button
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-xl bg-cyan-400/90 px-3 py-2 text-sm font-semibold text-[#07111f] shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1328]"
+                        class="btn primary radio-check"
                         @click="handleRadioCheck"
                         :disabled="speechLoading"
                       >
                         <v-icon
                           :icon="speechLoading ? 'mdi-loading' : 'mdi-radio-check'"
                           size="18"
-                          class="text-[#07111f]"
                           :class="{ 'animate-spin': speechLoading }"
                         />
                         {{ speechLoading ? 'Checking…' : hasCompletedRadioCheck ? 'Radio check again' : 'Run radio check' }}
@@ -165,19 +161,16 @@
                 <div class="mt-6 flex flex-wrap items-center gap-3">
                   <button
                     type="button"
-                    class="btn btn--primary"
+                    class="btn primary"
                     @click="startTour"
                     :disabled="startDisabled"
                   >
-                    <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#061318]" />
+                    <v-icon icon="mdi-gesture-tap-button" size="18" />
                     Start guided tour
                   </button>
-                  <NuxtLink
-                    to="/learn"
-                    class="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-cyan-300 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1328]"
-                  >
+                  <NuxtLink to="/learn" class="btn ghost">
                     Skip to Learn
-                    <v-icon icon="mdi-arrow-right" size="16" class="text-cyan-200" />
+                    <v-icon icon="mdi-arrow-right" size="16" class="btn-icon-accent" />
                   </NuxtLink>
                 </div>
                 <p v-if="startDisabled && voiceMode === 'radio'" class="mt-2 text-xs text-amber-200/80">
@@ -214,7 +207,7 @@
               <li v-for="(stop, index) in stages" :key="stop.id">
                 <button
                   type="button"
-                  class="group flex w-full items-center gap-3 rounded-2xl border border-white/5 px-4 py-3 text-left transition hover:border-cyan-300/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#080f1f]"
+                  class="btn ghost itinerary-stop group w-full items-center gap-3 text-left"
                   :class="{
                     'border-cyan-300/60 bg-cyan-400/10 text-white': tourStarted && index === stageIndex,
                     'cursor-not-allowed opacity-50': index > unlockedStageIndex
@@ -238,10 +231,10 @@
             <button
               v-if="tourStarted"
               type="button"
-              class="mt-6 inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm text-white/70 transition hover:border-cyan-300/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#080f1f]"
+              class="btn ghost mini restart-button"
               @click="restartTour"
             >
-              <v-icon icon="mdi-refresh" size="18" class="text-cyan-200" />
+              <v-icon icon="mdi-refresh" size="18" class="btn-icon-accent" />
               Restart tour
             </button>
           </aside>
@@ -258,11 +251,11 @@
               <div class="mt-6 flex flex-wrap justify-center gap-3">
                 <button
                   type="button"
-                  class="btn btn--primary"
+                  class="btn primary"
                   @click="startTour"
                   :disabled="startDisabled"
                 >
-                  <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#061318]" />
+                  <v-icon icon="mdi-gesture-tap-button" size="18" />
                   Start guided tour
                 </button>
               </div>
@@ -341,14 +334,14 @@
                         <div v-if="voiceMode === 'radio'" class="flex flex-wrap items-center gap-3">
                           <button
                             type="button"
-                            class="inline-flex items-center gap-2 rounded-xl border border-cyan-300/50 px-3 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c162c]"
+                            class="btn ghost mini stage-replay"
                             @click="replayStageVoice"
                             :disabled="speechLoading"
                           >
                             <v-icon
                               :icon="speechLoading ? 'mdi-loading' : 'mdi-replay'"
                               size="18"
-                              class="text-cyan-200"
+                              class="btn-icon-accent"
                               :class="{ 'animate-spin': speechLoading }"
                             />
                             Replay radio voice
@@ -364,39 +357,35 @@
                       <button
                         v-if="canGoPrevious"
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-cyan-300 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c162c]"
+                        class="btn ghost stage-prev"
                         @click="goToPrevious"
                       >
-                        <v-icon icon="mdi-arrow-left" size="18" class="text-cyan-200" />
+                        <v-icon icon="mdi-arrow-left" size="18" class="btn-icon-accent" />
                         Previous stop
                       </button>
                       <div class="ml-auto flex flex-wrap items-center gap-3">
                         <button
                           v-if="voiceMode === 'radio'"
                           type="button"
-                          class="inline-flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 transition hover:border-cyan-300/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c162c]"
+                          class="btn ghost mini stage-play"
                           @click="maybeSpeakForStage"
                           :disabled="speechLoading"
                         >
-                          <v-icon icon="mdi-play-circle" size="16" class="text-cyan-200" />
+                          <v-icon icon="mdi-play-circle" size="16" class="btn-icon-accent" />
                           Play again
                         </button>
                         <button
                           v-if="canGoNext"
                           type="button"
-                          class="btn btn--primary"
+                          class="btn primary stage-next"
                           @click="goToNext"
                         >
                           Next stop
-                          <v-icon icon="mdi-arrow-right" size="18" class="text-[#061318]" />
+                          <v-icon icon="mdi-arrow-right" size="18" />
                         </button>
-                        <NuxtLink
-                          v-else
-                          to="/learn"
-                          class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0c162c] shadow-lg shadow-cyan-500/20 transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c162c]"
-                        >
+                        <NuxtLink v-else to="/learn" class="btn primary stage-enter">
                           Enter Learn hub
-                          <v-icon icon="mdi-launch" size="18" class="text-[#0c162c]" />
+                          <v-icon icon="mdi-launch" size="18" />
                         </NuxtLink>
                       </div>
                     </div>
@@ -905,64 +894,139 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .voice-toggle {
-  @apply inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-cyan-300/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1328];
+  color: color-mix(in srgb, var(--text) 70%, transparent);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  transition: border-color 0.25s ease, background 0.25s ease, color 0.25s ease;
 }
 
 .voice-toggle.active {
-  @apply border-cyan-300/60 bg-cyan-400/10 text-white;
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text);
+}
+
+.voice-toggle__icon {
+  color: color-mix(in srgb, var(--accent) 65%, transparent);
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.125rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(12, 26, 48, 0.5);
-  color: rgba(229, 241, 255, 0.88);
-  font-size: 0.875rem;
+  padding: 0.625rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text);
   font-weight: 600;
-  line-height: 1.2;
+  font-size: 0.9rem;
+  line-height: 1.25;
   text-decoration: none;
-  box-shadow: 0 12px 28px rgba(6, 17, 31, 0.35);
-  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
 }
 
-.btn:hover {
-  border-color: rgba(165, 243, 252, 0.35);
-  background: rgba(13, 36, 66, 0.7);
-  color: #fff;
-  box-shadow: 0 16px 34px rgba(6, 17, 31, 0.4);
+.btn:hover:not([disabled]) {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .btn:focus-visible {
-  outline: 2px solid rgba(165, 243, 252, 0.55);
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
   outline-offset: 2px;
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
 }
 
-.btn--primary {
-  border-color: rgba(34, 211, 238, 0.55);
-  background: linear-gradient(180deg, rgba(34, 211, 238, 0.96), rgba(14, 165, 233, 0.88));
+.btn.primary {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 90%, transparent),
+    color-mix(in srgb, var(--accent2) 70%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
   color: #061318;
-  box-shadow: 0 18px 38px rgba(14, 165, 233, 0.3);
+  box-shadow: 0 18px 34px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
-.btn--primary:hover {
-  border-color: rgba(56, 189, 248, 0.6);
-  background: linear-gradient(180deg, rgba(165, 243, 252, 0.98), rgba(14, 165, 233, 0.94));
-  color: #030a14;
+.btn.primary:hover:not([disabled]) {
+  box-shadow: 0 22px 40px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
-.btn--primary:disabled {
-  background: linear-gradient(180deg, rgba(34, 211, 238, 0.72), rgba(14, 165, 233, 0.65));
-  color: rgba(7, 17, 31, 0.85);
+.btn.soft {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.btn.ghost {
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+
+.btn.mini {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  gap: 0.375rem;
+}
+
+.btn-icon-accent {
+  color: color-mix(in srgb, var(--accent) 65%, transparent);
+}
+
+.hero-enter {
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.hero-enter:hover:not([disabled]) {
+  transform: translateY(-1px);
+}
+
+.radio-check {
+  min-width: 0;
+  font-weight: 700;
+}
+
+.restart-button {
+  margin-top: 1.5rem;
+}
+
+.itinerary-stop {
+  display: flex;
+  width: 100%;
+  justify-content: flex-start;
+  padding: 0.75rem 1rem;
+  border-radius: 1.125rem;
+  border-color: color-mix(in srgb, var(--text) 12%, transparent);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  transition: border-color 0.25s ease, background 0.25s ease, color 0.25s ease;
+}
+
+.itinerary-stop:hover:not([disabled]) {
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--text);
+}
+
+.itinerary-stop:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.stage-prev,
+.stage-play,
+.stage-replay {
+  color: color-mix(in srgb, var(--text) 85%, transparent);
+}
+
+.stage-play {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.stage-next,
+.stage-enter,
+.hero-enter {
+  font-weight: 700;
 }
 
 .progress-fill {
