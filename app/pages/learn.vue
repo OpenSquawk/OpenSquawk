@@ -1165,6 +1165,7 @@
 import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch} from 'vue'
 import {useRoute, useRouter} from '#imports'
 import {useApi} from '~/composables/useApi'
+import {useAuthStore} from '~/stores/auth'
 import {createDefaultLearnConfig} from '~~/shared/learn/config'
 import type {LearnConfig, LearnProgress, LearnState} from '~~/shared/learn/config'
 import {learnModules, seedFullFlightScenario} from '~~/shared/data/learnModules'
@@ -2311,8 +2312,90 @@ const audioReveal = ref(true)
 const toast = ref({show: false, text: ''})
 const showSettings = ref(false)
 const api = useApi()
-
 const isClient = typeof window !== 'undefined'
+const auth = useAuthStore()
+
+const ATC_SETTINGS_STORAGE_PREFIX = 'os_atc_settings_'
+
+type LearnConfigPatch = Partial<LearnConfig>
+
+function getAtcSettingsStorageKey(): string | null {
+  if (!isClient) return null
+  const userId = auth.user?.id
+  if (!userId) return null
+  return `${ATC_SETTINGS_STORAGE_PREFIX}${userId}`
+}
+
+function sanitizeLearnConfigPatch(input: any): LearnConfigPatch {
+  const patch: LearnConfigPatch = {}
+  if (!input || typeof input !== 'object') {
+    return patch
+  }
+
+  if (typeof input.tts === 'boolean') {
+    patch.tts = input.tts
+  }
+
+  if (typeof input.audioChallenge === 'boolean') {
+    patch.audioChallenge = input.audioChallenge
+  }
+
+  if (typeof input.radioLevel === 'number' && Number.isFinite(input.radioLevel)) {
+    const level = Math.round(input.radioLevel)
+    patch.radioLevel = Math.min(5, Math.max(1, level))
+  }
+
+  if (typeof input.audioSpeed === 'number' && Number.isFinite(input.audioSpeed)) {
+    const rounded = Math.round(input.audioSpeed * 20) / 20
+    patch.audioSpeed = Math.min(1.3, Math.max(0.7, rounded))
+  }
+
+  if (typeof input.voice === 'string') {
+    patch.voice = input.voice.slice(0, 120)
+  }
+
+  return patch
+}
+
+function persistLocalAtcSettings(config: LearnConfig) {
+  if (!isClient) return
+  const key = getAtcSettingsStorageKey()
+  if (!key) return
+  const sanitized = sanitizeLearnConfigPatch(config)
+  if (!Object.keys(sanitized).length) return
+  try {
+    window.localStorage.setItem(key, JSON.stringify(sanitized))
+  } catch (err) {
+    console.warn('Failed to persist ATC settings locally', err)
+  }
+}
+
+function loadLocalAtcSettings(): LearnConfigPatch | null {
+  if (!isClient) return null
+  const key = getAtcSettingsStorageKey()
+  if (!key) return null
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    const sanitized = sanitizeLearnConfigPatch(parsed)
+    return Object.keys(sanitized).length ? sanitized : null
+  } catch (err) {
+    console.warn('Failed to load stored ATC settings', err)
+    try {
+      window.localStorage.removeItem(key)
+    } catch {
+      // ignore
+    }
+    return null
+  }
+}
+
+function hasConfigPatchDifference(patch: LearnConfigPatch, current: LearnConfig): boolean {
+  const entries = Object.entries(patch) as [keyof LearnConfig, LearnConfig[keyof LearnConfig]][]
+  return entries.some(([key, value]) => value !== undefined && value !== current[key])
+}
+
 let hoverCapabilityCleanup: (() => void) | null = null
 
 function resetModuleOverviewExpansion() {
@@ -2449,6 +2532,10 @@ const pendingSave = ref(false)
 async function loadLearnState() {
   if (!isClient) return
 
+  const storedConfig = loadLocalAtcSettings()
+  let appliedLocalOverride = false
+  let canPersistOverride = false
+
   try {
     const response = await api.get<LearnStateResponse>('/api/learn/state')
     if (response) {
@@ -2456,24 +2543,47 @@ async function loadLearnState() {
       progress.value = (response.progress ?? {}) as LearnProgress
       cfg.value = {...defaultCfg, ...(response.config || {})}
       unlockedModules.value = sanitizeModuleList(response.unlockedModules)
+
+      if (storedConfig && hasConfigPatchDifference(storedConfig, cfg.value)) {
+        cfg.value = {...cfg.value, ...storedConfig}
+        appliedLocalOverride = true
+        canPersistOverride = true
+      }
     } else {
       xp.value = 0
       progress.value = {} as LearnProgress
       cfg.value = {...defaultCfg}
       unlockedModules.value = []
+
+      if (storedConfig) {
+        cfg.value = {...cfg.value, ...storedConfig}
+        appliedLocalOverride = true
+        canPersistOverride = true
+      }
     }
-    dirtyState.xp = false
-    dirtyState.progress = false
-    dirtyState.config = false
-    dirtyState.unlocked = false
   } catch (err) {
     console.error('Failed to load learn state', err)
     xp.value = 0
     progress.value = {} as LearnProgress
     cfg.value = {...defaultCfg}
     unlockedModules.value = []
+
+    if (storedConfig) {
+      cfg.value = {...cfg.value, ...storedConfig}
+      appliedLocalOverride = true
+    }
   } finally {
     audioReveal.value = !cfg.value.audioChallenge
+    dirtyState.xp = false
+    dirtyState.progress = false
+    dirtyState.unlocked = false
+    dirtyState.config = appliedLocalOverride
+
+    if (appliedLocalOverride && canPersistOverride) {
+      schedulePersist()
+    }
+
+    persistLocalAtcSettings(cfg.value)
   }
 }
 
@@ -2511,6 +2621,8 @@ async function persistLearnState(force = false) {
     config: {...cfg.value},
     unlockedModules: [...unlockedModules.value],
   }
+
+  persistLocalAtcSettings(payload.config)
 
   try {
     await api.put('/api/learn/state', payload)
