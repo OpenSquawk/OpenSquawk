@@ -6,6 +6,7 @@ export interface LearnProfileDocument extends mongoose.Document {
   xp: number
   progress: LearnProgress
   config: LearnConfig
+  unlockedModules: string[]
   createdAt: Date
   updatedAt: Date
 }
@@ -15,6 +16,7 @@ const learnProfileSchema = new mongoose.Schema<LearnProfileDocument>(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     xp: { type: Number, default: 0 },
     progress: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
+    unlockedModules: { type: [String], default: () => [] },
     config: {
       tts: { type: Boolean, default: false },
       radioLevel: { type: Number, default: 4, min: 1, max: 5 },

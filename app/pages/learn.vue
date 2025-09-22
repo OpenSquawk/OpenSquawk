@@ -86,7 +86,15 @@
               <v-icon size="26">mdi-lock-alert</v-icon>
               <div class="tile-overlay-text">
                 <div class="tile-overlay-title">Clearance pending</div>
-                <div class="tile-overlay-sub">Complete earlier missions to unlock this briefing.</div>
+                <div class="tile-overlay-sub">
+                  Complete earlier missions to
+                  <button
+                      type="button"
+                      class="tile-overlay-link"
+                      @click.stop.prevent="attemptUnlockModule(m.id)"
+                  >unlock</button>
+                  this briefing.
+                </div>
               </div>
             </div>
           </div>
@@ -764,6 +772,10 @@
                 </div>
                 <div class="muted small">{{ l.desc }}</div>
                 <div class="tags">
+                  <span
+                      v-if="lessonOrderTag(current.id, l.id)"
+                      class="tag tag-index"
+                  >{{ lessonOrderTag(current.id, l.id) }}</span>
                   <span v-for="k in l.keywords" :key="k" class="tag">{{ k }}</span>
                 </div>
               </button>
@@ -2348,6 +2360,7 @@ audioReveal.value = !cfg.value.audioChallenge
 const XP_PER_LEVEL = 300
 const xp = ref(0)
 const progress = ref<LearnProgress>({})
+const unlockedModules = ref<string[]>([])
 const level = computed(() => 1 + Math.floor(xp.value / XP_PER_LEVEL))
 const nextLevel = computed(() => level.value + 1)
 const levelProgress = computed(() => Math.min(100, Math.round(((xp.value % XP_PER_LEVEL) / XP_PER_LEVEL) * 100)))
@@ -2419,8 +2432,17 @@ const currentBriefingArt = computed(() => current.value?.meta?.briefingArt || '/
 
 type LearnStateResponse = LearnState
 
+function sanitizeModuleList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const sanitized = value
+    .filter(item => typeof item === 'string')
+    .map(item => item.trim())
+    .filter(item => item.length > 0)
+  return Array.from(new Set(sanitized))
+}
+
 let persistTimer: ReturnType<typeof setTimeout> | null = null
-const dirtyState = reactive({xp: false, progress: false, config: false})
+const dirtyState = reactive({xp: false, progress: false, config: false, unlocked: false})
 const savingState = ref(false)
 const pendingSave = ref(false)
 
@@ -2433,19 +2455,23 @@ async function loadLearnState() {
       xp.value = Number.isFinite(response.xp) ? Math.max(0, Math.round(response.xp)) : 0
       progress.value = (response.progress ?? {}) as LearnProgress
       cfg.value = {...defaultCfg, ...(response.config || {})}
+      unlockedModules.value = sanitizeModuleList(response.unlockedModules)
     } else {
       xp.value = 0
       progress.value = {} as LearnProgress
       cfg.value = {...defaultCfg}
+      unlockedModules.value = []
     }
     dirtyState.xp = false
     dirtyState.progress = false
     dirtyState.config = false
+    dirtyState.unlocked = false
   } catch (err) {
     console.error('Failed to load learn state', err)
     xp.value = 0
     progress.value = {} as LearnProgress
     cfg.value = {...defaultCfg}
+    unlockedModules.value = []
   } finally {
     audioReveal.value = !cfg.value.audioChallenge
   }
@@ -2469,7 +2495,7 @@ function schedulePersist(immediate = false) {
 
 async function persistLearnState(force = false) {
   if (!isClient) return
-  if (!force && !dirtyState.xp && !dirtyState.progress && !dirtyState.config) {
+  if (!force && !dirtyState.xp && !dirtyState.progress && !dirtyState.config && !dirtyState.unlocked) {
     return
   }
   if (savingState.value) {
@@ -2483,6 +2509,7 @@ async function persistLearnState(force = false) {
     xp: Math.max(0, Math.round(xp.value)),
     progress: JSON.parse(JSON.stringify(progress.value)),
     config: {...cfg.value},
+    unlockedModules: [...unlockedModules.value],
   }
 
   try {
@@ -2490,6 +2517,7 @@ async function persistLearnState(force = false) {
     dirtyState.xp = false
     dirtyState.progress = false
     dirtyState.config = false
+    dirtyState.unlocked = false
   } catch (err) {
     console.error('Failed to persist learn state', err)
   } finally {
@@ -2519,6 +2547,10 @@ if (isClient) {
     dirtyState.xp = true
     schedulePersist()
   })
+  watch(unlockedModules, () => {
+    dirtyState.unlocked = true
+    schedulePersist()
+  }, {deep: true})
   watch(() => cfg.value.tts, markConfigDirty)
   watch(() => cfg.value.audioChallenge, () => {
     markConfigDirty()
@@ -2952,10 +2984,23 @@ function evaluate() {
 }
 
 function isModuleUnlocked(id: string) {
+  if (unlockedModules.value.includes(id)) return true
   if (id === 'normalize') return true
   const order = modules.value.findIndex(module => module.id === id)
   const previous = modules.value[order - 1]
   return previous ? pct(previous.id) >= 80 : true
+}
+
+function attemptUnlockModule(modId: string) {
+  if (!isClient) return
+  if (!modId) return
+  if (isModuleUnlocked(modId)) return
+  const confirmed = window.confirm('Unlock this mission briefing early?')
+  if (!confirmed) return
+  const next = new Set(unlockedModules.value)
+  next.add(modId)
+  unlockedModules.value = Array.from(next)
+  toastNow('Mission unlocked')
 }
 
 function openModule(id: string, options: { autoStart?: boolean } = {}) {
@@ -3071,6 +3116,25 @@ function pct(modId: string) {
   const module = modules.value.find(item => item.id === modId)
   if (!module) return 0
   return Math.round((doneCount(modId) / module.lessons.length) * 100)
+}
+
+function moduleNumber(modId: string): number {
+  const index = modules.value.findIndex(module => module.id === modId)
+  return index >= 0 ? index + 1 : 0
+}
+
+function lessonNumber(modId: string, lesId: string): number {
+  const module = modules.value.find(item => item.id === modId)
+  if (!module) return 0
+  const index = module.lessons.findIndex(lesson => lesson.id === lesId)
+  return index >= 0 ? index + 1 : 0
+}
+
+function lessonOrderTag(modId: string, lesId: string): string {
+  const modNum = moduleNumber(modId)
+  const lesNum = lessonNumber(modId, lesId)
+  if (!modNum || !lesNum) return ''
+  return `${modNum}.${lesNum}`
 }
 
 function avgScore(modId: string) {
@@ -3285,10 +3349,12 @@ function resetAll() {
   progress.value = {} as LearnProgress
   xp.value = 0
   cfg.value = {...defaultCfg}
+  unlockedModules.value = []
   audioReveal.value = !cfg.value.audioChallenge
   dirtyState.progress = true
   dirtyState.xp = true
   dirtyState.config = true
+  dirtyState.unlocked = true
   schedulePersist(true)
 }
 
@@ -4399,6 +4465,25 @@ onMounted(() => {
   color: rgba(248, 250, 252, .75)
 }
 
+.tile-overlay-link {
+  pointer-events: auto;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 2px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.tile-overlay-link:hover,
+.tile-overlay-link:focus-visible {
+  text-decoration: underline;
+  color: #f8fafc;
+  outline: none;
+}
+
 .line {
   height: 8px;
   border: 1px solid var(--border);
@@ -4884,6 +4969,13 @@ onMounted(() => {
   color: var(--t3);
   font-size: 11px;
   padding: 2px 6px
+}
+
+.tag-index {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .console {
