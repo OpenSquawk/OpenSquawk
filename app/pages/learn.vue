@@ -964,7 +964,7 @@
       <p class="muted">
         Level up by completing lessons and missions. Earn badges as you improve your pilot readbacks.
       </p>
-      <div class="hero-highlight" role="region" aria-label="Next objective">
+      <div class="hero-highlight mb-24" role="region" aria-label="Next objective">
         <div class="hero-orb" :style="{ '--progress': levelProgress + '%' }">
           <div class="hero-orb-core">
             <span class="hero-orb-level">Lvl {{ level }}</span>
