@@ -1,5 +1,5 @@
 <template>
-  <div class="scene">
+  <div class="scene learn-theme">
     <!-- APP BAR -->
     <header class="hud" role="banner">
       <nav class="hud-inner" aria-label="Global">
@@ -4267,42 +4267,6 @@ onMounted(() => {
   margin-top: 0
 }
 
-
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-  color: var(--text);
-  font-weight: 600;
-  text-decoration: none
-}
-
-.btn:hover {
-  background: color-mix(in srgb, var(--text) 10%, transparent)
-}
-
-.btn.primary {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 90%, transparent), color-mix(in srgb, var(--accent) 70%, transparent));
-  color: #061318;
-  border-color: color-mix(in srgb, var(--accent) 60%, transparent)
-}
-
-.btn.soft {
-  background: color-mix(in srgb, var(--text) 8%, transparent)
-}
-
-.btn.ghost {
-  background: transparent
-}
-
-.btn.mini {
-  padding: 6px 10px;
-  font-size: 12px
-}
 
 /* HUB tiles */
 .hub-head {
