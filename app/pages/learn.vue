@@ -180,7 +180,7 @@
             <img :src="currentBriefingArt" alt="Mission hero" class="plan-hero" />
             <div class="plan-summary-body">
               <span class="plan-tag">Auto flight</span>
-              <div class="plan-callout">{{ draftPlanScenario?.radioCall }}</div>
+              <div class="plan-callout">{{ displayCallsign(draftPlanScenario?.radioCall, draftPlanScenario) }}</div>
               <div class="plan-route">{{ draftPlanRoute }}</div>
               <div class="muted small">{{ draftPlanTagline }}</div>
             </div>
@@ -561,7 +561,7 @@
               <span class="plan-tag">Mission briefing</span>
               <span class="briefing-chip">{{ briefingSnapshot.callsign }}</span>
             </div>
-            <h2 class="briefing-hero-title">{{ briefingSnapshot.radioCall }}</h2>
+            <h2 class="briefing-hero-title">{{ displayCallsign(briefingSnapshot.radioCall, briefingSnapshot) }}</h2>
             <div class="briefing-hero-route">{{ briefingSnapshot.route }}</div>
             <p class="muted small briefing-hero-copy">Take a beat to brief the flight deck before the next call.</p>
             <div class="briefing-hero-pills">
@@ -789,7 +789,7 @@
               <div class="scenario-item">
                 <span class="scenario-label">Callsign</span>
                 <div class="scenario-value">{{ scenario.callsign }}</div>
-                <div class="scenario-sub">{{ scenario.radioCall }}</div>
+                <div class="scenario-sub">Pronunciation: {{ scenario.radioCall }}</div>
               </div>
               <div class="scenario-item">
                 <span class="scenario-label">Airport</span>
@@ -896,7 +896,7 @@
                     <template v-for="(segment, idx) in activeLesson.readback"
                               :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
                       <span v-if="segment.type === 'text'" class="cloze-chunk cloze-text">
-                        {{ typeof segment.text === 'function' && scenario ? segment.text(scenario) : segment.text }}
+                        {{ displayCallsign(typeof segment.text === 'function' && scenario ? segment.text(scenario) : segment.text) }}
                       </span>
                       <label
                           v-else
@@ -1199,6 +1199,11 @@ type ScoreResult = {
   fields: FieldState[]
 }
 
+type CallsignContext = {
+  radioCall?: string | null
+  callsign?: string | null
+}
+
 function norm(value: string): string {
   return value
       .toLowerCase()
@@ -1311,6 +1316,18 @@ const current = ref<ModuleDef | null>(null)
 const activeLesson = ref<Lesson | null>(null)
 const scenario = ref<Scenario | null>(null)
 const moduleStage = ref<'lessons' | 'setup' | 'briefing'>('lessons')
+
+function displayCallsign(value?: string | null, source?: CallsignContext | null): string {
+  if (!value) return ''
+  const context = source ?? scenario.value
+  if (!context) return value
+  const { radioCall, callsign } = context
+  if (radioCall && callsign && value.includes(radioCall)) {
+    return value.split(radioCall).join(callsign)
+  }
+  return value
+}
+
 const showLessonActions = computed(
     () => panel.value === 'module' && moduleStage.value === 'lessons' && !!current.value && !!activeLesson.value
 )
@@ -2098,7 +2115,7 @@ async function loadSimbriefPlan() {
     manualBaseScenario.value = cloneScenarioData(scenario)
     hydrateManualForm(scenario)
     simbriefPlanMeta.value = {
-      callsign: scenario.radioCall,
+      callsign: scenario.callsign,
       route: scenarioRoute(scenario)
     }
     flightPlanMode.value = 'simbrief'
@@ -2115,7 +2132,7 @@ function handleManualSubmit() {
   if (!scenario) return
   draftPlanScenario.value = cloneScenarioData(scenario)
   simbriefPlanMeta.value = {
-    callsign: scenario.radioCall,
+    callsign: scenario.callsign,
     route: scenarioRoute(scenario)
   }
   enterBriefingFromSetup()
@@ -2776,10 +2793,14 @@ function fieldHasAnswer(key: string): boolean {
 }
 
 function fieldExpectedValue(key: string): string {
-  return fieldStates.value[key]?.expected ?? ''
+  const expected = fieldStates.value[key]?.expected ?? ''
+  return displayCallsign(expected)
 }
 
-const targetPhrase = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.phrase(scenario.value) : ''))
+const targetPhrase = computed(() => {
+  if (!activeLesson.value || !scenario.value) return ''
+  return displayCallsign(activeLesson.value.phrase(scenario.value), scenario.value)
+})
 const lessonInfo = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.info(scenario.value) : []))
 const showScenarioPracticeHint = computed(() => {
   if (!current.value || !activeLesson.value) return false
