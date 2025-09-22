@@ -41,7 +41,7 @@ const fundamentalsLessons = [
             ])
           )
         },
-        placeholder: 'SWR59',
+        placeholder: 'Enter identifier',
         width: 'lg'
       }
     ],
@@ -126,7 +126,7 @@ const fundamentalsLessons = [
           `Information ${scenario.atisCodeWord}`,
           `information ${scenario.atisCodeWord.toLowerCase()}`
         ],
-        placeholder: 'Letter',
+        placeholder: 'Enter ATIS letter',
         width: 'xs',
         threshold: 0.9
       },
@@ -298,7 +298,7 @@ const fundamentalsLessons = [
         label: 'Visibility',
         expected: scenario => scenario.metarSegments.visibility,
         alternatives: scenario => [scenario.visibility],
-        placeholder: '9999',
+        placeholder: 'Enter visibility value',
         width: 'sm',
         inputmode: 'numeric'
       },
@@ -366,7 +366,7 @@ const fundamentalsLessons = [
           add(`${scenario.callsignNato} ${scenario.flightNumberWords}`)
           return Array.from(variants)
         },
-        placeholder: 'Lufthansa one two three',
+        placeholder: 'Enter call sign',
         width: 'lg'
       },
       {
@@ -378,7 +378,7 @@ const fundamentalsLessons = [
           scenario.readabilityWord,
           scenario.readabilityWord.toLowerCase()
         ],
-        placeholder: 'five',
+        placeholder: 'Enter readability (1-5)',
         width: 'sm'
       }
     ],
@@ -438,7 +438,7 @@ const fundamentalsLessons = [
           ])
           return Array.from(values)
         },
-        placeholder: '125.35',
+        placeholder: 'Enter contact frequency',
         width: 'md'
       }
     ],
