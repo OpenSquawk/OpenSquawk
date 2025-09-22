@@ -190,6 +190,30 @@ function randomFlightNumber(): string {
   return value
 }
 
+const phoneticCodeCharacters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('')
+
+function randomPhoneticCode(length = 5): string {
+  let value = ''
+  for (let i = 0; i < length; i++) {
+    value += choice(phoneticCodeCharacters)
+  }
+  return value
+}
+
+function codeToPhonetic(value: string): string {
+  return value
+    .toUpperCase()
+    .split('')
+    .map(char => {
+      if (natoMap[char]) return natoMap[char]
+      if (atcNumberWords[char]) return atcNumberWords[char]
+      return char
+    })
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function generateSquawk(): string {
   let code = ''
   for (let i = 0; i < 4; i++) {
@@ -301,6 +325,8 @@ export function createBaseScenario(): Scenario {
   const airline = choice(airlines)
   const flightNumber = randomFlightNumber()
   const callsign = `${airline.code}${flightNumber}`
+  const phoneticCode = randomPhoneticCode()
+  const phoneticCodeWords = codeToPhonetic(phoneticCode)
   const runway = choice(airport.runways)
   const stand = choice(airport.stands)
   const taxiRoute = choice(airport.taxi)
@@ -325,6 +351,7 @@ export function createBaseScenario(): Scenario {
   const temperature = randInt(-3, 28)
   const dewpoint = Math.max(temperature - randInt(2, 6), -10)
   const atisCode = choice(atisLetters)
+  const atisCodeWord = lettersToNato(atisCode)
   const remarks = choice(['NOSIG', 'BECMG 4000', 'TEMPO -SHRA'])
   const arrivalQnh = randInt(980, 1035)
   const arrivalWindDirection = randInt(0, 35) * 10
@@ -384,9 +411,15 @@ export function createBaseScenario(): Scenario {
     return acc
   }, {} as Record<FrequencyType, string>)
 
+  const contactFrequencies = frequencies.filter(freq => freq.type !== 'ATIS')
+  const handoffTarget = choice(contactFrequencies)
+  const handoffCity = handoffTarget.type === 'CTR' ? destination.city : airport.city
+  const handoffFacility = `${handoffCity} ${handoffTarget.label}`.trim()
+  const handoffFrequencyWords = frequencyWords[handoffTarget.type]
+
   const readability = choice(readabilityScale)
 
-  const atisText = `${airport.name} information ${atisCode}, time ${timestamp.slice(2, 4)}${timestamp.slice(4, 6)}, runway ${
+  const atisText = `${airport.name} information ${atisCodeWord}, time ${timestamp.slice(2, 4)}${timestamp.slice(4, 6)}, runway ${
     runwayToWords(runway)
   } in use, wind ${windToWords(windDirection, windSpeed)}, visibility ${visibilityToWords(visibility)}, temperature ${
     temperatureToWords(temperature)
@@ -397,6 +430,8 @@ export function createBaseScenario(): Scenario {
     airlineCode: airline.code,
     airlineCall: airline.call,
     radioCall: `${airline.call} ${digitsToWords(flightNumber)}`,
+    phoneticCode,
+    phoneticCodeWords,
     callsignNato: lettersToNato(airline.code),
     flightNumber,
     flightNumberWords: digitsToWords(flightNumber),
@@ -430,6 +465,7 @@ export function createBaseScenario(): Scenario {
     qnh,
     qnhWords: qnhToWords(qnh),
     atisCode,
+    atisCodeWord,
     atisText,
     atisSummary: {
       runway,
@@ -470,6 +506,13 @@ export function createBaseScenario(): Scenario {
     readabilityPhrase: `Readability ${readability.word}`,
     frequencies,
     frequencyWords,
+    handoff: {
+      type: handoffTarget.type,
+      facility: handoffFacility,
+      short: handoffTarget.label,
+      frequency: handoffTarget.value,
+      frequencyWords: handoffFrequencyWords
+    },
     atisFreq: airport.freqs.atis,
     deliveryFreq: airport.freqs.delivery,
     groundFreq: airport.freqs.ground,

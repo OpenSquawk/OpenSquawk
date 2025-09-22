@@ -46,6 +46,8 @@ export type Scenario = {
   airlineCode: string
   airlineCall: string
   radioCall: string
+  phoneticCode: string
+  phoneticCodeWords: string
   callsignNato: string
   flightNumber: string
   flightNumberWords: string
@@ -79,6 +81,7 @@ export type Scenario = {
   qnh: number
   qnhWords: string
   atisCode: string
+  atisCodeWord: string
   atisText: string
   atisSummary: {
     runway: string
@@ -119,6 +122,13 @@ export type Scenario = {
   readabilityPhrase: string
   frequencies: Frequency[]
   frequencyWords: Record<FrequencyType, string>
+  handoff: {
+    type: FrequencyType
+    facility: string
+    short: string
+    frequency: string
+    frequencyWords: string
+  }
   atisFreq: string
   deliveryFreq: string
   groundFreq: string
