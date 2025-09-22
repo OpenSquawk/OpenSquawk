@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-[#070d1a] text-white">
+  <div class="learn-theme min-h-screen bg-[#070d1a] text-white">
     <header class="border-b border-white/5 bg-[#070d1a]/80 backdrop-blur">
       <div
         class="mx-auto flex w-full max-w-screen-xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6 md:px-8"
@@ -13,12 +13,9 @@
             <p class="text-sm text-white/60">Guided preflight briefing</p>
           </div>
         </div>
-        <NuxtLink
-          to="/learn"
-          class="inline-flex items-center gap-2 rounded-xl bg-cyan-400/90 px-4 py-2 text-sm font-semibold text-[#07111f] shadow-lg shadow-cyan-500/30 transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070d1a]"
-        >
+        <NuxtLink to="/learn" class="btn primary">
           Enter Learn hub
-          <v-icon icon="mdi-launch" size="18" class="text-[#07111f]" />
+          <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
         </NuxtLink>
       </div>
     </header>
@@ -96,18 +93,20 @@
                     <div class="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
-                        class="voice-toggle"
+                        class="btn soft voice-toggle"
                         :class="{ active: voiceMode === 'text' }"
                         @click="setVoiceMode('text')"
+                        :aria-pressed="voiceMode === 'text'"
                       >
                         <v-icon icon="mdi-text" size="18" class="text-cyan-200" />
                         Text only
                       </button>
                       <button
                         type="button"
-                        class="voice-toggle"
+                        class="btn soft voice-toggle"
                         :class="{ active: voiceMode === 'radio' }"
                         @click="setVoiceMode('radio')"
+                        :aria-pressed="voiceMode === 'radio'"
                       >
                         <v-icon icon="mdi-radio-handheld" size="18" class="text-cyan-200" />
                         Radio voice
@@ -140,14 +139,14 @@
                     <div class="flex flex-wrap items-center gap-3">
                       <button
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-xl bg-cyan-400/90 px-3 py-2 text-sm font-semibold text-[#07111f] shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1328]"
+                        class="btn primary"
                         @click="handleRadioCheck"
                         :disabled="speechLoading"
                       >
                         <v-icon
                           :icon="speechLoading ? 'mdi-loading' : 'mdi-radio-check'"
                           size="18"
-                          class="text-[#07111f]"
+                          class="text-[#061318]"
                           :class="{ 'animate-spin': speechLoading }"
                         />
                         {{ speechLoading ? 'Checking…' : hasCompletedRadioCheck ? 'Radio check again' : 'Run radio check' }}
@@ -165,19 +164,16 @@
                 <div class="mt-6 flex flex-wrap items-center gap-3">
                   <button
                     type="button"
-                    class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 px-4 py-2 text-sm font-semibold text-[#07111f] shadow-lg shadow-cyan-500/30 transition hover:from-cyan-300 hover:via-sky-400 hover:to-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1328] disabled:cursor-not-allowed disabled:opacity-60"
+                    class="btn primary"
                     @click="startTour"
                     :disabled="startDisabled"
                   >
-                    <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#07111f]" />
+                    <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#061318]" />
                     Start guided tour
                   </button>
-                  <NuxtLink
-                    to="/learn"
-                    class="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-cyan-300 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1328]"
-                  >
+                  <NuxtLink to="/learn" class="btn ghost">
                     Skip to Learn
-                    <v-icon icon="mdi-arrow-right" size="16" class="text-cyan-200" />
+                    <v-icon icon="mdi-arrow-right" size="16" />
                   </NuxtLink>
                 </div>
                 <p v-if="startDisabled && voiceMode === 'radio'" class="mt-2 text-xs text-amber-200/80">
@@ -200,7 +196,7 @@
               <div class="flex items-center gap-3 text-xs text-white/70">
                 <div class="flex-1 overflow-hidden rounded-full bg-white/10">
                   <div
-                    class="h-2 rounded-full bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 transition-all duration-500"
+                    class="progress-fill"
                     :style="{ width: `${stageProgress}%` }"
                   ></div>
                 </div>
@@ -238,7 +234,7 @@
             <button
               v-if="tourStarted"
               type="button"
-              class="mt-6 inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm text-white/70 transition hover:border-cyan-300/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#080f1f]"
+              class="btn ghost mini mt-6"
               @click="restartTour"
             >
               <v-icon icon="mdi-refresh" size="18" class="text-cyan-200" />
@@ -258,11 +254,11 @@
               <div class="mt-6 flex flex-wrap justify-center gap-3">
                 <button
                   type="button"
-                  class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 px-4 py-2 text-sm font-semibold text-[#07111f] shadow-lg shadow-cyan-500/30 transition hover:from-cyan-300 hover:via-sky-400 hover:to-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1326] disabled:cursor-not-allowed disabled:opacity-60"
+                  class="btn primary"
                   @click="startTour"
                   :disabled="startDisabled"
                 >
-                  <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#07111f]" />
+                  <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#061318]" />
                   Start guided tour
                 </button>
               </div>
@@ -341,7 +337,7 @@
                         <div v-if="voiceMode === 'radio'" class="flex flex-wrap items-center gap-3">
                           <button
                             type="button"
-                            class="inline-flex items-center gap-2 rounded-xl border border-cyan-300/50 px-3 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c162c]"
+                            class="btn soft mini voice-replay"
                             @click="replayStageVoice"
                             :disabled="speechLoading"
                           >
@@ -364,7 +360,7 @@
                       <button
                         v-if="canGoPrevious"
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-cyan-300 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c162c]"
+                        class="btn ghost"
                         @click="goToPrevious"
                       >
                         <v-icon icon="mdi-arrow-left" size="18" class="text-cyan-200" />
@@ -374,7 +370,7 @@
                         <button
                           v-if="voiceMode === 'radio'"
                           type="button"
-                          class="inline-flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 transition hover:border-cyan-300/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c162c]"
+                          class="btn ghost mini play-again"
                           @click="maybeSpeakForStage"
                           :disabled="speechLoading"
                         >
@@ -384,19 +380,15 @@
                         <button
                           v-if="canGoNext"
                           type="button"
-                          class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 px-4 py-2 text-sm font-semibold text-[#07111f] shadow-lg shadow-cyan-500/30 transition hover:from-cyan-300 hover:via-sky-400 hover:to-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c162c]"
+                          class="btn primary"
                           @click="goToNext"
                         >
                           Next stop
-                          <v-icon icon="mdi-arrow-right" size="18" class="text-[#07111f]" />
+                          <v-icon icon="mdi-arrow-right" size="18" class="text-[#061318]" />
                         </button>
-                        <NuxtLink
-                          v-else
-                          to="/learn"
-                          class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0c162c] shadow-lg shadow-cyan-500/20 transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c162c]"
-                        >
+                        <NuxtLink v-else to="/learn" class="btn primary">
                           Enter Learn hub
-                          <v-icon icon="mdi-launch" size="18" class="text-[#0c162c]" />
+                          <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
                         </NuxtLink>
                       </div>
                     </div>
@@ -415,6 +407,9 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useHead } from '#imports'
 import { useApi } from '~/composables/useApi'
+import type { PizzicatoLite } from '~~/shared/utils/pizzicatoLite'
+import { loadPizzicatoLite } from '~~/shared/utils/pizzicatoLite'
+import { clampReadability, createNoiseGenerators, getReadabilityProfile } from '~~/shared/utils/radioEffects'
 
 type VoiceMode = 'text' | 'radio'
 
@@ -519,6 +514,13 @@ const speechError = ref<string | null>(null)
 const audioElement = ref<HTMLAudioElement | null>(null)
 let speechRequestId = 0
 
+const isClient = typeof window !== 'undefined'
+let speechContext: AudioContext | null = null
+let pizzicatoLiteInstance: PizzicatoLite | null = null
+type RadioSoundInstance = Awaited<ReturnType<PizzicatoLite['createSoundFromBase64']>>
+let activeRadioSound: RadioSoundInstance | null = null
+let activeRadioCleanup: Array<() => void> = []
+
 const activeStage = computed(() => stages[stageIndex.value])
 const canGoPrevious = computed(() => stageIndex.value > 0)
 const canGoNext = computed(() => stageIndex.value < stages.length - 1)
@@ -533,8 +535,164 @@ const progressLabel = computed(() => {
 })
 const startDisabled = computed(() => voiceMode.value === 'radio' && !hasCompletedRadioCheck.value)
 
+async function ensureSpeechAudioContext(): Promise<AudioContext | null> {
+  if (!isClient) return null
+
+  const audioWindow = window as typeof window & { webkitAudioContext?: typeof AudioContext }
+  const AudioContextCtor = audioWindow.AudioContext || audioWindow.webkitAudioContext
+  if (!AudioContextCtor) return null
+
+  if (!speechContext || speechContext.state === 'closed') {
+    speechContext = new AudioContextCtor()
+  }
+
+  if (speechContext.state === 'suspended') {
+    try {
+      await speechContext.resume()
+    } catch (error) {
+      console.warn('Failed to resume speech audio context', error)
+    }
+  }
+
+  return speechContext
+}
+
+async function ensurePizzicato(ctx: AudioContext | null): Promise<PizzicatoLite | null> {
+  if (!ctx) return null
+  if (!pizzicatoLiteInstance) {
+    pizzicatoLiteInstance = await loadPizzicatoLite()
+  }
+  return pizzicatoLiteInstance
+}
+
+function releaseRadio(cleanups: Array<() => void>, sound: RadioSoundInstance | null) {
+  if (activeRadioSound === sound) {
+    activeRadioSound = null
+  }
+  if (activeRadioCleanup === cleanups) {
+    activeRadioCleanup = []
+  }
+  if (cleanups.length) {
+    cleanups.forEach(stop => {
+      try {
+        stop()
+      } catch {
+        // ignore cleanup failures
+      }
+    })
+    cleanups.length = 0
+  }
+  sound?.clearEffects()
+}
+
+async function playWithRadioEffect(base64: string, readability: number, requestId: number): Promise<boolean> {
+  let sound: RadioSoundInstance | null = null
+  const cleanups: Array<() => void> = []
+
+  try {
+    const ctx = await ensureSpeechAudioContext()
+    if (!ctx || speechRequestId !== requestId) return false
+
+    const pizzicato = await ensurePizzicato(ctx)
+    if (!pizzicato || speechRequestId !== requestId) return false
+
+    sound = await pizzicato.createSoundFromBase64(ctx, base64)
+    if (!sound || speechRequestId !== requestId) return false
+
+    const profile = getReadabilityProfile(readability)
+    const { Effects } = pizzicato
+
+    const highpass = new Effects.HighPassFilter(ctx, {
+      frequency: profile.eq.highpass,
+      q: profile.eq.highpassQ
+    })
+    const lowpass = new Effects.LowPassFilter(ctx, {
+      frequency: profile.eq.lowpass,
+      q: profile.eq.lowpassQ
+    })
+
+    sound.addEffect(highpass)
+    sound.addEffect(lowpass)
+
+    if (profile.eq.bandpass) {
+      sound.addEffect(
+        new Effects.BandPassFilter(ctx, {
+          frequency: profile.eq.bandpass.frequency,
+          q: profile.eq.bandpass.q
+        })
+      )
+    }
+
+    if (profile.presence) {
+      sound.addEffect(new Effects.PeakingFilter(ctx, profile.presence))
+    }
+
+    profile.distortions.forEach(amount => {
+      sound?.addEffect(new Effects.Distortion(ctx, { amount }))
+    })
+
+    sound.addEffect(new Effects.Compressor(ctx, profile.compressor))
+
+    if (profile.tremolos) {
+      profile.tremolos.forEach(tremolo => {
+        sound?.addEffect(new Effects.Tremolo(ctx, tremolo))
+      })
+    }
+
+    sound.setVolume(profile.gain)
+
+    const playbackDuration = Math.max(0.1, sound.duration)
+    cleanups.push(...createNoiseGenerators(ctx, playbackDuration, profile, readability))
+
+    if (speechRequestId !== requestId) {
+      releaseRadio(cleanups, sound)
+      return false
+    }
+
+    activeRadioSound = sound
+    activeRadioCleanup = cleanups
+
+    if (speechRequestId !== requestId) {
+      releaseRadio(cleanups, sound)
+      return false
+    }
+
+    const playbackPromise = sound.play()
+    if (speechRequestId === requestId) {
+      speechPlaying.value = true
+    }
+
+    playbackPromise.finally(() => {
+      const shouldUpdateState = speechRequestId === requestId
+      releaseRadio(cleanups, sound)
+      if (shouldUpdateState) {
+        speechPlaying.value = false
+      }
+    })
+
+    return true
+  } catch (error) {
+    releaseRadio(cleanups, sound)
+    console.error('Failed to apply radio effect', error)
+    return false
+  }
+}
+
 function stopAudio(advanceRequestId = true) {
   speechPlaying.value = false
+
+  if (activeRadioSound || activeRadioCleanup.length) {
+    const sound = activeRadioSound
+    if (sound) {
+      try {
+        sound.stop()
+      } catch (error) {
+        console.warn('Failed to stop radio voice', error)
+      }
+    }
+    releaseRadio(activeRadioCleanup, sound ?? null)
+  }
+
   if (audioElement.value) {
     try {
       audioElement.value.pause()
@@ -544,6 +702,7 @@ function stopAudio(advanceRequestId = true) {
     }
     audioElement.value = null
   }
+
   if (advanceRequestId) {
     speechRequestId += 1
   }
@@ -582,6 +741,17 @@ async function speak(text: string, stageId?: string): Promise<boolean> {
     }
 
     const mime = response?.audio?.mime || 'audio/wav'
+    const readability = clampReadability(radioLevel.value)
+
+    const playedWithEffects = await playWithRadioEffect(base64, readability, requestId)
+    if (requestId !== speechRequestId) {
+      return false
+    }
+
+    if (playedWithEffects) {
+      return true
+    }
+
     const audio = new Audio(`data:${mime};base64,${base64}`)
 
     audio.onended = () => {
@@ -614,6 +784,10 @@ async function speak(text: string, stageId?: string): Promise<boolean> {
     } catch (error) {
       if (speechRequestId === requestId) {
         speechError.value = 'Audio was blocked by the browser. Click anywhere on the page and try again.'
+        speechPlaying.value = false
+        if (audioElement.value === audio) {
+          audioElement.value = null
+        }
       }
       return false
     }
@@ -723,11 +897,43 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .voice-toggle {
-  @apply inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-cyan-300/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1328];
+  transition: border-color 0.25s ease, background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.voice-toggle .v-icon {
+  color: color-mix(in srgb, var(--accent) 70%, white 30%);
 }
 
 .voice-toggle.active {
-  @apply border-cyan-300/60 bg-cyan-400/10 text-white;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--text);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.voice-toggle.active .v-icon {
+  color: color-mix(in srgb, var(--accent) 85%, white 15%);
+}
+
+.voice-replay {
+  color: var(--t2);
+}
+
+.voice-replay:disabled {
+  opacity: 0.6;
+}
+
+.play-again {
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.progress-fill {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.85), rgba(14, 165, 233, 0.92));
+  box-shadow: 0 0 18px rgba(14, 165, 233, 0.35);
+  transition: width 0.45s ease;
 }
 
 .fade-slide-enter-active,

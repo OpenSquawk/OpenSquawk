@@ -62,6 +62,8 @@ export default defineNuxtConfig({
         }
     },
     css: [
-        '~/assets/css/global.css', '~/assets/css/opensquawk-glass.css'
+        '~/assets/css/global.css',
+        '~/assets/css/opensquawk-glass.css',
+        '~/assets/css/learn-theme.css'
     ],
 })
