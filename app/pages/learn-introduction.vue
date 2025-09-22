@@ -42,7 +42,7 @@
                 Train with confidence before you call live AI ATC
               </h1>
               <p class="max-w-2xl text-base text-white/80 sm:text-lg">
-                This walkthrough introduces the Learn page that is publicly available today. Live AI ATC for full simulator missions is still in closed testing—Learn is where you rehearse the phraseology, pacing and workflows so the jump to real operations feels natural.
+                This walkthrough shows how Learn works today. Live AI ATC for full simulator missions is still in closed testing, so treat this as your training ground before calling the real network.
               </p>
               <div class="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-5 text-amber-100 shadow-lg shadow-amber-500/10" role="status">
                 <div class="flex items-start gap-3">
@@ -52,7 +52,7 @@
                   <div class="space-y-1">
                     <p class="text-sm font-semibold uppercase tracking-wide text-amber-100/90">Current status</p>
                     <p class="text-sm text-amber-50/90">
-                      Learn is a dedicated training environment. The AI that will staff live frequencies comes later—today you can already practise with the same phraseology, mission structure and scoring model the controllers will use.
+                      Learn is the training environment. The AI that will staff live frequencies comes later—today you can already rehearse with the same phraseology, mission rhythm and scoring model.
                     </p>
                   </div>
                 </div>
@@ -60,23 +60,31 @@
               <ul class="grid gap-3 text-sm text-white/70 sm:grid-cols-2 sm:text-base">
                 <li class="flex items-start gap-3">
                   <v-icon icon="mdi-target" size="20" class="mt-1 text-cyan-300" />
-                  <span>Drill ICAO alphabet, clearances, taxi flows and full-flight sequences with instant feedback.</span>
+                  <span>Drill ICAO alphabet, clearances and taxi flows with instant feedback.</span>
                 </li>
                 <li class="flex items-start gap-3">
                   <v-icon icon="mdi-sync" size="20" class="mt-1 text-cyan-300" />
-                  <span>Progress, XP and objectives sync with your OpenSquawk account when you are signed in.</span>
+                  <span>Progress, XP and objectives sync to your OpenSquawk account when you sign in.</span>
                 </li>
                 <li class="flex items-start gap-3">
                   <v-icon icon="mdi-headset" size="20" class="mt-1 text-cyan-300" />
-                  <span>Simulate radio readability, enable audio challenge mode and tune ATC speed to match reality.</span>
+                  <span>Simulate radio readability, enable audio challenge mode and tune ATC speed.</span>
                 </li>
                 <li class="flex items-start gap-3">
                   <v-icon icon="mdi-airplane-clock" size="20" class="mt-1 text-cyan-300" />
-                  <span>Import a SimBrief plan or craft your own mission to rehearse the exact trip you intend to fly.</span>
+                  <span>Import a SimBrief plan or craft your own mission to rehearse your exact trip.</span>
                 </li>
               </ul>
             </div>
             <div class="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl shadow-cyan-500/10">
+              <div class="overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+                <img
+                  src="/img/learn/missions/full-flight/briefing-hero.png"
+                  alt="Mission briefing preview"
+                  class="h-48 w-full object-cover sm:h-56"
+                  loading="lazy"
+                />
+              </div>
               <div class="rounded-2xl border border-white/10 bg-black/40 p-6">
                 <h2 class="text-lg font-semibold">Tour itinerary</h2>
                 <p class="mt-3 text-sm text-white/70">
@@ -199,6 +207,15 @@
                       </p>
                     </div>
 
+                    <div class="overflow-hidden rounded-3xl border border-white/10 bg-black/30">
+                      <img
+                        src="/img/learn/modules/img7.jpeg"
+                        alt="Module tiles inside the Learn hub"
+                        class="h-56 w-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+
                     <div class="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
                       <div class="space-y-4 rounded-3xl border border-white/10 bg-[#0f182d]/80 p-5">
                         <p class="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-200/70">Modules</p>
@@ -277,6 +294,15 @@
                       <p class="text-sm text-white/70">
                         Every mission follows the same pattern: hub, planning, briefing, execution and celebration. Step through the sequence to see what you will do in Learn.
                       </p>
+                    </div>
+
+                    <div class="overflow-hidden rounded-3xl border border-white/10 bg-black/30">
+                      <img
+                        src="/img/learn/missions/full-flight/briefing-route.png"
+                        alt="Mission planning cards"
+                        class="h-56 w-full object-cover"
+                        loading="lazy"
+                      />
                     </div>
 
                     <div class="space-y-6">
@@ -359,6 +385,15 @@
                       <p class="text-sm text-white/70">
                         Lessons simulate a real frequency. Use the tabs to inspect each panel, then trigger a sample ATC call to hear how the speech engine sounds.
                       </p>
+                    </div>
+
+                    <div class="overflow-hidden rounded-3xl border border-white/10 bg-black/30">
+                      <img
+                        src="/img/learn/modules/img11.jpeg"
+                        alt="Lesson console preview"
+                        class="h-56 w-full object-cover"
+                        loading="lazy"
+                      />
                     </div>
 
                     <div class="grid gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
@@ -481,6 +516,15 @@
                       </p>
                     </div>
 
+                    <div class="overflow-hidden rounded-3xl border border-white/10 bg-black/30">
+                      <img
+                        src="/img/learn/missions/full-flight/briefing-weather.png"
+                        alt="Weather briefing illustration"
+                        class="h-56 w-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+
                     <div class="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
                       <div class="rounded-3xl border border-white/10 bg-[#0f182d]/80 p-6">
                         <h4 class="text-base font-semibold text-white">Training tips</h4>
@@ -554,7 +598,7 @@
                     <div class="rounded-3xl border border-cyan-400/50 bg-cyan-400/10 p-6 text-center shadow-lg shadow-cyan-500/25">
                       <h4 class="text-lg font-semibold text-white">Ready for the real missions?</h4>
                       <p class="mt-2 text-sm text-white/80">
-                        Head to the Learn hub, choose your module and repeat each scenario until the readback feels automatic. When live AI ATC opens to the public, you will already sound like a pro.
+                        Head to the Learn hub, choose your module and loop the scenarios until the readback feels automatic. You will be ready when live AI ATC goes public.
                       </p>
                       <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
                         <NuxtLink
@@ -624,41 +668,37 @@ const moduleSummaries = [
   {
     icon: 'mdi-alpha',
     title: 'Fundamentals · Basics',
-    description: 'Drill the ICAO alphabet, numbers, ATIS and METAR decoding so every call starts clean.',
+    description: 'Warm up with the ICAO alphabet, numbers and weather essentials.',
     skills: [
-      'Master ICAO alphabet pronunciation and number pacing before the missions speed up.',
-      'Decode ATIS and METAR snippets to prepare runway, wind and QNH details quickly.',
-      'Rehearse the standard call structure so your first contact with ATC is confident.'
+      'Lock in ICAO pronunciation and number pacing.',
+      'Decode ATIS or METAR snippets to prep runway, wind and QNH.'
     ]
   },
   {
     icon: 'mdi-walkie-talkie',
     title: 'Readbacks · Essential Calls',
-    description: 'Practice clearances, taxi instructions, approach handoffs and landing confirmations.',
+    description: 'Drill clearances, taxiing and tower exchanges.',
     skills: [
-      'Respond to IFR clearances with squawk codes, departure procedures and altitudes.',
-      'Keep taxi routes and hold-short instructions straight even with complex airport layouts.',
-      'Follow approach and tower handoffs with proper acknowledgement and readback cadence.'
+      'Answer IFR clearances with squawk, procedure and altitude notes.',
+      'Track taxi routes and hold-short phrases without getting lost.'
     ]
   },
   {
     icon: 'mdi-traffic-light',
     title: 'ATC · Advanced Calls',
-    description: 'Handle requests, contingencies and priority interruptions with confidence.',
+    description: 'Handle reroutes, speed changes and priority requests.',
     skills: [
-      'Work through reroutes, holds and runway changes without losing your composure.',
-      'Practise priority readbacks when ATC issues speed or altitude restrictions mid-flight.',
-      'Use the evaluation tools to compare your wording with the AI’s ideal phraseology.'
+      'Stay calm through holds, reroutes or runway swaps.',
+      'Match the AI phrasing when restrictions appear mid-flight.'
     ]
   },
   {
     icon: 'mdi-airplane',
     title: 'Full Flight · Gate to Gate',
-    description: 'String everything together with a single scenario from clearance to taxi-in, including flight planning.',
+    description: 'Fly the whole story from briefing to taxi-in.',
     skills: [
-      'Build a gate-to-gate brief from random, manual or SimBrief flight plans in minutes.',
-      'Complete every phase—clearance, taxi, departure, en-route, approach and taxi-in—in one run.',
-      'Perfect your flows before booking live AI ATC or joining a network session.'
+      'Build a plan from random, manual or SimBrief data.',
+      'Link every phase—clearance to shutdown—without leaving the mission.'
     ]
   }
 ] as const
@@ -667,31 +707,28 @@ const overviewCards = [
   {
     icon: 'mdi-radar',
     title: 'Mission hub overview',
-    description: 'The Learn landing page lists all available training modules with unlockable tiles and live progress bars.',
+    description: 'The Learn hub lists every module with unlockable tiles and live progress.',
     points: [
-      'Start with Fundamentals to unlock Readbacks, Advanced calls and the full-flight mission.',
-      'Tiles display how many lessons you have completed plus the average score for each mission.',
-      'Locked modules explain what to do next so you always know the next action to unlock them.'
+      'Start in Fundamentals to unlock the rest of the curriculum.',
+      'Tiles show lesson count, average score and what to do next.'
     ]
   },
   {
     icon: 'mdi-clipboard-text',
     title: 'Mission setup & briefing',
-    description: 'Modules with flight planning walk you through random flights, manual inputs or SimBrief imports before training.',
+    description: 'Planning missions let you roll a random route, type your own or import SimBrief.',
     points: [
-      'Random flights instantly generate a realistic callsign, route and weather—reroll as often as you like.',
-      'Manual planning lets you recreate an upcoming simulator session down to the runway and squawk code.',
-      'Paste your SimBrief pilot ID to pull the most recent dispatch and load it straight into the briefing.'
+      'Random mode hands you a callsign, route and weather instantly.',
+      'Manual or SimBrief entries make it easy to mirror an upcoming flight.'
     ]
   },
   {
     icon: 'mdi-teach',
     title: 'Lesson console & scoring',
-    description: 'Each lesson plays an ATC transmission, asks for your readback and grades every field for accuracy.',
+    description: 'Each lesson plays ATC audio, captures your readback and scores accuracy.',
     points: [
-      'Listen with the speaker button, stop playback anytime or reveal the text if audio challenge mode hides it.',
-      'Fill the blanks, hit Check and review the per-field breakdown with similarity percentages.',
-      'Use Reset to clear entries, Auto-fill to study the perfect answer and New scenario to reroll fresh data.'
+      'Reveal text only when you need it, then grade yourself with Check.',
+      'Reset, Auto-fill or roll a new scenario to keep the pace high.'
     ]
   }
 ] as const
@@ -700,38 +737,38 @@ const stepFlow = [
   {
     order: '01',
     title: 'Sign in and open the mission hub',
-    description: 'Head to /learn after logging in. The top HUD confirms you are in training mode with mission tiles below.',
-    tips: ['If you are returning, the hub restores the last module you opened so you can continue immediately.']
+    description: 'Log in and head to /learn. The banner confirms you are in training mode.',
+    tips: ['The hub remembers your last module so you can pick up instantly.']
   },
   {
     order: '02',
     title: 'Choose a module',
-    description: 'Select Fundamentals for basics, Readbacks for clearances, Advanced for edge cases or Full Flight for an end-to-end run.',
-    tips: ['Hover a tile to see your completion stats and the main skills a module covers.']
+    description: 'Select Fundamentals, Readbacks, Advanced or Full Flight to match your goal.',
+    tips: ['Hover a tile for completion stats and focus areas.']
   },
   {
     order: '03',
     title: 'Lock in a flight (if required)',
-    description: 'Some missions need a flight plan first. Pick random, manual or SimBrief and confirm the details before proceeding.',
-    tips: ['Keep rerolling random flights until you find a route that matches the procedures you want to practise.']
+    description: 'Some missions need a plan first—pick random, manual or SimBrief and confirm.',
+    tips: ['Reroll random flights until the procedures line up with what you want to practise.']
   },
   {
     order: '04',
     title: 'Brief the mission',
-    description: 'Review the hero briefing card for runways, frequencies, weather, squawk and any altitude or timing calls.',
-    tips: ['Use the art and bullet cards to double-check SID, STAR and weather cues before clicking Start mission.']
+    description: 'Review runway, weather, squawk and notes on the briefing cards.',
+    tips: ['Use the illustrations to double-check SID, STAR and key calls.']
   },
   {
     order: '05',
     title: 'Practise the lesson',
-    description: 'Listen to the ATC call, complete the readback blanks, evaluate and iterate until the score feels consistent.',
-    tips: ['Activate audio challenge to force yourself to decode the call without reading ahead for extra realism.']
+    description: 'Play the call, fill the blanks and iterate until the score sticks.',
+    tips: ['Audio challenge hides the text when you want pure listening practice.']
   },
   {
     order: '06',
     title: 'Advance & celebrate progress',
-    description: 'Use the footer navigation to move on. XP awards update your level, objectives and badges automatically.',
-    tips: ['Aim for 80%+ on each lesson to turn the progress bars green and unlock the next missions faster.']
+    description: 'Use the footer to move on—XP updates your level and objectives automatically.',
+    tips: ['Aim for 80%+ to unlock the next missions quickly.']
   }
 ] as const
 
@@ -739,41 +776,37 @@ const consoleHighlights = [
   {
     icon: 'mdi-volume-high',
     title: 'Target audio & phrase',
-    description: 'The target panel plays the ATC call and shows reference text when revealed.',
+    description: 'The target panel plays the call and shows reference text when revealed.',
     points: [
-      'Speaker button triggers TTS. The stop icon halts playback instantly if you want to replay.',
-      'Audio challenge hides the phrase until you click “Reveal text”, ideal for training pure listening skills.',
-      'The dice icon (“Roll”) swaps in a new scenario with fresh numbers, frequencies or weather.'
+      'Speaker handles playback—stop or roll for something new anytime.',
+      'Audio challenge hides the script until you tap Reveal text.'
     ]
   },
   {
     icon: 'mdi-form-textbox',
     title: 'Readback workspace',
-    description: 'Fields highlight success or gaps so you can focus revisions on weak spots.',
+    description: 'Blanks highlight what is right or needs work.',
     points: [
-      'Green checks confirm each blank is correct; amber warns you which element still needs work.',
-      'Similarity percentages quantify how close your wording is even when it is not a perfect match.',
-      'Hints and info pills recap phraseology rules, conversions and contextual data from the scenario.'
+      'Green checks confirm the field; amber shows what to fix.',
+      'Similarity percentages show how close your words were.'
     ]
   },
   {
     icon: 'mdi-auto-fix',
     title: 'Evaluation controls',
-    description: 'Three buttons keep the repetition loop tight and efficient.',
+    description: 'Three buttons keep the loop fast.',
     points: [
-      '“Check” grades your readback and pushes XP when you pass.',
-      '“Reset” clears all answers so you can attempt the same call again without leaving the lesson.',
-      '“Auto-fill” drops in the official solution—great for studying how the AI expects the wording.'
+      'Check grades your readback and awards XP.',
+      'Reset or Auto-fill to retry or study the model answer.'
     ]
   },
   {
     icon: 'mdi-timeline-clock',
     title: 'Mission footer & sequencing',
-    description: 'The bottom toolbar ensures you always know what comes next.',
+    description: 'The footer tracks sequencing and quick actions.',
     points: [
-      'Previous and Next buttons move between lessons or modules, showing the upcoming topic in the hint.',
-      '“New scenario” in the footer mirrors the dice button for quick-fire repetitions of the same skill.',
-      'When you finish a mission the footer points you to the next module so you keep momentum.'
+      'Previous/Next jump between lessons or modules with previews.',
+      'New scenario mirrors the dice button for rapid reps.'
     ]
   }
 ] as const
@@ -782,68 +815,67 @@ const settings = [
   {
     icon: 'mdi-voice',
     title: 'Browser TTS toggle',
-    description: 'Switch between browser-based speech (fast, offline) and the hosted AI voice for richer delivery.',
-    tip: 'Use browser speech when you are travelling or offline—swap back to the AI voice when you want the natural cadence.'
+    description: 'Swap between local speech (fast) and the hosted AI voice.',
+    tip: 'Use browser speech offline; switch back for the richer AI cadence.'
   },
   {
     icon: 'mdi-eye-outline',
     title: 'Audio challenge',
-    description: 'Hide target text until you reveal it manually. Perfect for practising pure listening comprehension.',
-    tip: 'Combine with a lower radio level to simulate noisy frequencies before you move to live controllers.'
+    description: 'Hide the reference text until you deliberately reveal it.',
+    tip: 'Pair with a lower radio level to mimic a noisy frequency.'
   },
   {
     icon: 'mdi-signal-variant',
     title: 'Radio level',
-    description: 'Set readability from 1 (noisy) to 5 (crisp) to simulate different radio conditions.',
-    tip: 'Levels 1–2 add static just like a busy network evening—great for your final rehearsal.'
+    description: 'Choose readability from 1 (noisy) to 5 (crisp).',
+    tip: 'Levels 1–2 add static like a busy network evening.'
   },
   {
     icon: 'mdi-speedometer',
     title: 'ATC speaking speed',
-    description: 'Adjust playback between 0.7× and 1.3× to slow down or accelerate the controller cadence.',
-    tip: 'Start slower when you learn a new procedure and inch back toward 1.0× as you gain confidence.'
+    description: 'Adjust playback between 0.7× and 1.3×.',
+    tip: 'Start slow on new procedures, then return to 1.0× as confidence grows.'
   },
   {
     icon: 'mdi-volume-high',
     title: 'Quick test',
-    description: 'Use the built-in sample phrase to confirm your audio output and chosen voice before starting a mission.',
-    tip: 'Run the test at the beginning of a session so everyone in the room knows the speakers work.'
+    description: 'Play a sample phrase to check audio output and voice.',
+    tip: 'Run it at the start of each session to confirm everything works.'
   },
   {
     icon: 'mdi-refresh',
     title: 'Reset training data',
-    description: 'Clear XP, progress and local settings on the current device if you want a fresh slate.',
-    tip: 'Perfect when you lend your device to a friend or want to replay the onboarding from scratch.'
+    description: 'Clear XP, progress and local settings on this device.',
+    tip: 'Use it before lending your setup or replaying the onboarding.'
   }
 ] as const
 
 const trainingTips = [
-  'Repeat each lesson five to ten times with the dice “Roll” action to lock in muscle memory.',
-  'Alternate between modules—revisit Fundamentals after a complex mission to keep basics sharp.',
-  'Use manual flight plans to rehearse a real-world route you intend to fly on VATSIM or another network.',
-  'Turn on audio challenge and drop the radio level when you are comfortable to stress-test comprehension.'
+  'Roll each lesson a few times to lock in the phrase.',
+  'Bounce between modules so fundamentals stay sharp.',
+  'When ready, enable audio challenge and lower the radio level for a stress test.'
 ] as const
 
 const faqs = [
   {
     question: 'Is this the same AI that will control my simulator session?',
-    answer: 'Not yet. The Learn hub is a standalone training environment. Live AI ATC is still in closed testing, but the phraseology and flows you practise here match what the live system will expect.'
+    answer: 'Not yet. Learn is the public trainer while live AI ATC stays in closed testing, but the flows match.'
   },
   {
     question: 'Do I need a SimBrief account to use Learn?',
-    answer: 'No. SimBrief import is optional. You can generate random flights instantly or enter your own departure, arrival and route data manually.'
+    answer: 'No. SimBrief import is optional—you can roll a random flight or enter one manually.'
   },
   {
     question: 'How is my progress saved?',
-    answer: 'Your XP, lesson scores, mission state and settings are stored locally for offline work and sync to your OpenSquawk account whenever you are logged in.'
+    answer: 'Progress and settings save locally and sync once you sign in.'
   },
   {
     question: 'Can I restart my training?',
-    answer: 'Yes. Open the ATC settings dialog and use “Reset training data” to clear progress on the current device before starting again.'
+    answer: 'Yes. Open ATC settings and use “Reset training data” on this device.'
   },
   {
     question: 'Which devices work best?',
-    answer: 'Learn runs in the browser on desktop or laptop. A headset or microphone is optional today—the trainer focuses on readbacks you type, not voice recognition yet.'
+    answer: 'Learn runs best in a desktop browser. A headset is optional for now because you type the readbacks.'
   }
 ] as const
 
