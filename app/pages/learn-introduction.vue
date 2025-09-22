@@ -13,12 +13,9 @@
             <p class="text-sm text-white/60">Guided preflight briefing</p>
           </div>
         </div>
-        <NuxtLink
-          to="/learn"
-          class="inline-flex items-center gap-2 rounded-xl bg-cyan-400/90 px-4 py-2 text-sm font-semibold text-[#07111f] shadow-lg shadow-cyan-500/30 transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070d1a]"
-        >
+        <NuxtLink to="/learn" class="btn primary">
           Enter Learn hub
-          <v-icon icon="mdi-launch" size="18" class="text-[#07111f]" />
+          <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
         </NuxtLink>
       </div>
     </header>
@@ -138,16 +135,11 @@
                       <p class="mt-2 text-xs text-cyan-100/70">Lower numbers add static. Higher numbers sound crisp.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        class="inline-flex items-center gap-2 rounded-xl bg-cyan-400/90 px-3 py-2 text-sm font-semibold text-[#07111f] shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1328]"
-                        @click="handleRadioCheck"
-                        :disabled="speechLoading"
-                      >
+                      <button type="button" class="btn primary mini" @click="handleRadioCheck" :disabled="speechLoading">
                         <v-icon
                           :icon="speechLoading ? 'mdi-loading' : 'mdi-radio-check'"
                           size="18"
-                          class="text-[#07111f]"
+                          class="text-[#061318]"
                           :class="{ 'animate-spin': speechLoading }"
                         />
                         {{ speechLoading ? 'Checking…' : hasCompletedRadioCheck ? 'Radio check again' : 'Run radio check' }}
@@ -163,18 +155,13 @@
                   </div>
                 </div>
                 <div class="mt-6 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 px-4 py-2 text-sm font-semibold text-[#07111f] shadow-lg shadow-cyan-500/30 transition hover:from-cyan-300 hover:via-sky-400 hover:to-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1328] disabled:cursor-not-allowed disabled:opacity-60"
-                    @click="startTour"
-                    :disabled="startDisabled"
-                  >
-                    <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#07111f]" />
+                  <button type="button" class="btn primary" @click="startTour" :disabled="startDisabled">
+                    <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#061318]" />
                     Start guided tour
                   </button>
                   <NuxtLink
                     to="/learn"
-                    class="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-cyan-300 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1328]"
+                    class="btn ghost"
                   >
                     Skip to Learn
                     <v-icon icon="mdi-arrow-right" size="16" class="text-cyan-200" />
@@ -256,13 +243,8 @@
                 Start the guided tour above. I will only show one stop at a time so it never feels overwhelming.
               </p>
               <div class="mt-6 flex flex-wrap justify-center gap-3">
-                <button
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 px-4 py-2 text-sm font-semibold text-[#07111f] shadow-lg shadow-cyan-500/30 transition hover:from-cyan-300 hover:via-sky-400 hover:to-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1326] disabled:cursor-not-allowed disabled:opacity-60"
-                  @click="startTour"
-                  :disabled="startDisabled"
-                >
-                  <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#07111f]" />
+                <button type="button" class="btn primary" @click="startTour" :disabled="startDisabled">
+                  <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#061318]" />
                   Start guided tour
                 </button>
               </div>
@@ -381,22 +363,17 @@
                           <v-icon icon="mdi-play-circle" size="16" class="text-cyan-200" />
                           Play again
                         </button>
-                        <button
-                          v-if="canGoNext"
-                          type="button"
-                          class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 px-4 py-2 text-sm font-semibold text-[#07111f] shadow-lg shadow-cyan-500/30 transition hover:from-cyan-300 hover:via-sky-400 hover:to-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c162c]"
-                          @click="goToNext"
-                        >
+                        <button v-if="canGoNext" type="button" class="btn primary" @click="goToNext">
                           Next stop
-                          <v-icon icon="mdi-arrow-right" size="18" class="text-[#07111f]" />
+                          <v-icon icon="mdi-arrow-right" size="18" class="text-[#061318]" />
                         </button>
                         <NuxtLink
                           v-else
                           to="/learn"
-                          class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0c162c] shadow-lg shadow-cyan-500/20 transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c162c]"
+                          class="btn primary"
                         >
                           Enter Learn hub
-                          <v-icon icon="mdi-launch" size="18" class="text-[#0c162c]" />
+                          <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
                         </NuxtLink>
                       </div>
                     </div>
@@ -415,6 +392,9 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useHead } from '#imports'
 import { useApi } from '~/composables/useApi'
+import type { PizzicatoLite } from '~~/shared/utils/pizzicatoLite'
+import { loadPizzicatoLite } from '~~/shared/utils/pizzicatoLite'
+import { createNoiseGenerators, getReadabilityProfile } from '~~/shared/utils/radioEffects'
 
 type VoiceMode = 'text' | 'radio'
 
@@ -506,6 +486,8 @@ const stages: StageStop[] = [
 
 const api = useApi()
 
+const isClient = typeof window !== 'undefined'
+
 const voiceMode = ref<VoiceMode>('text')
 const radioLevel = ref(3)
 const hasCompletedRadioCheck = ref(false)
@@ -517,6 +499,11 @@ const speechLoading = ref(false)
 const speechPlaying = ref(false)
 const speechError = ref<string | null>(null)
 const audioElement = ref<HTMLAudioElement | null>(null)
+let speechContext: AudioContext | null = null
+let pizzicatoLiteInstance: PizzicatoLite | null = null
+type RadioSoundInstance = Awaited<ReturnType<PizzicatoLite['createSoundFromBase64']>>
+let activeRadioSound: RadioSoundInstance | null = null
+let activeRadioCleanup: Array<() => void> = []
 let speechRequestId = 0
 
 const activeStage = computed(() => stages[stageIndex.value])
@@ -535,17 +522,200 @@ const startDisabled = computed(() => voiceMode.value === 'radio' && !hasComplete
 
 function stopAudio(advanceRequestId = true) {
   speechPlaying.value = false
-  if (audioElement.value) {
+  const audio = audioElement.value
+  if (audio) {
     try {
-      audioElement.value.pause()
-      audioElement.value.currentTime = 0
+      audio.pause()
+      audio.currentTime = 0
     } catch (error) {
       console.warn('Failed to stop audio', error)
     }
+    audio.onended = null
+    audio.onerror = null
     audioElement.value = null
+  }
+  if (activeRadioSound) {
+    try {
+      activeRadioSound.stop()
+    } catch (error) {
+      console.warn('Failed to stop radio playback', error)
+    }
+    activeRadioSound = null
+  }
+  if (activeRadioCleanup.length) {
+    const stops = activeRadioCleanup
+    activeRadioCleanup = []
+    stops.forEach(stop => {
+      try {
+        stop()
+      } catch {
+        // ignore cleanup errors
+      }
+    })
   }
   if (advanceRequestId) {
     speechRequestId += 1
+  }
+}
+
+async function ensureSpeechAudioContext(): Promise<AudioContext | null> {
+  if (!isClient) return null
+
+  const audioWindow = window as typeof window & { webkitAudioContext?: typeof AudioContext }
+  const AudioContextCtor = audioWindow.AudioContext || audioWindow.webkitAudioContext
+  if (!AudioContextCtor) return null
+
+  if (!speechContext || speechContext.state === 'closed') {
+    speechContext = new AudioContextCtor()
+  }
+
+  if (speechContext.state === 'suspended') {
+    try {
+      await speechContext.resume()
+    } catch (error) {
+      console.warn('Failed to resume speech audio context', error)
+    }
+  }
+
+  return speechContext
+}
+
+async function ensurePizzicato(ctx: AudioContext | null): Promise<PizzicatoLite | null> {
+  if (!ctx) return null
+  if (!pizzicatoLiteInstance) {
+    pizzicatoLiteInstance = await loadPizzicatoLite()
+  }
+  return pizzicatoLiteInstance
+}
+
+async function playSpeechSource(base64: string, mime: string, requestId: number): Promise<boolean> {
+  const readability = Math.max(1, Math.min(5, radioLevel.value || 3))
+  const dataUrl = `data:${mime};base64,${base64}`
+
+  const playWithoutEffects = async (): Promise<boolean> => {
+    const audio = new Audio(dataUrl)
+    audioElement.value = audio
+
+    audio.onended = () => {
+      if (speechRequestId === requestId && audioElement.value === audio) {
+        speechPlaying.value = false
+        audioElement.value = null
+      }
+    }
+
+    audio.onerror = () => {
+      if (speechRequestId === requestId && audioElement.value === audio) {
+        speechPlaying.value = false
+        speechError.value = 'Playback failed. Check your audio output and try again.'
+        audioElement.value = null
+      }
+    }
+
+    try {
+      await audio.play()
+      if (speechRequestId === requestId && audioElement.value === audio) {
+        speechPlaying.value = true
+      }
+      return true
+    } catch (error) {
+      if (speechRequestId === requestId && audioElement.value === audio) {
+        speechError.value = 'Audio was blocked by the browser. Click anywhere on the page and try again.'
+        speechPlaying.value = false
+        audioElement.value = null
+      }
+      return false
+    }
+  }
+
+  const ctx = await ensureSpeechAudioContext()
+  const pizzicato = await ensurePizzicato(ctx)
+  if (!ctx || !pizzicato) {
+    return playWithoutEffects()
+  }
+
+  let sound: RadioSoundInstance | null = null
+  let noiseStops: Array<() => void> = []
+
+  try {
+    sound = await pizzicato.createSoundFromBase64(ctx, base64)
+    const profile = getReadabilityProfile(readability)
+    const { Effects } = pizzicato
+
+    const highpass = new Effects.HighPassFilter(ctx, { frequency: profile.eq.highpass, q: profile.eq.highpassQ })
+    const lowpass = new Effects.LowPassFilter(ctx, { frequency: profile.eq.lowpass, q: profile.eq.lowpassQ })
+    sound.addEffect(highpass)
+    sound.addEffect(lowpass)
+
+    if (profile.eq.bandpass) {
+      sound.addEffect(
+        new Effects.BandPassFilter(ctx, {
+          frequency: profile.eq.bandpass.frequency,
+          q: profile.eq.bandpass.q
+        })
+      )
+    }
+
+    if (profile.presence) {
+      sound.addEffect(new Effects.PeakingFilter(ctx, profile.presence))
+    }
+
+    profile.distortions.forEach(amount => {
+      sound?.addEffect(new Effects.Distortion(ctx, { amount }))
+    })
+
+    sound.addEffect(new Effects.Compressor(ctx, profile.compressor))
+
+    if (profile.tremolos) {
+      profile.tremolos.forEach(tremolo => {
+        sound?.addEffect(new Effects.Tremolo(ctx, tremolo))
+      })
+    }
+
+    sound.setVolume(profile.gain)
+
+    const playbackDuration = Math.max(0.1, sound.duration)
+    noiseStops = createNoiseGenerators(ctx, playbackDuration, profile, readability)
+
+    activeRadioSound = sound
+    activeRadioCleanup = noiseStops
+
+    speechPlaying.value = true
+    await sound.play()
+    return speechRequestId === requestId
+  } catch (error) {
+    console.error('Failed to apply radio effect', error)
+    if (speechRequestId === requestId) {
+      speechPlaying.value = false
+    }
+    return playWithoutEffects()
+  } finally {
+    if (sound) {
+      try {
+        sound.clearEffects()
+      } catch {
+        // ignore cleanup failures
+      }
+    }
+
+    if (activeRadioSound === sound) {
+      activeRadioSound = null
+    }
+
+    if (activeRadioCleanup === noiseStops) {
+      activeRadioCleanup = []
+    }
+
+    noiseStops.forEach(stop => {
+      try {
+        stop()
+      } catch {
+        // ignore cleanup failures
+      }
+    })
+
+    if (speechRequestId === requestId && !audioElement.value) {
+      speechPlaying.value = false
+    }
   }
 }
 
@@ -581,42 +751,8 @@ async function speak(text: string, stageId?: string): Promise<boolean> {
       throw new Error('The radio voice is unavailable right now.')
     }
 
-    const mime = response?.audio?.mime || 'audio/wav'
-    const audio = new Audio(`data:${mime};base64,${base64}`)
-
-    audio.onended = () => {
-      if (speechRequestId === requestId) {
-        speechPlaying.value = false
-        if (audioElement.value === audio) {
-          audioElement.value = null
-        }
-      }
-    }
-
-    audio.onerror = () => {
-      if (speechRequestId === requestId) {
-        speechPlaying.value = false
-        speechError.value = 'Playback failed. Check your audio output and try again.'
-        if (audioElement.value === audio) {
-          audioElement.value = null
-        }
-      }
-    }
-
-    audioElement.value = audio
-
-    try {
-      await audio.play()
-      if (speechRequestId === requestId) {
-        speechPlaying.value = true
-      }
-      return true
-    } catch (error) {
-      if (speechRequestId === requestId) {
-        speechError.value = 'Audio was blocked by the browser. Click anywhere on the page and try again.'
-      }
-      return false
-    }
+    const mime = typeof response?.audio?.mime === 'string' ? response.audio.mime : 'audio/wav'
+    return await playSpeechSource(base64, mime, requestId)
   } catch (error: any) {
     if (speechRequestId === requestId) {
       const message = typeof error?.message === 'string' ? error.message : 'The radio voice is unavailable right now.'
@@ -722,6 +858,74 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: color-mix(in srgb, var(--text, #ffffff) 6%, transparent);
+  color: var(--text, #ffffff);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text, #ffffff) 12%, transparent);
+}
+
+.btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent, #22d3ee) 60%, transparent);
+  outline-offset: 2px;
+}
+
+.btn.primary {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent, #22d3ee) 92%, transparent),
+    color-mix(in srgb, var(--accent2, #0ea5e9) 70%, transparent)
+  );
+  color: #061318;
+  border-color: color-mix(in srgb, var(--accent, #22d3ee) 60%, transparent);
+  box-shadow: 0 18px 32px rgba(14, 165, 233, 0.25);
+}
+
+.btn.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn.ghost {
+  background: transparent;
+  color: color-mix(in srgb, var(--text, #ffffff) 82%, transparent);
+}
+
+.btn.ghost:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent, #22d3ee) 60%, transparent);
+  color: var(--text, #ffffff);
+}
+
+.btn.mini {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn.primary[disabled] {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent, #22d3ee) 70%, transparent),
+    color-mix(in srgb, var(--accent2, #0ea5e9) 55%, transparent)
+  );
+}
+
 .voice-toggle {
   @apply inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-cyan-300/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1328];
 }
