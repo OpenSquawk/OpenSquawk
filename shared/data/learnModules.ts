@@ -12,90 +12,93 @@ function gradientArt(colors: string[]): string {
 const fundamentalsLessons = [
   {
     id: 'icao-alphabet',
-    title: 'ICAO Alphabet & Numbers',
-    desc: 'Spell letters and digits clearly',
+    title: 'Decode ICAO Letters & Numbers',
+    desc: 'Turn phonetic blocks into identifiers',
     keywords: ['Alphabet', 'Numbers', 'Basics'],
     hints: [
-      'Spell each letter with its ICAO name (e.g. Delta, Lima, Hotel).',
-      'Use ATC numbers: tree, fower, fife, niner.'
+      'Convert the NATO letters and ATC numbers back into characters.',
+      'Write the identifier exactly as you would enter it into the FMS.'
     ],
     fields: [
       {
-        key: 'letters',
-        label: 'Letters',
-        expected: scenario => scenario.callsignNato,
-        placeholder: 'Delta Lima Hotel',
-        width: 'xl',
-        threshold: 0.9
-      },
-      {
-        key: 'digits',
-        label: 'Numbers',
-        expected: scenario => scenario.flightNumberWords,
-        placeholder: 'one two three',
-        width: 'lg',
-        threshold: 0.88
+        key: 'icao-code',
+        label: 'Identifier',
+        expected: scenario => scenario.phoneticCode,
+        alternatives: scenario => {
+          const spelled = scenario.phoneticCodeWords
+          const upper = scenario.phoneticCode.toUpperCase()
+          const lower = upper.toLowerCase()
+          const spacedUpper = upper.split('').join(' ')
+          const spacedLower = lower.split('').join(' ')
+          return Array.from(
+            new Set([
+              upper,
+              lower,
+              spelled,
+              spelled.toLowerCase(),
+              spacedUpper,
+              spacedLower
+            ])
+          )
+        },
+        placeholder: 'SWR59',
+        width: 'lg'
       }
     ],
     readback: [
-      { type: 'text', text: 'Call sign: ' },
-      { type: 'field', key: 'letters', width: 'lg' },
-      { type: 'text', text: ' · ' },
-      { type: 'field', key: 'digits', width: 'md' }
+      { type: 'text', text: 'Identifier ' },
+      { type: 'field', key: 'icao-code', width: 'lg' }
     ],
     defaultFrequency: 'DEL',
-    phrase: scenario => `${scenario.callsignNato} ${scenario.flightNumberWords}`,
+    phrase: scenario => scenario.phoneticCodeWords,
     info: scenario => [
-      `Callsign: ${scenario.callsign}`,
-      `Radio call: ${scenario.radioCall}`,
-      `ICAO spelling: ${scenario.callsignNato}`,
-      `Flight number spoken: ${scenario.flightNumberWords}`
+      `Heard: ${scenario.phoneticCodeWords}`,
+      `Identifier: ${scenario.phoneticCode}`
     ],
     generate: createBaseScenario
   },
   {
     id: 'radio-call',
     title: 'Radio Call Sign',
-    desc: 'Say the spoken and ICAO call sign',
+    desc: 'Say the spoken or ICAO call sign confidently',
     keywords: ['Basics', 'Callsign'],
     hints: [
-      'Use the airline telephony plus digits for the spoken version.',
-      'ICAO format keeps the three-letter code with the numbers.'
+      'Use the airline telephony plus digits when talking to ATC.',
+      'Readbacks can use either the spoken or ICAO format.'
     ],
     fields: [
       {
-        key: 'radio-call-spoken',
-        label: 'Spoken Call Sign',
+        key: 'radio-call',
+        label: 'Call sign',
         expected: scenario => scenario.radioCall,
-        alternatives: scenario => [
-          scenario.radioCall,
-          `${scenario.airlineCall} ${scenario.flightNumber}`,
-          `${scenario.airlineCall} ${scenario.flightNumberWords}`
-        ],
-        width: 'lg'
-      },
-      {
-        key: 'radio-call-icao',
-        label: 'ICAO Identifier',
-        expected: scenario => scenario.callsign,
-        alternatives: scenario => [
-          scenario.callsign,
-          `${scenario.airlineCode}${scenario.flightNumber}`
-        ],
-        width: 'md'
+        alternatives: scenario => {
+          const variants = new Set<string>()
+          const add = (value?: string) => {
+            if (!value) return
+            variants.add(value)
+            variants.add(value.toLowerCase())
+          }
+          add(scenario.radioCall)
+          add(`${scenario.airlineCall} ${scenario.flightNumber}`)
+          add(`${scenario.airlineCall} ${scenario.flightNumberWords}`)
+          add(scenario.callsign)
+          add(`${scenario.airlineCode} ${scenario.flightNumber}`)
+          add(`${scenario.callsignNato} ${scenario.flightNumberWords}`)
+          return Array.from(variants)
+        },
+        width: 'xl'
       }
     ],
     readback: [
       { type: 'text', text: 'Call sign ' },
-      { type: 'field', key: 'radio-call-spoken', width: 'lg' },
-      { type: 'text', text: ' · ICAO ' },
-      { type: 'field', key: 'radio-call-icao', width: 'md' }
+      { type: 'field', key: 'radio-call', width: 'xl' }
     ],
     defaultFrequency: 'DEL',
     phrase: scenario => `${scenario.radioCall}`,
     info: scenario => [
-      `Spoken call sign: ${scenario.radioCall}`,
-      `ICAO identifier: ${scenario.callsign}`
+      `Spoken: ${scenario.radioCall}`,
+      `ICAO: ${scenario.callsign}`,
+      `Phonetic: ${scenario.callsignNato} ${scenario.flightNumberWords}`
     ],
     generate: createBaseScenario
   },
@@ -105,8 +108,8 @@ const fundamentalsLessons = [
     desc: 'Extract the identifier and key data from the ATIS',
     keywords: ['ATIS', 'Weather'],
     hints: [
-      'Remember the ATIS identifier as a single letter.',
-      'Order: runway – wind – visibility – temperature – dew point – QNH.'
+      'Remember the ATIS identifier as its NATO word (e.g. Information Yankee).',
+      'Order: runway – wind – visibility – temperature – dew point – QNH; copy the numbers as digits.'
     ],
     fields: [
       {
@@ -116,7 +119,12 @@ const fundamentalsLessons = [
         alternatives: scenario => [
           scenario.atisCode,
           scenario.atisCode.toLowerCase(),
-          `Information ${scenario.atisCode}`
+          scenario.atisCodeWord,
+          scenario.atisCodeWord.toLowerCase(),
+          `Information ${scenario.atisCode}`,
+          `information ${scenario.atisCode.toLowerCase()}`,
+          `Information ${scenario.atisCodeWord}`,
+          `information ${scenario.atisCodeWord.toLowerCase()}`
         ],
         placeholder: 'Letter',
         width: 'xs',
@@ -143,22 +151,93 @@ const fundamentalsLessons = [
       {
         key: 'atis-visibility',
         label: 'Visibility',
-        expected: scenario => scenario.atisSummary.visibility,
-        alternatives: scenario => [scenario.visibility, scenario.visibilityWords],
+        expected: scenario => scenario.visibility,
+        alternatives: scenario => {
+          const values = new Set<string>()
+          const add = (value?: string) => {
+            if (!value) return
+            values.add(value)
+            values.add(value.toLowerCase())
+          }
+          add(scenario.visibility)
+          add(scenario.atisSummary.visibility)
+          add(scenario.visibilityWords)
+          const numeric = Number(scenario.visibility)
+          if (!Number.isNaN(numeric)) {
+            if (numeric >= 1000) {
+              const precise = (numeric / 1000).toFixed(1).replace(/\.0$/, '')
+              add(precise)
+              add(`${precise}km`)
+              add(`${precise} km`)
+            }
+            if (numeric >= 1000) {
+              const rounded = Math.round(numeric / 1000)
+              add(rounded.toString())
+              add(`${rounded}km`)
+              add(`${rounded} km`)
+            }
+          }
+          if (scenario.visibility === '9999') {
+            add('10')
+            add('10km')
+            add('10 km')
+          }
+          return Array.from(values)
+        },
         width: 'sm'
       },
       {
         key: 'atis-temp',
         label: 'Temperature',
-        expected: scenario => scenario.atisSummary.temperature,
-        alternatives: scenario => [scenario.temperatureWords],
+        expected: scenario => scenario.temperature.toString(),
+        alternatives: scenario => {
+          const value = scenario.temperature
+          const base = value.toString()
+          const plus = value > 0 ? `+${base}` : base
+          const c = `${base}°C`
+          const cSpaced = `${base} °C`
+          const shortC = value > 0 ? `${plus}C` : `${base}C`
+          const options = new Set<string>([
+            base,
+            plus,
+            c,
+            cSpaced,
+            shortC,
+            scenario.temperatureWords,
+            formatTemp(value)
+          ])
+          options.add(`${plus}°C`)
+          options.add(`${plus} °C`)
+          options.add(scenario.temperatureWords.toLowerCase())
+          return Array.from(options)
+        },
         width: 'sm'
       },
       {
         key: 'atis-dew',
         label: 'Dew point',
-        expected: scenario => scenario.atisSummary.dewpoint,
-        alternatives: scenario => [scenario.dewpointWords],
+        expected: scenario => scenario.dewpoint.toString(),
+        alternatives: scenario => {
+          const value = scenario.dewpoint
+          const base = value.toString()
+          const plus = value > 0 ? `+${base}` : base
+          const c = `${base}°C`
+          const cSpaced = `${base} °C`
+          const shortC = value > 0 ? `${plus}C` : `${base}C`
+          const options = new Set<string>([
+            base,
+            plus,
+            c,
+            cSpaced,
+            shortC,
+            scenario.dewpointWords,
+            formatTemp(value)
+          ])
+          options.add(`${plus}°C`)
+          options.add(`${plus} °C`)
+          options.add(scenario.dewpointWords.toLowerCase())
+          return Array.from(options)
+        },
         width: 'sm'
       },
       {
@@ -188,8 +267,8 @@ const fundamentalsLessons = [
     defaultFrequency: 'ATIS',
     phrase: scenario => scenario.atisText,
     info: () => [
-      'Note the identifier, runway, wind, visibility, temperature, dew point, and QNH.',
-      'Visibility: four digits or 9999 for ≥10 km; QNH as a four-digit value.'
+      'Note the identifier (NATO word), runway, wind, visibility, temperature, dew point, and QNH.',
+      'Temperatures and dew point can be recorded as plain numbers; visibility may be metres or kilometres.'
     ],
     generate: createBaseScenario
   },
@@ -261,22 +340,32 @@ const fundamentalsLessons = [
   {
     id: 'radio-check',
     title: 'Radio Check',
-    desc: 'Report readability',
+    desc: 'Acknowledge a requested radio check',
     keywords: ['Ground', 'Comms'],
     hints: [
-      'Reply with "Readability" followed by the number.',
-      'Always finish the check with your call sign.'
+      'Reply with "Readability" plus the number you hear.',
+      'Finish with your call sign; no need to repeat the frequency.'
     ],
     fields: [
       {
         key: 'rc-callsign',
         label: 'Callsign',
         expected: scenario => scenario.radioCall,
-        alternatives: scenario => [
-          scenario.radioCall,
-          `${scenario.airlineCall} ${scenario.flightNumber}`,
-          scenario.callsign
-        ],
+        alternatives: scenario => {
+          const variants = new Set<string>()
+          const add = (value?: string) => {
+            if (!value) return
+            variants.add(value)
+            variants.add(value.toLowerCase())
+          }
+          add(scenario.radioCall)
+          add(`${scenario.airlineCall} ${scenario.flightNumber}`)
+          add(`${scenario.airlineCall} ${scenario.flightNumberWords}`)
+          add(scenario.callsign)
+          add(`${scenario.airlineCode} ${scenario.flightNumber}`)
+          add(`${scenario.callsignNato} ${scenario.flightNumberWords}`)
+          return Array.from(variants)
+        },
         placeholder: 'Lufthansa one two three',
         width: 'lg'
       },
@@ -284,22 +373,106 @@ const fundamentalsLessons = [
         key: 'rc-readability',
         label: 'Readability',
         expected: scenario => scenario.readabilityWord,
-        alternatives: scenario => [scenario.readability.toString(), scenario.readabilityWord],
+        alternatives: scenario => [
+          scenario.readability.toString(),
+          scenario.readabilityWord,
+          scenario.readabilityWord.toLowerCase()
+        ],
         placeholder: 'five',
         width: 'sm'
       }
     ],
     readback: [
-      { type: 'text', text: 'This is ' },
-      { type: 'field', key: 'rc-callsign', width: 'lg' },
-      { type: 'text', text: ', readability ' },
-      { type: 'field', key: 'rc-readability', width: 'sm' }
+      { type: 'text', text: 'Readability ' },
+      { type: 'field', key: 'rc-readability', width: 'sm' },
+      { type: 'text', text: ', ' },
+      { type: 'field', key: 'rc-callsign', width: 'lg' }
     ],
     defaultFrequency: 'GND',
-    phrase: scenario => `${scenario.airport.name} Ground, ${scenario.radioCall}, radio check on ${scenario.groundFreq}.`,
+    phrase: scenario => `${scenario.radioCall}, ${scenario.airport.name} Ground, say radio check on ${scenario.groundFreq}.`,
     info: scenario => [
-      `Frequency: ${scenario.groundFreq} (${scenario.frequencyWords.GND})`,
-      `Expected response: Readability ${scenario.readability} (${scenario.readabilityWord})`
+      `Request: ${scenario.airport.name} Ground on ${scenario.groundFreq} (${scenario.frequencyWords.GND})`,
+      `Respond: Readability ${scenario.readability} (${scenario.readabilityWord}) with your call sign`
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'frequency-change',
+    title: 'Frequency Change Readback',
+    desc: 'Confirm a handoff instruction',
+    keywords: ['Comms', 'Frequency'],
+    hints: [
+      'Repeat the station and frequency before your call sign.',
+      'State the frequency as digits or with "decimal".'
+    ],
+    fields: [
+      {
+        key: 'freq-contact-frequency',
+        label: 'Frequency',
+        expected: scenario => scenario.handoff.frequency,
+        alternatives: scenario => {
+          const freq = scenario.handoff.frequency
+          const trimmed = freq.replace(/\.?0+$/, '')
+          const comma = freq.replace('.', ',')
+          const trimmedComma = trimmed.replace('.', ',')
+          const spaced = freq.replace('.', ' ')
+          const trimmedSpaced = trimmed.replace('.', ' ')
+          const words = scenario.handoff.frequencyWords
+          const pointWords = words.replace('decimal', 'point')
+          const compact = freq.replace('.', '')
+          const trimmedCompact = trimmed.replace('.', '')
+          const values = new Set<string>([
+            freq,
+            trimmed,
+            comma,
+            trimmedComma,
+            spaced,
+            trimmedSpaced,
+            words,
+            words.toLowerCase(),
+            pointWords,
+            pointWords.toLowerCase(),
+            compact,
+            trimmedCompact
+          ])
+          return Array.from(values)
+        },
+        placeholder: '125.35',
+        width: 'md'
+      },
+      {
+        key: 'freq-contact-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: scenario => {
+          const variants = new Set<string>()
+          const add = (value?: string) => {
+            if (!value) return
+            variants.add(value)
+            variants.add(value.toLowerCase())
+          }
+          add(scenario.radioCall)
+          add(`${scenario.airlineCall} ${scenario.flightNumber}`)
+          add(`${scenario.airlineCall} ${scenario.flightNumberWords}`)
+          add(scenario.callsign)
+          add(`${scenario.airlineCode} ${scenario.flightNumber}`)
+          add(`${scenario.callsignNato} ${scenario.flightNumberWords}`)
+          return Array.from(variants)
+        },
+        width: 'lg'
+      }
+    ],
+    readback: [
+      { type: 'text', text: scenario => `Contact ${scenario.handoff.facility} on ` },
+      { type: 'field', key: 'freq-contact-frequency', width: 'md' },
+      { type: 'text', text: ', ' },
+      { type: 'field', key: 'freq-contact-callsign', width: 'lg' }
+    ],
+    defaultFrequency: 'TWR',
+    phrase: scenario => `${scenario.radioCall}, contact ${scenario.handoff.facility} on ${scenario.handoff.frequencyWords}.`,
+    info: scenario => [
+      `Station: ${scenario.handoff.facility}`,
+      `Frequency: ${scenario.handoff.frequency} (${scenario.handoff.frequencyWords})`
     ],
     generate: createBaseScenario
   }
