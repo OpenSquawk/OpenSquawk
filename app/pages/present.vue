@@ -1,8 +1,8 @@
 <template>
-  <div class="presentation" @click="handleClick">
+  <div class="presentation" ref="presentationRef">
     <div class="frame">
       <Transition name="fade" mode="out-in">
-        <section class="slide" :key="currentIndex">
+        <section class="slide" :key="currentIndex" @click="handleSlideClick">
           <div class="kicker" v-if="currentSlide.kicker">{{ currentSlide.kicker }}</div>
           <h1 v-if="currentSlide.layout === 'title'">{{ currentSlide.title }}</h1>
           <h2 v-else>{{ currentSlide.title }}</h2>
@@ -25,6 +25,10 @@
               </ul>
             </div>
           </div>
+          <div v-if="currentSlide.image" class="image">
+            <img :src="currentSlide.image.src" :alt="currentSlide.image.alt" loading="lazy" />
+            <p v-if="currentSlide.image.caption" class="image-caption">{{ currentSlide.image.caption }}</p>
+          </div>
           <blockquote v-if="currentSlide.quote" class="quote">
             “{{ currentSlide.quote }}”
           </blockquote>
@@ -34,15 +38,38 @@
             <div v-else class="qr-placeholder">QR code is rendering…</div>
             <p>{{ currentSlide.qr }}</p>
           </div>
+          <div v-if="currentIndex === 0 && !isFullscreen" class="fullscreen-callout">
+            <button type="button" class="fullscreen-button" @click.stop="toggleFullscreen">
+              Enter fullscreen
+            </button>
+            <p class="fullscreen-hint">Or press “F” anytime.</p>
+          </div>
           <footer v-if="currentSlide.footer" class="slide-footer">{{ currentSlide.footer }}</footer>
         </section>
       </Transition>
       <div class="meta">
-        <div class="progress-label">{{ currentIndex + 1 }} / {{ totalSlides }}</div>
-        <div class="progress">
-          <div class="progress-bar" :style="{ width: `${progress}%` }"></div>
+        <div class="progress-info">
+          <div class="progress-label">{{ currentIndex + 1 }} / {{ totalSlides }}</div>
+          <div class="progress">
+            <div class="progress-bar" :style="{ width: `${progress}%` }"></div>
+          </div>
         </div>
-        <div class="hint" :class="{ hidden: !showHint }">Press ←/→ or space to navigate</div>
+        <div class="meta-actions">
+          <button type="button" class="meta-fullscreen" @click.stop="toggleFullscreen">
+            {{ isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen' }}
+          </button>
+          <div class="hint" :class="{ hidden: !showHint }">Press ←/→, space, or click · “F” toggles fullscreen</div>
+        </div>
+      </div>
+      <div class="outline">
+        <div
+          v-for="(section, index) in sections"
+          :key="section.id"
+          class="outline-item"
+          :class="{ active: index === currentSectionIndex, past: index < currentSectionIndex }"
+        >
+          <span>{{ section.label }}</span>
+        </div>
       </div>
     </div>
   </div>
@@ -52,272 +79,304 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { renderSVG } from 'uqr'
 
+const sections = [
+  { id: 'intro', label: 'Intro' },
+  { id: 'story', label: 'Story' },
+  { id: 'vision', label: 'Vision' },
+  { id: 'build', label: 'Build' },
+  { id: 'roadmap', label: 'Roadmap' },
+  { id: 'invite', label: 'Invite' }
+]
+
 const slides = [
   {
     layout: 'title',
-    kicker: 'Nick Danner · Systems Engineer & Data Enthusiast',
+    section: 'intro',
+    kicker: 'Nick Danner · learning in public',
     title: 'OpenSquawk',
-    subtitle: 'Streaming aviation intelligence for everyone',
-    text: ['A 45-minute story about building my first open-source project.']
+    subtitle: 'A small open-source experiment for shared aviation awareness',
+    text: ['Thanks for letting me share where this little project is at right now.']
   },
   {
-    title: 'Meet Nick',
+    section: 'intro',
+    title: 'A quick hello',
     bullets: [
-      'Lead systems engineer turned indie maker focused on aviation data.',
-      'Based in Hamburg, Germany with a soft spot for rainy dawn departures.',
-      'Eight years crafting telemetry and event-driven platforms for pilots and operations teams.'
+      "I'm Nick, a systems tinkerer splitting time between Hamburg and makeshift desks in terminals.",
+      'Most of my career was stitching radios, telemetry, and dispatch tools so other people could fly safely.',
+      "This is my first time leading an open project, so I'm very much relying on your experience."
     ],
-    footer: 'nick.danner@opensquawk.dev · @nickcodes'
+    footer: 'nick.danner@opensquawk.dev · @nickcodes (DMs open)'
   },
   {
-    title: 'Professional snapshot',
+    section: 'intro',
+    title: 'Path so far',
     bullets: [
-      '2015–2018 · Avionics integration engineer at SkyGrid Systems.',
-      '2018–2021 · Led real-time telemetry at Aerologix during their European expansion.',
-      '2021–2024 · Built streaming analytics for drone corridors at FlightPath Labs.',
-      '2024 · Sabbatical dedicated to opening aviation data for small operators.'
+      '2015-2018 · Helped a tiny avionics shop wire sensors into aging airframes.',
+      '2018-2023 · Worked on real-time telemetry platforms for drones and regional airlines.',
+      '2024 · Taking a breather to learn in public and invite others in early.'
     ]
   },
   {
-    title: 'How the idea was born',
+    section: 'story',
+    title: 'Why radios keep me up at night',
     text: [
-      'Last September I mentored a night shift at the Berlin “Hack the Skies” event.',
-      'We tried to correlate ATC voice transcripts with live NOTAM updates and ended up screenshotting dashboards at 3 a.m.'
+      'Night shifts on ops desks showed how messy it gets when voice, text, and weather live in separate silos.',
+      'I kept wondering if a lightweight, transparent stream could help small teams react faster.'
     ]
   },
   {
-    title: 'The pivotal moment',
+    section: 'story',
+    title: 'The messy moment',
     bullets: [
-      'Controllers emailed PDFs while ops teams waited for context.',
-      'Pilots in the room had three different chat threads for runway status.',
-      'Everyone trusted the data, but no one shared a single source of truth in real time.'
+      'A hack night in Berlin: three chats, two dashboards, and screenshots flying around at 03:00.',
+      'Controllers emailed PDFs while crews kept refreshing NOTAM feeds hoping for context.',
+      'We trusted the data but not the coordination.'
     ],
-    quote: 'We lost more time debating the data than reacting to it.'
+    quote: 'We lost more time explaining updates than acting on them.'
   },
   {
-    title: 'Opportunity I saw',
-    bullets: [
-      'Unify voice, text, and telemetry signals without locking them behind proprietary hubs.',
-      'Let small operators plug into the same situational awareness tools as major airlines.',
-      'Build something transparent enough that the community can audit and extend it.'
-    ]
-  },
-  {
-    title: 'Introducing OpenSquawk',
+    section: 'story',
+    title: 'Seed of the idea',
     text: [
-      'An open-source streaming platform that ingests public ATC audio, converts it to structured events, and distributes live alerts to crews and ops rooms.'
+      'I started sketching a stream that anyone could inspect, fork, and improve without vendor lock-in.',
+      'The hope: community radios plus open tooling might cover gaps that vendors ignore.'
+    ],
+    image: {
+      src: 'https://loremflickr.com/1200/675/airport,night',
+      alt: 'Placeholder photo of people collaborating around radios',
+      caption: 'Placeholder photo via LoremFlickr to set the scene.'
+    }
+  },
+  {
+    section: 'vision',
+    title: 'What I hope OpenSquawk becomes',
+    text: [
+      'An open source kit that turns ATC audio and public data into shared situational awareness.'
     ],
     bullets: [
-      'Focuses on fast, relevant signal extraction rather than archival playback.',
-      'Ships with opinionated defaults yet stays hackable through lightweight plugins.'
+      'Keep the pipeline transparent so anyone can audit or remix it.',
+      'Make it lightweight enough for hobbyists yet useful for ops desks.',
+      'Let community voices steer what “useful” means.'
     ]
   },
   {
-    title: 'Vision',
+    section: 'vision',
+    title: 'How it might feel day to day',
     columns: [
       {
-        heading: 'Radically open data',
+        heading: 'Pilots',
+        text: ['Get concise runway or weather heads-up moments after they drop on frequency.']
+      },
+      {
+        heading: 'Dispatch',
+        text: ['See voice + NOTAM + METAR stitched on one simple timeline.']
+      },
+      {
+        heading: 'Community',
+        text: ['Tune in, suggest better rules, and share improvements openly.']
+      }
+    ],
+    image: {
+      src: 'https://loremflickr.com/1200/675/cockpit',
+      alt: 'Placeholder photo of cockpit teamwork',
+      caption: 'Simple LoremFlickr placeholder to imagine the workflow.'
+    }
+  },
+  {
+    section: 'vision',
+    title: 'Principles guiding me',
+    bullets: [
+      'Plain text configs and docs that explain the “why”, not just the “how”.',
+      'Audit trails everywhere so mistakes can be traced kindly.',
+      'APIs mirror real use-cases—no secret features hidden in private branches.',
+      'Assume contributors will outsmart me, so make experiments easy.'
+    ]
+  },
+  {
+    section: 'build',
+    title: 'Pieces already moving',
+    bullets: [
+      'Edge recorders capture a handful of European ATC streams (thanks to patient friends).',
+      'Whisper-small transcribes into events with basic tagging for callsigns and runways.',
+      'A Nuxt dashboard renders a live timeline so I can sanity check alerts.'
+    ]
+  },
+  {
+    section: 'build',
+    title: 'Where it still creaks',
+    bullets: [
+      'Transcripts drift when accents or noise ramp up—confidence handling needs love.',
+      'Rule logic is brittle; today it is just my manual tweaks.',
+      'Docs lag behind code, so onboarding is rough without me on a call.'
+    ]
+  },
+  {
+    section: 'build',
+    title: 'Capture flow (draft)',
+    columns: [
+      {
+        heading: 'Listen',
         items: [
-          'Automate ingestion of global ATC streams and NOTAM feeds.',
-          'Expose clean, well-documented event schemas.',
-          'Enable remixing without legal or pricing hurdles.'
+          'Community radios stream Opus audio over QUIC tunnels.',
+          'Fallback: simple HTTPS polling when ports are locked down.'
         ]
       },
       {
-        heading: 'Realtime clarity',
+        heading: 'Buffer',
         items: [
-          'Deliver sub-second alerts to pilots, dispatchers, and analysts.',
-          'Blend voice, telemetry, and weather into a shared timeline.',
-          'Keep historical context so trends are always one query away.'
+          'Rust shim segments audio into 20s chunks with metadata.',
+          'S3-compatible storage keeps short-term history.'
         ]
       },
       {
-        heading: 'Community-first',
+        heading: 'Dispatch',
         items: [
-          'Design contributions to be approachable for both data and ops folks.',
-          'Document every subsystem as if a stranger needs to debug it at 2 a.m.',
-          'Celebrate forks, experiments, and shared learning.'
+          'Temporal kicks off transcription jobs and retries politely.',
+          'Events land on Kafka for anything downstream.'
+        ]
+      }
+    ],
+    image: {
+      src: 'https://loremflickr.com/1200/675/radio',
+      alt: 'Placeholder photo of radio equipment',
+      caption: 'LoremFlickr placeholder to visualize the capture setup.'
+    }
+  },
+  {
+    section: 'build',
+    title: 'Transcribe & enrich',
+    bullets: [
+      'Automatic language detection picks Whisper models per frequency.',
+      'Keyword heuristics tag runways, aircraft, and urgency hints.',
+      'Geo lookups attach airport + sector context in near real time.',
+      'Low confidence items pause for a simple review queue.'
+    ]
+  },
+  {
+    section: 'build',
+    title: 'Serving the data',
+    columns: [
+      {
+        heading: 'Real-time',
+        items: [
+          'SSE and WebSocket endpoints feed dashboards and CLI clients.',
+          'Rules engine emits quick summaries for phones or tablets.'
+        ]
+      },
+      {
+        heading: 'History',
+        items: [
+          'Materialize maintains rolling windows for trend checks.',
+          'PostgreSQL keeps annotated events for deeper dives.'
+        ]
+      },
+      {
+        heading: 'Sharing',
+        items: [
+          'Supabase auth keeps things open but respectful.',
+          'OpenAPI specs generate TypeScript helpers automatically.'
+        ]
+      }
+    ],
+    image: {
+      src: 'https://loremflickr.com/1200/675/technology',
+      alt: 'Placeholder photo of data dashboards',
+      caption: 'Another LoremFlickr placeholder to hint at the UI.'
+    }
+  },
+  {
+    section: 'build',
+    title: 'Toolbox right now',
+    columns: [
+      {
+        heading: 'Languages',
+        items: ['Rust for capture agents.', 'Python for transcription orchestration.', 'TypeScript/Vue for the UI.']
+      },
+      {
+        heading: 'Infra',
+        items: [
+          'Kafka + Redpanda locally for streams.',
+          'Materialize & Postgres for storage.',
+          'Docker + Nix flakes for reproducible dev envs.'
+        ]
+      },
+      {
+        heading: 'Observability',
+        items: [
+          'Grafana + Loki for quick checks.',
+          'Sentry (self-hosted) for Nuxt errors.',
+          'Plain text logs shipped to object storage.'
         ]
       }
     ]
   },
   {
-    title: 'Guiding product principles',
+    section: 'build',
+    title: 'Reality check & open questions',
     bullets: [
-      'Default to plain text formats and human-readable configs.',
-      'Every automation produces an audit trail you can replay.',
-      'APIs mirror internal use-cases—no private endpoints hiding behind the curtain.',
-      'Accessibility: works in a browser, a dispatch wallboard, or a CLI feed.'
-    ]
+      'How to keep costs friendly if community radios scale up?',
+      'What safety reviews should an open stream pass before others depend on it?',
+      'Is my event schema even close to what real ops teams need?',
+      'What have I overlooked completely? I’d love blunt feedback.'
+    ],
+    note: 'I assume many of you have solved tougher problems—please call out gaps kindly.'
   },
   {
-    title: 'What already works',
+    section: 'roadmap',
+    title: 'Next few weeks',
     bullets: [
-      'Live ingestion of six European ATC frequencies with Whisper-based transcription.',
-      'NOTAM and METAR polling unified into a single event stream.',
-      'Rule engine that tags events with urgency levels and suggested actions.',
-      'Operator dashboard with streaming timeline and collaborative annotations.'
+      'Polish contributor docs and record setup walkthrough videos.',
+      'Stabilize capture nodes on cheap single-board computers.',
+      'Refine alert wording with two volunteer dispatchers.'
     ]
   },
   {
-    title: 'System at a glance',
-    columns: [
-      {
-        heading: 'Capture',
-        items: [
-          'Edge devices record VHF audio & push via secure WebRTC relays.',
-          'Scheduled scrapers pull NOTAM/METAR diffs every 60 seconds.'
-        ]
-      },
-      {
-        heading: 'Decode',
-        items: [
-          'Whisper small-v3 handles multilingual transcripts.',
-          'Keyword matcher spots callsigns, runway states, and weather codes.'
-        ]
-      },
-      {
-        heading: 'Enrich',
-        items: [
-          'Temporal database stitches events with aircraft position feeds.',
-          'Geo-fencing adds airport and sector context on the fly.'
-        ]
-      },
-      {
-        heading: 'Deliver',
-        items: [
-          'WebSockets & SSE push curated alerts.',
-          'Supabase mirror keeps data queryable for BI tools.'
-        ]
-      }
-    ]
-  },
-  {
-    title: 'Technology stack',
-    columns: [
-      {
-        heading: 'Ingestion & compute',
-        items: [
-          'Rust microservices for radio capture & pre-processing.',
-          'Python workers orchestrated by Temporal for transcription jobs.',
-          'Go-based enrichment service with gRPC interfaces.'
-        ]
-      },
-      {
-        heading: 'Data & storage',
-        items: [
-          'Apache Kafka for event streaming with exactly-once semantics.',
-          'Materialize for low-latency materialized views.',
-          'PostgreSQL for metadata, Supabase for auth & row-level security.'
-        ]
-      },
-      {
-        heading: 'Experience layer',
-        items: [
-          'Nuxt 4 SPA served via edge CDN.',
-          'Tailwind + custom visual language for readability in dim ops rooms.',
-          'OpenAPI-defined endpoints with generated TypeScript clients.'
-        ]
-      },
-      {
-        heading: 'Ops & tooling',
-        items: [
-          'Nix flakes for deterministic builds.',
-          'GitHub Actions pipelines with ephemeral staging environments.',
-          'Grafana Cloud for metrics & alerting.'
-        ]
-      }
-    ]
-  },
-  {
-    title: 'Ingestion pipeline details',
+    section: 'roadmap',
+    title: 'Spring & summer focus',
     bullets: [
-      'Multi-tenant radio capture agents publish Opus streams over QUIC.',
-      'Temporal workflows batch frames into 20-second jobs for transcription.',
-      'Language detection auto-selects acoustic models per frequency.',
-      'Fallback to manual tagging UI when confidence drops below 70%.'
+      'Open-source the review queue UI for low-confidence transcripts.',
+      'Publish a simple API playground so others can poke without cloning everything.',
+      'Add automated health checks for each radio feed.'
     ]
   },
   {
-    title: 'Analysis & scoring engine',
+    section: 'roadmap',
+    title: 'Longer-term hopes',
     bullets: [
-      'Vector search surfaces similar past events for faster triage.',
-      'Rules DSL compiled to WebAssembly so dispatchers can extend it.',
-      'Confidence weighting blends transcript certainty with sensor agreement.',
-      'Alert fatigue guardrails throttle repeated low-value pings.'
+      'Global map of volunteer radios with uptime badges.',
+      'Community rule library people can share and fork.',
+      'Experiment with lightweight on-device noise reduction.',
+      'Figure out sustainable hosting without putting paywalls up.'
     ]
   },
   {
-    title: 'APIs & integrations',
+    section: 'invite',
+    title: 'Where I could use help',
     bullets: [
-      'GraphQL gateway for historical queries and analytics.',
-      'SSE endpoints for lightweight clients & cockpit tablets.',
-      'Plug-in hooks for sending events to Mattermost, Slack, or MS Teams.',
-      'CLI toolkit generates JSON Lines for rapid downstream prototyping.'
+      'Feedback on whether the architecture matches real-world ops pressure.',
+      'Advice on running welcoming open-source communities (moderation, onboarding, etc.).',
+      'Folks with spare radio gear or know-how to host a feed for a week or two.'
     ]
   },
   {
-    title: 'Developer experience focus',
+    section: 'invite',
+    title: 'Ways to share advice',
     bullets: [
-      'Devcontainer scripts spin up the full stack with sample data in under five minutes.',
-      'Storybook-style playground for testing rule evaluations.',
-      'Observability dashboards versioned alongside the code.',
-      'Docs site built with Nuxt Content—PRs preview instantly via GitHub Actions.'
+      'Open an issue or discussion in the repo—small notes are fantastic.',
+      'Join a casual video call; I’m happy to schedule around you.',
+      'Share docs, templates, or stories from your own open projects I should study.',
+      'If you prefer anonymous feedback, I can set up a simple form.'
     ]
   },
   {
-    title: 'Quality, security & observability',
-    bullets: [
-      'End-to-end tests replay anonymized traffic nightly.',
-      'OPA policies guard radio streams and redact sensitive fields.',
-      'Grafana Loki captures raw transcripts for 24 hours before purging.',
-      'Incident playbooks live in-repo with checklists and runbooks.'
-    ]
-  },
-  {
-    title: 'Roadmap · next 90 days',
-    bullets: [
-      'Expand capture network with five community-hosted radios in Spain & Portugal.',
-      'Release v0.2 of the rules DSL with visual editor.',
-      'Ship first-class integration for open-source EFB tool SkyPad.',
-      'Publish contribution guidelines and governance RFC.'
-    ]
-  },
-  {
-    title: 'Roadmap · late 2025',
-    bullets: [
-      'Global frequency directory with health checks and uptime badges.',
-      'Incident review workspace with collaborative tagging.',
-      'Edge ML experiments for on-device noise reduction.',
-      'Federated deployments for operators with strict data residency needs.'
-    ]
-  },
-  {
-    title: 'My ask tonight',
-    bullets: [
-      'This is my first open-source repo—feedback on structure and tone is gold.',
-      'Help validate the event model: does it match the ops reality you live in?',
-      'Looking for testers willing to run a capture node for a week.',
-      'Point me toward communities where this could deliver real value.'
-    ]
-  },
-  {
-    title: 'How you can contribute',
-    bullets: [
-      'Review the architecture docs and call out blind spots.',
-      'Try the setup script and share where it hurts.',
-      'Pair-program on the rules editor—frontend or backend welcome.',
-      'Even a short note on how you bootstrap open-source communities helps.'
-    ]
-  },
-  {
-    title: 'Thank you',
+    section: 'invite',
+    title: 'Thank you for listening',
     text: [
-      'I am opening the repo tonight and want to grow this with people who care about accessible aviation data.',
-      'Scan to star the repo, file an issue, or grab the starter kit.'
+      'I’m opening the repo tonight and would be grateful for any pointers or company.',
+      'Scan to star the repo, file an issue, or just say hi.'
     ],
     qr: 'https://github.com/nickmakes/opensquawk',
-    footer: 'Reach out anytime: nick.danner@opensquawk.dev · Appreciate your time—excited for your input!'
+    footer: 'Seriously, thank you. Every bit of guidance helps me keep this grounded.'
   }
 ]
 
@@ -325,10 +384,17 @@ const totalSlides = slides.length
 const currentIndex = ref(0)
 const qrCode = ref('')
 const showHint = ref(true)
+const isFullscreen = ref(false)
+const presentationRef = ref(null)
 const qrTarget = 'https://github.com/nickmakes/opensquawk'
 
 const currentSlide = computed(() => slides[currentIndex.value])
 const progress = computed(() => ((currentIndex.value + 1) / totalSlides) * 100)
+const currentSectionIndex = computed(() => {
+  const sectionId = currentSlide.value.section
+  const idx = sections.findIndex((section) => section.id === sectionId)
+  return idx === -1 ? 0 : idx
+})
 
 const goToSlide = (index) => {
   const nextIndex = Math.min(Math.max(index, 0), totalSlides - 1)
@@ -348,6 +414,21 @@ const previousSlide = () => {
   }
 }
 
+const toggleFullscreen = async () => {
+  try {
+    if (!document.fullscreenElement) {
+      const element = presentationRef.value
+      if (element && element.requestFullscreen) {
+        await element.requestFullscreen()
+      }
+    } else if (document.exitFullscreen) {
+      await document.exitFullscreen()
+    }
+  } catch (error) {
+    console.error('Failed to toggle fullscreen', error)
+  }
+}
+
 const onKeydown = (event) => {
   if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(event.key) || event.key === ' ' || event.key === 'Space') {
     event.preventDefault()
@@ -361,20 +442,29 @@ const onKeydown = (event) => {
   } else if (event.key === 'End') {
     event.preventDefault()
     goToSlide(totalSlides - 1)
+  } else if (event.key === 'f' || event.key === 'F') {
+    event.preventDefault()
+    toggleFullscreen()
   }
 }
 
-const handleClick = (event) => {
+const handleSlideClick = (event) => {
   const target = event.target
   const element = target instanceof Element ? target : null
-  if (element && element.closest('.qr-wrapper')) {
+  if (element && (element.closest('button') || element.closest('a') || element.closest('.qr-wrapper'))) {
     return
   }
   nextSlide()
 }
 
+const onFullscreenChange = () => {
+  isFullscreen.value = Boolean(document.fullscreenElement)
+}
+
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)
+  document.addEventListener('fullscreenchange', onFullscreenChange)
+  isFullscreen.value = Boolean(document.fullscreenElement)
   try {
     const svg = renderSVG(qrTarget, {
       ecc: 'M',
@@ -391,6 +481,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
 })
 </script>
 
@@ -415,8 +506,8 @@ onBeforeUnmount(() => {
 .frame {
   width: min(92vw, 160vh);
   aspect-ratio: 16 / 9;
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 24px;
   box-shadow: 0 30px 80px rgba(2, 6, 23, 0.7);
   position: relative;
@@ -428,7 +519,7 @@ onBeforeUnmount(() => {
 
 .slide {
   flex: 1;
-  padding: 64px 72px 48px;
+  padding: 64px 72px 32px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -440,34 +531,31 @@ onBeforeUnmount(() => {
   letter-spacing: 0.28em;
   font-size: 0.85rem;
   color: #38bdf8;
-  font-weight: 600;
+  opacity: 0.85;
 }
 
 h1 {
-  font-size: clamp(3.2rem, 5vw, 4.6rem);
+  font-size: clamp(3rem, 5.6vw, 4.4rem);
   margin: 0;
   line-height: 1.05;
 }
 
 h2 {
-  font-size: clamp(2.6rem, 3.8vw, 3.4rem);
+  font-size: clamp(2.4rem, 4.3vw, 3.4rem);
   margin: 0;
-  line-height: 1.1;
+  line-height: 1.12;
 }
 
 .subtitle {
-  font-size: 1.5rem;
-  max-width: 28ch;
-  color: rgba(241, 245, 249, 0.85);
+  font-size: 1.2rem;
+  color: rgba(226, 232, 240, 0.88);
   margin: 0;
 }
 
 .lead {
-  font-size: 1.25rem;
-  line-height: 1.6;
-  color: rgba(241, 245, 249, 0.9);
+  font-size: 1.15rem;
+  color: rgba(226, 232, 240, 0.92);
   margin: 0;
-  max-width: 70ch;
 }
 
 .bullet-list {
@@ -476,41 +564,38 @@ h2 {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-width: 70ch;
+  gap: 14px;
 }
 
 .bullet-list li {
-  display: grid;
-  grid-template-columns: auto 1fr;
+  display: flex;
   gap: 16px;
-  align-items: start;
-  font-size: 1.18rem;
-  line-height: 1.6;
-  color: rgba(226, 232, 240, 0.95);
+  font-size: 1.12rem;
+  color: rgba(226, 232, 240, 0.92);
 }
 
 .marker {
   width: 10px;
   height: 10px;
-  margin-top: 12px;
   border-radius: 50%;
   background: linear-gradient(135deg, #38bdf8, #818cf8);
+  margin-top: 10px;
+  flex-shrink: 0;
 }
 
 .columns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 32px;
-  max-width: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 24px;
+  align-items: start;
 }
 
 .column h3 {
-  font-size: 1.2rem;
-  margin: 0 0 12px;
+  margin: 0 0 10px;
+  font-size: 1.05rem;
   color: #a5b4fc;
-  letter-spacing: 0.04em;
   text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .column p {
@@ -530,8 +615,30 @@ h2 {
   color: rgba(226, 232, 240, 0.9);
 }
 
+.image {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.6);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35);
+}
+
+.image img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+
+.image-caption {
+  margin: 10px 16px 14px;
+  font-size: 0.9rem;
+  text-align: center;
+  color: rgba(148, 163, 184, 0.85);
+}
+
 .quote {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   font-style: italic;
   color: rgba(248, 250, 252, 0.85);
   border-left: 4px solid rgba(129, 140, 248, 0.6);
@@ -555,7 +662,7 @@ h2 {
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  margin-top: 24px;
+  margin-top: 16px;
 }
 
 .qr-wrapper img {
@@ -577,11 +684,57 @@ h2 {
   color: rgba(226, 232, 240, 0.7);
 }
 
+.fullscreen-callout {
+  margin-top: auto;
+  padding: 20px 24px;
+  border-radius: 16px;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 320px;
+}
+
+.fullscreen-button,
+.meta-fullscreen {
+  cursor: pointer;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.18);
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  padding: 10px 20px;
+  transition: background 180ms ease, transform 180ms ease;
+}
+
+.fullscreen-button:hover,
+.meta-fullscreen:hover {
+  background: rgba(56, 189, 248, 0.3);
+  transform: translateY(-1px);
+}
+
+.fullscreen-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(148, 163, 184, 0.85);
+}
+
 .meta {
-  padding: 12px 24px 24px;
+  padding: 12px 32px 18px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.progress-info {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
+  flex: 1;
+  min-width: 220px;
 }
 
 .progress {
@@ -601,17 +754,53 @@ h2 {
 .progress-label {
   font-size: 0.9rem;
   color: rgba(148, 163, 184, 0.85);
-  min-width: 64px;
+  min-width: 72px;
+}
+
+.meta-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .hint {
   font-size: 0.85rem;
-  color: rgba(148, 163, 184, 0.7);
+  color: rgba(148, 163, 184, 0.72);
   transition: opacity 200ms ease;
+  text-align: right;
 }
 
 .hint.hidden {
   opacity: 0;
+}
+
+.outline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 12px;
+  padding: 0 32px 32px;
+}
+
+.outline-item {
+  text-align: center;
+  padding-top: 10px;
+  border-top: 2px solid rgba(148, 163, 184, 0.25);
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.7);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.outline-item.past {
+  border-color: rgba(56, 189, 248, 0.35);
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.outline-item.active {
+  border-color: rgba(56, 189, 248, 0.85);
+  color: #e0f2fe;
+  font-weight: 600;
 }
 
 .fade-enter-active,
@@ -626,7 +815,7 @@ h2 {
 
 @media (max-width: 1024px) {
   .slide {
-    padding: 48px 44px 36px;
+    padding: 48px 44px 24px;
   }
 
   h1 {
@@ -636,13 +825,6 @@ h2 {
   h2 {
     font-size: clamp(2.2rem, 5vw, 3rem);
   }
-
-  .lead,
-  .bullet-list li,
-  .column ul,
-  .column p {
-    font-size: 1.05rem;
-  }
 }
 
 @media (max-width: 768px) {
@@ -650,12 +832,29 @@ h2 {
     padding: 1.5vh;
   }
 
-  .slide {
-    padding: 40px 28px 28px;
+  .frame {
+    border-radius: 18px;
   }
 
-  .frame {
-    border-radius: 16px;
+  .slide {
+    padding: 40px 28px 20px;
+    gap: 20px;
+  }
+
+  .meta {
+    padding: 12px 20px 16px;
+  }
+
+  .outline {
+    padding: 0 20px 24px;
+  }
+
+  .meta-actions {
+    align-items: stretch;
+  }
+
+  .hint {
+    text-align: left;
   }
 }
 </style>
