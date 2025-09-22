@@ -941,13 +941,6 @@
                     {{ Math.round(result.sim * 100) }}%
                   </div>
                 </div>
-                <div v-if="result" class="field-checks">
-                  <div v-for="field in result.fields" :key="field.key" class="field-check" :class="{ ok: field.pass }">
-                    <div class="field-name">{{ field.label }}</div>
-                    <div class="field-answer">{{ field.answer || '—' }}</div>
-                    <div class="field-expected">Expected: {{ field.expected }}</div>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -5536,43 +5529,6 @@ onMounted(() => {
   color: var(--t3);
   text-transform: none;
   letter-spacing: normal;
-}
-
-.field-checks {
-  margin-top: 12px;
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-
-.field-check {
-  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
-  padding: 12px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--text) 4%, transparent);
-  box-shadow: 0 12px 26px rgba(2, 6, 23, .28);
-}
-
-.field-check.ok {
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-
-.field-name {
-  font-size: 12px;
-  letter-spacing: .08em;
-  color: var(--t3);
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-
-.field-answer {
-  font-weight: 600;
-}
-
-.field-expected {
-  font-size: 12px;
-  color: var(--t3);
 }
 
 .hint.secondary {
