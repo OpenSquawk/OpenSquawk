@@ -1,0 +1,39 @@
+/* Shared Learn surface styling */
+.learn-theme .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.learn-theme .btn:hover {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.learn-theme .btn.primary {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 90%, transparent),
+    color-mix(in srgb, var(--accent) 70%, transparent)
+  );
+  color: #061318;
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.learn-theme .btn.soft {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.learn-theme .btn.ghost {
+  background: transparent;
+}
+
+.learn-theme .btn.mini {
+  padding: 6px 10px;
+  font-size: 12px;
+}
