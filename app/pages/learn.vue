@@ -2192,6 +2192,7 @@ function startLessonsForCurrent() {
 }
 
 function goToHub() {
+  stopAudio()
   panel.value = 'hub'
   moduleStage.value = 'lessons'
   current.value = null
@@ -2420,7 +2421,9 @@ if (import.meta.client) {
   }
 
   watch([panel, moduleStage], ([panelValue, stage]) => {
-    if (panelValue !== 'module' || stage !== 'lessons') {
+    const inLesson = panelValue === 'module' && stage === 'lessons'
+    if (!inLesson) {
+      stopAudio()
       resetModuleOverviewExpansion()
     }
   })
@@ -2876,6 +2879,7 @@ watch(activeLesson, lesson => {
       })
     }
   } else {
+    stopAudio()
     scenario.value = null
   }
 })
@@ -3109,6 +3113,7 @@ function attemptUnlockModule(modId: string) {
 }
 
 function openModule(id: string, options: { autoStart?: boolean } = {}) {
+  stopAudio()
   const module = modules.value.find(item => item.id === id) || null
   current.value = module
   manualErrors.value = []
