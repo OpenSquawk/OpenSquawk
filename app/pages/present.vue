@@ -1,7 +1,7 @@
 <template>
   <div class="presentation" ref="presentationEl" @click="handleClick">
     <button
-      v-if="canFullscreen"
+      v-if="canFullscreen && !isFullscreen"
       type="button"
       class="fullscreen-toggle"
       @click.stop="toggleFullscreen"
@@ -78,13 +78,11 @@
       <div class="meta">
         <div class="meta-top">
           <div class="progress-label">{{ currentIndex + 1 }} / {{ totalSlides }}</div>
-          <div class="progress">
-            <div class="progress-bar" :style="{ width: `${progress}%` }"></div>
-          </div>
           <div class="hint" :class="{ hidden: !showHint }">Press ←/→, space, or click · F toggles fullscreen</div>
         </div>
         <div class="section-outline" v-if="sectionStates.length">
           <div class="section-track">
+            <div class="section-progress" :style="{ width: `${progress}%` }"></div>
             <div
               v-for="section in sectionStates"
               :key="section.label"
@@ -843,21 +841,8 @@ h2 {
 .meta-top {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
-}
-
-.progress {
-  flex: 1;
-  height: 6px;
-  background: rgba(148, 163, 184, 0.2);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(135deg, #38bdf8, #818cf8);
-  transition: width 220ms ease;
 }
 
 .progress-label {
@@ -871,6 +856,7 @@ h2 {
   color: rgba(148, 163, 184, 0.7);
   transition: opacity 200ms ease;
   text-align: right;
+  margin-left: auto;
 }
 
 .hint.hidden {
@@ -878,6 +864,7 @@ h2 {
 }
 
 .section-outline {
+  position: relative;
   padding: 4px 4px 0;
 }
 
@@ -887,18 +874,32 @@ h2 {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding-top: 12px;
+  padding-top: 18px;
 }
 
 .section-track::before {
   content: '';
   position: absolute;
-  top: 18px;
+  top: 20px;
   left: 0;
   right: 0;
   height: 2px;
   background: rgba(148, 163, 184, 0.25);
+  z-index: -1;
+}
+
+.section-progress {
+  position: absolute;
+  top: 19px;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  border-radius: 999px;
+  width: 0;
+  transition: width 220ms ease;
+  max-width: 100%;
   z-index: 0;
+  pointer-events: none;
 }
 
 .section-node {
