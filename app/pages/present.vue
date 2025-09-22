@@ -81,13 +81,19 @@
           <div class="hint" :class="{ hidden: !showHint }">Press ←/→, space, or click · F toggles fullscreen</div>
         </div>
         <div class="section-outline" v-if="sectionStates.length">
-          <div class="section-track">
-            <div class="section-progress" :style="{ width: `${progress}%` }"></div>
+          <div class="section-track" :class="{ complete: isDeckComplete }">
+            <div class="section-progress" :style="{ width: `${progressPercent}%` }"></div>
             <div
               v-for="section in sectionStates"
               :key="section.label"
               class="section-node"
-              :class="{ active: section.isActive, passed: section.isPassed }"
+              :class="{
+                active: section.isActive,
+                passed: section.isPassed,
+                'at-start': section.isFirst,
+                'at-end': section.isLast
+              }"
+              :style="{ '--section-flex': section.slideCount }"
             >
               <div class="dot"></div>
               <span>{{ section.label }}</span>
@@ -413,14 +419,28 @@ const sectionDetails = sectionOrder
     }
   })
   .filter((section) => section !== null)
+  .map((section, index, array) => {
+    const slideCount = section.lastIndex - section.firstIndex + 1
+    const startPercent = (section.firstIndex / totalSlides) * 100
+    const endPercent = ((section.lastIndex + 1) / totalSlides) * 100
+    return {
+      ...section,
+      slideCount,
+      startPercent,
+      endPercent,
+      spanPercent: endPercent - startPercent,
+      isFirst: index === 0,
+      isLast: index === array.length - 1
+    }
+  })
 
 const currentSlide = computed(() => slides[currentIndex.value])
-const progress = computed(() => ((currentIndex.value + 1) / totalSlides) * 100)
-const currentSection = computed(() => currentSlide.value.section)
+const progressPercent = computed(() => Math.min(((currentIndex.value + 1) / totalSlides) * 100, 100))
+const isDeckComplete = computed(() => currentIndex.value === totalSlides - 1)
 const sectionStates = computed(() =>
   sectionDetails.map((section) => ({
     ...section,
-    isActive: section.label === currentSection.value,
+    isActive: currentIndex.value >= section.firstIndex && currentIndex.value <= section.lastIndex,
     isPassed: currentIndex.value > section.lastIndex
   }))
 )
@@ -558,11 +578,12 @@ onBeforeUnmount(() => {
 }
 
 .presentation {
+  --frame-margin: clamp(12px, 1.8vh, 32px);
   height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2.5vh;
+  padding: var(--frame-margin);
   box-sizing: border-box;
   position: relative;
 }
@@ -601,7 +622,11 @@ onBeforeUnmount(() => {
 }
 
 .frame {
-  width: min(92vw, 160vh);
+  width: min(
+    calc(100vw - 2 * var(--frame-margin)),
+    calc((100vh - 2 * var(--frame-margin)) * 16 / 9)
+  );
+  max-height: calc(100vh - 2 * var(--frame-margin));
   aspect-ratio: 16 / 9;
   background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -863,22 +888,22 @@ h2 {
 }
 
 .section-outline {
-  padding: 4px 4px 0;
+  padding: 6px 16px 0;
 }
 
 .section-track {
   position: relative;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 12px;
+  align-items: stretch;
+  gap: 0;
+  padding: 32px 0 0;
+  min-height: 72px;
 }
 
 .section-track::before {
   content: '';
   position: absolute;
-  top: 18px;
+  top: 20px;
   left: 0;
   right: 0;
   height: 2px;
@@ -886,13 +911,35 @@ h2 {
   z-index: 0;
 }
 
+.section-track::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.45);
+  border: 2px solid rgba(15, 23, 42, 0.9);
+  transform: translate(50%, -50%);
+  transition: all 180ms ease;
+  z-index: 1;
+}
+
+.section-track.complete::after {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  border-color: rgba(15, 23, 42, 0.95);
+}
+
 .section-progress {
   position: absolute;
-  top: 18px;
+  top: 20px;
   left: 0;
   width: 0;
   max-width: 100%;
-  height: 2px;
+  height: 3px;
   background: linear-gradient(135deg, #38bdf8, #818cf8);
   border-radius: 999px;
   transition: width 220ms ease;
@@ -903,40 +950,51 @@ h2 {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  flex: 1;
+  flex-grow: var(--section-flex);
+  flex-shrink: 1;
+  flex-basis: 0%;
   min-width: 0;
-  font-size: 0.78rem;
+  padding-top: 34px;
+  font-size: 0.76rem;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   color: rgba(148, 163, 184, 0.7);
   z-index: 1;
 }
 
 .section-node .dot {
+  position: absolute;
+  top: 20px;
+  left: 0;
   width: 12px;
   height: 12px;
   border-radius: 50%;
   background: rgba(148, 163, 184, 0.5);
   border: 2px solid rgba(15, 23, 42, 0.9);
+  transform: translate(-50%, -50%);
   transition: all 180ms ease;
 }
 
+.section-node span {
+  display: block;
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-word;
+  text-align: left;
+  line-height: 1.3;
+}
+
 .section-node.active .dot {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   background: linear-gradient(135deg, #38bdf8, #818cf8);
   border-color: rgba(15, 23, 42, 0.95);
 }
 
 .section-node.passed .dot {
   background: rgba(148, 163, 184, 0.9);
-}
-
-.section-node span {
-  text-align: center;
-  white-space: nowrap;
 }
 
 .section-node.active span {
@@ -946,6 +1004,14 @@ h2 {
 
 .section-node.passed span {
   color: rgba(226, 232, 240, 0.85);
+}
+
+.section-node.at-end {
+  align-items: flex-end;
+}
+
+.section-node.at-end span {
+  text-align: right;
 }
 
 .fade-enter-active,
@@ -989,14 +1055,28 @@ h2 {
     padding: 16px 20px 20px;
   }
 
+  .section-track {
+    padding-top: 28px;
+    min-height: 64px;
+  }
+
+  .section-track::before,
+  .section-track::after,
+  .section-progress,
+  .section-node .dot {
+    top: 18px;
+  }
+
   .section-node {
     font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    padding-top: 30px;
   }
 }
 
 @media (max-width: 768px) {
   .presentation {
-    padding: 1.5vh;
+    --frame-margin: clamp(10px, 1.2vh, 24px);
   }
 
   .slide {
@@ -1010,6 +1090,12 @@ h2 {
   .fullscreen-toggle {
     top: 12px;
     right: 12px;
+  }
+
+  .section-node {
+    font-size: 0.64rem;
+    letter-spacing: 0.05em;
+    padding-top: 28px;
   }
 }
 </style>
