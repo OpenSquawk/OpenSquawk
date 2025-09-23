@@ -21,12 +21,21 @@ const atcDecisionTree = {
     "approach_type": "ILS Z",
     "taxi_route": "V A",
     "missed_approach": "as published",
+    "release_time": "0955Z",
+    "hold_point": "holding point runway 25R",
+    "other_callsign": "BAW432",
+    "traffic_type": "B738",
+    "traffic_position": "from the left on taxiway V",
+    "runway_cross": "18",
+    "intersection": "N5",
+    "report_point": "holding point runway 25R",
     "delivery_freq": "121.900",
     "ground_freq": "121.700",
     "tower_freq": "118.700",
     "departure_freq": "125.350",
     "approach_freq": "120.800",
     "handoff_freq": "121.800",
+    "frequency_next": "119.200",
     "atis_freq": "118.025",
     "atis_code": "K",
     "gate": "B24",
@@ -35,15 +44,68 @@ const atcDecisionTree = {
     "push_delay_min": 5,
     "surface_wind": "220/05",
     "speed_restriction": "210 knots",
+    "speed_value": "180 knots",
     "emergency_heading": "180",
     "remarks": "standard",
-    "time_now": "ISO8601"
+    "time_now": "ISO8601",
+    "direct_fix": "KULOK",
+    "hold_fix": "KOPAG",
+    "hold_direction": "right",
+    "hold_altitude_ft": 6000,
+    "hold_leg_time_min": 1,
+    "expect_further_clearance_time": "10 minutes",
+    "metering_fix": "TEBRA",
+    "level_altitude_ft": 4000,
+    "flight_level": "FL100",
+    "final_approach_fix": "NIBAP",
+    "runway_exit": "N4",
+    "backtrack_point": "full length runway 25R",
+    "follow_me_vehicle": "Follow-me vehicle",
+    "squawk_new": "5678",
+    "altimeter_setting": "QNH 1013",
+    "traffic_alert": "traffic on short final",
+    "wind_shear_alert": "windshear reported on final",
+    "go_around_reason": "runway obstruction",
+    "expected_approach": "ILS Z runway 25R",
+    "holding_speed": "210 knots"
   },
   "flags": {
     "in_air": false,
     "emergency_active": false,
     "current_unit": "DEL",
-    "stack": []
+    "stack": [],
+    "release_required": false,
+    "need_hold_position": false,
+    "need_give_way": false,
+    "need_follow_traffic": false,
+    "need_expedite_taxi": false,
+    "need_cross_runway": false,
+    "need_backtrack": false,
+    "report_ready_required": false,
+    "immediate_takeoff": false,
+    "cancel_takeoff": false,
+    "stop_takeoff": false,
+    "expedite_climb": false,
+    "level_off_required": false,
+    "vector_required": false,
+    "direct_to_required": false,
+    "speed_control_required": false,
+    "level_change_required": false,
+    "squawk_change_required": false,
+    "ident_request": false,
+    "altimeter_update_required": false,
+    "report_required": false,
+    "expedite_descent": false,
+    "descent_level_restriction": false,
+    "descent_report_required": false,
+    "hold_required": false,
+    "approach_speed_control": false,
+    "expected_approach_change": false,
+    "windshear_alert_active": false,
+    "expedite_vacate": false,
+    "backtrack_after_landing": false,
+    "post_landing_hold": false,
+    "follow_me_required": false
   },
   "policies": {
     "timeouts": {
@@ -137,6 +199,29 @@ const atcDecisionTree = {
       "say_tpl": "{callsign}, readback correct. Start-up at own discretion. Contact Ground {ground_freq} when ready for push and start.",
       "actions": [{"set": "flags.current_unit", "to": "DEL"}],
       "handoff": {"to": "GROUND","freq": "{ground_freq}"},
+      "next": [
+        {"to": "CD_CLR_RELEASE_PENDING", "when": "flags.release_required === true"},
+        {"to": "GRD_READY_FOR_PUSH"}
+      ]
+    },
+
+    "CD_CLR_RELEASE_PENDING": {
+      "role": "atc",
+      "phase": "Clearance",
+      "say_tpl": "{callsign}, hold for release, expect {release_time}.",
+      "next": [{"to": "CD_CLR_RELEASE_ACK"}]
+    },
+    "CD_CLR_RELEASE_ACK": {
+      "role": "pilot",
+      "phase": "Clearance",
+      "utterance_tpl": "{callsign} holding for release, expect {release_time}.",
+      "actions": [{"set": "flags.release_required", "to": false}],
+      "next": [{"to": "CD_CLR_RELEASED"}]
+    },
+    "CD_CLR_RELEASED": {
+      "role": "atc",
+      "phase": "Clearance",
+      "say_tpl": "{callsign}, released for departure, advise ready.",
       "next": [{"to": "GRD_READY_FOR_PUSH"}]
     },
 
@@ -174,7 +259,108 @@ const atcDecisionTree = {
       "phase": "TaxiOut",
       "say_tpl": "{callsign}, taxi to runway {runway} via {taxi_route}, hold short runway {runway}.",
       "readback_required": ["runway","taxi_route","hold_short"],
+      "next": [
+        {"to": "GRD_HOLD_POSITION", "when": "flags.need_hold_position === true"},
+        {"to": "GRD_GIVE_WAY", "when": "flags.need_give_way === true"},
+        {"to": "GRD_FOLLOW_TRAFFIC", "when": "flags.need_follow_traffic === true"},
+        {"to": "GRD_TAXI_EXPEDITE", "when": "flags.need_expedite_taxi === true"},
+        {"to": "GRD_CROSS_RUNWAY", "when": "flags.need_cross_runway === true"},
+        {"to": "GRD_BACKTRACK_INSTR", "when": "flags.need_backtrack === true"},
+        {"to": "GRD_REPORT_READY", "when": "flags.report_ready_required === true"},
+        {"to": "GRD_TAXI_READBACK"}
+      ]
+    },
+    "GRD_HOLD_POSITION": {
+      "role": "atc",
+      "phase": "TaxiOut",
+      "say_tpl": "{callsign}, hold position.",
+      "next": [{"to": "GRD_HOLD_POSITION_ACK"}]
+    },
+    "GRD_HOLD_POSITION_ACK": {
+      "role": "pilot",
+      "phase": "TaxiOut",
+      "utterance_tpl": "{callsign} holding position.",
+      "actions": [{"set": "flags.need_hold_position", "to": false}],
+      "next": [{"to": "GRD_TAXI_INSTR"}]
+    },
+    "GRD_GIVE_WAY": {
+      "role": "atc",
+      "phase": "TaxiOut",
+      "say_tpl": "{callsign}, give way to {other_callsign} {traffic_position}.",
+      "next": [{"to": "GRD_GIVE_WAY_ACK"}]
+    },
+    "GRD_GIVE_WAY_ACK": {
+      "role": "pilot",
+      "phase": "TaxiOut",
+      "utterance_tpl": "{callsign} giving way to {other_callsign}.",
+      "actions": [{"set": "flags.need_give_way", "to": false}],
+      "next": [{"to": "GRD_TAXI_INSTR"}]
+    },
+    "GRD_FOLLOW_TRAFFIC": {
+      "role": "atc",
+      "phase": "TaxiOut",
+      "say_tpl": "{callsign}, follow {other_callsign}, {traffic_type} {traffic_position}.",
+      "next": [{"to": "GRD_FOLLOW_TRAFFIC_ACK"}]
+    },
+    "GRD_FOLLOW_TRAFFIC_ACK": {
+      "role": "pilot",
+      "phase": "TaxiOut",
+      "utterance_tpl": "{callsign} following {other_callsign}.",
+      "actions": [{"set": "flags.need_follow_traffic", "to": false}],
+      "next": [{"to": "GRD_TAXI_INSTR"}]
+    },
+    "GRD_TAXI_EXPEDITE": {
+      "role": "atc",
+      "phase": "TaxiOut",
+      "say_tpl": "{callsign}, expedite taxi, traffic {traffic_alert}.",
+      "next": [{"to": "GRD_TAXI_EXPEDITE_ACK"}]
+    },
+    "GRD_TAXI_EXPEDITE_ACK": {
+      "role": "pilot",
+      "phase": "TaxiOut",
+      "utterance_tpl": "{callsign} expediting taxi.",
+      "actions": [{"set": "flags.need_expedite_taxi", "to": false}],
       "next": [{"to": "GRD_TAXI_READBACK"}]
+    },
+    "GRD_CROSS_RUNWAY": {
+      "role": "atc",
+      "phase": "TaxiOut",
+      "say_tpl": "{callsign}, cross runway {runway_cross} at {intersection}, then hold short {runway}.",
+      "readback_required": ["runway_cross","intersection","runway"],
+      "next": [{"to": "GRD_CROSS_READBACK"}]
+    },
+    "GRD_CROSS_READBACK": {
+      "role": "pilot",
+      "phase": "TaxiOut",
+      "utterance_tpl": "{callsign} crossing runway {runway_cross} at {intersection}, holding short {runway}.",
+      "actions": [{"set": "flags.need_cross_runway", "to": false}],
+      "next": [{"to": "GRD_TAXI_INSTR"}]
+    },
+    "GRD_BACKTRACK_INSTR": {
+      "role": "atc",
+      "phase": "TaxiOut",
+      "say_tpl": "{callsign}, backtrack {backtrack_point} then vacate via {taxi_route}.",
+      "next": [{"to": "GRD_BACKTRACK_ACK"}]
+    },
+    "GRD_BACKTRACK_ACK": {
+      "role": "pilot",
+      "phase": "TaxiOut",
+      "utterance_tpl": "{callsign} backtracking {backtrack_point}.",
+      "actions": [{"set": "flags.need_backtrack", "to": false}],
+      "next": [{"to": "GRD_TAXI_INSTR"}]
+    },
+    "GRD_REPORT_READY": {
+      "role": "atc",
+      "phase": "TaxiOut",
+      "say_tpl": "{callsign}, report ready at {report_point}.",
+      "next": [{"to": "GRD_REPORT_READY_ACK"}]
+    },
+    "GRD_REPORT_READY_ACK": {
+      "role": "pilot",
+      "phase": "TaxiOut",
+      "utterance_tpl": "{callsign} will report ready at {report_point}.",
+      "actions": [{"set": "flags.report_ready_required", "to": false}],
+      "next": [{"to": "GRD_TAXI_INSTR"}]
     },
     "GRD_TAXI_READBACK": {
       "role": "pilot",
@@ -210,6 +396,7 @@ const atcDecisionTree = {
       "utterance_tpl": "{callsign} holding short {runway}, ready for departure.",
       "next": [
         {"to": "TWR_LINEUP", "when": "runway_occupied === true"},
+        {"to": "TWR_IMMEDIATE_TKOF", "when": "flags.immediate_takeoff === true && runway_occupied === false"},
         {"to": "TWR_TAKEOFF_CLR", "when": "runway_occupied === false"}
       ]
     },
@@ -218,6 +405,17 @@ const atcDecisionTree = {
       "phase": "Departure",
       "say_tpl": "{callsign}, line up and wait runway {runway}.",
       "next": [{"to": "TWR_TAKEOFF_CLR"}]
+    },
+    "TWR_IMMEDIATE_TKOF": {
+      "role": "atc",
+      "phase": "Departure",
+      "say_tpl": "{callsign}, wind {surface_wind}, runway {runway} cleared immediate take-off.",
+      "readback_required": ["runway","cleared_takeoff"],
+      "actions": [
+        {"set": "flags.immediate_takeoff", "to": false},
+        {"set": "flags.in_air", "to": true}
+      ],
+      "next": [{"to": "TWR_TAKEOFF_READBACK"}]
     },
     "TWR_TAKEOFF_CLR": {
       "role": "atc",
@@ -238,7 +436,11 @@ const atcDecisionTree = {
       "phase": "Departure",
       "auto": "check_readback",
       "readback_required": ["runway","cleared_takeoff"],
-      "ok_next": [{"to": "DEP_CONTACT"}],
+      "ok_next": [
+        {"to": "TWR_CANCEL_TKOF", "when": "flags.cancel_takeoff === true"},
+        {"to": "TWR_STOP_TKOF", "when": "flags.stop_takeoff === true"},
+        {"to": "DEP_CONTACT"}
+      ],
       "bad_next": [{"to": "TWR_TAKEOFF_READBACK_CORRECT"}]
     },
     "TWR_TAKEOFF_READBACK_CORRECT": {
@@ -246,6 +448,32 @@ const atcDecisionTree = {
       "phase": "Departure",
       "say_tpl": "{callsign}, negative; runway {runway}, cleared for take-off.",
       "next": [{"to": "TWR_TAKEOFF_READBACK"}]
+    },
+    "TWR_CANCEL_TKOF": {
+      "role": "atc",
+      "phase": "Departure",
+      "say_tpl": "{callsign}, cancel take-off clearance, hold position.",
+      "actions": [{"set": "flags.cancel_takeoff", "to": false}],
+      "next": [{"to": "TWR_CANCEL_TKOF_ACK"}]
+    },
+    "TWR_CANCEL_TKOF_ACK": {
+      "role": "pilot",
+      "phase": "Departure",
+      "utterance_tpl": "{callsign} canceling take-off, holding position.",
+      "next": [{"to": "TWR_LINEUP_REQ"}]
+    },
+    "TWR_STOP_TKOF": {
+      "role": "atc",
+      "phase": "Departure",
+      "say_tpl": "{callsign}, stop immediately.",
+      "actions": [{"set": "flags.stop_takeoff", "to": false}],
+      "next": [{"to": "TWR_STOP_TKOF_ACK"}]
+    },
+    "TWR_STOP_TKOF_ACK": {
+      "role": "pilot",
+      "phase": "Departure",
+      "utterance_tpl": "{callsign} stopping.",
+      "next": [{"to": "TWR_LINEUP_REQ"}]
     },
 
     "DEP_CONTACT": {
@@ -267,9 +495,37 @@ const atcDecisionTree = {
       "phase": "Climb",
       "say_tpl": "{callsign}, climb {climb_altitude_ft} feet, proceed direct {transition} if able.",
       "next": [
+        {"to": "DEP_EXPEDITE_CLIMB", "when": "flags.expedite_climb === true"},
+        {"to": "DEP_LEVEL_OFF_RESTR", "when": "flags.level_off_required === true"},
         {"to": "DEP_CLIMB_READBACK", "when": "pilot_able === true"},
         {"to": "DEP_UNABLE_DIR", "when": "pilot_able === false"}
       ]
+    },
+    "DEP_EXPEDITE_CLIMB": {
+      "role": "atc",
+      "phase": "Climb",
+      "say_tpl": "{callsign}, expedite climb to {climb_altitude_ft} feet.",
+      "next": [{"to": "DEP_EXPEDITE_CLIMB_ACK"}]
+    },
+    "DEP_EXPEDITE_CLIMB_ACK": {
+      "role": "pilot",
+      "phase": "Climb",
+      "utterance_tpl": "{callsign} expediting climb to {climb_altitude_ft}.",
+      "actions": [{"set": "flags.expedite_climb", "to": false}],
+      "next": [{"to": "DEP_CLIMB_READBACK"}]
+    },
+    "DEP_LEVEL_OFF_RESTR": {
+      "role": "atc",
+      "phase": "Climb",
+      "say_tpl": "{callsign}, maintain {level_altitude_ft} until {direct_fix}.",
+      "next": [{"to": "DEP_LEVEL_OFF_ACK"}]
+    },
+    "DEP_LEVEL_OFF_ACK": {
+      "role": "pilot",
+      "phase": "Climb",
+      "utterance_tpl": "{callsign} maintaining {level_altitude_ft} until {direct_fix}.",
+      "actions": [{"set": "flags.level_off_required", "to": false}],
+      "next": [{"to": "DEP_CLIMB_READBACK"}]
     },
     "DEP_UNABLE_DIR": {
       "role": "pilot",
@@ -302,20 +558,180 @@ const atcDecisionTree = {
       "role": "pilot",
       "phase": "Enroute",
       "auto": "monitor",
-      "next": [{"to": "DES_INITIATE"}]
+      "next": [
+        {"to": "ENR_VECTOR_HEADING", "when": "flags.vector_required === true"},
+        {"to": "ENR_DIRECT_TO", "when": "flags.direct_to_required === true"},
+        {"to": "ENR_SPEED_ADJUST", "when": "flags.speed_control_required === true"},
+        {"to": "ENR_LEVEL_CHANGE", "when": "flags.level_change_required === true"},
+        {"to": "ENR_SQUAWK_CHANGE", "when": "flags.squawk_change_required === true"},
+        {"to": "ENR_IDENT_REQUEST", "when": "flags.ident_request === true"},
+        {"to": "ENR_QNH_UPDATE", "when": "flags.altimeter_update_required === true"},
+        {"to": "ENR_REPORT_REQUEST", "when": "flags.report_required === true"},
+        {"to": "DES_INITIATE"}
+      ]
+    },
+
+    "ENR_VECTOR_HEADING": {
+      "role": "atc",
+      "phase": "Enroute",
+      "say_tpl": "{callsign}, turn heading {vector_heading}.",
+      "next": [{"to": "ENR_VECTOR_ACK"}]
+    },
+    "ENR_VECTOR_ACK": {
+      "role": "pilot",
+      "phase": "Enroute",
+      "utterance_tpl": "{callsign} heading {vector_heading}.",
+      "actions": [{"set": "flags.vector_required", "to": false}],
+      "next": [{"to": "ENR_CRUISE"}]
+    },
+    "ENR_DIRECT_TO": {
+      "role": "atc",
+      "phase": "Enroute",
+      "say_tpl": "{callsign}, proceed direct {direct_fix}.",
+      "next": [{"to": "ENR_DIRECT_ACK"}]
+    },
+    "ENR_DIRECT_ACK": {
+      "role": "pilot",
+      "phase": "Enroute",
+      "utterance_tpl": "{callsign} direct {direct_fix}.",
+      "actions": [{"set": "flags.direct_to_required", "to": false}],
+      "next": [{"to": "ENR_CRUISE"}]
+    },
+    "ENR_SPEED_ADJUST": {
+      "role": "atc",
+      "phase": "Enroute",
+      "say_tpl": "{callsign}, maintain {speed_value}.",
+      "next": [{"to": "ENR_SPEED_ACK"}]
+    },
+    "ENR_SPEED_ACK": {
+      "role": "pilot",
+      "phase": "Enroute",
+      "utterance_tpl": "{callsign} maintaining {speed_value}.",
+      "actions": [{"set": "flags.speed_control_required", "to": false}],
+      "next": [{"to": "ENR_CRUISE"}]
+    },
+    "ENR_LEVEL_CHANGE": {
+      "role": "atc",
+      "phase": "Enroute",
+      "say_tpl": "{callsign}, climb and maintain {flight_level}.",
+      "next": [{"to": "ENR_LEVEL_ACK"}]
+    },
+    "ENR_LEVEL_ACK": {
+      "role": "pilot",
+      "phase": "Enroute",
+      "utterance_tpl": "{callsign} climb maintain {flight_level}.",
+      "actions": [{"set": "flags.level_change_required", "to": false}],
+      "next": [{"to": "ENR_CRUISE"}]
+    },
+    "ENR_SQUAWK_CHANGE": {
+      "role": "atc",
+      "phase": "Enroute",
+      "say_tpl": "{callsign}, squawk {squawk_new}.",
+      "next": [{"to": "ENR_SQUAWK_ACK"}]
+    },
+    "ENR_SQUAWK_ACK": {
+      "role": "pilot",
+      "phase": "Enroute",
+      "utterance_tpl": "{callsign} squawking {squawk_new}.",
+      "actions": [{"set": "flags.squawk_change_required", "to": false}],
+      "next": [{"to": "ENR_CRUISE"}]
+    },
+    "ENR_IDENT_REQUEST": {
+      "role": "atc",
+      "phase": "Enroute",
+      "say_tpl": "{callsign}, squawk ident.",
+      "next": [{"to": "ENR_IDENT_ACK"}]
+    },
+    "ENR_IDENT_ACK": {
+      "role": "pilot",
+      "phase": "Enroute",
+      "utterance_tpl": "{callsign} ident.",
+      "actions": [{"set": "flags.ident_request", "to": false}],
+      "next": [{"to": "ENR_CRUISE"}]
+    },
+    "ENR_QNH_UPDATE": {
+      "role": "atc",
+      "phase": "Enroute",
+      "say_tpl": "{callsign}, set {altimeter_setting}.",
+      "next": [{"to": "ENR_QNH_ACK"}]
+    },
+    "ENR_QNH_ACK": {
+      "role": "pilot",
+      "phase": "Enroute",
+      "utterance_tpl": "{callsign} {altimeter_setting}.",
+      "actions": [{"set": "flags.altimeter_update_required", "to": false}],
+      "next": [{"to": "ENR_CRUISE"}]
+    },
+    "ENR_REPORT_REQUEST": {
+      "role": "atc",
+      "phase": "Enroute",
+      "say_tpl": "{callsign}, report passing {metering_fix}.",
+      "next": [{"to": "ENR_REPORT_ACK"}]
+    },
+    "ENR_REPORT_ACK": {
+      "role": "pilot",
+      "phase": "Enroute",
+      "utterance_tpl": "{callsign} will report passing {metering_fix}.",
+      "actions": [{"set": "flags.report_required", "to": false}],
+      "next": [{"to": "ENR_CRUISE"}]
     },
 
     "DES_INITIATE": {
       "role": "atc",
       "phase": "Descent",
       "say_tpl": "{callsign}, descend via {star} {transition}, QNH {qnh_hpa}.",
-      "next": [{"to": "DES_READBACK"}]
+      "next": [
+        {"to": "DES_EXPEDITE", "when": "flags.expedite_descent === true"},
+        {"to": "DES_LEVEL_RESTR", "when": "flags.descent_level_restriction === true"},
+        {"to": "DES_REPORT_PASSING", "when": "flags.descent_report_required === true"},
+        {"to": "DES_READBACK"}
+      ]
     },
     "DES_READBACK": {
       "role": "pilot",
       "phase": "Descent",
       "utterance_tpl": "{callsign} descend via {star} {transition}, QNH {qnh_hpa}.",
       "next": [{"to": "APP_HANDOFF"}]
+    },
+
+    "DES_EXPEDITE": {
+      "role": "atc",
+      "phase": "Descent",
+      "say_tpl": "{callsign}, expedite descent to {level_altitude_ft} feet.",
+      "next": [{"to": "DES_EXPEDITE_ACK"}]
+    },
+    "DES_EXPEDITE_ACK": {
+      "role": "pilot",
+      "phase": "Descent",
+      "utterance_tpl": "{callsign} expediting descent to {level_altitude_ft}.",
+      "actions": [{"set": "flags.expedite_descent", "to": false}],
+      "next": [{"to": "DES_READBACK"}]
+    },
+    "DES_LEVEL_RESTR": {
+      "role": "atc",
+      "phase": "Descent",
+      "say_tpl": "{callsign}, cross {metering_fix} at or above {level_altitude_ft}.",
+      "next": [{"to": "DES_LEVEL_RESTR_ACK"}]
+    },
+    "DES_LEVEL_RESTR_ACK": {
+      "role": "pilot",
+      "phase": "Descent",
+      "utterance_tpl": "{callsign} cross {metering_fix} at or above {level_altitude_ft}.",
+      "actions": [{"set": "flags.descent_level_restriction", "to": false}],
+      "next": [{"to": "DES_READBACK"}]
+    },
+    "DES_REPORT_PASSING": {
+      "role": "atc",
+      "phase": "Descent",
+      "say_tpl": "{callsign}, report passing {level_altitude_ft} feet.",
+      "next": [{"to": "DES_REPORT_PASSING_ACK"}]
+    },
+    "DES_REPORT_PASSING_ACK": {
+      "role": "pilot",
+      "phase": "Descent",
+      "utterance_tpl": "{callsign} will report passing {level_altitude_ft} feet.",
+      "actions": [{"set": "flags.descent_report_required", "to": false}],
+      "next": [{"to": "DES_READBACK"}]
     },
 
     "APP_HANDOFF": {
@@ -330,7 +746,13 @@ const atcDecisionTree = {
       "role": "atc",
       "phase": "Approach",
       "say_tpl": "{callsign}, turn left heading 220, descend to {initial_altitude_ft} feet, reduce speed {speed_restriction}.",
-      "next": [{"to": "APP_CLEARED_APP"}]
+      "next": [
+        {"to": "APP_EXPECT_APPROACH", "when": "flags.expected_approach_change === true"},
+        {"to": "APP_HOLD_INSTRUCT", "when": "flags.hold_required === true"},
+        {"to": "APP_SPEED_CONTROL", "when": "flags.approach_speed_control === true"},
+        {"to": "APP_WINDSHEAR_ALERT", "when": "flags.windshear_alert_active === true"},
+        {"to": "APP_CLEARED_APP"}
+      ]
     },
     "APP_CLEARED_APP": {
       "role": "atc",
@@ -343,6 +765,80 @@ const atcDecisionTree = {
       "phase": "Approach",
       "utterance_tpl": "{callsign} established localizer {runway}.",
       "next": [{"to": "TWR_LAND_CONTACT"}]
+    },
+
+    "APP_EXPECT_APPROACH": {
+      "role": "atc",
+      "phase": "Approach",
+      "say_tpl": "{callsign}, expect {expected_approach} after {hold_fix}.",
+      "next": [{"to": "APP_EXPECT_APPROACH_ACK"}]
+    },
+    "APP_EXPECT_APPROACH_ACK": {
+      "role": "pilot",
+      "phase": "Approach",
+      "utterance_tpl": "{callsign} expecting {expected_approach} after {hold_fix}.",
+      "actions": [{"set": "flags.expected_approach_change", "to": false}],
+      "next": [{"to": "APP_VECTORING"}]
+    },
+    "APP_HOLD_INSTRUCT": {
+      "role": "atc",
+      "phase": "Approach",
+      "say_tpl": "{callsign}, hold at {hold_fix}, {hold_direction} turns, {hold_leg_time_min}-minute legs, maintain {hold_altitude_ft} feet, expect further clearance in {expect_further_clearance_time}.",
+      "readback_required": ["hold_fix","hold_direction","hold_altitude_ft"],
+      "next": [{"to": "APP_HOLD_READBACK"}]
+    },
+    "APP_HOLD_READBACK": {
+      "role": "pilot",
+      "phase": "Approach",
+      "utterance_tpl": "{callsign} holding {hold_fix}, {hold_direction} turns, {hold_leg_time_min}-minute legs, maintain {hold_altitude_ft} feet, expect further clearance {expect_further_clearance_time}.",
+      "next": [{"to": "APP_HOLD_CHECK"}]
+    },
+    "APP_HOLD_CHECK": {
+      "role": "atc",
+      "phase": "Approach",
+      "auto": "check_readback",
+      "readback_required": ["hold_fix","hold_direction","hold_altitude_ft"],
+      "ok_next": [{"to": "APP_HOLD_EXPECT_FURTHER"}],
+      "bad_next": [{"to": "APP_HOLD_CORRECT"}]
+    },
+    "APP_HOLD_EXPECT_FURTHER": {
+      "role": "atc",
+      "phase": "Approach",
+      "say_tpl": "{callsign}, expect further clearance in {expect_further_clearance_time}.",
+      "actions": [{"set": "flags.hold_required", "to": false}],
+      "next": [{"to": "APP_VECTORING"}]
+    },
+    "APP_HOLD_CORRECT": {
+      "role": "atc",
+      "phase": "Approach",
+      "say_tpl": "{callsign}, negative; hold at {hold_fix}, {hold_direction} turns, maintain {hold_altitude_ft} feet.",
+      "next": [{"to": "APP_HOLD_READBACK"}]
+    },
+    "APP_SPEED_CONTROL": {
+      "role": "atc",
+      "phase": "Approach",
+      "say_tpl": "{callsign}, maintain speed {holding_speed} until {final_approach_fix}.",
+      "next": [{"to": "APP_SPEED_CONTROL_ACK"}]
+    },
+    "APP_SPEED_CONTROL_ACK": {
+      "role": "pilot",
+      "phase": "Approach",
+      "utterance_tpl": "{callsign} maintaining {holding_speed} until {final_approach_fix}.",
+      "actions": [{"set": "flags.approach_speed_control", "to": false}],
+      "next": [{"to": "APP_VECTORING"}]
+    },
+    "APP_WINDSHEAR_ALERT": {
+      "role": "atc",
+      "phase": "Approach",
+      "say_tpl": "{callsign}, caution {wind_shear_alert}.",
+      "next": [{"to": "APP_WINDSHEAR_ACK"}]
+    },
+    "APP_WINDSHEAR_ACK": {
+      "role": "pilot",
+      "phase": "Approach",
+      "utterance_tpl": "{callsign} caution noted.",
+      "actions": [{"set": "flags.windshear_alert_active", "to": false}],
+      "next": [{"to": "APP_VECTORING"}]
     },
 
     "TWR_LAND_CONTACT": {
@@ -374,7 +870,11 @@ const atcDecisionTree = {
       "role": "pilot",
       "phase": "Landing",
       "utterance_tpl": "{callsign} cleared to land {runway}.",
-      "next": [{"to": "TWR_VACATE"}]
+      "next": [
+        {"to": "TWR_EXPEDITE_VACATE", "when": "flags.expedite_vacate === true"},
+        {"to": "TWR_BACKTRACK_AFTER_LAND", "when": "flags.backtrack_after_landing === true"},
+        {"to": "TWR_VACATE"}
+      ]
     },
     "TWR_VACATE": {
       "role": "atc",
@@ -383,6 +883,33 @@ const atcDecisionTree = {
       "actions": [{"set": "flags.in_air", "to": false}],
       "handoff": {"to": "GROUND","freq": "{ground_freq}"},
       "next": [{"to": "GRD_TAXI_IN_REQ"}]
+    },
+
+    "TWR_EXPEDITE_VACATE": {
+      "role": "atc",
+      "phase": "Landing",
+      "say_tpl": "{callsign}, expedite vacating runway, exit via {runway_exit}.",
+      "next": [{"to": "TWR_EXPEDITE_VACATE_ACK"}]
+    },
+    "TWR_EXPEDITE_VACATE_ACK": {
+      "role": "pilot",
+      "phase": "Landing",
+      "utterance_tpl": "{callsign} expediting vacating via {runway_exit}.",
+      "actions": [{"set": "flags.expedite_vacate", "to": false}],
+      "next": [{"to": "TWR_VACATE"}]
+    },
+    "TWR_BACKTRACK_AFTER_LAND": {
+      "role": "atc",
+      "phase": "Landing",
+      "say_tpl": "{callsign}, backtrack runway then vacate at {runway_exit}.",
+      "next": [{"to": "TWR_BACKTRACK_AFTER_LAND_ACK"}]
+    },
+    "TWR_BACKTRACK_AFTER_LAND_ACK": {
+      "role": "pilot",
+      "phase": "Landing",
+      "utterance_tpl": "{callsign} backtracking to {runway_exit}.",
+      "actions": [{"set": "flags.backtrack_after_landing", "to": false}],
+      "next": [{"to": "TWR_VACATE"}]
     },
 
     "GRD_TAXI_IN_REQ": {
@@ -396,13 +923,58 @@ const atcDecisionTree = {
       "phase": "TaxiIn",
       "say_tpl": "{callsign}, taxi to stand {gate} via {taxi_route}.",
       "readback_required": ["gate","taxi_route"],
-      "next": [{"to": "GRD_TAXI_IN_READBACK"}]
+      "next": [
+        {"to": "GRD_TAXI_IN_HOLD", "when": "flags.post_landing_hold === true"},
+        {"to": "GRD_TAXI_IN_FOLLOW", "when": "flags.follow_me_required === true"},
+        {"to": "GRD_TAXI_IN_EXPEDITE", "when": "flags.need_expedite_taxi === true"},
+        {"to": "GRD_TAXI_IN_READBACK"}
+      ]
     },
     "GRD_TAXI_IN_READBACK": {
       "role": "pilot",
       "phase": "TaxiIn",
       "utterance_tpl": "{callsign} taxi to stand {gate} via {taxi_route}.",
       "next": [{"to": "GRD_TAXI_IN_READBACK_CHECK"}]
+    },
+
+    "GRD_TAXI_IN_HOLD": {
+      "role": "atc",
+      "phase": "TaxiIn",
+      "say_tpl": "{callsign}, hold position after vacating.",
+      "next": [{"to": "GRD_TAXI_IN_HOLD_ACK"}]
+    },
+    "GRD_TAXI_IN_HOLD_ACK": {
+      "role": "pilot",
+      "phase": "TaxiIn",
+      "utterance_tpl": "{callsign} holding after vacating.",
+      "actions": [{"set": "flags.post_landing_hold", "to": false}],
+      "next": [{"to": "GRD_TAXI_INSTR_IN"}]
+    },
+    "GRD_TAXI_IN_FOLLOW": {
+      "role": "atc",
+      "phase": "TaxiIn",
+      "say_tpl": "{callsign}, follow {follow_me_vehicle}.",
+      "next": [{"to": "GRD_TAXI_IN_FOLLOW_ACK"}]
+    },
+    "GRD_TAXI_IN_FOLLOW_ACK": {
+      "role": "pilot",
+      "phase": "TaxiIn",
+      "utterance_tpl": "{callsign} following {follow_me_vehicle}.",
+      "actions": [{"set": "flags.follow_me_required", "to": false}],
+      "next": [{"to": "GRD_TAXI_INSTR_IN"}]
+    },
+    "GRD_TAXI_IN_EXPEDITE": {
+      "role": "atc",
+      "phase": "TaxiIn",
+      "say_tpl": "{callsign}, expedite taxi to stand {gate}.",
+      "next": [{"to": "GRD_TAXI_IN_EXPEDITE_ACK"}]
+    },
+    "GRD_TAXI_IN_EXPEDITE_ACK": {
+      "role": "pilot",
+      "phase": "TaxiIn",
+      "utterance_tpl": "{callsign} expediting to stand {gate}.",
+      "actions": [{"set": "flags.need_expedite_taxi", "to": false}],
+      "next": [{"to": "GRD_TAXI_IN_READBACK"}]
     },
     "GRD_TAXI_IN_READBACK_CHECK": {
       "role": "atc",
@@ -462,6 +1034,19 @@ const atcDecisionTree = {
       "role": "atc",
       "phase": "Interrupt",
       "say_tpl": "{callsign}, PAN acknowledged, priority granted, expect vectors direct {dest} or nearest suitable.",
+      "next": [{"to": "RESUME_PRIOR_FLOW"}]
+    },
+
+    "INT_MINIMUM_FUEL": {
+      "role": "pilot",
+      "phase": "Interrupt",
+      "utterance_tpl": "{callsign} minimum fuel.",
+      "next": [{"to": "ATC_MINIMUM_FUEL_ACK"}]
+    },
+    "ATC_MINIMUM_FUEL_ACK": {
+      "role": "atc",
+      "phase": "Interrupt",
+      "say_tpl": "{callsign}, minimum fuel acknowledged, advise endurance and intentions when able.",
       "next": [{"to": "RESUME_PRIOR_FLOW"}]
     },
 
