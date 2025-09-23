@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
-import { getOpenAIClient, routeDecision, type LLMDecisionResult } from "../../utils/openai";
+import { getOpenAIClient, routeDecision } from "../../utils/openai";
+import type { LLMDecisionResult } from "~~/shared/types/llm";
 import { createReadStream } from "node:fs";
 import { TransmissionLog } from "../../models/TransmissionLog";
 import { getUserFromEvent } from "../../utils/auth";
@@ -33,6 +34,7 @@ interface PTTResponse {
     transcription: string;
     decision?: LLMDecisionResult['decision'];
     trace?: LLMDecisionResult['trace'];
+    active_nodes?: LLMDecisionResult['active_nodes'];
 }
 
 async function sh(cmd: string, args: string[]) {
@@ -272,6 +274,9 @@ export default defineEventHandler(async (event) => {
         }
         if (decisionResult?.trace) {
             result.trace = decisionResult.trace;
+        }
+        if (decisionResult?.active_nodes?.length) {
+            result.active_nodes = decisionResult.active_nodes;
         }
 
         return result;

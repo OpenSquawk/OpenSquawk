@@ -17,6 +17,14 @@ export interface FlowActivationInstruction {
     mode?: FlowActivationMode
 }
 
+export interface ActiveNodeSummary {
+    flow: string
+    state: string
+    role?: string
+    say_tpl?: string
+    controller_say_tpl?: string
+}
+
 export interface CandidateTraceEntry {
     id: string
     flow: string
@@ -106,4 +114,10 @@ export interface LLMDecisionTrace {
         flow: string
         reason?: string
     }
+}
+
+export interface LLMDecisionResult {
+    decision: LLMDecision
+    trace?: LLMDecisionTrace
+    active_nodes?: ActiveNodeSummary[]
 }
