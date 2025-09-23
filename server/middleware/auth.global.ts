@@ -9,6 +9,9 @@ export default defineEventHandler(async (event) => {
   if (url.pathname.startsWith('/api/service/')) {
     return
   }
+  if (url.pathname.startsWith('/api/bridge/')) {
+    return
+  }
   if (event.node.req.method === 'OPTIONS') {
     return
   }
