@@ -365,7 +365,29 @@
               v-if="inspectorOpen && flowDetail"
               class="w-[380px] shrink-0 overflow-y-auto border-l border-white/10 bg-[#0b1224]/85 backdrop-blur fixed right-0 bottom-0 top-12"
             >
-              <div v-if="nodeForm" class="space-y-5 px-5 py-6">
+              <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-[#0e152b]/80 px-5 py-4">
+                <v-btn-toggle
+                  v-model="inspectorMode"
+                  color="cyan"
+                  density="comfortable"
+                  class="rounded-xl bg-white/5"
+                >
+                  <v-btn value="node" variant="text" prepend-icon="mdi-source-branch">Nodes</v-btn>
+                  <v-btn value="flow" variant="text" prepend-icon="mdi-cog-outline">Flow</v-btn>
+                </v-btn-toggle>
+                <v-btn
+                  v-if="inspectorMode === 'flow'"
+                  color="cyan"
+                  variant="flat"
+                  prepend-icon="mdi-content-save"
+                  :loading="flowSaveLoading"
+                  @click="persistFlowNow"
+                >
+                  Flow speichern
+                </v-btn>
+              </div>
+              <template v-if="inspectorMode === 'node'">
+                <div v-if="nodeForm" class="space-y-5 px-5 py-6">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <div class="flex items-center gap-2">
@@ -915,10 +937,178 @@
                   </div>
                 </v-window-item>
                 </v-window>
-            </div>
-            <div v-else class="px-5 py-6 text-sm text-white/50">
-              Wähle einen Node auf der Canvas aus.
-            </div>
+                </div>
+                <div v-else class="px-5 py-6 text-sm text-white/60">
+                  Wähle einen Node auf der Canvas aus.
+                </div>
+              </template>
+              <template v-else>
+                <div class="space-y-5 px-5 py-6">
+                  <div class="space-y-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0 space-y-1">
+                        <p class="font-mono text-xs text-white/50">{{ flowDetail.flow.slug }}</p>
+                        <h3 class="truncate text-xl font-semibold">
+                          {{ flowForm.name || 'Unbenannter Flow' }}
+                        </h3>
+                        <div class="flex flex-wrap items-center gap-2 text-xs text-white/50">
+                          <span>Start: {{ flowForm.startState || '–' }}</span>
+                          <span>Nodes: {{ flowDetail.nodes.length }}</span>
+                        </div>
+                      </div>
+                      <div class="flex flex-col items-end gap-2">
+                        <v-chip size="x-small" color="cyan" variant="tonal">
+                          {{ flowForm.entryMode === 'linear' ? 'Einzeln' : 'Parallel' }}
+                        </v-chip>
+                        <v-chip v-if="flowForm.isMain" size="x-small" color="purple" variant="tonal">
+                          Hauptflow
+                        </v-chip>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="space-y-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                    <v-text-field
+                      v-model="flowForm.name"
+                      label="Name"
+                      hide-details
+                      density="comfortable"
+                      color="cyan"
+                    />
+                    <v-textarea
+                      v-model="flowForm.description"
+                      label="Beschreibung"
+                      rows="3"
+                      hide-details
+                      color="cyan"
+                    />
+                    <div class="grid grid-cols-2 gap-3">
+                      <v-text-field
+                        v-model="flowForm.schemaVersion"
+                        label="Schema Version"
+                        hide-details
+                        density="comfortable"
+                        color="cyan"
+                      />
+                      <v-select
+                        v-model="flowForm.entryMode"
+                        :items="flowModeOptions"
+                        item-title="title"
+                        item-value="value"
+                        label="Ausführungsmodus"
+                        hide-details
+                        density="comfortable"
+                        color="cyan"
+                      />
+                    </div>
+                    <p class="text-xs text-white/50">{{ currentFlowModeDescription }}</p>
+                    <v-switch
+                      v-model="flowForm.isMain"
+                      label="Als Hauptflow markieren"
+                      hide-details
+                      inset
+                      density="comfortable"
+                      color="purple"
+                    />
+                    <v-combobox
+                      v-model="flowForm.startState"
+                      :items="flowNodeOptions"
+                      item-title="title"
+                      item-value="value"
+                      label="Start Node"
+                      hide-details
+                      density="comfortable"
+                      clearable
+                      color="cyan"
+                    />
+                    <v-combobox
+                      v-model="flowForm.endStates"
+                      :items="flowNodeOptions"
+                      item-title="title"
+                      item-value="value"
+                      label="End Nodes"
+                      multiple
+                      chips
+                      hide-details
+                      density="comfortable"
+                      clearable
+                      color="cyan"
+                    />
+                  </div>
+                  <div class="space-y-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                    <v-combobox
+                      v-model="flowForm.roles"
+                      :items="flowRoleOptions"
+                      label="Rollen"
+                      multiple
+                      chips
+                      hide-details
+                      density="comfortable"
+                      color="cyan"
+                    />
+                    <v-combobox
+                      v-model="flowForm.phases"
+                      :items="flowPhaseOptions"
+                      label="Phasen"
+                      multiple
+                      chips
+                      hide-details
+                      density="comfortable"
+                      color="purple"
+                    />
+                  </div>
+                  <v-expansion-panels variant="accordion" class="rounded-xl border border-white/10 bg-white/5">
+                    <v-expansion-panel>
+                      <v-expansion-panel-title>
+                        <span class="text-sm font-semibold text-white/80">Erweiterte Einstellungen</span>
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
+                        <div class="space-y-4">
+                          <div>
+                            <label class="text-xs uppercase tracking-wider text-white/50">Variablen (JSON)</label>
+                            <v-textarea
+                              v-model="flowForm.variables"
+                              rows="4"
+                              variant="outlined"
+                              color="cyan"
+                              hide-details
+                            />
+                          </div>
+                          <div>
+                            <label class="text-xs uppercase tracking-wider text-white/50">Flags (JSON)</label>
+                            <v-textarea
+                              v-model="flowForm.flags"
+                              rows="4"
+                              variant="outlined"
+                              color="cyan"
+                              hide-details
+                            />
+                          </div>
+                          <div>
+                            <label class="text-xs uppercase tracking-wider text-white/50">Policies (JSON)</label>
+                            <v-textarea
+                              v-model="flowForm.policies"
+                              rows="4"
+                              variant="outlined"
+                              color="cyan"
+                              hide-details
+                            />
+                          </div>
+                          <div>
+                            <label class="text-xs uppercase tracking-wider text-white/50">Hooks (JSON)</label>
+                            <v-textarea
+                              v-model="flowForm.hooks"
+                              rows="4"
+                              variant="outlined"
+                              color="cyan"
+                              hide-details
+                            />
+                          </div>
+                        </div>
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
+                  </v-expansion-panels>
+                </div>
+              </template>
           </aside>
           </transition>
         </div>
@@ -961,6 +1151,7 @@ import { useApi } from '~/composables/useApi'
 import { useAuthStore } from '~/stores/auth'
 import DecisionNodeCanvas from '~/components/editor/DecisionNodeCanvas.vue'
 import type {
+  DecisionFlowEntryMode,
   DecisionFlowModel,
   DecisionFlowSummary,
   DecisionNodeCondition,
@@ -1003,6 +1194,8 @@ interface FlowFormState {
   name: string
   description: string
   schemaVersion: string
+  entryMode: DecisionFlowEntryMode
+  isMain: boolean
   startState: string
   endStates: string[]
   roles: string[]
@@ -1075,6 +1268,7 @@ const autosaveIndicator = ref(false)
 const canvasComponent = ref<InstanceType<typeof DecisionNodeCanvas> | null>(null)
 
 const inspectorOpen = ref(false)
+const inspectorMode = ref<'node' | 'flow'>('node')
 
 const selectedFlowSlug = ref<string | null>(null)
 const flowDetail = ref<{ flow: DecisionFlowModel; nodes: DecisionNodeModel[] } | null>(null)
@@ -1087,6 +1281,8 @@ const flowForm = reactive<FlowFormState>({
   name: '',
   description: '',
   schemaVersion: '1.0',
+  entryMode: 'parallel',
+  isMain: false,
   startState: '',
   endStates: [],
   roles: ['pilot', 'atc', 'system'],
@@ -1249,6 +1445,61 @@ const nodeSelectorItems = computed(() => {
     .map(({ matchesSearch, matchesRole, matchesPhase, matchesAuto, ...rest }) => rest)
 })
 
+const flowModeOptions: Array<{ value: DecisionFlowEntryMode; title: string; subtitle: string }> = [
+  { value: 'parallel', title: 'Parallel', subtitle: 'Mehrere Branches können gleichzeitig laufen' },
+  { value: 'linear', title: 'Einzeln', subtitle: 'Es läuft immer nur ein Branch' },
+]
+
+const flowNodeOptions = computed(() => {
+  if (!flowDetail.value) return []
+  const items = flowDetail.value.nodes
+    .slice()
+    .sort((a, b) => a.stateId.localeCompare(b.stateId))
+    .map((node) => ({
+      value: node.stateId,
+      title: node.title ? `${node.stateId} — ${node.title}` : node.stateId,
+    }))
+
+  const known = new Set(items.map((item) => item.value))
+  const extras = [flowForm.startState, ...flowForm.endStates]
+    .map((state) => (typeof state === 'string' ? state.trim() : ''))
+    .filter((state): state is string => Boolean(state && !known.has(state)))
+
+  extras.forEach((state) => {
+    items.push({ value: state, title: `${state} (nicht im Flow)` })
+    known.add(state)
+  })
+
+  return items
+})
+
+const flowRoleOptions = computed(() => {
+  const roles = new Set<string>(roleOptions)
+  flowForm.roles.forEach((role) => {
+    const trimmed = typeof role === 'string' ? role.trim() : ''
+    if (trimmed) roles.add(trimmed)
+  })
+  return Array.from(roles)
+})
+
+const flowPhaseOptions = computed(() => {
+  const phases = new Set<string>()
+  flowForm.phases.forEach((phase) => {
+    const trimmed = typeof phase === 'string' ? phase.trim() : ''
+    if (trimmed) phases.add(trimmed)
+  })
+  flowDetail.value?.nodes.forEach((node) => {
+    const trimmed = typeof node.phase === 'string' ? node.phase.trim() : ''
+    if (trimmed) phases.add(trimmed)
+  })
+  return Array.from(phases)
+})
+
+const currentFlowModeDescription = computed(() => {
+  const option = flowModeOptions.find((entry) => entry.value === flowForm.entryMode)
+  return option?.subtitle ?? ''
+})
+
 const canvasNodes = computed<CanvasNodeView[]>(() => {
   if (!flowDetail.value) return []
   const flow = flowDetail.value.flow
@@ -1353,6 +1604,7 @@ watch(
   inspectorOpen,
   (open) => {
     if (!open || !flowDetail.value) return
+    if (inspectorMode.value !== 'node') return
     if (selectedNodeId.value) return
     const preferred =
       flowDetail.value.flow.startState &&
@@ -1397,10 +1649,74 @@ watch(
   () => flowForm.endStates,
   (states) => {
     if (!flowDetail.value) return
-    flowDetail.value.flow.endStates = [...states]
+    flowDetail.value.flow.endStates = Array.from(new Set(states))
     if (!flowInitializing) {
       scheduleFlowSave()
     }
+  },
+  { deep: true }
+)
+
+watch(
+  () => flowForm.name,
+  (name) => {
+    if (!flowDetail.value || flowInitializing) return
+    flowDetail.value.flow.name = name
+  }
+)
+
+watch(
+  () => flowForm.description,
+  (description) => {
+    if (!flowDetail.value || flowInitializing) return
+    flowDetail.value.flow.description = description || ''
+  }
+)
+
+watch(
+  () => flowForm.schemaVersion,
+  (version) => {
+    if (!flowDetail.value || flowInitializing) return
+    flowDetail.value.flow.schemaVersion = version
+  }
+)
+
+watch(
+  () => flowForm.entryMode,
+  (mode) => {
+    if (!flowDetail.value || flowInitializing) return
+    flowDetail.value.flow.entryMode = mode
+  }
+)
+
+watch(
+  () => flowForm.isMain,
+  (isMain) => {
+    if (!flowDetail.value || flowInitializing) return
+    flowDetail.value.flow.isMain = isMain
+  }
+)
+
+watch(
+  () => flowForm.roles,
+  (roles) => {
+    if (!flowDetail.value || flowInitializing) return
+    const sanitized = roles
+      .map((role) => (typeof role === 'string' ? role.trim() : ''))
+      .filter((role): role is string => Boolean(role))
+    flowDetail.value.flow.roles = Array.from(new Set(sanitized))
+  },
+  { deep: true }
+)
+
+watch(
+  () => flowForm.phases,
+  (phases) => {
+    if (!flowDetail.value || flowInitializing) return
+    const sanitized = phases
+      .map((phase) => (typeof phase === 'string' ? phase.trim() : ''))
+      .filter((phase): phase is string => Boolean(phase))
+    flowDetail.value.flow.phases = Array.from(new Set(sanitized))
   },
   { deep: true }
 )
@@ -1641,6 +1957,8 @@ function populateFlowForm(flow: DecisionFlowModel) {
   flowForm.name = flow.name
   flowForm.description = flow.description ?? ''
   flowForm.schemaVersion = flow.schemaVersion ?? '1.0'
+  flowForm.entryMode = flow.entryMode || 'parallel'
+  flowForm.isMain = Boolean(flow.isMain)
   flowForm.startState = flow.startState
   flowForm.endStates = Array.isArray(flow.endStates) ? [...new Set(flow.endStates)] : []
   flowForm.roles = flow.roles?.length ? [...new Set(flow.roles)] : ['pilot', 'atc', 'system']
@@ -1762,6 +2080,7 @@ function selectNode(stateId: string | null, options: { focus?: boolean } = {}) {
     selectedNodeId.value = null
     return
   }
+  inspectorMode.value = 'node'
   inspectorOpen.value = true
   if (selectedNodeId.value !== stateId) {
     selectedNodeId.value = stateId
@@ -1806,10 +2125,14 @@ async function persistFlow(options: { silent?: boolean } = {}) {
   flowSaveLoading.value = true
   let payload: Record<string, any>
   try {
+    const entryMode = flowForm.entryMode === 'linear' ? 'linear' : 'parallel'
+    const isMain = Boolean(flowForm.isMain)
     payload = {
       name: flowForm.name.trim(),
       description: flowForm.description,
       schemaVersion: flowForm.schemaVersion.trim(),
+      entryMode,
+      isMain,
       startState: flowForm.startState.trim(),
       endStates: flowForm.endStates,
       roles: flowForm.roles,
@@ -1826,6 +2149,8 @@ async function persistFlow(options: { silent?: boolean } = {}) {
     }
     flowForm.name = payload.name
     flowForm.schemaVersion = payload.schemaVersion
+    flowForm.entryMode = payload.entryMode
+    flowForm.isMain = payload.isMain
     flowForm.startState = payload.startState
   } catch (error: any) {
     flowSaveLoading.value = false
@@ -1848,8 +2173,25 @@ async function persistFlow(options: { silent?: boolean } = {}) {
         flowDetail.value.nodes = updated.nodes
       }
     }
+    flowInitializing = true
+    flowForm.name = updated.flow.name
+    flowForm.description = updated.flow.description ?? ''
+    flowForm.schemaVersion = updated.flow.schemaVersion ?? '1.0'
+    flowForm.entryMode = updated.flow.entryMode || 'parallel'
+    flowForm.isMain = Boolean(updated.flow.isMain)
+    flowForm.startState = updated.flow.startState
+    flowForm.endStates = Array.isArray(updated.flow.endStates)
+      ? [...new Set(updated.flow.endStates)]
+      : []
+    flowForm.roles = updated.flow.roles?.length
+      ? [...new Set(updated.flow.roles)]
+      : ['pilot', 'atc', 'system']
+    flowForm.phases = updated.flow.phases?.length ? [...new Set(updated.flow.phases)] : []
     flowSnapshot.value = cloneNode(flowForm)
     lastFlowAutosaveError = ''
+    nextTick(() => {
+      flowInitializing = false
+    })
 
     if (silent) {
       const summaryIndex = flows.value.findIndex((flow) => flow.slug === updated.flow.slug)
@@ -1861,6 +2203,8 @@ async function persistFlow(options: { silent?: boolean } = {}) {
           description: updated.flow.description,
           startState: updated.flow.startState,
           nodeCount: updated.nodes?.length ?? previous.nodeCount,
+          entryMode: updated.flow.entryMode,
+          isMain: updated.flow.isMain,
         })
       }
       flashAutosaveIndicator()
@@ -1878,6 +2222,10 @@ async function persistFlow(options: { silent?: boolean } = {}) {
   } finally {
     flowSaveLoading.value = false
   }
+}
+
+function persistFlowNow() {
+  void persistFlow({ silent: false })
 }
 
 async function persistNode(options: { silent?: boolean } = {}) {
