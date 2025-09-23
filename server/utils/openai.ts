@@ -2,6 +2,7 @@
 import OpenAI from 'openai'
 import {spellIcaoDigits, toIcaoPhonetic} from '../../shared/utils/radioSpeech'
 import type {
+    ActiveNodeSummary,
     CandidateTraceEntry,
     CandidateTraceStep,
     DecisionCandidateTimeline,
@@ -9,6 +10,7 @@ import type {
     FlowActivationMode,
     LLMDecision,
     LLMDecisionInput,
+    LLMDecisionResult,
     LLMDecisionTrace,
     LLMDecisionTraceCall,
 } from '../../shared/types/llm'
@@ -74,10 +76,6 @@ export async function decide(system: string, user: string): Promise<string> {
     return r.choices?.[0]?.message?.content?.trim() || ''
 }
 
-export interface LLMDecisionResult {
-    decision: LLMDecision
-    trace?: LLMDecisionTrace
-}
 
 type ReadbackStatus = 'ok' | 'missing' | 'incorrect' | 'uncertain'
 
@@ -212,6 +210,8 @@ interface DecisionCandidate {
 interface PreparedCandidateResult {
     finalCandidates: DecisionCandidate[]
     candidateFlowMap: Map<string, string>
+    candidateIndex: Map<string, DecisionCandidate>
+    finalCandidateIndex: Map<string, DecisionCandidate>
     activeFlowSlug: string
     flowEntryModes: Map<string, FlowActivationMode>
     timeline: DecisionCandidateTimeline
@@ -726,6 +726,11 @@ async function prepareDecisionCandidates(
         }
     }
 
+    const finalCandidateIndex = new Map<string, DecisionCandidate>()
+    for (const candidate of finalCandidates) {
+        finalCandidateIndex.set(candidate.id, candidate)
+    }
+
     const timeline: DecisionCandidateTimeline = {
         steps: timelineSteps,
         fallbackUsed,
@@ -735,6 +740,8 @@ async function prepareDecisionCandidates(
     return {
         finalCandidates,
         candidateFlowMap,
+        candidateIndex: candidateMap,
+        finalCandidateIndex,
         activeFlowSlug,
         flowEntryModes,
         timeline,
@@ -918,19 +925,96 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
     }
 
     const finalize = (decision: LLMDecision): LLMDecisionResult => {
-        const targetState = decision.next_state
+        const targetState = typeof decision.next_state === 'string' ? decision.next_state : ''
+        const normalizedControllerSay = typeof decision.controller_say_tpl === 'string'
+            ? decision.controller_say_tpl.trim()
+            : ''
+
+        const targetCandidate = targetState
+            ? prepared.finalCandidateIndex.get(targetState) || prepared.candidateIndex.get(targetState)
+            : undefined
+        const targetFlow = targetCandidate?.flow || (targetState ? candidateFlowMap.get(targetState) : undefined)
+        const candidateSayTemplate = targetCandidate?.state?.say_tpl
+        const candidateRole = targetCandidate?.state?.role
+
+        if ((!normalizedControllerSay.length) && candidateRole === 'atc' && typeof candidateSayTemplate === 'string') {
+            decision.controller_say_tpl = candidateSayTemplate
+        }
+
         let activation = resolveActivationInstruction(decision.activate_flow as any)
-        if (!activation && targetState) {
-            const targetFlow = candidateFlowMap.get(targetState)
-            if (targetFlow && targetFlow !== activeFlowSlug) {
-                activation = resolveActivationInstruction(targetFlow)
-            }
+        if (!activation && targetFlow && targetFlow !== activeFlowSlug) {
+            activation = resolveActivationInstruction(targetFlow)
+        }
+
+        const finalControllerSay = typeof decision.controller_say_tpl === 'string'
+            ? decision.controller_say_tpl.trim()
+            : ''
+        const atcWillSpeak = Boolean(
+            (finalControllerSay && finalControllerSay.length)
+            || (candidateRole === 'atc' && typeof candidateSayTemplate === 'string' && candidateSayTemplate.trim().length)
+        )
+
+        if (targetCandidate?.state?.auto === 'pop_stack_or_route_by_intent') {
+            decision.resume_previous = true
         }
 
         if (activation) {
+            if (activation.slug !== activeFlowSlug && atcWillSpeak && activation.mode !== 'main') {
+                activation.mode = 'linear'
+            }
             decision.activate_flow = activation
         } else if (decision.activate_flow) {
             delete (decision as any).activate_flow
+        }
+
+        let activeNodes: ActiveNodeSummary[] | undefined
+        if (activation?.mode === 'parallel') {
+            const nodes: ActiveNodeSummary[] = []
+
+            if (input.state_id && activeFlowSlug) {
+                const previousSay = typeof input.state?.say_tpl === 'string' ? input.state.say_tpl : undefined
+                nodes.push({
+                    flow: activeFlowSlug,
+                    state: input.state_id,
+                    role: input.state?.role,
+                    say_tpl: previousSay,
+                    controller_say_tpl: input.state?.role === 'atc' ? previousSay : undefined,
+                })
+            }
+
+            if (targetState) {
+                const flowForTarget = targetFlow || activeFlowSlug
+                if (flowForTarget) {
+                    nodes.push({
+                        flow: flowForTarget,
+                        state: targetState,
+                        role: candidateRole,
+                        say_tpl: typeof candidateSayTemplate === 'string' ? candidateSayTemplate : undefined,
+                        controller_say_tpl: candidateRole === 'atc'
+                            ? (decision.controller_say_tpl || candidateSayTemplate || undefined)
+                            : undefined,
+                    })
+                }
+            }
+
+            if (nodes.length) {
+                const seen = new Set<string>()
+                activeNodes = nodes.filter(node => {
+                    if (!node.flow || !node.state) {
+                        return false
+                    }
+                    const key = `${node.flow}::${node.state}`
+                    if (seen.has(key)) {
+                        return false
+                    }
+                    seen.add(key)
+                    return true
+                })
+            }
+
+            if (!activeNodes?.length) {
+                activeNodes = undefined
+            }
         }
 
         const shouldAttachTrace = Boolean(
@@ -940,10 +1024,14 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             || trace.autoSelection
         )
 
-        if (!shouldAttachTrace) {
-            return { decision }
+        const result: LLMDecisionResult = { decision }
+        if (shouldAttachTrace) {
+            result.trace = trace
         }
-        return { decision, trace }
+        if (activeNodes && activeNodes.length) {
+            result.active_nodes = activeNodes
+        }
+        return result
     }
 
     async function handleReadbackCheck(): Promise<LLMDecisionResult> {
