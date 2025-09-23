@@ -136,7 +136,7 @@
             <div class="flex flex-1 flex-col gap-2 px-4 pb-4 pt-2">
               <div class="space-y-1">
                 <p class="font-mono text-xs tracking-wider text-cyan-200/80">{{ node.id }}</p>
-                <p class="text-base font-semibold text-white/90">{{ node.title || 'Untitled node' }}</p>
+                <p v-if="node.displayTitle" class="text-base font-semibold text-white/90">{{ node.displayTitle }}</p>
                 <p class="line-clamp-2 text-sm text-white/60">{{ node.summary }}</p>
               </div>
               <div class="flex flex-wrap gap-1 pt-1">
@@ -239,6 +239,7 @@ interface CanvasNodeInput {
   role: string
   phase: string
   title?: string
+  displayTitle?: string
   summary?: string
   selected: boolean
   highlight: boolean
@@ -262,6 +263,13 @@ type ConnectionDirection = 'incoming' | 'outgoing'
 interface CanvasPan {
   x: number
   y: number
+}
+
+function computeDisplayTitle(title?: string | null) {
+  const trimmed = (title ?? '').trim()
+  if (!trimmed) return ''
+  if (trimmed.toLowerCase() === 'untitled node') return ''
+  return trimmed
 }
 
 const props = withDefaults(
@@ -425,6 +433,7 @@ const preparedNodes = computed(() => {
       height,
       accent,
       layout: displayLayout,
+      displayTitle: computeDisplayTitle(node.title),
       previewTransitions: transitions as CanvasNodePreviewTransition[],
     }
   })
@@ -458,14 +467,17 @@ const nodeConnections = computed(() => {
 
   for (const node of props.nodes) {
     const transitions = node.model.transitions || []
+    const nodeTitle = computeDisplayTitle(node.title)
     for (const transition of transitions) {
       const key = transition.key || `${node.id}_${transition.target}_${transition.type}`
       const outgoingEntry = result.get(node.id)
       if (outgoingEntry) {
+        const targetNode = lookup.get(transition.target)
+        const targetTitle = computeDisplayTitle(targetNode?.title)
         outgoingEntry.outgoing.push({
           key: `out-${key}`,
           id: transition.target,
-          title: lookup.get(transition.target)?.title,
+          title: targetTitle || undefined,
           type: transition.type,
           auto: Boolean(transition.autoTrigger || transition.type === 'auto'),
         })
@@ -476,7 +488,7 @@ const nodeConnections = computed(() => {
         targetEntry.incoming.push({
           key: `in-${key}`,
           id: node.id,
-          title: node.title,
+          title: nodeTitle || undefined,
           type: transition.type,
           auto: Boolean(transition.autoTrigger || transition.type === 'auto'),
         })

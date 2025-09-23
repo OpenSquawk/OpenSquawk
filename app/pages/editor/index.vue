@@ -419,78 +419,79 @@
                   </v-tab>
                 </v-tabs>
                 <v-window v-model="inspectorTab" class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <v-window-item value="general">
-                  <div class="space-y-4">
-                    <v-textarea v-model="nodeForm.summary" label="Kurzbeschreibung" rows="2" hide-details color="cyan" />
-                    <div class="grid grid-cols-2 gap-3">
-                      <v-select
-                        v-model="nodeForm.role"
-                        :items="roleOptions"
-                        label="Rolle"
-                        hide-details
-                        density="comfortable"
-                        color="cyan"
-                      />
+                  <v-window-item value="general">
+                    <div class="space-y-4">
+                      <v-text-field v-model="nodeForm.title" label="Titel" hide-details color="cyan" />
+                      <v-textarea v-model="nodeForm.summary" label="Kurzbeschreibung" rows="2" hide-details color="cyan" />
+                      <div class="grid grid-cols-2 gap-3">
+                        <v-select
+                          v-model="nodeForm.role"
+                          :items="roleOptions"
+                          label="Rolle"
+                          hide-details
+                          density="comfortable"
+                          color="cyan"
+                        />
+                        <v-combobox
+                          v-model="nodeForm.phase"
+                          :items="phaseFilterOptions"
+                          label="Phase"
+                          hide-details
+                          density="comfortable"
+                          color="cyan"
+                          clearable
+                        />
+                      </div>
+                      <div class="grid grid-cols-2 gap-3">
+                        <v-text-field
+                          v-model.number="nodeForm.layout.x"
+                          label="Position X"
+                          type="number"
+                          hide-details
+                          density="comfortable"
+                          color="cyan"
+                          @change="syncNodeLayout"
+                        />
+                        <v-text-field
+                          v-model.number="nodeForm.layout.y"
+                          label="Position Y"
+                          type="number"
+                          hide-details
+                          density="comfortable"
+                          color="cyan"
+                          @change="syncNodeLayout"
+                        />
+                      </div>
+                      <v-text-field v-model="nodeForm.layout.color" label="Card-Farbe" hide-details color="cyan" />
+                      <v-textarea v-model="nodeForm.sayTemplate" label="ATC Say Template" rows="2" hide-details color="cyan" />
+                      <v-textarea v-model="nodeForm.utteranceTemplate" label="Pilot Utterance Template" rows="2" hide-details color="cyan" />
+                      <v-textarea v-model="nodeForm.elseSayTemplate" label="Fallback Template" rows="2" hide-details color="cyan" />
                       <v-combobox
-                        v-model="nodeForm.phase"
-                        :items="phaseFilterOptions"
-                        label="Phase"
+                        v-model="nodeForm.readbackRequired"
+                        label="Readback Felder"
+                        multiple
+                        chips
                         hide-details
-                        density="comfortable"
                         color="cyan"
-                        clearable
+                        :items="suggestedReadbackFields"
                       />
+                      <div>
+                        <label class="text-xs uppercase tracking-wider text-white/50">Actions (JSON)</label>
+                        <v-textarea
+                          v-model="nodeActionsText"
+                          rows="4"
+                          variant="outlined"
+                          color="cyan"
+                          hide-details
+                          @blur="syncActionsFromText"
+                        />
+                        <p v-if="nodeActionsError" class="mt-1 text-xs text-amber-300">{{ nodeActionsError }}</p>
+                      </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                      <v-text-field
-                        v-model.number="nodeForm.layout.x"
-                        label="Position X"
-                        type="number"
-                        hide-details
-                        density="comfortable"
-                        color="cyan"
-                        @change="syncNodeLayout"
-                      />
-                      <v-text-field
-                        v-model.number="nodeForm.layout.y"
-                        label="Position Y"
-                        type="number"
-                        hide-details
-                        density="comfortable"
-                        color="cyan"
-                        @change="syncNodeLayout"
-                      />
-                    </div>
-                    <v-text-field v-model="nodeForm.layout.color" label="Card-Farbe" hide-details color="cyan" />
-                    <v-textarea v-model="nodeForm.sayTemplate" label="ATC Say Template" rows="2" hide-details color="cyan" />
-                    <v-textarea v-model="nodeForm.utteranceTemplate" label="Pilot Utterance Template" rows="2" hide-details color="cyan" />
-                    <v-textarea v-model="nodeForm.elseSayTemplate" label="Fallback Template" rows="2" hide-details color="cyan" />
-                    <v-combobox
-                      v-model="nodeForm.readbackRequired"
-                      label="Readback Felder"
-                      multiple
-                      chips
-                      hide-details
-                      color="cyan"
-                      :items="suggestedReadbackFields"
-                    />
-                    <div>
-                      <label class="text-xs uppercase tracking-wider text-white/50">Actions (JSON)</label>
-                      <v-textarea
-                        v-model="nodeActionsText"
-                        rows="4"
-                        variant="outlined"
-                        color="cyan"
-                        hide-details
-                        @blur="syncActionsFromText"
-                      />
-                      <p v-if="nodeActionsError" class="mt-1 text-xs text-amber-300">{{ nodeActionsError }}</p>
-                    </div>
-                  </div>
-                </v-window-item>
-                <v-window-item value="transitions">
-                  <div class="space-y-4">
-                    <div class="flex items-center justify-between">
+                  </v-window-item>
+                  <v-window-item value="transitions">
+                    <div class="space-y-4">
+                      <div class="flex items-center justify-between">
                       <h3 class="text-sm font-semibold uppercase tracking-widest text-white/70">Transitions</h3>
                       <div class="flex gap-2">
                         <v-btn size="small" color="cyan" variant="tonal" prepend-icon="mdi-plus" @click="addTransition()">
@@ -714,6 +715,7 @@ interface CanvasNodeView {
   role: string
   phase: string
   title?: string
+  displayTitle?: string
   summary?: string
   selected: boolean
   highlight: boolean
@@ -755,6 +757,13 @@ const roleIcons: Record<string, string> = {
   pilot: 'mdi-account',
   atc: 'mdi-radar',
   system: 'mdi-robot',
+}
+
+function sanitizeNodeTitle(title?: string | null) {
+  const trimmed = (title ?? '').trim()
+  if (!trimmed) return ''
+  if (trimmed.toLowerCase() === 'untitled node') return ''
+  return trimmed
 }
 
 const telemetryParameters = [
@@ -963,6 +972,7 @@ const canvasNodes = computed<CanvasNodeView[]>(() => {
     const matchesRole = nodeFilter.role === 'all' || node.role === nodeFilter.role
     const matchesPhase = nodeFilter.phase === 'all' || node.phase === nodeFilter.phase
     const matchesAuto = !nodeFilter.autopOnly || autopCount > 0
+    const displayTitle = sanitizeNodeTitle(node.title)
     const matchesSearch =
       !query ||
       [node.stateId, node.title, node.summary]
@@ -980,6 +990,7 @@ const canvasNodes = computed<CanvasNodeView[]>(() => {
       role: node.role,
       phase: node.phase,
       title: node.title,
+      displayTitle,
       summary: node.summary,
       selected: selectedNodeId.value === node.stateId,
       highlight: matchesSearch,
