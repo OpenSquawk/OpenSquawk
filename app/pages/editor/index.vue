@@ -101,8 +101,12 @@
               </div>
             </div>
             <div class="flex min-w-0 flex-1 items-center gap-3">
-              <v-text-field
-                v-model="nodeFilter.search"
+              <v-autocomplete
+                v-model="nodeSearchSelection"
+                v-model:search="nodeFilter.search"
+                :items="nodeSearchSuggestions"
+                item-title="label"
+                item-value="id"
                 density="comfortable"
                 variant="solo"
                 hide-details
@@ -110,7 +114,60 @@
                 prepend-inner-icon="mdi-magnify"
                 placeholder="Nodes durchsuchen"
                 class="app-bar-field flex-1 min-w-[200px] text-sm text-white/80"
-              />
+                :menu-props="{ maxHeight: 360 }"
+              >
+                <template #item="{ props, item }">
+                  <v-list-item v-bind="props" :title="item.raw.label">
+                    <template #prepend>
+                      <v-icon
+                        :icon="item.raw.icon || roleIcons[item.raw.role] || 'mdi-shape-outline'"
+                        :color="roleColors[item.raw.role] || 'cyan'"
+                        size="20"
+                        class="mr-2"
+                      />
+                    </template>
+                    <v-list-item-title class="flex items-center gap-2">
+                      <span class="font-mono text-[11px] text-white/50">{{ item.raw.id }}</span>
+                      <span class="truncate text-sm font-medium text-white/90">
+                        {{ item.raw.title || 'Ohne Titel' }}
+                      </span>
+                    </v-list-item-title>
+                    <v-list-item-subtitle v-if="item.raw.summary" class="text-xs text-white/50">
+                      {{ item.raw.summary }}
+                    </v-list-item-subtitle>
+                    <template #append>
+                      <div class="flex items-center gap-1">
+                        <v-chip
+                          v-if="item.raw.phase"
+                          size="x-small"
+                          color="purple"
+                          variant="tonal"
+                          class="bg-opacity-20 text-white/70"
+                        >
+                          {{ item.raw.phase }}
+                        </v-chip>
+                        <v-chip
+                          size="x-small"
+                          :color="roleColors[item.raw.role] || 'cyan'"
+                          variant="tonal"
+                          class="bg-opacity-20 text-white/70"
+                        >
+                          {{ item.raw.role }}
+                        </v-chip>
+                        <v-chip
+                          v-if="item.raw.autopCount > 0"
+                          size="x-small"
+                          color="amber"
+                          variant="tonal"
+                          class="bg-opacity-20 text-white/70"
+                        >
+                          {{ item.raw.autopCount }}
+                        </v-chip>
+                      </div>
+                    </template>
+                  </v-list-item>
+                </template>
+              </v-autocomplete>
               <v-menu v-model="filtersMenuOpen" transition="scale-transition" :close-on-content-click="false" offset-y>
                 <template #activator="{ props }">
                   <v-badge
@@ -745,6 +802,17 @@ interface FlowFormState {
   hooks: string
 }
 
+interface NodeSearchSuggestion {
+  id: string
+  label: string
+  title?: string
+  summary?: string
+  role: string
+  phase?: string
+  autopCount: number
+  icon?: string
+}
+
 const roleColors: Record<string, string> = {
   pilot: '#22d3ee',
   atc: '#f97316',
@@ -818,6 +886,7 @@ const nodeFilter = reactive({
 })
 
 const filtersMenuOpen = ref(false)
+const nodeSearchSelection = ref<string | null>(null)
 
 watch(flowSearch, (value) => {
   if (value == null) {
@@ -837,6 +906,13 @@ watch(
     }
   }
 )
+
+watch(nodeSearchSelection, (stateId) => {
+  if (!stateId) return
+  selectNode(stateId, { focus: true })
+  nodeSearchSelection.value = null
+  nodeFilter.search = ''
+})
 
 const activeFilterCount = computed(() => {
   let count = 0
@@ -919,6 +995,87 @@ const phaseFilterOptions = computed(() => {
   flowForm.phases.forEach((phase) => phases.add(phase))
   flowDetail.value?.nodes.forEach((node) => phases.add(node.phase))
   return Array.from(phases)
+})
+
+const nodeSearchSuggestions = computed<NodeSearchSuggestion[]>(() => {
+  if (!flowDetail.value) return []
+  const query = String(nodeFilter.search ?? '').trim().toLowerCase()
+  if (!query) return []
+  const role = nodeFilter.role
+  const phase = nodeFilter.phase
+  const autopOnly = nodeFilter.autopOnly
+
+  const results: Array<
+    NodeSearchSuggestion & { exact: boolean; score: number; priority: number }
+  > = []
+
+  for (const node of flowDetail.value.nodes) {
+    const autopCount = (node.transitions || []).filter((transition) => transition.autoTrigger).length
+    if (role !== 'all' && node.role !== role) continue
+    if (phase !== 'all' && node.phase !== phase) continue
+    if (autopOnly && autopCount === 0) continue
+
+    const fields: Array<{ value: string; priority: number }> = [
+      { value: node.stateId, priority: 0 },
+    ]
+    if (node.title) {
+      fields.push({ value: node.title, priority: 1 })
+    }
+    if (node.summary) {
+      fields.push({ value: node.summary, priority: 2 })
+    }
+
+    let exact = false
+    let best = Number.POSITIVE_INFINITY
+    let bestPriority = Number.POSITIVE_INFINITY
+
+    for (const field of fields) {
+      const lower = field.value.toLowerCase()
+      if (lower === query) {
+        exact = true
+        best = 0
+        bestPriority = field.priority
+        break
+      }
+      const index = lower.indexOf(query)
+      if (index !== -1) {
+        if (index < best || (index === best && field.priority < bestPriority)) {
+          best = index
+          bestPriority = field.priority
+        }
+      }
+    }
+
+    if (!exact && best === Number.POSITIVE_INFINITY) {
+      continue
+    }
+
+    results.push({
+      id: node.stateId,
+      label: node.title ? `${node.stateId} — ${node.title}` : node.stateId,
+      title: node.title,
+      summary: node.summary,
+      role: node.role,
+      phase: node.phase,
+      autopCount,
+      icon: node.layout?.icon,
+      exact,
+      score: best,
+      priority: bestPriority,
+    })
+  }
+
+  const limit = 20
+
+  return results
+    .sort((a, b) => {
+      if (a.exact !== b.exact) return a.exact ? -1 : 1
+      if (a.score !== b.score) return a.score - b.score
+      if (a.priority !== b.priority) return a.priority - b.priority
+      return a.id.localeCompare(b.id)
+    })
+    .slice(0, limit)
+    .map(({ exact, score, priority, ...suggestion }) => suggestion)
 })
 
 const nodeSelectorItems = computed(() => {
