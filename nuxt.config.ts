@@ -12,7 +12,7 @@ export default defineNuxtConfig({
       '@nuxt/image',
     ],
     aos: {once: true, duration: 600, easing: 'ease-out'},
-    app: {head: {link: [{rel: 'icon', type: 'image/jpeg', href: '/img/logo.jpeg'}]}},
+    app: {head: {link: [{rel: 'icon', type: 'image/jpeg', href: '/img/icon-sm.jpeg'}]}},
     runtimeConfig: {
         openaiKey: process.env.OPENAI_API_KEY,
         openaiProject: process.env.OPENAI_PROJECT,
