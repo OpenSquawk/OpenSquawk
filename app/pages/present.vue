@@ -116,36 +116,32 @@ const slides = [
   },
   {
     section: 'Intro',
-    title: "Hello, I'm Nick",
+    title: 'Hello I am …',
+    text: ['Nick Danner—systems tinkerer & radio nerd based in Hamburg.'],
     bullets: [
+      "Still figuring out public speaking—thanks for the patience tonight.",
       'One-person systems engineer who loves turning radio noise into context.',
-      'Based in Hamburg, working from a tiny desk and a lot of coffee.',
-      "Still figuring out public speaking—thanks for the patience tonight."
+      'Working from a tiny desk, a stack of SDRs, and a lot of coffee.'
     ],
     footer: 'nick.danner@opensquawk.dev · @nickcodes'
   },
   {
     section: 'Intro',
-    title: 'Where I usually help out',
+    title: "Why I'm sharing tonight",
     bullets: [
-      "Built telemetry tools for small ops teams that can't afford airline-scale software.",
-      'Spend time translating between pilots, dispatch, and messy data feeds.',
-      'Picked up enough frontend, backend, and infra to be useful—still learning daily.'
-    ],
-    image: 'https://picsum.photos/seed/opensquawk-desk/1200/675',
-    imageAlt: 'placeholder photo of a desk with multiple screens glowing at night',
-    imageCredit: 'Photo placeholder via Lorem Picsum'
+      'This is my first open-source repo-guidance on structure and tone would mean a lot.',
+      'Need reality checks: does the event model map to how your ops actually work?',
+      'Curious how you approach starting and sustaining open projects.',
+      "If nothing else, I'd love stories about what to avoid."
+    ]
   },
   {
-    section: 'Story',
-    title: 'Where this spark started',
-    text: [
-      'Last autumn I joined a community night shift at the “Hack the Skies” meetup in Berlin.',
-      'We tried to line up ATC audio with NOTAM changes and ended up juggling screenshots at 3 a.m.'
-    ],
-    image: 'https://picsum.photos/seed/opensquawk-nightshift/1200/675',
-    imageAlt: 'placeholder photo of city lights at night seen from above',
-    imageCredit: 'Photo placeholder via Lorem Picsum'
+    section: 'Intro',
+    title: 'What I hope OpenSquawk becomes',
+    bullets: [
+      'Make it lightweight enough for hobbyists yet useful for ops desks.',
+      'Assume contributors will outsmart me, so make experiments easy.'
+    ]
   },
   {
     section: 'Story',
@@ -161,7 +157,6 @@ const slides = [
     section: 'Story',
     title: "Why I couldn't let it go",
     bullets: [
-      'Small operators rarely get tools tuned for them.',
       'Open data projects exist, yet wiring them into live ops feels intimidating.',
       'I wanted to try building a gentle starting point and ask smarter people for help.'
     ],
@@ -207,7 +202,7 @@ const slides = [
   },
   {
     section: 'Progress',
-    title: 'What already runs (on a good day)',
+    title: 'Pieces already moving / What already runs (on a good day)',
     bullets: [
       'Transcribes six European frequencies with Whisper small on a home lab GPU.',
       'Fetches NOTAM and METAR updates into a shared event bus every minute.',
@@ -217,6 +212,23 @@ const slides = [
     image: 'https://picsum.photos/seed/opensquawk-dashboard/1200/675',
     imageAlt: 'placeholder photo of dashboard screens glowing with charts',
     imageCredit: 'Photo placeholder via Lorem Picsum'
+  },
+  {
+    section: 'Progress',
+    title: 'Where it still creaks',
+    bullets: [
+      'Radio front-ends need more shielding—busy nights still spike noise.',
+      'Temporal workflows recover slowly when a transcription job stalls.',
+      'Docs lag behind features, so first-time setup still feels brittle.'
+    ]
+  },
+  {
+    section: 'Progress',
+    title: 'Reality check & open questions',
+    bullets: [
+      'How to keep costs friendly if community radios scale up?',
+      "What have I overlooked completely? I'd love blunt feedback."
+    ]
   },
   {
     section: 'Tech',
@@ -335,7 +347,7 @@ const slides = [
   },
   {
     section: 'Roadmap',
-    title: 'Near-term roadmap (next 90 days)',
+    title: 'Next few weeks',
     bullets: [
       'Expand capture network with five community-hosted radios in Spain and Portugal.',
       'Release v0.2 of the rules DSL with a friendlier visual editor.',
@@ -345,6 +357,15 @@ const slides = [
     image: 'https://picsum.photos/seed/opensquawk-roadmap/1200/675',
     imageAlt: 'placeholder photo of notes and roadmap sketches on a desk',
     imageCredit: 'Photo placeholder via Lorem Picsum'
+  },
+  {
+    section: 'Roadmap',
+    title: 'Longer-term hopes',
+    bullets: [
+      'Community radios filing reliable telemetry without me in the loop.',
+      'Shared rule libraries emerging from dispatch teams in the wild.',
+      'Enough stability that new folks build on top without holding their breath.'
+    ]
   },
   {
     section: 'Roadmap',
@@ -358,11 +379,17 @@ const slides = [
   },
   {
     section: 'Together',
+    title: 'Where I could use help',
+    bullets: [
+      'Balancing ease-of-use with the control ops teams expect.',
+      'Finding stories from the field that shape the event model early.'
+    ]
+  },
+  {
+    section: 'Together',
     title: 'Where I need the most help',
     bullets: [
-      'This is my first open-source repo—feedback on structure and tone is gold to me.',
-      'Please sanity check the event model: does it match the ops reality you live in?',
-      'Looking for testers willing to run a capture node for a week.',
+      'This is my first open-source repo-feedback on structure and tone is gold to me.',
       'Pointers to communities who might benefit would mean a lot.'
     ]
   },
