@@ -955,6 +955,8 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         candidate.regexTriggers.some(trigger => evaluateRegexPattern(trigger.pattern, trigger.patternFlags, utterance))
     )
 
+    const trace: LLMDecisionTrace = { calls: [] }
+
     let workingSet = regexMatches
     if (workingSet.length === 0) {
         workingSet = candidates.filter(candidate => candidate.regexTriggers.length === 0)
@@ -970,14 +972,29 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
     )
 
     if (survivors.length === 1) {
-        return { decision: { next_state: survivors[0].id } }
+        const [winner] = survivors
+
+        if (regexMatches.length > 0 && winner.regexTriggers.length > 0) {
+            const patterns = winner.regexTriggers
+                .map(trigger => trigger?.pattern ? `/${trigger.pattern}/${trigger.patternFlags || 'i'}` : '')
+                .filter(pattern => Boolean(pattern))
+            trace.autoSelection = {
+                id: winner.id,
+                flow: winner.flow,
+                reason: patterns.length
+                    ? `Regex trigger matched ${patterns.join(', ')}`
+                    : 'Regex trigger matched pilot utterance'
+            }
+            return { decision: { next_state: winner.id }, trace }
+        }
+
+        return { decision: { next_state: winner.id } }
     }
 
     if (survivors.length === 0) {
         return { decision: { next_state: input.state_id } }
     }
 
-    const trace: LLMDecisionTrace = { calls: [] }
     const llmCandidates = survivors.map(candidate => ({
         id: candidate.id,
         flow: candidate.flow,
