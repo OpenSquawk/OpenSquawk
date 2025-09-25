@@ -9,7 +9,6 @@ import type {
     LLMDecisionInput,
     LLMDecisionResult,
     LLMDecisionTrace,
-    LLMDecisionTraceCall,
 } from '../../shared/types/llm'
 import type { DecisionNodeCondition, DecisionNodeTrigger, RuntimeDecisionState, RuntimeDecisionSystem } from '../../shared/types/decision'
 import { buildRuntimeDecisionSystem } from '../services/decisionFlowService'
@@ -955,7 +954,10 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         candidate.regexTriggers.some(trigger => evaluateRegexPattern(trigger.pattern, trigger.patternFlags, utterance))
     )
 
-    const trace: LLMDecisionTrace = { calls: [] }
+    let trace: LLMDecisionTrace | undefined
+    if (regexMatches.length > 0) {
+        trace = { calls: [] }
+    }
 
     let workingSet = regexMatches
     if (workingSet.length === 0) {
@@ -975,6 +977,9 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         const [winner] = survivors
 
         if (regexMatches.length > 0 && winner.regexTriggers.length > 0) {
+            if (!trace) {
+                trace = { calls: [] }
+            }
             const patterns = winner.regexTriggers
                 .map(trigger => trigger?.pattern ? `/${trigger.pattern}/${trigger.patternFlags || 'i'}` : '')
                 .filter(pattern => Boolean(pattern))
@@ -995,86 +1000,15 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         return { decision: { next_state: input.state_id } }
     }
 
-    const llmCandidates = survivors.map(candidate => ({
-        id: candidate.id,
-        flow: candidate.flow,
-        state: candidate.state,
-    }))
-
-    const payload = {
-        state_id: input.state_id,
-        flow_slug: activeFlowSlug,
-        pilot_utterance: utterance,
-        variables: input.variables,
-        flags: input.flags,
-        candidates: llmCandidates.map(candidate => ({
-            id: candidate.id,
-            flow: candidate.flow,
-            role: candidate.state?.role,
-            phase: candidate.state?.phase,
-            summary: candidate.state?.summary,
-            triggers: candidate.state?.triggers || [],
-            conditions: candidate.state?.conditions || [],
-            say_tpl: candidate.state?.say_tpl,
-        })),
-    }
-
-    const requestBody = {
-        model: getModel(),
-        response_format: {
-            type: 'json_schema',
-            json_schema: {
-                name: 'decision',
-                schema: {
-                    type: 'object',
-                    additionalProperties: false,
-                    properties: {
-                        next_state: { type: 'string' },
-                    },
-                    required: ['next_state'],
-                },
-            },
-        },
-        messages: [
-            {
-                role: 'system',
-                content: 'You are an ATC decision assistant. Choose the best next state from the provided candidates based on the pilot utterance and context. Return JSON.',
-            },
-            {
-                role: 'user',
-                content: JSON.stringify(payload),
-            },
-        ],
-    }
-
-    const callTrace: LLMDecisionTraceCall = {
-        stage: 'decision',
-        request: JSON.parse(JSON.stringify(requestBody)),
-    }
-
-    let chosen: string | null = null
-    try {
-        const client = ensureOpenAI()
-        const response = await client.chat.completions.create(requestBody)
-        const raw = response.choices?.[0]?.message?.content?.trim() || ''
-        callTrace.response = JSON.parse(JSON.stringify(response))
-        callTrace.rawResponseText = raw
-
-        if (raw) {
-            const parsed = JSON.parse(raw) as { next_state?: string }
-            if (typeof parsed.next_state === 'string' && parsed.next_state.trim().length) {
-                chosen = parsed.next_state.trim()
-            }
+    const [first] = survivors
+    if (trace) {
+        trace.fallback = {
+            used: true,
+            reason: 'Multiple candidates matched after filtering; defaulting to first match.',
+            selected: first.id,
         }
-    } catch (err) {
-        callTrace.error = err instanceof Error ? err.message : String(err)
-    } finally {
-        trace.calls.push(callTrace)
+        return { decision: { next_state: first.id }, trace }
     }
 
-    if (chosen && survivors.some(candidate => candidate.id === chosen)) {
-        return { decision: { next_state: chosen }, trace }
-    }
-
-    return { decision: { next_state: survivors[0].id }, trace }
+    return { decision: { next_state: first.id } }
 }
