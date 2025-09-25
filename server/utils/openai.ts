@@ -2,13 +2,10 @@
 import OpenAI from 'openai'
 import {spellIcaoDigits, toIcaoPhonetic} from '../../shared/utils/radioSpeech'
 import type {
-    ActiveNodeSummary,
     CandidateTraceEntry,
     CandidateTraceStep,
     DecisionCandidateTimeline,
-    FlowActivationInstruction,
     FlowActivationMode,
-    LLMDecision,
     LLMDecisionInput,
     LLMDecisionResult,
     LLMDecisionTrace,
@@ -874,424 +871,193 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
     }
 }
 
+
 export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisionResult> {
-    const pilotUtterance = (input.pilot_utterance || '').trim()
-    const pilotText = pilotUtterance.toLowerCase()
-    const trace: LLMDecisionTrace = {calls: []}
-    let candidateFlowMap = new Map<string, string>()
-    let activeFlowSlug = input.flow_slug || ''
+    const utterance = (input.pilot_utterance || '').trim()
+    const { system, index } = await getRuntimeSystemIndex()
 
-    const prepared = await prepareDecisionCandidates(input, pilotUtterance)
-    candidateFlowMap = prepared.candidateFlowMap
-    const flowEntryModes = prepared.flowEntryModes
-    if (prepared.activeFlowSlug) {
-        activeFlowSlug = prepared.activeFlowSlug
-        input.flow_slug = prepared.activeFlowSlug
-    }
-    trace.candidateTimeline = prepared.timeline
-    if (prepared.autoSelected) {
-        trace.autoSelection = {
-            id: prepared.autoSelected.id,
-            flow: prepared.autoSelected.flow,
-            reason: 'Single candidate remained after trigger and condition evaluation.',
-        }
-    }
-    input.candidates = prepared.finalCandidates.map(candidate => ({
-        id: candidate.id,
-        state: candidate.state,
-        flow: candidate.flow,
-    }))
+    const currentEntry = index.get(input.state_id)
+    const activeFlowSlug =
+        input.flow_slug
+        || currentEntry?.flow
+        || system.main
+        || Object.keys(system.flows || {})[0]
+        || ''
 
-    const resolveActivationInstruction = (
-        value?: string | FlowActivationInstruction | null
-    ): FlowActivationInstruction | undefined => {
-        if (!value) return undefined
-        if (typeof value === 'string') {
-            const normalizedMode = flowEntryModes.get(value)
-                || (value === prepared.activeFlowSlug ? 'main' : undefined)
-            return {
-                slug: value,
-                mode: normalizedMode || 'parallel',
-            }
-        }
-        if (!value.slug) return undefined
-        const normalizedMode = value.mode
-            || flowEntryModes.get(value.slug)
-            || (value.slug === prepared.activeFlowSlug ? 'main' : undefined)
-        return {
-            slug: value.slug,
-            mode: normalizedMode || 'parallel',
-        }
-    }
-
-    const finalize = (decision: LLMDecision): LLMDecisionResult => {
-        const targetState = typeof decision.next_state === 'string' ? decision.next_state : ''
-        const normalizedControllerSay = typeof decision.controller_say_tpl === 'string'
-            ? decision.controller_say_tpl.trim()
-            : ''
-
-        const targetCandidate = targetState
-            ? prepared.finalCandidateIndex.get(targetState) || prepared.candidateIndex.get(targetState)
-            : undefined
-        const targetFlow = targetCandidate?.flow || (targetState ? candidateFlowMap.get(targetState) : undefined)
-        const candidateSayTemplate = targetCandidate?.state?.say_tpl
-        const candidateRole = targetCandidate?.state?.role
-
-        if ((!normalizedControllerSay.length) && candidateRole === 'atc' && typeof candidateSayTemplate === 'string') {
-            decision.controller_say_tpl = candidateSayTemplate
+    const candidateMap = new Map<string, DecisionCandidate>()
+    const addCandidate = (
+        id?: string,
+        flow?: string,
+        providedState?: RuntimeDecisionState
+    ) => {
+        if (!id || candidateMap.has(id)) {
+            return
         }
 
-        let activation = resolveActivationInstruction(decision.activate_flow as any)
-        if (!activation && targetFlow && targetFlow !== activeFlowSlug) {
-            activation = resolveActivationInstruction(targetFlow)
+        const indexed = index.get(id)
+        const state = providedState || indexed?.state
+        if (!state) {
+            return
         }
 
-        const finalControllerSay = typeof decision.controller_say_tpl === 'string'
-            ? decision.controller_say_tpl.trim()
-            : ''
-        const atcWillSpeak = Boolean(
-            (finalControllerSay && finalControllerSay.length)
-            || (candidateRole === 'atc' && typeof candidateSayTemplate === 'string' && candidateSayTemplate.trim().length)
-        )
+        const triggers = Array.isArray(state.triggers) ? state.triggers.filter(Boolean) : []
+        const regexTriggers = triggers.filter(trigger => trigger?.type === 'regex')
+        const noneTriggers = triggers.filter(trigger => trigger?.type === 'none')
+        const flowSlug = flow || indexed?.flow || activeFlowSlug
 
-        if (targetCandidate?.state?.auto === 'pop_stack_or_route_by_intent') {
-            decision.resume_previous = true
-        }
-
-        if (activation) {
-            if (activation.slug !== activeFlowSlug && atcWillSpeak && activation.mode !== 'main') {
-                activation.mode = 'linear'
-            }
-            decision.activate_flow = activation
-        } else if (decision.activate_flow) {
-            delete (decision as any).activate_flow
-        }
-
-        let activeNodes: ActiveNodeSummary[] | undefined
-        if (activation?.mode === 'parallel') {
-            const nodes: ActiveNodeSummary[] = []
-
-            if (input.state_id && activeFlowSlug) {
-                const previousSay = typeof input.state?.say_tpl === 'string' ? input.state.say_tpl : undefined
-                nodes.push({
-                    flow: activeFlowSlug,
-                    state: input.state_id,
-                    role: input.state?.role,
-                    say_tpl: previousSay,
-                    controller_say_tpl: input.state?.role === 'atc' ? previousSay : undefined,
-                })
-            }
-
-            if (targetState) {
-                const flowForTarget = targetFlow || activeFlowSlug
-                if (flowForTarget) {
-                    nodes.push({
-                        flow: flowForTarget,
-                        state: targetState,
-                        role: candidateRole,
-                        say_tpl: typeof candidateSayTemplate === 'string' ? candidateSayTemplate : undefined,
-                        controller_say_tpl: candidateRole === 'atc'
-                            ? (decision.controller_say_tpl || candidateSayTemplate || undefined)
-                            : undefined,
-                    })
-                }
-            }
-
-            if (nodes.length) {
-                const seen = new Set<string>()
-                activeNodes = nodes.filter(node => {
-                    if (!node.flow || !node.state) {
-                        return false
-                    }
-                    const key = `${node.flow}::${node.state}`
-                    if (seen.has(key)) {
-                        return false
-                    }
-                    seen.add(key)
-                    return true
-                })
-            }
-
-            if (!activeNodes?.length) {
-                activeNodes = undefined
-            }
-        }
-
-        const shouldAttachTrace = Boolean(
-            trace.calls.length
-            || trace.fallback
-            || (trace.candidateTimeline && trace.candidateTimeline.steps.length)
-            || trace.autoSelection
-        )
-
-        const result: LLMDecisionResult = { decision }
-        if (shouldAttachTrace) {
-            result.trace = trace
-        }
-        if (activeNodes && activeNodes.length) {
-            result.active_nodes = activeNodes
-        }
-        return result
-    }
-
-    async function handleReadbackCheck(): Promise<LLMDecisionResult> {
-        const requiredKeys = READBACK_REQUIREMENTS[input.state_id] || input.state.readback_required || []
-        const expectedItems = requiredKeys.reduce<Array<{
-            key: string;
-            value: string;
-            spoken_variants: string[]
-        }>>((acc, key) => {
-            const value = resolveReadbackValue(key, input)
-            if (!value) {
-                return acc
-            }
-
-            const normalizedValue = String(value)
-            if (!normalizedValue.trim().length) {
-                return acc
-            }
-
-            acc.push({
-                key,
-                value: normalizedValue,
-                spoken_variants: buildSpokenVariants(key, normalizedValue)
-            })
-            return acc
-        }, [])
-
-        const okNext = pickTransition(input.state.ok_next, input.candidates)
-        const badNext = pickTransition(input.state.bad_next, input.candidates)
-        const defaultNext = fallbackNextState(input)
-
-        if (!expectedItems.length) {
-            return finalize({next_state: okNext ?? defaultNext})
-        }
-
-        const sanitizedPilot = sanitizeForQuickMatch(pilotUtterance)
-        const heuristicsOk = expectedItems.every(item => {
-            const sanitizedValue = sanitizeForQuickMatch(item.value)
-            return sanitizedValue ? sanitizedPilot.includes(sanitizedValue) : true
+        candidateMap.set(id, {
+            id,
+            flow: flowSlug,
+            state,
+            triggers,
+            regexTriggers,
+            noneTriggers,
         })
+    }
 
-        if (heuristicsOk && okNext) {
-            return finalize({next_state: okNext})
-        }
-
-        const payload = {
-            state_id: input.state_id,
-            callsign: input.variables?.callsign,
-            pilot_utterance: pilotUtterance,
-            expected_items: expectedItems,
-            controller_instruction: input.state.say_tpl ?? null
-        }
-
-        const requestBody = {
-            model: getModel(),
-            response_format: {type: 'json_schema', json_schema: READBACK_JSON_SCHEMA},
-            reasoning_effort: 'low',
-            n: 1,
-            verbosity: 'low',
-            messages: [
-                {
-                    role: 'system',
-                    content: [
-                        'You are an aviation clearance readback checker.',
-                        'Evaluate if the pilot_utterance correctly repeats every item in expected_items.',
-                        'Return JSON with keys: status (ok, missing, incorrect, uncertain), missing (array), incorrect (array), notes (optional).',
-                        'Treat reasonable phonetic variations as correct.'
-                    ].join(' ')
-                },
-                {role: 'user', content: JSON.stringify(payload)}
-            ]
-        }
-
-        const callTrace: LLMDecisionTraceCall = {
-            stage: 'readback-check',
-            request: JSON.parse(JSON.stringify(requestBody))
-        }
-
-        try {
-            const client = ensureOpenAI()
-            const response = await client.chat.completions.create(requestBody)
-
-            const raw = response.choices?.[0]?.message?.content || '{}'
-            callTrace.response = JSON.parse(JSON.stringify(response))
-            callTrace.rawResponseText = raw
-            trace.calls.push(callTrace)
-
-            const parsed = JSON.parse(raw) as { status?: ReadbackStatus }
-            const status: ReadbackStatus = parsed.status || 'uncertain'
-
-            if (status === 'ok') {
-                return finalize({next_state: okNext ?? defaultNext})
-            }
-
-            if ((status === 'missing' || status === 'incorrect') && badNext) {
-                return finalize({next_state: badNext})
-            }
-
-            if (status === 'uncertain' && okNext) {
-                return finalize({next_state: okNext})
-            }
-
-            return finalize({next_state: badNext ?? defaultNext})
-        } catch (err) {
-            callTrace.error = err instanceof Error ? err.message : String(err)
-            trace.calls.push(callTrace)
-            if (!trace.fallback) {
-                trace.fallback = {used: true, reason: callTrace.error, selected: 'readback-check-fallback'}
-            }
-            console.warn('[ATC] Readback check failed, using fallback:', err)
-            return finalize({next_state: okNext ?? defaultNext})
+    if (currentEntry?.state) {
+        const transitions = [
+            ...(currentEntry.state.next || []),
+            ...(currentEntry.state.ok_next || []),
+            ...(currentEntry.state.bad_next || []),
+            ...(currentEntry.state.timer_next || []),
+        ]
+        for (const transition of transitions) {
+            if (!transition?.to) continue
+            addCandidate(transition.to, currentEntry.flow)
         }
     }
 
-    if (input.state?.auto === 'check_readback') {
-        return await handleReadbackCheck()
+    for (const raw of input.candidates || []) {
+        if (!raw?.id) continue
+        addCandidate(raw.id, raw.flow, raw.state)
     }
 
-    if (!pilotUtterance) {
-        const interruptCandidate = input.candidates.find(c => c.id.startsWith('INT_'))
-            || input.candidates.find(c => c.state?.auto === 'monitor')
-            || input.candidates.find(c => c.state?.role === 'system')
-
-        if (interruptCandidate) {
-            return finalize({next_state: interruptCandidate.id})
-        }
+    for (const [flowSlug, tree] of Object.entries(system.flows || {})) {
+        if (flowSlug === activeFlowSlug) continue
+        const start = tree?.start_state
+        if (!start) continue
+        const startState = tree?.states?.[start]
+        addCandidate(start, flowSlug, startState)
     }
 
-    const optimizedInput = optimizeInputForLLM(input)
+    let candidates = Array.from(candidateMap.values())
+    if (candidates.length === 0) {
+        return { decision: { next_state: input.state_id } }
+    }
 
-    // Check whether the next states require ATC responses
-    const atcCandidates = input.candidates.filter(c =>
-        c.state.role === 'atc' || c.state.say_tpl || c.id.startsWith('INT_')
+    candidates = candidates.filter(candidate =>
+        !candidate.triggers.some(trigger => trigger?.type === 'auto_time' || trigger?.type === 'auto_variable')
     )
 
-    // If no ATC states are available, perform a simple transition without a response
-    if (atcCandidates.length === 0 && input.candidates.length > 0) {
-        return finalize({next_state: input.candidates[0].id})
+    const regexCandidates = candidates.filter(candidate => candidate.regexTriggers.length > 0)
+    const regexMatches = regexCandidates.filter(candidate =>
+        candidate.regexTriggers.some(trigger => evaluateRegexPattern(trigger.pattern, trigger.patternFlags, utterance))
+    )
+
+    let workingSet = regexMatches
+    if (workingSet.length === 0) {
+        workingSet = candidates.filter(candidate => candidate.regexTriggers.length === 0)
     }
 
-    // Compact yet informative prompt — includes variable info for intelligent responses
-    const system = [
-        'You are an ATC state router. Return strict JSON.',
-        'Keys: next_state, controller_say_tpl (optional), off_schema (optional), intent (optional).',
-        '',
-        'CLASSIFY INTENT: Determine if pilot_utterance is PILOT_REQUEST (pilot initiates a call or request), PILOT_READBACK (acknowledging prior ATC instruction), SYS_INTERRUPT (system-driven transition, no pilot input), or OTHER.',
-        'Use decision_hints.expecting_pilot_call, state_summary.role and candidates[].requires_atc_reply to guide the choice.',
-        '',
-        'ROUTING: Choose next_state from candidates[].id that best fits the intent and keeps the flow consistent with state_summary.next/ok_next/bad_next.',
-        'If unsure, prefer GEN_NO_REPLY (set off_schema=true) or the first logical candidate.',
-        '',
-        'ATC RESPONSES: Only include controller_say_tpl when the chosen candidate requires an ATC reply (requires_atc_reply=true), has template variables, or the pilot is off schema.',
-        'Never speak for pilot states. Always include {callsign} in ATC responses and prefer provided variables such as {runway}, {squawk}, {dest}.',
-        '',
-        `Available variables: {${optimizedInput.available_variables.join('}, {')}}`,
-        `Common candidate variables: {${optimizedInput.candidate_variables.join('}, {')}}`,
-        '',
-        'INTERRUPTS: If an interrupt state (id starts with INT_) best matches the intent, select it and answer accordingly.',
-        'Do not invent state ids. If nothing fits, respond with next_state "GEN_NO_REPLY" and off_schema=true.'
-    ].join(' ')
+    if (workingSet.length === 0) {
+        return { decision: { next_state: input.state_id } }
+    }
 
-    // Update optimized input to indicate which candidates need ATC responses
-    optimizedInput.atc_candidates = atcCandidates.map(c => c.id)
+    const context = { variables: input.variables || {}, flags: input.flags || {} }
+    const survivors = workingSet.filter(candidate =>
+        evaluateConditionList(candidate.state?.conditions, context, utterance).passed
+    )
 
-    const user = JSON.stringify(optimizedInput)
+    if (survivors.length === 1) {
+        return { decision: { next_state: survivors[0].id } }
+    }
 
-    const body = {
+    if (survivors.length === 0) {
+        return { decision: { next_state: input.state_id } }
+    }
+
+    const trace: LLMDecisionTrace = { calls: [] }
+    const llmCandidates = survivors.map(candidate => ({
+        id: candidate.id,
+        flow: candidate.flow,
+        state: candidate.state,
+    }))
+
+    const payload = {
+        state_id: input.state_id,
+        flow_slug: activeFlowSlug,
+        pilot_utterance: utterance,
+        variables: input.variables,
+        flags: input.flags,
+        candidates: llmCandidates.map(candidate => ({
+            id: candidate.id,
+            flow: candidate.flow,
+            role: candidate.state?.role,
+            phase: candidate.state?.phase,
+            summary: candidate.state?.summary,
+            triggers: candidate.state?.triggers || [],
+            conditions: candidate.state?.conditions || [],
+            say_tpl: candidate.state?.say_tpl,
+        })),
+    }
+
+    const requestBody = {
         model: getModel(),
-        response_format: {type: 'json_object'},
+        response_format: {
+            type: 'json_schema',
+            json_schema: {
+                name: 'decision',
+                schema: {
+                    type: 'object',
+                    additionalProperties: false,
+                    properties: {
+                        next_state: { type: 'string' },
+                    },
+                    required: ['next_state'],
+                },
+            },
+        },
         messages: [
-            {role: 'system', content: system},
-            {role: 'user', content: user}
-        ]
+            {
+                role: 'system',
+                content: 'You are an ATC decision assistant. Choose the best next state from the provided candidates based on the pilot utterance and context. Return JSON.',
+            },
+            {
+                role: 'user',
+                content: JSON.stringify(payload),
+            },
+        ],
     }
 
     const callTrace: LLMDecisionTraceCall = {
         stage: 'decision',
-        request: JSON.parse(JSON.stringify(body))
+        request: JSON.parse(JSON.stringify(requestBody)),
     }
 
+    let chosen: string | null = null
     try {
         const client = ensureOpenAI()
-
-        console.log("calling LLM with body:", body)
-
-        const r = await client.chat.completions.create(body)
-
-        const raw = r.choices?.[0]?.message?.content || '{}'
-        callTrace.response = JSON.parse(JSON.stringify(r))
+        const response = await client.chat.completions.create(requestBody)
+        const raw = response.choices?.[0]?.message?.content?.trim() || ''
+        callTrace.response = JSON.parse(JSON.stringify(response))
         callTrace.rawResponseText = raw
+
+        if (raw) {
+            const parsed = JSON.parse(raw) as { next_state?: string }
+            if (typeof parsed.next_state === 'string' && parsed.next_state.trim().length) {
+                chosen = parsed.next_state.trim()
+            }
+        }
+    } catch (err) {
+        callTrace.error = err instanceof Error ? err.message : String(err)
+    } finally {
         trace.calls.push(callTrace)
-
-        const parsed = JSON.parse(raw)
-
-        // Minimal validation
-        if (!parsed.next_state || typeof parsed.next_state !== 'string') {
-            throw new Error('Invalid next_state')
-        }
-
-        console.log("LLM decision:", parsed)
-
-        return finalize(parsed as LLMDecision)
-
-    } catch (e) {
-        const errorMessage = e instanceof Error ? e.message : String(e)
-        callTrace.error = errorMessage
-        trace.calls.push(callTrace)
-        const fallbackInfo = {used: true, reason: errorMessage} as NonNullable<LLMDecisionTrace['fallback']>
-        trace.fallback = fallbackInfo
-        console.error('LLM JSON parse error, using smart fallback:', e)
-
-        // Smart keyword-based fallback - mit Template-Variablen
-        const callsign = input.variables.callsign || ''
-
-        // Pilot braucht Clearance → ATC muss antworten
-        if (pilotText.includes('clearance') || pilotText.includes('request clearance')) {
-            fallbackInfo.selected = 'clearance'
-            return finalize({
-                next_state: 'CD_ISSUE_CLR',
-                off_schema: true,
-                controller_say_tpl: `{callsign}, cleared to {dest} via {sid} departure, runway {runway}, climb {initial_altitude_ft} feet, squawk {squawk}.`
-            })
-        }
-
-        // Pilot fragt nach Taxi → ATC muss antworten
-        if (pilotText.includes('taxi') || pilotText.includes('pushback')) {
-            fallbackInfo.selected = 'taxi'
-            return finalize({
-                next_state: 'GRD_TAXI_INSTR',
-                off_schema: true,
-                controller_say_tpl: `{callsign}, taxi to runway {runway} via {taxi_route}, hold short runway {runway}.`
-            })
-        }
-
-        // Pilot ready for takeoff → ATC muss antworten
-        if (pilotText.includes('takeoff') || pilotText.includes('ready')) {
-            fallbackInfo.selected = 'takeoff'
-            return finalize({
-                next_state: 'TWR_TAKEOFF_CLR',
-                off_schema: true,
-                controller_say_tpl: `{callsign}, wind {remarks}, runway {runway} cleared for take-off.`
-            })
-        }
-
-        // Pilot readback or acknowledgment → no ATC response required
-        if (pilotText.includes('wilco') || pilotText.includes('roger') ||
-            pilotText.includes('cleared') || pilotText.includes('copied')) {
-            fallbackInfo.selected = 'acknowledge'
-            return finalize({
-                next_state: input.candidates[0]?.id || 'GEN_NO_REPLY'
-                // Keine controller_say_tpl - Pilot hat nur acknowledged
-            })
-        }
-
-        // Generic fallback - mit Template
-        fallbackInfo.selected = 'generic'
-        return finalize({
-            next_state: 'GEN_NO_REPLY',
-            off_schema: true,
-            controller_say_tpl: `{callsign}, say again your last transmission.`
-        })
     }
+
+    if (chosen && survivors.some(candidate => candidate.id === chosen)) {
+        return { decision: { next_state: chosen }, trace }
+    }
+
+    return { decision: { next_state: survivors[0].id }, trace }
 }
