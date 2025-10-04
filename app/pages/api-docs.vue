@@ -7,10 +7,10 @@
           <NuxtLink to="/"
             class="inline-flex items-center gap-2 rounded-full border border-transparent bg-white/5 px-4 py-2 text-white/70 transition hover:border-white/20 hover:bg-white/10 hover:text-cyan-200">
             <v-icon icon="mdi-arrow-left" size="18" />
-            Zurück
+            Back
           </NuxtLink>
           <div class="flex flex-col">
-            <span class="text-[10px] uppercase tracking-[0.35em] text-white/40">Dokumentation</span>
+            <span class="text-[10px] uppercase tracking-[0.35em] text-white/40">Documentation</span>
             <span class="text-lg font-semibold text-white">OpenSquawk API</span>
           </div>
         </div>
@@ -21,7 +21,7 @@
               <v-icon icon="mdi-magnify" size="18" />
             </span>
             <input ref="searchInputRef" v-model="searchTerm" type="search"
-              placeholder="/api/service/auth/login"
+              placeholder="Search endpoints, descriptions, or keywords"
               class="w-full rounded-full border border-white/15 bg-black/40 py-2.5 pl-11 pr-12 text-sm text-white placeholder:text-white/35 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
               @keydown.esc.prevent="clearSearch" />
             <button v-if="hasActiveSearch" type="button"
@@ -38,19 +38,14 @@
       <div class="grid gap-10 lg:grid-cols-[20rem,minmax(0,1fr)] xl:grid-cols-[22rem,minmax(0,1fr)]">
         <aside class="lg:sticky lg:top-[6.25rem] lg:h-[calc(100vh-7rem)] lg:self-start">
           <div class="flex h-full flex-col">
-            <nav class="flex h-full flex-col overflow-hidden">
-              <header class="border-b border-white/10 px-5 py-4">
-                <h2 class="text-base font-semibold text-white">Kapitelübersicht</h2>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.3em] text-white/35">
-                  <template v-if="hasActiveSearch">
-                    {{ resultCount }} {{ resultCount === 1 ? 'Treffer' : 'Treffer gesamt' }}
-                  </template>
-                  <template v-else>
-                    {{ totalEndpointCount }} dokumentierte Routen
-                  </template>
+            <nav class="flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+              <header class="border-b border-white/10 px-4 py-3">
+                <h2 class="text-base font-semibold text-white">Catalog</h2>
+                <p v-if="hasActiveSearch" class="mt-1 text-[11px] uppercase tracking-[0.3em] text-white/50">
+                  {{ resultCount }} {{ resultCount === 1 ? 'match' : 'matches' }}
                 </p>
               </header>
-              <div class="flex max-h-full flex-col gap-6 overflow-y-auto px-5 py-4 text-sm text-white/70">
+              <div class="flex max-h-full flex-col gap-6 overflow-y-auto px-4 py-4 text-sm text-white/70">
                 <NuxtLink :to="`#${generalAnchor}`" class="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition"
                   :class="activeAnchor === generalAnchor
                     ? 'bg-cyan-500/20 text-white'
@@ -83,7 +78,7 @@
                   </div>
                 </template>
                 <p v-else class="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-xs text-white/50">
-                  Keine Treffer für die aktuelle Suche.
+                  No matches for the current search.
                 </p>
               </div>
             </nav>
@@ -129,7 +124,7 @@
 
           <section class="space-y-3">
             <header class="space-y-2">
-              <h2 class="text-2xl font-semibold">Endpoint catalogue</h2>
+              <h2 class="text-2xl font-semibold">Endpoint catalog</h2>
               <p class="text-sm text-white/60">
                 Endpoints are grouped by audience. Public endpoints do not require a bearer token. Protected endpoints require a
                 valid access token. Rate limits and additional business rules are documented per route.
@@ -192,7 +187,7 @@
                                   class="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/60 transition hover:border-cyan-300/60 hover:text-white"
                                   @click.stop="copyToClipboard(fullEndpointUrl(endpoint.path), getCopyKey(endpoint, 'url'))">
                                   <v-icon icon="mdi-content-copy" size="14" />
-                                  <span>{{ copyStates[getCopyKey(endpoint, 'url')] ? 'Kopiert' : 'Copy URL' }}</span>
+                                  <span>{{ copyStates[getCopyKey(endpoint, 'url')] ? 'Copied' : 'Copy URL' }}</span>
                                 </button>
                               </div>
                             </div>
@@ -224,14 +219,14 @@
                         <div v-show="isEndpointExpanded(getEndpointKey(endpoint))"
                           class="space-y-4 border-t border-white/10 bg-black/40 p-6">
                           <div v-if="endpoint.query?.length" class="space-y-3">
-                            <h5 class="text-sm font-semibold text-white">Query parameter</h5>
+                            <h5 class="text-sm font-semibold text-white">Query parameters</h5>
                             <div class="overflow-hidden rounded-2xl border border-white/10 bg-black/40">
                               <table class="w-full text-left text-sm text-white/70">
                                 <thead class="bg-white/5 text-xs uppercase tracking-[0.2em] text-white/50">
                                   <tr>
                                     <th scope="col" class="px-4 py-3 font-medium text-white/60">Parameter</th>
-                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Typ</th>
-                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Beschreibung</th>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Type</th>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Description</th>
                                   </tr>
                                 </thead>
                                 <tbody class="divide-y divide-white/5">
@@ -241,7 +236,7 @@
                                         <span :class="['block text-white', param.required ? 'font-semibold' : 'font-medium']">{{ param.name }}</span>
                                         <span class="text-[11px] uppercase tracking-[0.25em]"
                                           :class="param.required ? 'text-white' : 'text-white/40'">
-                                          {{ param.required ? 'Erforderlich' : 'Optional' }}
+                                          {{ param.required ? 'Required' : 'Optional' }}
                                         </span>
                                       </div>
                                     </td>
@@ -254,14 +249,14 @@
                           </div>
 
                           <div v-if="endpoint.body?.length" class="space-y-3">
-                            <h5 class="text-sm font-semibold text-white">Request Body</h5>
+                            <h5 class="text-sm font-semibold text-white">Request body</h5>
                             <div class="overflow-hidden rounded-2xl border border-white/10 bg-black/40">
                               <table class="w-full text-left text-sm text-white/70">
                                 <thead class="bg-white/5 text-xs uppercase tracking-[0.2em] text-white/50">
                                   <tr>
-                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Feld</th>
-                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Typ</th>
-                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Beschreibung</th>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Field</th>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Type</th>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Description</th>
                                   </tr>
                                 </thead>
                                 <tbody class="divide-y divide-white/5">
@@ -271,7 +266,7 @@
                                         <span :class="['block text-white', field.required ? 'font-semibold' : 'font-medium']">{{ field.name }}</span>
                                         <span class="text-[11px] uppercase tracking-[0.25em]"
                                           :class="field.required ? 'text-white' : 'text-white/40'">
-                                          {{ field.required ? 'Erforderlich' : 'Optional' }}
+                                          {{ field.required ? 'Required' : 'Optional' }}
                                         </span>
                                       </div>
                                     </td>
@@ -290,7 +285,7 @@
                                 class="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/60 transition hover:border-cyan-300/60 hover:text-white"
                                 @click.stop="copyToClipboard(endpoint.sampleRequest, getCopyKey(endpoint, 'request'))">
                                 <v-icon icon="mdi-content-copy" size="14" />
-                                <span>{{ copyStates[getCopyKey(endpoint, 'request')] ? 'Kopiert' : 'Copy' }}</span>
+                                <span>{{ copyStates[getCopyKey(endpoint, 'request')] ? 'Copied' : 'Copy' }}</span>
                               </button>
                             </div>
                             <pre class="overflow-x-auto rounded-2xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleRequest }}</code></pre>
@@ -303,7 +298,7 @@
                                 class="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/60 transition hover:border-cyan-300/60 hover:text-white"
                                 @click.stop="copyToClipboard(endpoint.sampleResponse, getCopyKey(endpoint, 'response'))">
                                 <v-icon icon="mdi-content-copy" size="14" />
-                                <span>{{ copyStates[getCopyKey(endpoint, 'response')] ? 'Kopiert' : 'Copy' }}</span>
+                                <span>{{ copyStates[getCopyKey(endpoint, 'response')] ? 'Copied' : 'Copy' }}</span>
                               </button>
                             </div>
                             <pre class="overflow-x-auto rounded-2xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleResponse }}</code></pre>
