@@ -52,15 +52,13 @@
                 </p>
               </header>
               <div class="flex max-h-full flex-col gap-6 overflow-y-auto p-5 pr-4 text-sm text-white/70">
-                <NuxtLink :to="`#${generalAnchor}`" class="block rounded-2xl border px-4 py-3 transition"
+                <NuxtLink :to="`#${generalAnchor}`" class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm transition"
                   :class="activeAnchor === generalAnchor
-                    ? 'border-cyan-400/80 bg-cyan-500/15 text-white'
-                    : 'border-transparent bg-white/0 hover:border-cyan-400/60 hover:bg-cyan-500/10'"
+                    ? 'bg-cyan-500/20 text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'"
                   @click="handleAnchorClick(generalAnchor)">
-                  <span class="flex items-center justify-between gap-3">
-                    <span class="font-medium">About the API</span>
-                    <span class="text-[10px] uppercase tracking-[0.25em] text-white/40">Overview</span>
-                  </span>
+                  <span class="font-medium">About the API</span>
+                  <span class="text-[10px] uppercase tracking-[0.25em] text-white/40">Overview</span>
                 </NuxtLink>
 
                 <template v-if="navigationSections.length">
@@ -69,22 +67,16 @@
                     <div class="space-y-2">
                       <div v-for="group in navSection.groups" :key="group.title" class="space-y-1">
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">{{ group.title }}</p>
-                        <ul class="space-y-1">
+                        <ul class="space-y-0.5">
                           <li v-for="endpoint in group.endpoints" :key="endpoint.anchor">
-                            <NuxtLink :to="`#${endpoint.anchor}`" class="block rounded-xl border px-4 py-3 transition"
+                            <NuxtLink :to="`#${endpoint.anchor}`"
+                              class="block rounded-lg px-3 py-1.5 text-left leading-tight transition"
                               :class="activeAnchor === endpoint.anchor
-                                ? 'border-cyan-400/80 bg-cyan-500/15 text-white'
-                                : 'border-transparent bg-white/0 hover:border-cyan-400/60 hover:bg-cyan-500/10'"
+                                ? 'bg-cyan-500/20 text-white'
+                                : 'text-white/70 hover:bg-white/10 hover:text-white'"
                               @click="handleAnchorClick(endpoint.anchor)">
-                              <div class="flex items-start gap-2">
-                                <span :class="['inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
-                                  {{ endpoint.method }}
-                                </span>
-                                <div class="min-w-0 flex-1">
-                                  <p class="truncate font-medium text-white">{{ endpoint.path }}</p>
-                                  <p class="line-clamp-2 text-xs text-white/60">{{ endpoint.summary }}</p>
-                                </div>
-                              </div>
+                              <p class="truncate text-[13px] font-medium">{{ endpoint.path }}</p>
+                              <p v-if="endpoint.summary" class="line-clamp-2 text-[11px] text-white/50">{{ endpoint.summary }}</p>
                             </NuxtLink>
                           </li>
                         </ul>
@@ -101,6 +93,23 @@
         </aside>
 
         <main class="space-y-12">
+          <section class="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+            <div class="h-56 w-full bg-cover bg-center"
+              style="background-image: url('/img/learn/missions/full-flight/briefing-weather.png');"></div>
+            <div class="space-y-3 p-6 sm:p-8">
+              <div class="flex flex-wrap gap-2">
+                <NuxtLink v-for="target in quickJumpTargets" :key="target.anchor" :to="`#${target.anchor}`"
+                  class="inline-flex items-center rounded-full border px-4 py-2 text-sm transition"
+                  :class="activeAnchor === target.anchor
+                    ? 'border-cyan-300/70 bg-cyan-500/20 text-white'
+                    : 'border-white/15 bg-black/40 text-white/70 hover:border-cyan-400/60 hover:text-white'"
+                  @click="handleAnchorClick(target.anchor)">
+                  {{ target.label }}
+                </NuxtLink>
+              </div>
+            </div>
+          </section>
+
           <section :id="generalAnchor" :ref="setAnchorRef(generalAnchor)"
             class="space-y-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-8">
             <header class="space-y-3">
@@ -1055,6 +1064,18 @@ const navigationSections = computed<NavigationSectionItem[]>(() =>
     }))
     .filter((section) => section.groups.length > 0),
 )
+
+const quickJumpTargets = computed(() => {
+  const sectionTargets = filteredSections.value.map((section) => ({
+    label: section.title,
+    anchor: sectionAnchor(section.title),
+  }))
+
+  return [
+    { label: 'About the API', anchor: generalAnchor },
+    ...sectionTargets,
+  ]
+})
 
 const getEndpointKey = (endpoint: EndpointEntry) => `${endpoint.method.toUpperCase()}-${endpoint.path}`
 
