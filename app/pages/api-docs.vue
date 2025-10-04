@@ -37,11 +37,10 @@
     <div class="mx-auto w-full px-6 pb-12 pt-24 lg:px-14 xl:px-24">
       <div class="grid gap-10 lg:grid-cols-[20rem,minmax(0,1fr)] xl:grid-cols-[22rem,minmax(0,1fr)]">
         <aside class="lg:sticky lg:top-[6.25rem] lg:h-[calc(100vh-7rem)] lg:self-start">
-          <div class="flex h-full flex-col gap-6">
-            <nav class="flex-1 overflow-hidden rounded-3xl border border-white/10 bg-white/5">
-              <header class="border-b border-white/5 p-5">
+          <div class="flex h-full flex-col">
+            <nav class="flex h-full flex-col overflow-hidden">
+              <header class="border-b border-white/10 px-5 py-4">
                 <h2 class="text-base font-semibold text-white">Kapitelübersicht</h2>
-                <p class="mt-1 text-xs text-white/60">Seitlich scrollen unabhängig vom Inhalt.</p>
                 <p class="mt-2 text-[11px] uppercase tracking-[0.3em] text-white/35">
                   <template v-if="hasActiveSearch">
                     {{ resultCount }} {{ resultCount === 1 ? 'Treffer' : 'Treffer gesamt' }}
@@ -51,8 +50,8 @@
                   </template>
                 </p>
               </header>
-              <div class="flex max-h-full flex-col gap-6 overflow-y-auto p-5 pr-4 text-sm text-white/70">
-                <NuxtLink :to="`#${generalAnchor}`" class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm transition"
+              <div class="flex max-h-full flex-col gap-6 overflow-y-auto px-5 py-4 text-sm text-white/70">
+                <NuxtLink :to="`#${generalAnchor}`" class="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition"
                   :class="activeAnchor === generalAnchor
                     ? 'bg-cyan-500/20 text-white'
                     : 'text-white/70 hover:bg-white/10 hover:text-white'"
@@ -64,19 +63,18 @@
                 <template v-if="navigationSections.length">
                   <div v-for="navSection in navigationSections" :key="navSection.title" class="space-y-3">
                     <p class="text-[11px] uppercase tracking-[0.3em] text-white/35">{{ navSection.title }}</p>
-                    <div class="space-y-2">
+                    <div class="space-y-1.5">
                       <div v-for="group in navSection.groups" :key="group.title" class="space-y-1">
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">{{ group.title }}</p>
                         <ul class="space-y-0.5">
                           <li v-for="endpoint in group.endpoints" :key="endpoint.anchor">
                             <NuxtLink :to="`#${endpoint.anchor}`"
-                              class="block rounded-lg px-3 py-1.5 text-left leading-tight transition"
+                              class="block rounded-md px-3 py-1 text-left text-[13px] leading-snug transition"
                               :class="activeAnchor === endpoint.anchor
                                 ? 'bg-cyan-500/20 text-white'
                                 : 'text-white/70 hover:bg-white/10 hover:text-white'"
                               @click="handleAnchorClick(endpoint.anchor)">
-                              <p class="truncate text-[13px] font-medium">{{ endpoint.path }}</p>
-                              <p v-if="endpoint.summary" class="line-clamp-2 text-[11px] text-white/50">{{ endpoint.summary }}</p>
+                              <p class="line-clamp-2 font-medium">{{ endpoint.path }}</p>
                             </NuxtLink>
                           </li>
                         </ul>
@@ -186,10 +184,12 @@
                       :ref="setAnchorRef(endpointAnchor(section.title, group.title, endpoint))"
                       :key="getEndpointKey(endpoint)"
                       class="group overflow-hidden rounded-3xl border border-white/10 bg-white/5">
-                      <button type="button"
-                        class="flex w-full flex-col gap-4 p-6 text-left transition hover:bg-white/10 focus:outline-none focus-visible:bg-white/10"
+                      <div role="button" tabindex="0"
+                        class="flex w-full cursor-pointer flex-col gap-4 p-6 text-left transition hover:bg-white/10 focus:outline-none focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1020]"
                         :aria-expanded="isEndpointExpanded(getEndpointKey(endpoint))"
-                        @click="toggleEndpoint(getEndpointKey(endpoint))">
+                        @click="toggleEndpoint(getEndpointKey(endpoint))"
+                        @keydown.enter.prevent="toggleEndpoint(getEndpointKey(endpoint))"
+                        @keydown.space.prevent="toggleEndpoint(getEndpointKey(endpoint))">
                         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                           <div class="space-y-2">
                             <div class="flex flex-wrap items-center gap-3">
@@ -197,7 +197,15 @@
                                 :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
                                 {{ endpoint.method }}
                               </span>
-                              <code class="rounded bg-black/50 px-2 py-1 text-sm font-mono text-cyan-200">{{ endpoint.path }}</code>
+                              <div class="flex flex-wrap items-center gap-2">
+                                <code class="rounded bg-black/50 px-2 py-1 text-sm font-mono text-cyan-200">{{ fullEndpointUrl(endpoint.path) }}</code>
+                                <button type="button"
+                                  class="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/60 transition hover:border-cyan-300/60 hover:text-white"
+                                  @click.stop="copyToClipboard(fullEndpointUrl(endpoint.path), getCopyKey(endpoint, 'url'))">
+                                  <v-icon icon="mdi-content-copy" size="14" />
+                                  <span>{{ copyStates[getCopyKey(endpoint, 'url')] ? 'Kopiert' : 'Copy URL' }}</span>
+                                </button>
+                              </div>
                             </div>
                             <p class="text-sm text-white/70">{{ endpoint.summary }}</p>
                           </div>
@@ -221,7 +229,7 @@
                             </span>
                           </div>
                         </div>
-                      </button>
+                      </div>
 
                       <transition name="fade-slide">
                         <div v-show="isEndpointExpanded(getEndpointKey(endpoint))"
@@ -287,12 +295,28 @@
                           </div>
 
                           <div v-if="endpoint.sampleRequest" class="space-y-3">
-                            <h5 class="text-sm font-semibold text-white">Sample request</h5>
+                            <div class="flex items-center justify-between gap-4">
+                              <h5 class="text-sm font-semibold text-white">Sample request</h5>
+                              <button type="button"
+                                class="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/60 transition hover:border-cyan-300/60 hover:text-white"
+                                @click.stop="copyToClipboard(endpoint.sampleRequest, getCopyKey(endpoint, 'request'))">
+                                <v-icon icon="mdi-content-copy" size="14" />
+                                <span>{{ copyStates[getCopyKey(endpoint, 'request')] ? 'Kopiert' : 'Copy' }}</span>
+                              </button>
+                            </div>
                             <pre class="overflow-x-auto rounded-2xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleRequest }}</code></pre>
                           </div>
 
                           <div v-if="endpoint.sampleResponse" class="space-y-3">
-                            <h5 class="text-sm font-semibold text-white">Sample response</h5>
+                            <div class="flex items-center justify-between gap-4">
+                              <h5 class="text-sm font-semibold text-white">Sample response</h5>
+                              <button type="button"
+                                class="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/60 transition hover:border-cyan-300/60 hover:text-white"
+                                @click.stop="copyToClipboard(endpoint.sampleResponse, getCopyKey(endpoint, 'response'))">
+                                <v-icon icon="mdi-content-copy" size="14" />
+                                <span>{{ copyStates[getCopyKey(endpoint, 'response')] ? 'Kopiert' : 'Copy' }}</span>
+                              </button>
+                            </div>
                             <pre class="overflow-x-auto rounded-2xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleResponse }}</code></pre>
                           </div>
 
@@ -392,6 +416,8 @@ interface NavigationSectionItem {
   title: string
   groups: NavigationGroupItem[]
 }
+
+const BASE_URL = 'https://opensquawk.de'
 
 const sectionCategoryOrder: Record<string, string[]> = {
   'Public endpoints': ['Waitlist & marketing', 'Authentication & onboarding', 'Tools & diagnostics'],
@@ -944,6 +970,8 @@ const endpointSections: EndpointSection[] = [
 const searchTerm = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const openEndpoints = ref<Record<string, boolean>>({})
+const copyStates = ref<Record<string, boolean>>({})
+const copyTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 const generalAnchor = 'about-the-api'
 const activeAnchor = ref(generalAnchor)
 
@@ -1065,6 +1093,8 @@ const navigationSections = computed<NavigationSectionItem[]>(() =>
     .filter((section) => section.groups.length > 0),
 )
 
+const fullEndpointUrl = (path: string) => `${BASE_URL}${path}`
+
 const quickJumpTargets = computed(() => {
   const sectionTargets = filteredSections.value.map((section) => ({
     label: section.title,
@@ -1078,6 +1108,9 @@ const quickJumpTargets = computed(() => {
 })
 
 const getEndpointKey = (endpoint: EndpointEntry) => `${endpoint.method.toUpperCase()}-${endpoint.path}`
+
+const getCopyKey = (endpoint: EndpointEntry, type: 'url' | 'request' | 'response') =>
+  `${getEndpointKey(endpoint)}-${type}`
 
 const setAnchorRef = (anchor: string) => (el: HTMLElement | null) => {
   if (el) {
@@ -1124,6 +1157,31 @@ const scheduleActiveAnchorUpdate = () => {
 const handleAnchorClick = (anchor: string) => {
   activeAnchor.value = anchor
   scheduleActiveAnchorUpdate()
+}
+
+const copyToClipboard = async (value: string, key: string) => {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) {
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(value)
+
+    copyStates.value = { ...copyStates.value, [key]: true }
+
+    if (copyTimeouts.has(key)) {
+      clearTimeout(copyTimeouts.get(key)!)
+    }
+
+    const timeout = setTimeout(() => {
+      copyStates.value = { ...copyStates.value, [key]: false }
+      copyTimeouts.delete(key)
+    }, 2000)
+
+    copyTimeouts.set(key, timeout)
+  } catch (error) {
+    console.error('Failed to copy text', error)
+  }
 }
 
 const clearSearch = () => {
@@ -1173,6 +1231,11 @@ onBeforeUnmount(() => {
   if (scrollFrame !== null) {
     scrollFrame = null
   }
+
+  copyTimeouts.forEach((timeout) => {
+    clearTimeout(timeout)
+  })
+  copyTimeouts.clear()
 })
 
 const isEndpointExpanded = (key: string) => {
