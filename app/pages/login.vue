@@ -355,7 +355,7 @@ async function submitLogin() {
   try {
     await auth.login({...loginForm})
     await auth.fetchUser()
-    const target = redirectTarget.value || '/learn'
+    const target = redirectTarget.value || '/classroom'
     await router.replace(target)
   } catch (err: any) {
     const message = err?.data?.statusMessage || err?.message || 'Login failed'
@@ -408,7 +408,7 @@ async function submitRegister() {
       acceptPrivacy: registerForm.acceptPrivacy,
     })
     await auth.fetchUser()
-    const target = redirectTarget.value || '/learn'
+    const target = redirectTarget.value || '/classroom'
     await router.replace(target)
   } catch (err: any) {
     const message = err?.data?.statusMessage || err?.message || 'Registration failed'
@@ -427,7 +427,7 @@ useHead({
 
 onMounted(() => {
   if (auth.isAuthenticated) {
-    const target = redirectTarget.value || '/learn'
+    const target = redirectTarget.value || '/classroom'
     router.replace(target)
   }
 })
