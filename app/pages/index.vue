@@ -151,7 +151,7 @@
                   Hear about new features first!
                 </h3>
                 <p class="text-sm text-white/70">
-                  Join the feature list and get updates on releases, drops & learning content.
+                  Join the feature list and get updates on releases, drops & classroom content.
                 </p>
               </div>
               <div class="flex flex-col gap-3 py-2 sm:flex-row">
@@ -182,7 +182,7 @@
                 <label class="flex items-start gap-3">
                   <input type="checkbox" v-model="updatesForm.consentMarketing" class="mt-1" required/>
                   <span>
-                    Yes, email me when new features, waitlist drops or learning content go live.
+                    Yes, email me when new features, waitlist drops or classroom content go live.
                   </span>
                 </label>
                 <label class="flex items-start gap-3">
@@ -1008,7 +1008,7 @@ POST /api/route/taxi
               <label class="flex items-start gap-3">
                 <input type="checkbox" v-model="waitlistForm.subscribeUpdates" class="mt-1"/>
                 <span>
-                  Yes, keep me posted when new features, drops or learning content go live.
+                  Yes, keep me posted when new features, drops or classroom content go live.
                 </span>
               </label>
               <label class="flex items-start gap-3">

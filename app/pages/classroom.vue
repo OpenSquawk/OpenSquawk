@@ -10,7 +10,7 @@
           <div class="hud-divider" aria-hidden="true"></div>
           <span class="brand">OpenSquawk</span>
           <span class="sep">|</span>
-          <span class="mode">Pilot Voice Prep</span>
+          <span class="mode">Classroom</span>
         </div>
 
         <div class="hud-right">
@@ -950,10 +950,10 @@
               <v-icon size="20">mdi-dice-multiple</v-icon>
             </div>
             <div class="lesson-tip-body">
-              <div class="lesson-tip-title">Schon gewusst?</div>
+              <div class="lesson-tip-title">Did you know?</div>
               <p class="muted small">
-                Mit dem Würfel-Icon „New scenario“ kannst du denselben Call sofort mit neuen Daten üben. Einfach anklicken und du
-                bekommst andere Werte – wenn du das pro Lesson 5–10x wiederholst, sitzt der Funkspruch wirklich.
+                Use the dice icon “New scenario” to rehearse the same call with fresh data instantly. Just click it and you'll
+                get different values — repeat that 5–10 times per lesson and the radio call will really stick.
               </p>
             </div>
           </div>
@@ -1491,7 +1491,7 @@ async function syncRouteFromState(): Promise<void> {
     await router.replace({query: nextQuery})
     lastSyncedQuerySignature = signature
   } catch (error) {
-    console.error('Failed to sync learn route state', error)
+    console.error('Failed to sync classroom route state', error)
   } finally {
     isSyncingRoute = false
   }
@@ -6757,5 +6757,10 @@ onMounted(() => {
   border-top: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
   box-shadow: 0 -4px 12px rgba(2, 6, 23, .1);
   z-index: 50;
+}
+</style>
+<style>
+.panel.dialog .btn {
+  @apply px-3 py-1;
 }
 </style>

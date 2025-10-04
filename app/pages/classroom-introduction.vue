@@ -9,12 +9,12 @@
             <v-icon icon="mdi-radar" size="26" class="text-cyan-300" />
           </div>
           <div>
-            <p class="text-lg font-semibold tracking-tight">Learn orientation</p>
+            <p class="text-lg font-semibold tracking-tight">Classroom orientation</p>
             <p class="text-sm text-white/60">Guided preflight briefing</p>
           </div>
         </div>
-        <NuxtLink to="/learn" class="btn primary">
-          Enter Learn hub
+        <NuxtLink to="/classroom" class="btn primary">
+          Enter Classroom hub
           <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
         </NuxtLink>
       </div>
@@ -30,12 +30,12 @@
                 class="inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-400/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-200/80"
               >Orientation</span>
               <h1 class="text-3xl font-semibold leading-tight sm:text-4xl md:text-5xl">
-                Get comfortable with Learn before you call live AI ATC
+                Get comfortable with the Classroom before you call live AI ATC
               </h1>
               <p class="max-w-2xl text-base text-white/80 sm:text-lg">
                 This is your training playground. Live AI controllers for the simulator are still in closed testing, so we
-                start with Learn to build phraseology, timing and confidence. I will guide you through the flow before you
-                dive into the hub.
+                start with the Classroom to build phraseology, timing and confidence. I will guide you through the flow
+                before you dive into the hub.
               </p>
               <div class="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-5 text-amber-100 shadow-lg shadow-amber-500/10" role="status">
                 <div class="flex items-start gap-3">
@@ -45,8 +45,8 @@
                   <div class="space-y-1">
                     <p class="text-sm font-semibold uppercase tracking-wide text-amber-100/90">Heads-up</p>
                     <p class="text-sm text-amber-50/90">
-                      Learn mirrors the calls you will make later, but today it runs as a standalone trainer. Treat it like a
-                      warm-up before the live network opens.
+                      The Classroom mirrors the calls you will make later, but today it runs as a standalone trainer. Treat it
+                      like a warm-up before the live network opens.
                     </p>
                   </div>
                 </div>
@@ -66,7 +66,7 @@
               <div class="overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-xl shadow-cyan-500/10">
                 <img
                   src="/img/learn/modules/img14.jpeg"
-                  alt="Pilots reviewing the Learn mission board"
+                  alt="Pilots reviewing the Classroom mission board"
                   class="h-56 w-full object-cover"
                   loading="lazy"
                 />
@@ -75,12 +75,12 @@
                 <div class="flex items-center gap-4">
                   <img
                     src="/img/learn/instructor.png"
-                    alt="Avery, the Learn instructor"
+                    alt="Avery, the Classroom instructor"
                     class="h-14 w-14 rounded-2xl border border-cyan-400/40 object-cover"
                   />
                   <div>
                     <p class="text-base font-semibold">Avery</p>
-                    <p class="text-sm text-white/60">Your Learn instructor</p>
+                    <p class="text-sm text-white/60">Your Classroom instructor</p>
                   </div>
                 </div>
                 <p class="mt-4 text-sm text-white/70">
@@ -171,8 +171,8 @@
                     <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#061318]" />
                     Start guided tour
                   </button>
-                  <NuxtLink to="/learn" class="btn ghost">
-                    Skip to Learn
+                  <NuxtLink to="/classroom" class="btn ghost">
+                    Skip to Classroom
                     <v-icon icon="mdi-arrow-right" size="16" />
                   </NuxtLink>
                 </div>
@@ -386,8 +386,8 @@
                           Next stop
                           <v-icon icon="mdi-arrow-right" size="18" class="text-[#061318]" />
                         </button>
-                        <NuxtLink v-else to="/learn" class="btn primary">
-                          Enter Learn hub
+                      <NuxtLink v-else to="/classroom" class="btn primary">
+                        Enter Classroom hub
                           <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
                         </NuxtLink>
                       </div>
@@ -424,7 +424,7 @@ interface StageStop {
   voiceLine: string
 }
 
-useHead({ title: 'Learn orientation • OpenSquawk' })
+useHead({ title: 'Classroom orientation • OpenSquawk' })
 
 const stages: StageStop[] = [
   {
@@ -437,7 +437,7 @@ const stages: StageStop[] = [
     ],
     tip: 'Hover or tap a tile for a quick brief before opening it.',
     image: '/img/learn/modules/img11.jpeg',
-    imageAlt: 'Learn mission hub interface with highlighted modules',
+    imageAlt: 'Classroom mission hub interface with highlighted modules',
     voiceLine:
       'First stop is the mission hub. This is our briefing room before any AI frequency opens. Pick the module you want and you are two clicks from a lesson.'
   },
@@ -479,7 +479,7 @@ const stages: StageStop[] = [
     ],
     tip: 'Drop the radio level for extra static when you want to stress-test your ears.',
     image: '/img/learn/modules/img10.jpeg',
-    imageAlt: 'Audio settings and challenge toggles inside Learn',
+    imageAlt: 'Audio settings and challenge toggles inside the Classroom',
     voiceLine:
       'Your settings live here. Slide the radio level for more or less static and flip on Audio Challenge when you want the full listen-and-respond workout.'
   },
@@ -491,7 +491,7 @@ const stages: StageStop[] = [
       'Every lesson ends with accuracy notes, timing feedback and retry suggestions.',
       'Use the summary to decide whether to repeat, advance or swap to another module.'
     ],
-    tip: 'Bookmark /learn so a quick refresher is always a tab away.',
+    tip: 'Bookmark /classroom so a quick refresher is always a tab away.',
     image: '/img/learn/modules/img7.jpeg',
     imageAlt: 'Pilot reviewing a scorecard summary',
     voiceLine:
@@ -725,9 +725,9 @@ async function speak(text: string, stageId?: string): Promise<boolean> {
       text: trimmed,
       level: radioLevel.value,
       speed: 1,
-      moduleId: 'learn-intro',
+      moduleId: 'classroom-intro',
       lessonId: stageId || null,
-      tag: 'learn-orientation'
+      tag: 'classroom-orientation'
     }
 
     const response: any = await api.post('/api/atc/say', payload)
@@ -806,7 +806,7 @@ async function speak(text: string, stageId?: string): Promise<boolean> {
 
 async function handleRadioCheck() {
   if (speechLoading.value) return
-  const success = await speak('Learner, this is Avery. If you can hear me loud and clear, give me a thumbs up and we will taxi to the first stop.', 'radio-check')
+  const success = await speak('Classmate, this is Avery. If you can hear me loud and clear, give me a thumbs up and we will taxi to the first stop.', 'radio-check')
   if (success) {
     hasCompletedRadioCheck.value = true
   }

@@ -1,14 +1,14 @@
 # OpenSquawk
 
 OpenSquawk is an open, cost-efficient AI-ATC platform for flight simulators.
-Built with Nuxt 4, it provides a web interface that combines training, radio communication, and learning content for simulator pilots.
+Built with Nuxt 4, it provides a web interface that combines training, radio communication, and classroom content for simulator pilots.
 On the server side, via Node.js Open AI deliver speech synthesis, decision trees, and account management.
 Goal: a community-driven alternative to other costly AI-ATC solutions while being open and extensible.
 
 ## Current Features
 
-* Modern web UI (Nuxt 4, Tailwind, Vuetify) with landing and learning pages
-* Server APIs for ATC logic, decision trees, learning content, and authentication
+* Modern web UI (Nuxt 4, Tailwind, Vuetify) with landing and classroom pages
+* Server APIs for ATC logic, decision trees, classroom content, and authentication
 * MongoDB storage
 * OpenAI integration for speech and text models with configurable voices
 * Optional local Speaches server for self-hosted speech in/output
