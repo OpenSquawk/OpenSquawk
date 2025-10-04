@@ -1,33 +1,39 @@
 ---
 title: "Alpha prototype ready for early testing"
 date: "2025-09-15"
-summary: "Our first OpenSquawk alpha build runs locally for MSFS and shows where community-driven AI ATC is heading."
+summary: "Our first Live ATC loop now runs end-to-end: push-to-talk audio, state machine decisions and natural voice replies."
 ---
 
-We have stabilised the OpenSquawk alpha prototype internally and are now handing it to curious co-developers. The build combines a Nuxt interface with Node services for speech-to-text, decision logic and TTS. Everything runs locally as long as you bring a bit of terminal experience.
+The first OpenSquawk alpha is finally in the wild for contributors. It wires the entire Live ATC loop together:
+press your simulator push-to-talk key, we capture the audio, run Whisper-class speech-to-text, let the LLM pick a
+legal response from our state machine and answer through Coqui/Piper voices. Everything runs locally so you can study
+and tweak every step.
 
-## What to expect
+## What ships in the alpha
 
-- Self-host setup: `yarn install`, fill your `.env`, then `yarn dev` or `docker compose up` for the full stack.
-- Simulator focus: Microsoft Flight Simulator (MSFS) first; X-Plane is already in the concept phase.
-- Target image: community-driven features so VATSIM training stays realistic and hosting remains affordable.
+- **Live ATC core:** Streaming PTT audio into the controller, including intent understanding and rule-checked replies.
+- **Telemetry bridge:** The MSFS 2020 plug-in mirrors heading, altitude, flight plan legs and radio stack into the
+  decision engine so the controller can vector or warn even without pilot input.
+- **Classroom carry-over:** The existing listening drills stay available for invitees – Ground and Departure packs help
+  you test comprehension before flying with Live ATC.
 
 ## Prerequisites
 
-- Basic knowledge of Node/Nuxt (reading logs, updating packages, configuring `.env`).
-- Access to MSFS (PC) for the first radio experiments.
-- Willingness to document issues and ship small tweaks via pull request.
+- A Windows MSFS 2020 install and a microphone/PTT setup in your sim.
+- Comfort with Node/Nuxt tooling (`yarn install`, `.env` wiring, `yarn dev` or `docker compose up`).
+- Willingness to log findings, share radio snippets and propose rule updates.
 
-## How you can help
+## How to help
 
-- Test the alpha build and report findings as issues – ideally with logs or quick screenshots.
-- Check the `help-wanted` issues for concrete tasks aimed at Node/Nuxt devs, ATC SMEs, testers and infra/cost benchmarking.
-- Share feature ideas directly in the roadmap or email us at [info@opensquawk.de](mailto:info@opensquawk.de).
+- Fly short circuits with the alpha controller, then file issues with timestamps, transcripts or audio.
+- Extend the decision tree with regional phraseology or additional branches (missed approach, pattern work, VFR).
+- Record Classroom feedback so we can refine the answer keys and scoring UX.
 
-## Next steps
+## Next milestones
 
-- X-Plane plug-in as the next milestone.
-- Iterate learning modules (Ground → Departure → Arrival → VATSIM).
-- Benchmark hosting costs transparently and share them on the blog.
+- Polish the telemetry plug-in for MSFS 2024 and begin the X-Plane bridge prototype.
+- Add proactive ATC calls (spacing alerts, runway occupancy checks) triggered purely from flight-state changes.
+- Expand Classroom with Arrival scenarios and a lightweight dashboard for instructors.
 
-Thanks for every piece of feedback – together we can turn OpenSquawk into open-source, low-cost AI ATC for flight simulators.
+Thank you for pushing the very first iteration of Live ATC forward – every log and suggestion keeps the project honest
+and grounded in real-world procedures.

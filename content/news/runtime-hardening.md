@@ -1,36 +1,48 @@
 ---
-title: "Runtime hardening & safer inputs"
+title: "Runtime hardening for Live ATC"
 date: "2025-09-18"
-summary: "A new configuration hub, secure audio uploads and stronger passwords make OpenSquawk more robust."
+summary: "The Live ATC alpha now validates PTT audio, centralises config and guards Classroom accounts with stronger inputs."
 readingTime: "3 min read"
 ---
 
-We worked across the backend, runtime config and onboarding today to make OpenSquawk more resilient. Three workstreams were in focus: reproducible configuration, clean audio inputs for the radio workflow and tighter protection for user accounts.
+Today’s update is all about resilience for the Live ATC pipeline and the Classroom invite system. We tightened how
+runtime values are loaded, cleaned the push-to-talk ingestion path and refreshed onboarding checks so alpha access
+stays tidy.
 
 ## Highlights
 
-- **Central runtime configuration:** All sensitive keys (OpenAI, TTS, Piper & Speaches) now flow through a shared helper. Misconfigurations show up instantly with clear error messages.
-- **Safer radio inputs:** The PTT API now accepts validated base64 audio up to 2 MB and standardises unknown formats to WAV before Whisper takes over.
-- **Stronger passwords:** Registration checks email format and password quality (length, letters/numbers, special characters) so alpha access is not created with trivial credentials.
+- **Unified runtime config:** Every key (Whisper, local LLM, Coqui/Piper, simulator bridge) now flows through
+  `server/utils/runtimeConfig.ts`. Missing values surface with precise error messages before the stack boots.
+- **Safer push-to-talk uploads:** The radio endpoint accepts only validated base64 audio up to 2 MB, normalises
+  everything to WAV/mono and rejects suspicious payloads before they reach Whisper.
+- **Stronger accounts:** Waitlist and Classroom invites now require solid passwords and validated emails, keeping the
+  closed alpha manageable.
 
 ## Details
 
-### Runtime configuration tidied up
+### Runtime configuration tightened
 
-A new utility (`server/utils/runtimeConfig.ts`) encapsulates every runtime variable. The `OpenAI` and TTS clients consistently pull keys, models, voice defaults as well as Piper/Speaches switches from there. The server now stops with an explanatory error if `OPENAI_API_KEY` is missing – better to fail early than silently throw 500s.
+The new helper checks every secret up front and exposes defaults for local development. Live ATC services now share the
+same source of truth for model names, TTS voice selections and plug-in ports, which means fewer mismatches when swapping
+between Docker and bare-metal setups.
 
-### Audio endpoints hardened
+### Push-to-talk ingress hardened
 
-The push-to-talk route validates base64 input, caps file size at a practical 2 MB (~60 seconds of radio) and enforces known audio formats. That reduces the risk of memory spikes and ensures FFmpeg only kicks in for real conversions. At the same time, TTS endpoints now read their settings from the runtime config and respect local Piper ports and Speaches base URLs.
+The `/api/radio/ptt` route sanitises payloads: it verifies base64 structure, caps file size to a realistic
+push-to-talk clip and converts formats through FFmpeg only when needed. If the payload fails validation we respond with
+clear 400 errors so testers can retry quickly.
 
-### Onboarding secured
+### Classroom onboarding tightened
 
-Registration immediately rejects invalid input: wrong emails, short passwords or missing special characters now return clear error messages. Test accounts stay manageable and security standards rise without slowing the flow.
+Invite-only accounts now go through the same validation logic as the waitlist: incorrect emails, weak passwords or
+missing consent checkboxes stop the flow immediately. That keeps the Classroom cohorts small enough for meaningful
+feedback.
 
-## Outlook
+## What’s next
 
-- Connect the Hotjar/analytics opt-in to the new config logic.
-- Mirror the same password guidelines for login (including feedback UI).
-- Consider processing larger audio files asynchronously if long-form transcripts become interesting.
+- Expose telemetry bridge status in the UI so testers can confirm MSFS data is streaming.
+- Mirror the new validation for future X-Plane and FlightGear plug-ins.
+- Add long-form transcription support for Classroom scenario creation (async processing).
 
-If you have more hardening ideas, feel free to open issues or send PRs directly!
+Hardening isn’t glamorous, but it makes every Live ATC exchange more reliable. Thanks for testing and filing detailed
+bug reports!

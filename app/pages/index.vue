@@ -103,34 +103,41 @@
       <div class="container-outer relative z-10 mt-8 pt-14 pb-10 sm:pt-20 sm:pb-16 md:pt-24 md:pb-20">
         <div class="hero-grid grid gap-10 lg:my-20 xl:gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-center">
           <div class="hero-copy max-w-2xl" data-aos="fade-up">
-            <span class="chip mb-4">Alpha · Open-Source AI ATC</span>
+            <span class="chip mb-4">In development · Live AI ATC</span>
             <h1 class="text-3xl sm:text-5xl md:text-6xl font-semibold leading-tight">
               OpenSquawk<br/>
-              <span class="text-cyan-400">Open-source, low-cost AI ATC</span>
+              <span class="text-cyan-400">Live speech ATC for simulator pilots</span>
             </h1>
             <p class="mt-4 sm:mt-6 text-white/80 text-base sm:text-lg">
-              Open, affordable AI air traffic control for flight simulators. Built in public with self-hosted and hosted
-              paths on the roadmap.
+              Push-to-talk in your sim, get authentic instructions back. Speech-to-text, an AI-guided state machine and
+              realistic text-to-speech keep every exchange inside real-world procedures.
             </p>
             <ul class="mt-6 space-y-2 text-white/70 text-sm sm:text-base">
               <li class="flex items-start gap-2">
-                <v-icon icon="mdi-account-group" size="18" class="mt-[3px] text-cyan-300"/>
-                <span>Community roadmap decides what launches.</span>
+                <v-icon icon="mdi-microphone-message" size="18" class="mt-[3px] text-cyan-300"/>
+                <span>PTT → STT → LLM-guided decision tree → TTS. Built for natural radio without losing procedural control.</span>
               </li>
               <li class="flex items-start gap-2">
-                <v-icon icon="mdi-airplane" size="18" class="mt-[3px] text-cyan-300"/>
-                <span><strong>Simulator support</strong>: MSFS first, X-Plane next – all tuned for VATSIM-ready training.</span>
+                <v-icon icon="mdi-airplane-clock" size="18" class="mt-[3px] text-cyan-300"/>
+                <span>MSFS plug-in streams flight state so the controller can react – even proactively when separation is at risk.</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <v-icon icon="mdi-headset" size="18" class="mt-[3px] text-cyan-300"/>
+                <span><strong>Product lineup</strong>: Live ATC (in development) and Classroom listening drills (alpha, invite only).</span>
               </li>
             </ul>
             <p class="mt-2 text-sm text-white/70">
-              Collaborators welcome (Node/Nuxt, ATC SMEs, testers, infra benchmarking). Say hi at
+              We build in the open and welcome collaborators – engineers, ATC SMEs, voice nerds and sim pilots. Say hi at
               <a class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
             </p>
             <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
               <NuxtLink to="#cta" class="btn btn-primary text-base">
-                <!-- enque apply for access icon -->
                 <v-icon icon="mdi-account-plus" size="20"/>
-                Join the waitlist
+                Join the Live ATC waitlist
+              </NuxtLink>
+              <NuxtLink to="#classroom" class="btn btn-ghost text-base">
+                <v-icon icon="mdi-school" size="20"/>
+                Classroom alpha info
               </NuxtLink>
             </div>
           </div>
@@ -205,20 +212,20 @@
         <div
             class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 items-center opacity-80 text-xs sm:text-sm md:text-base">
           <div class="flex items-center justify-center gap-2 text-white/60">
-            <v-icon icon="mdi-test-tube" class="opacity-70"/>
-            Alpha status
+            <v-icon icon="mdi-radar" class="opacity-70"/>
+            Live ATC · in development
+          </div>
+          <div class="flex items-center justify-center gap-2 text-white/60">
+            <v-icon icon="mdi-school" class="opacity-70"/>
+            Classroom · alpha invites running
+          </div>
+          <div class="flex items-center justify-center gap-2 text-white/60">
+            <v-icon icon="mdi-waveform" class="opacity-70"/>
+            PTT → STT → LLM → TTS pipeline
           </div>
           <div class="flex items-center justify-center gap-2 text-white/60">
             <v-icon icon="mdi-microsoft-xbox" class="opacity-70"/>
-            MSFS (focus)
-          </div>
-          <div class="flex items-center justify-center gap-2 text-white/60">
-            <v-icon icon="mdi-airplane" class="opacity-70"/>
-            X-Plane (up next)
-          </div>
-          <div class="flex items-center justify-center gap-2 text-white/60">
-            <v-icon icon="mdi-headset" class="opacity-70"/>
-            VATSIM learning path (planned)
+            MSFS 2020 plug-in first · 2024+ roadmap
           </div>
         </div>
       </div>
@@ -229,11 +236,11 @@
       <div class="container-outer">
         <div class="max-w-2xl mb-10" data-aos="fade-up">
           <h2 class="text-3xl md:text-4xl font-semibold">
-            Vision & focus
+            Built for real-sounding, state-aware radio work
           </h2>
           <p class="mt-3 text-white/80">
-            Open-source, low-cost AI ATC for flight simulation. Community-driven features, transparent costs and the
-            freedom to self-host or use hosted options later.
+            OpenSquawk combines open tooling with domain rules so every call feels like talking to a human controller –
+            without giving the LLM free rein.
           </p>
         </div>
 
@@ -241,29 +248,29 @@
           <div class="card" data-aos="fade-up" data-aos-delay="0">
             <div class="flex items-center gap-3">
               <div class="p-2 rounded-lg bg-cyan-500/20 border border-cyan-400/20">
-                <v-icon icon="mdi-tower-fire" class="text-cyan-300"/>
+                <v-icon icon="mdi-waveform" class="text-cyan-300"/>
               </div>
               <h3 class="font-semibold text-lg">
-                Open AI ATC foundation
+                Speech-in, speech-out
               </h3>
             </div>
             <p class="mt-3 text-white/80">
-              We are building an affordable core for radio analysis, decision logic and voices that anyone can inspect
-              and extend.
+              Whisper-class STT cleans up radio audio, the LLM matches it to our curated decision tree and Coqui/Piper
+              voices read back the exact instruction.
             </p>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="100">
             <div class="flex items-center gap-3">
               <div class="p-2 rounded-lg bg-cyan-500/20 border border-cyan-400/20">
-                <v-icon icon="mdi-vote" class="text-cyan-300"/>
+                <v-icon icon="mdi-airplane-clock" class="text-cyan-300"/>
               </div>
               <h3 class="font-semibold text-lg">
-                Community decides
+                Flight-state aware logic
               </h3>
             </div>
             <p class="mt-3 text-white/80">
-              Roadmap votes and community proposals steer our priorities – training, tools and integrations grow with
-              you.
+              Our MSFS plug-in mirrors heading, altitude, flight plan and traffic data into the controller so ATC can
+              vector, warn or hand off even without a pilot call.
             </p>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="200">
@@ -272,12 +279,12 @@
                 <v-icon icon="mdi-source-repository" class="text-cyan-300"/>
               </div>
               <h3 class="font-semibold text-lg">
-                Self-host & hosted options
+                Open and auditable
               </h3>
             </div>
             <p class="mt-3 text-white/80">
-              Beta goal: spin up your own instance via Docker within minutes or pick fairly priced hosting plans – open,
-              transparent, affordable.
+              Everything ships as open source so simmers, instructors and researchers can inspect prompts, rules and
+              voices – or self-host the full stack.
             </p>
           </div>
         </div>
@@ -285,45 +292,42 @@
         <div class="grid gap-4 md:grid-cols-2 md:gap-6 mt-6">
           <div class="card" data-aos="fade-up" data-aos-delay="0">
             <h3 class="font-semibold text-lg">
-              Simulator support (plan)
+              Simulator roadmap
             </h3>
             <p class="mt-3 text-white/80">
-              We focus on Microsoft Flight Simulator first, work on the X-Plane concept in parallel and gather feedback
-              for additional platforms.
+              Live ATC launches with Microsoft Flight Simulator on Windows. We are mapping the same telemetry bridge to
+              MSFS 2024, then X-Plane and later FlightGear (Win/Linux/macOS).
             </p>
             <ul class="mt-3 space-y-2 text-white/70 text-sm list-disc list-inside">
-              <li>MSFS bridge: planned live-data connector scheduled for upcoming milestones
-              </li>
-              <li>X-Plane: support follows MSFS once the shared bridge architecture is ready
-              </li>
-              <li>SimBrief: direct import of flight plans &amp; briefings in planning
-              </li>
+              <li>MSFS 2020: plug-in prototype streaming flight data & push-to-talk audio.</li>
+              <li>MSFS 2024: compatibility update shortly after release.</li>
+              <li>X-Plane & FlightGear: design underway, targeting Windows first, then Linux/macOS.</li>
             </ul>
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="100">
             <h3 class="font-semibold text-lg">
-              Alpha prototype
+              Classroom alpha today
             </h3>
             <p class="mt-3 text-white/80">
-              The current build runs locally (Node/Nuxt + services). You will need basic terminal skills and a taste for
-              experimentation.
+              The Classroom mode already runs listening drills: play ATC clips, extract clearances, compare with the
+              answer key and repeat until it sticks.
             </p>
             <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div class="glass rounded-xl p-3 flex items-center gap-2">
-                <v-icon icon="mdi-console"/>
-                Setup via CLI
+                <v-icon icon="mdi-headset"/>
+                Hearing exercises
               </div>
               <div class="glass rounded-xl p-3 flex items-center gap-2">
-                <v-icon icon="mdi-docker"/>
-                Docker Compose optional
+                <v-icon icon="mdi-clipboard-text"/>
+                Instant answer check
               </div>
               <div class="glass rounded-xl p-3 flex items-center gap-2">
                 <v-icon icon="mdi-account-hard-hat"/>
-                Bug reports welcome
+                Invite-only feedback
               </div>
               <div class="glass rounded-xl p-3 flex items-center gap-2">
                 <v-icon icon="mdi-source-branch"/>
-                PRs & roadmap votes welcome
+                Scenarios expand weekly
               </div>
             </div>
           </div>
@@ -579,37 +583,32 @@
       </div>
     </section>
 
-    <!-- LEARN PATH -->
-    <section id="learn" class="py-12 sm:py-16 md:py-24 bg-[#0b1020]">
+    <!-- CLASSROOM -->
+    <section id="classroom" class="py-12 sm:py-16 md:py-24 bg-[#0b1020]">
       <div class="container-outer">
         <div class="grid gap-6 md:grid-cols-2 md:gap-8 items-center">
           <div data-aos="fade-right">
             <h2 class="text-3xl md:text-4xl font-semibold">
-              Learning path (in progress)
+              Classroom alpha modules
             </h2>
             <p class="mt-3 text-white/80">
-              Together with the community we structure training modules – from the first radio call to networks like
-              VATSIM. Feedback from tests flows straight into every chapter.
+              Invitation-only cohorts practise listening comprehension: extract the clearance, compare with the answer
+              key and repeat until every call sticks.
             </p>
             <ol class="mt-5 space-y-3 text-white/80">
-              <li class="flex gap-3"><span class="chip">1</span><span><b>Basics</b> (concept): phonetic alphabet, numbers, standard readbacks.</span>
-              </li>
-              <li class="flex gap-3"><span class="chip">2</span><span><b>Ground</b> (alpha): taxi flows, hotspots, holding short.</span>
-              </li>
-              <li class="flex gap-3"><span class="chip">3</span><span><b>Departure</b> (planned): SID handling, altitude/speed calls.</span>
-              </li>
-              <li class="flex gap-3"><span class="chip">4</span><span><b>Arrival</b> (planned): STARs, vectors, approach briefing.</span>
-              </li>
-              <li class="flex gap-3"><span class="chip">5</span><span><b>VATSIM</b> (community beta): checklists, etiquette, live practice.</span>
-              </li>
+              <li class="flex gap-3"><span class="chip">1</span><span><b>Basics</b> (concept): numbers, letters, standard readbacks.</span></li>
+              <li class="flex gap-3"><span class="chip">2</span><span><b>Ground</b> (alpha): taxi flows, hotspots, hold short calls.</span></li>
+              <li class="flex gap-3"><span class="chip">3</span><span><b>Departure</b> (alpha): SID expectations, climb/heading changes.</span></li>
+              <li class="flex gap-3"><span class="chip">4</span><span><b>Arrival</b> (planned): STAR shortcuts, vectoring, approach clearance.</span></li>
+              <li class="flex gap-3"><span class="chip">5</span><span><b>Network drills</b> (planned): etiquette before joining VATSIM/IVAO.</span></li>
             </ol>
             <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
-              <NuxtLink to="#roadmap" class="btn btn-primary">
-                View roadmap
+              <NuxtLink to="#cta" class="btn btn-primary">
+                Join Live ATC waitlist
               </NuxtLink>
-              <NuxtLink to="/news" class="btn btn-ghost">
-                Read news
-              </NuxtLink>
+              <a href="mailto:info@opensquawk.de" class="btn btn-ghost">
+                Request a Classroom invite
+              </a>
             </div>
           </div>
           <div class="card" data-aos="fade-left">
@@ -626,49 +625,142 @@
         <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4" data-aos="fade-up">
           <div class="max-w-2xl">
             <h2 class="text-3xl md:text-4xl font-semibold">
-              Plans & hosting
+              Product lineup & availability
             </h2>
             <p class="mt-3 text-white/80">
-              Three ways to use OpenSquawk – all currently €0 while we cover the infrastructure.
+              Two experiences, one stack. Classroom is flying today via invitation, Live ATC is the flagship in active
+              development and the open-source core stays free to inspect or host yourself.
             </p>
           </div>
         </div>
 
         <div class="mt-8 grid gap-4 md:grid-cols-3 md:gap-6 items-stretch">
-          <!-- OSS -->
+          <!-- Live ATC -->
           <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="0">
-            <div class="absolute -top-3 right-4 chip">Community</div>
+            <div class="absolute -top-3 right-4 chip">Flagship</div>
             <div class="flex flex-col flex-1">
               <div class="flex flex-col flex-1">
                 <h3 class="text-xl font-semibold">
-                  Open-source (self-host)
+                  Live ATC (in development)
                 </h3>
                 <p class="mt-2 text-white/80 flex-1">
-                  Full control over infrastructure and data. Self-hosting is always an option.
+                  AI controller that listens to your PTT call, consults the state machine and answers with authentic
+                  phraseology. Perfect for solo IFR/VFR practice when networks are offline.
                 </p>
                 <div class="mt-5 text-3xl font-semibold">
-                  0€<span class="text-white/60 text-sm font-normal"> / forever</span>
+                  Closed alpha<span class="text-white/60 text-sm font-normal"> · waitlist open</span>
                 </div>
                 <ul class="mt-5 space-y-3 text-sm">
                   <li class="flex items-start gap-3 text-white/80">
                     <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Full feature set &amp; customization</span>
+                    <span>PTT → STT → LLM decision tree → TTS pipeline</span>
                   </li>
                   <li class="flex items-start gap-3 text-white/80">
                     <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Plugin SDK &amp; API access</span>
+                    <span>MSFS 2020 plug-in streams live telemetry</span>
                   </li>
                   <li class="flex items-start gap-3 text-white/80">
                     <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Community support &amp; docs</span>
+                    <span>Proactive calls for spacing, altitude and handoffs</span>
                   </li>
                   <li class="flex items-start gap-3 text-white/60">
                     <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
-                    <span>Managed hosting &amp; updates included</span>
+                    <span>Public download (planned post-alpha)</span>
                   </li>
                   <li class="flex items-start gap-3 text-white/60">
                     <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
-                    <span>Guided multi-user environments</span>
+                    <span>X-Plane / FlightGear builds (roadmap)</span>
+                  </li>
+                </ul>
+              </div>
+              <NuxtLink to="#cta" class="btn btn-primary w-full mt-6">
+                Join the waitlist
+              </NuxtLink>
+            </div>
+          </div>
+
+          <!-- Classroom -->
+          <div
+              class="card border-2 border-cyan-400/40 relative flex flex-col h-full pricing-card shadow-[0_0_40px_rgba(34,211,238,.25)]"
+              data-aos="fade-up"
+              data-aos-delay="100"
+          >
+            <div class="absolute -top-3 right-4 chip bg-cyan-500/30 border-cyan-400/50">
+              Live today
+            </div>
+            <div class="flex flex-col flex-1">
+              <div class="flex flex-col flex-1">
+                <h3 class="text-xl font-semibold">Classroom (alpha invitation)</h3>
+                <p class="mt-2 text-white/80 flex-1">
+                  Listening drills that sharpen comprehension: decode clearances, practise readbacks and compare against
+                  official transcripts.
+                </p>
+                <div class="mt-5 text-3xl font-semibold">
+                  Invitation only<span class="text-white/60 text-sm font-normal"> · alpha</span>
+                </div>
+                <ul class="mt-5 space-y-3 text-sm">
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Scenario packs: Ground, Departure, Approach</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Instant feedback on key details (altitude, squawk, headings)</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Invite-based cohorts for structured feedback</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/60">
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <span>Public signup (planned)</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/60">
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <span>Offline package download (researching)</span>
+                  </li>
+                </ul>
+              </div>
+              <NuxtLink to="#classroom" class="btn btn-primary w-full mt-6">
+                Request an invite
+              </NuxtLink>
+            </div>
+          </div>
+
+          <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="200">
+            <div class="absolute -top-3 right-4 chip">Open source</div>
+            <div class="flex flex-col flex-1">
+              <div class="flex flex-col flex-1">
+                <h3 class="text-xl font-semibold">
+                  Self-host & contribute
+                </h3>
+                <p class="mt-2 text-white/80 flex-1">
+                  Clone the repo, run Docker and modify the controller logic. Ideal for researchers, virtual airlines or
+                  devs who want a fully local stack.
+                </p>
+                <div class="mt-5 text-3xl font-semibold">
+                  0€<span class="text-white/60 text-sm font-normal"> / always</span>
+                </div>
+                <ul class="mt-5 space-y-3 text-sm">
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Nuxt UI, Node services, STT/LLM/TTS pipeline – all open</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Decision tree & prompts ready for experimentation</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
+                    <span>Plugin SDK hooks for future sims (X-Plane, FlightGear)</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/60">
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <span>Managed hosting or SLA</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/60">
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <span>Cloud voice/STT credits included</span>
                   </li>
                 </ul>
               </div>
@@ -683,107 +775,16 @@
               </NuxtLink>
             </div>
           </div>
-
-          <!-- Hosted Learning -->
-          <div
-              class="card border-2 border-cyan-400/40 relative flex flex-col h-full pricing-card shadow-[0_0_40px_rgba(34,211,238,.25)]"
-              data-aos="fade-up"
-              data-aos-delay="100"
-          >
-            <div class="absolute -top-3 right-4 chip bg-cyan-500/30 border-cyan-400/50">
-              Recommended
-            </div>
-            <div class="flex flex-col flex-1">
-              <div class="flex flex-col flex-1">
-                <h3 class="text-xl font-semibold">Hosted – learning mode</h3>
-                <p class="mt-2 text-white/80 flex-1">
-                  We cover the base costs so you can train with all fundamental features. For live ATC you provide your
-                  own OpenAI API key – we only use it for the background radio requests.
-                </p>
-                <div class="mt-5 text-3xl font-semibold">
-                  0€<span class="text-white/60 text-sm font-normal"> / beta</span>
-                </div>
-                <ul class="mt-5 space-y-3 text-sm">
-                  <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Learning modules &amp; core features included</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Managed updates handled by us</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Zero setup – ready to train</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/60">
-                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
-                    <span>Shared team environments</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/60">
-                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
-                    <span>Live ATC usage covered by us</span>
-                  </li>
-                </ul>
-              </div>
-              <NuxtLink to="#cta" class="btn btn-primary w-full mt-6">
-                Join the waitlist
-              </NuxtLink>
-            </div>
-          </div>
-
-          <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="200">
-            <div class="absolute -top-3 right-4 chip">Teams</div>
-            <div class="flex flex-col flex-1">
-              <div class="flex flex-col flex-1">
-                <h3 class="text-xl font-semibold">
-                  Hosted – community server
-                </h3>
-                <p class="mt-2 text-white/80 flex-1">
-                  For virtual airlines and groups that want to practise together. We are testing dedicated environments
-                  – currently also €0 and powered by your own API key.
-                </p>
-                <div class="mt-5 text-3xl font-semibold">
-                  0€<span class="text-white/60 text-sm font-normal"> / beta</span>
-                </div>
-                <ul class="mt-5 space-y-3 text-sm">
-                  <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Shared sessions &amp; multi-role practise</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Managed environment &amp; updates</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Roadmap shaped by team feedback</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/60">
-                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
-                    <span>Live ATC usage covered by us</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/60">
-                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
-                    <span>Full infrastructure control</span>
-                  </li>
-                </ul>
-              </div>
-              <NuxtLink to="#cta" class="btn btn-ghost w-full mt-6">
-                Get in touch
-              </NuxtLink>
-            </div>
-          </div>
         </div>
 
         <div class="mt-8 text-sm text-white/70 space-y-2" data-aos="fade-up" data-aos-delay="300">
           <p>
-            Direct VATSIM integration is on hold until licensing is clarified. We stay aligned with the network
-            guidelines before enabling any live connectivity.
+            Live ATC alpha runs offline-first while we research licensing for networks such as VATSIM and IVAO. We will
+            only enable direct connectivity once community rules and legal reviews are satisfied.
           </p>
           <p>
-            In the meantime we focus on offline training flows and roadmap voting to decide which learning content
-            launches next.
+            Until then we double down on the state machine, simulator plug-ins and new Classroom scenarios – shaped by
+            roadmap votes and alpha feedback.
           </p>
         </div>
       </div>
@@ -853,37 +854,37 @@ POST /api/route/taxi
       <div class="container-outer">
         <div class="max-w-2xl mb-10" data-aos="fade-up">
           <h2 class="text-3xl md:text-4xl font-semibold">
-            How it works
+            Radio loop in four tightly controlled stages
           </h2>
           <p class="mt-3 text-white/80">
-            Audio in → understanding → response out. Designed for low latency and clean radio discipline.
+            Every transmission passes through deterministic checkpoints so phraseology stays believable and safe.
           </p>
         </div>
         <div class="grid md:grid-cols-4 gap-4 md:gap-6">
           <div class="card" data-aos="fade-up" data-aos-delay="0">
             <h3 class="font-semibold flex items-center gap-2">
-              <v-icon icon="mdi-waveform"/>
-              1 · ASR
+              <v-icon icon="mdi-radio-handheld"/>
+              1 · Capture
             </h3>
-            <p class="mt-2 text-white/80">Streaming speech-to-text tuned for radio.</p></div>
+            <p class="mt-2 text-white/80">Push-to-talk audio plus simulator telemetry stream into the engine.</p></div>
           <div class="card" data-aos="fade-up" data-aos-delay="100">
             <h3 class="font-semibold flex items-center gap-2">
-              <v-icon icon="mdi-brain"/>
-              2 · NLU
+              <v-icon icon="mdi-waveform"/>
+              2 · Understand
             </h3>
-            <p class="mt-2 text-white/80">LLM understands intent, context and state.</p></div>
+            <p class="mt-2 text-white/80">Whisper-class STT normalises radio noise; the LLM interprets intent.</p></div>
           <div class="card" data-aos="fade-up" data-aos-delay="200">
             <h3 class="font-semibold flex items-center gap-2">
               <v-icon icon="mdi-logic-gate-and"/>
-              3 · Logic
+              3 · Decide
             </h3>
-            <p class="mt-2 text-white/80">Rules, flight data, taxi routing, validation.</p></div>
+            <p class="mt-2 text-white/80">A curated state machine enforces valid clearances and cross-checks flight data.</p></div>
           <div class="card" data-aos="fade-up" data-aos-delay="300">
             <h3 class="font-semibold flex items-center gap-2">
               <v-icon icon="mdi-microphone"/>
-              4 · TTS
+              4 · Speak
             </h3>
-            <p class="mt-2 text-white/80">Natural voice-out with accurate numbers.</p></div>
+            <p class="mt-2 text-white/80">Coqui/Piper TTS deliver regionalised voices with crisp numbers.</p></div>
         </div>
       </div>
     </section>
@@ -1084,11 +1085,11 @@ POST /api/route/taxi
           </div>
           <div class="card" data-aos="fade-up" data-aos-delay="300">
             <h3 class="font-semibold">
-              How affordable is “Hosted – Basic”?
+              How do I access the Classroom?
             </h3>
             <p class="mt-2 text-white/80">
-              Current target is ~€4–5 per month, final pricing after cost benchmarking. We will share the results
-              transparently on the blog.
+              The Classroom is invitation-only during alpha. Join the waitlist and mention “Classroom” or email
+              <a href="mailto:info@opensquawk.de" class="text-cyan-300 underline">info@opensquawk.de</a> to request an invite.
             </p>
           </div>
         </div>
@@ -1105,8 +1106,8 @@ POST /api/route/taxi
               <span class="text-lg font-semibold">OpenSquawk</span>
             </div>
             <p class="mx-auto max-w-2xl text-sm text-white/70 sm:mx-0 lg:flex-1 lg:max-w-3xl">
-              Open-source, low-cost AI ATC for flight simulators. Alpha prototype available – basic coding skills
-              recommended.
+              OpenSquawk builds Live ATC and Classroom training as open-source projects: speech-to-text, LLM-guided
+              state machine and natural TTS ready for sim pilots.
             </p>
             <div class="footer-brand-actions lg:flex-none">
               <NuxtLink
@@ -1131,17 +1132,17 @@ POST /api/route/taxi
               <ul class="space-y-2 text-sm text-white/70">
                 <li>
                   <NuxtLink to="#features" class="hover:text-cyan-300">
-                    Vision
+                    Live ATC
                   </NuxtLink>
                 </li>
                 <li>
-                  <NuxtLink to="#learn" class="hover:text-cyan-300">
-                    Learning path
+                  <NuxtLink to="#classroom" class="hover:text-cyan-300">
+                    Classroom
                   </NuxtLink>
                 </li>
                 <li>
                   <NuxtLink to="#pricing" class="hover:text-cyan-300">
-                    Pricing
+                    Product lineup
                   </NuxtLink>
                 </li>
                 <li>
@@ -1226,9 +1227,10 @@ interface ExtendedNavLink extends NavLink {
 }
 
 const navLinks: NavLink[] = [
-  {label: 'Vision', to: '#features'},
+  {label: 'Live ATC', to: '#features'},
+  {label: 'Classroom', to: '#classroom'},
   {label: 'Roadmap', to: '#roadmap'},
-  {label: 'Plans', to: '#pricing'},
+  {label: 'Lineup', to: '#pricing'},
   {label: 'Get involved', to: '#contributing'},
   {label: 'FAQ', to: '#faq'},
 ]
