@@ -408,7 +408,7 @@ const slides = [
     section: 'Together',
     title: 'Where I need the most help',
     bullets: [
-      'Fresh eyes on repository structure, documentation tone, and accessibility.',
+      'This is my first open-source repo-feedback on structure and tone is gold to me',
       'Pointers to communities who might benefit would mean a lot.'
     ]
   },
