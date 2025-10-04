@@ -1491,7 +1491,7 @@ async function syncRouteFromState(): Promise<void> {
     await router.replace({query: nextQuery})
     lastSyncedQuerySignature = signature
   } catch (error) {
-    console.error('Failed to sync learn route state', error)
+    console.error('Failed to sync classroom route state', error)
   } finally {
     isSyncingRoute = false
   }
