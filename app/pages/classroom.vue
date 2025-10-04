@@ -10,7 +10,7 @@
           <div class="hud-divider" aria-hidden="true"></div>
           <span class="brand">OpenSquawk</span>
           <span class="sep">|</span>
-          <span class="mode">Pilot Voice Prep</span>
+          <span class="mode">Classroom</span>
         </div>
 
         <div class="hud-right">
@@ -6757,5 +6757,10 @@ onMounted(() => {
   border-top: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
   box-shadow: 0 -4px 12px rgba(2, 6, 23, .1);
   z-index: 50;
+}
+</style>
+<style>
+.panel.dialog .btn {
+  @apply px-3 py-1;
 }
 </style>
