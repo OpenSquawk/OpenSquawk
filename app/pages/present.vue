@@ -109,8 +109,10 @@ const slides = [
     section: 'Intro',
     kicker: 'Nick Danner · systems tinkerer & radio nerd',
     title: 'OpenSquawk',
-    subtitle: 'Trying to share aviation awareness in the open',
-    text: ['Thanks for giving a small indie builder your attention for the next 45 minutes.'],
+    subtitle: 'Open-source AI ATC for home flight simulation',
+    text: [
+      'Thanks for lending a solo builder 45 minutes to walk through the vision, the research, and the work in progress.'
+    ],
     fullscreenPrompt: true,
     note: 'Press F or use the button to enter fullscreen whenever you like.'
   },
@@ -120,8 +122,8 @@ const slides = [
     text: ['Nick Danner—systems tinkerer & radio nerd based in Hamburg.'],
     bullets: [
       "Still figuring out public speaking—thanks for the patience tonight.",
-      'One-person systems engineer who loves turning radio noise into context.',
-      'Working from a tiny desk, a stack of SDRs, and a lot of coffee.'
+      'One-person systems engineer turning radio noise into context for sim pilots.',
+      'Working from a tiny desk, a stack of SDRs, and plenty of curiosity.'
     ],
     footer: 'nick.danner@opensquawk.dev · @nickcodes'
   },
@@ -129,47 +131,59 @@ const slides = [
     section: 'Intro',
     title: "Why I'm sharing tonight",
     bullets: [
-      'This is my first open-source repo-guidance on structure and tone would mean a lot.',
-      'Need reality checks: does the event model map to how your ops actually work?',
-      'Curious how you approach starting and sustaining open projects.',
-      "If nothing else, I'd love stories about what to avoid."
+      'Pressure-test the roadmap before opening the code later this evening.',
+      'Validate whether the unscripted AI ATC vision maps to real ops expectations.',
+      'Collect stories on starting and sustaining open aviation tech projects.',
+      "If nothing else, learn what traps to dodge from folks who have been there."
     ]
   },
   {
     section: 'Intro',
-    title: 'What I hope OpenSquawk becomes',
+    title: 'What OpenSquawk is aiming for',
     bullets: [
-      'Make it lightweight enough for hobbyists yet useful for ops desks.',
-      'Assume contributors will outsmart me, so make experiments easy.'
+      'Pipeline: Speech-to-Text → domain-tuned LLM → Text-to-Speech, all runnable on a home rig.',
+      'Open architecture that lets hobbyists and ops desks inspect every decision.',
+      'Clear guardrails so experimental automation never hides its reasoning.'
     ]
   },
   {
     section: 'Story',
-    title: 'What felt broken in that room',
+    title: 'Why this matters',
     bullets: [
-      'Important changes lived in separate chats, PDFs, and whispered heads-ups.',
-      'Nobody wanted another silo, but nobody had time to stitch the feeds together.',
-      'Everyone around me knew far more than I did—we just lacked shared tooling.'
+      'Real pilots practise with networks like VATSIM, yet coverage gaps remain for everyday flying.',
+      'Built-in sim ATC is still rigid: limited phraseology, no real voice, and little regional nuance.',
+      'Community keeps asking for affordable, always-on AI ATC without vendor lock-in.'
     ],
     quote: 'We trust the data. We just never see it in the same place when it matters.'
   },
   {
     section: 'Story',
-    title: "Why I couldn't let it go",
+    title: 'What the market already offers',
     bullets: [
-      'Open data projects exist, yet wiring them into live ops feels intimidating.',
-      'I wanted to try building a gentle starting point and ask smarter people for help.'
+      'SayIntentions.AI: cloud-first, subscription, ~88k airports, rich features yet tough monthly pricing.',
+      'BeyondATC: one-time license, hybrid rule engine plus offline LLM for natural dialogue and traffic.',
+      'FSHud & Pilot2ATC: reliable rule-based control with menus or strict grammars slowly adding voice.',
+      'Open-source attempts like Red Griffin ATC or BlueSky stop short of full STT→LLM→TTS pipelines.'
     ],
     image: 'https://picsum.photos/seed/opensquawk-airfield/1200/675',
     imageAlt: 'placeholder photo of a small airfield at dawn with soft light',
     imageCredit: 'Photo placeholder via Lorem Picsum'
   },
   {
+    section: 'Story',
+    title: 'Lessons learned from those teams',
+    bullets: [
+      'Cloud-native AI ATC faces brutal recurring costs; offline-first keeps the lights on.',
+      'Hybrid architectures—rules for separation, LLMs for phrasing—balance realism and safety.',
+      'Traffic management matters as much as speech; users notice when sequencing fails.'
+    ]
+  },
+  {
     section: 'Vision',
     title: 'So… what is OpenSquawk?',
     text: [
-      "It's my first attempt at an open-source stream that listens to public ATC audio, turns it into events, and shares them in real time.",
-      'Think of it as a community-friendly way to watch the same timeline without vendor lock-in.'
+      "It's an open-source AI ATC toolkit for simulators like MSFS and X-Plane.",
+      'It listens to pilot audio, interprets intent with a domain model, and responds using authentic radio phraseology.'
     ]
   },
   {
@@ -182,7 +196,7 @@ const slides = [
       },
       {
         heading: 'Helpful',
-        items: ['Deliver context quickly instead of burying people in dashboards.']
+        items: ['Deliver context quickly without burying people in dashboards.']
       },
       {
         heading: 'Welcoming',
@@ -194,20 +208,20 @@ const slides = [
     section: 'Vision',
     title: 'Principles keeping me honest',
     bullets: [
-      'Plain-text configs and readable event schemas first.',
-      'If automation acts, it leaves a trail you can replay.',
-      'APIs I use internally stay the same ones everyone else gets.',
-      'Shipping slowly is fine if the community understands what exists.'
+      'Plain-text configs and transparent event schemas first.',
+      'If automation acts, it leaves a replayable trail.',
+      'APIs used internally stay the ones everyone else gets.',
+      'Ship small slices so the community always sees the current reality.'
     ]
   },
   {
     section: 'Progress',
-    title: 'Pieces already moving / What already runs (on a good day)',
+    title: 'What already runs (on a good day)',
     bullets: [
-      'Transcribes six European frequencies with Whisper small on a home lab GPU.',
-      'Fetches NOTAM and METAR updates into a shared event bus every minute.',
-      'Tags events with a lightweight rules engine so people know why something pinged.',
-      'Shows a humble dashboard that streams a timeline for testing together.'
+      'Local Whisper small prototype transcribes six European frequencies with <1.5 s latency.',
+      'NOTAM & METAR polling feeds a shared event bus every minute.',
+      'Lightweight rule engine tags events with context for experimentation.',
+      'Early Nuxt dashboard streams a shared timeline for remote testers.'
     ],
     image: 'https://picsum.photos/seed/opensquawk-dashboard/1200/675',
     imageAlt: 'placeholder photo of dashboard screens glowing with charts',
@@ -217,17 +231,18 @@ const slides = [
     section: 'Progress',
     title: 'Where it still creaks',
     bullets: [
-      'Radio front-ends need more shielding—busy nights still spike noise.',
-      'Temporal workflows recover slowly when a transcription job stalls.',
-      'Docs lag behind features, so first-time setup still feels brittle.'
+      'RF front-ends need better shielding—busy nights still swamp the signal.',
+      'Temporal workflows restart slowly when a transcription job stalls.',
+      'Docs and setup scripts lag behind features, so onboarding feels brittle.'
     ]
   },
   {
     section: 'Progress',
     title: 'Reality check & open questions',
     bullets: [
-      'How to keep costs friendly if community radios scale up?',
-      "What have I overlooked completely? I'd love blunt feedback."
+      'How do we keep compute costs friendly as community radios scale?',
+      'Which separation rules are essential for a credible first release?',
+      'Where can we source and license ATC dialogue data for finetuning?'
     ]
   },
   {
@@ -237,22 +252,22 @@ const slides = [
       {
         heading: 'Capture',
         items: [
-          'Edge radios publish Opus audio over QUIC to a small relay.',
-          'Scheduled scrapers pull NOTAM and METAR diffs about every 60 seconds.'
+          'Community SDR nodes push Opus audio via QUIC relays.',
+          'Scheduled scrapers pull NOTAM & METAR diffs roughly every 60 seconds.'
         ]
       },
       {
         heading: 'Decode',
         items: [
           'Whisper small-v3 handles multilingual transcripts on consumer GPUs.',
-          'Keyword matcher spots callsigns, runway states, and weather codes.'
+          'Error-correction layer normalises callsigns, runway states, and weather codes.'
         ]
       },
       {
-        heading: 'Enrich',
+        heading: 'Decide',
         items: [
-          'Temporal database stitches events with aircraft position feeds.',
-          'Geo-fencing adds airport and sector context on the fly.'
+          'Hybrid rules + LLM decide clearances while checking traffic constraints.',
+          'Temporal data store links transcripts with aircraft positions and airspace.'
         ]
       },
       {
@@ -268,16 +283,16 @@ const slides = [
       {
         heading: 'Ingestion & compute',
         items: [
-          'Rust microservices handle radio capture and buffering.',
-          'Python workers orchestrated by Temporal for transcription jobs.',
-          'Go-based enrichment service with gRPC interfaces.'
+          'Rust capture agents buffer radio frames and handle QUIC uplinks.',
+          'Python workers on Temporal coordinate Whisper inference and post-processing.',
+          'Domain-tuned 7B-class LLM served via llama.cpp with structured prompts.'
         ]
       },
       {
         heading: 'Data & storage',
         items: [
-          'Apache Kafka for event streaming with exactly-once semantics.',
-          'Materialize for low-latency materialized views.',
+          'Kafka or Redpanda for event streaming with exactly-once semantics.',
+          'DuckDB + Materialize-style views for low-latency querying.',
           'PostgreSQL for metadata, Supabase for auth and row-level security.'
         ]
       },
@@ -285,13 +300,17 @@ const slides = [
         heading: 'Experience layer',
         items: [
           'Nuxt 4 SPA served via edge CDN.',
-          'Tailwind + custom visual language for readability in dim ops rooms.',
+          'Tailwind + custom visual language tuned for dim ops rooms.',
           'OpenAPI-defined endpoints with generated TypeScript clients.'
         ]
       },
       {
         heading: 'Ops & tooling',
-        items: ['Nix flakes for deterministic builds.', 'GitHub Actions pipelines with ephemeral staging environments.', 'Grafana Cloud for metrics and alerting.']
+        items: [
+          'Nix flakes for deterministic builds.',
+          'GitHub Actions pipelines with ephemeral staging environments.',
+          'Grafana Cloud + Loki for metrics and transcript retention.'
+        ]
       }
     ]
   },
@@ -299,7 +318,7 @@ const slides = [
     section: 'Tech',
     title: 'Ingestion focus',
     bullets: [
-      'Multi-tenant radio capture agents publish Opus streams over QUIC.',
+      'Multi-tenant capture agents publish Opus streams over QUIC with auto gain control.',
       'Temporal workflows batch frames into 20-second jobs for transcription.',
       'Language detection auto-selects acoustic models per frequency.',
       'Manual review UI appears when confidence dips below 70%.'
@@ -330,7 +349,7 @@ const slides = [
     title: 'DX and docs hopes',
     bullets: [
       'Devcontainer scripts spin up the stack with sample data in under five minutes.',
-      'Storybook-style playground for testing rule evaluations.',
+      'Playground UI exercises rule evaluations and TTS voices.',
       'Observability dashboards versioned alongside the code.',
       'Docs site built with Nuxt Content—PRs preview instantly via GitHub Actions.'
     ]
@@ -339,9 +358,9 @@ const slides = [
     section: 'Tech',
     title: 'Keeping things safe-ish',
     bullets: [
-      'End-to-end tests replay anonymized traffic nightly.',
+      'End-to-end tests replay anonymised traffic nightly.',
       'OPA policies guard radio streams and redact sensitive fields.',
-      'Grafana Loki captures raw transcripts for 24 hours before purging.',
+      'Loki captures raw transcripts for 24 hours before purging.',
       'Incident playbooks live in-repo with checklists and runbooks.'
     ]
   },
@@ -350,7 +369,7 @@ const slides = [
     title: 'Next few weeks',
     bullets: [
       'Expand capture network with five community-hosted radios in Spain and Portugal.',
-      'Release v0.2 of the rules DSL with a friendlier visual editor.',
+      'Release rules DSL v0.2 with a friendlier visual editor.',
       'Ship first-class integration for the open-source EFB tool SkyPad.',
       'Publish contribution guidelines and a lightweight governance RFC.'
     ],
@@ -389,7 +408,7 @@ const slides = [
     section: 'Together',
     title: 'Where I need the most help',
     bullets: [
-      'This is my first open-source repo-feedback on structure and tone is gold to me.',
+      'Fresh eyes on repository structure, documentation tone, and accessibility.',
       'Pointers to communities who might benefit would mean a lot.'
     ]
   },
