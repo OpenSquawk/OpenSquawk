@@ -5767,6 +5767,7 @@ onMounted(() => {
 
 .module-stage-panel {
   margin-top: 24px;
+  margin-bottom: 64px;
   border-radius: 24px;
   border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
   background: color-mix(in srgb, var(--text) 4%, transparent);
