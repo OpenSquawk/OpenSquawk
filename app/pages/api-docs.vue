@@ -1,101 +1,136 @@
 <template>
   <div class="min-h-screen bg-[#0b1020] text-white">
-    <div class="mx-auto w-full px-6 py-12 lg:px-14 xl:px-24">
-      <header class="space-y-6">
-        <NuxtLink to="/" class="inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-cyan-300">
-          <v-icon icon="mdi-arrow-left" size="18" /> Back to landing page
-        </NuxtLink>
-        <div class="max-w-3xl space-y-3">
-          <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Developer</p>
-          <h1 class="text-4xl font-semibold">OpenSquawk API reference</h1>
-          <p class="text-base text-white/70">
-            All endpoints speak JSON over HTTPS. Unless otherwise stated, successful responses follow the shape
-            <code class="bg-white/10 px-1">{ \"success\": true }</code> and failures raise an error object with
-            <code class="bg-white/10 px-1">statusCode</code> and <code class="bg-white/10 px-1">statusMessage</code>.
-          </p>
-        </div>
-        <div class="grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/70 lg:grid-cols-2">
-          <div class="space-y-2">
-            <h2 class="text-lg font-semibold text-white">Authentication</h2>
-            <p>
-              Login returns a short-lived access token and sets an HTTP-only refresh cookie. Send the access token on protected
-              routes via <code class="bg-white/10 px-1">Authorization: Bearer &lt;token&gt;</code>. Refresh the token by calling
-              <code class="bg-white/10 px-1">POST /api/service/auth/refresh</code> with the refresh cookie present.
-            </p>
-          </div>
-          <div class="space-y-2">
-            <h2 class="text-lg font-semibold text-white">Base URLs</h2>
-            <ul class="list-disc space-y-1 pl-5">
-              <li>Production: <code class="bg-white/10 px-1">https://opensquawk.de</code></li>
-              <li>Local development: <code class="bg-white/10 px-1">http://localhost:3000</code></li>
-            </ul>
+    <v-app-bar flat density="comfortable"
+      class="sticky top-0 z-40 border-b border-white/10 bg-[#0b1020]/95 backdrop-blur">
+      <div class="mx-auto flex w-full flex-col gap-4 px-6 py-3 sm:flex-row sm:items-center sm:justify-between lg:px-14 xl:px-24">
+        <div class="flex items-center gap-4 text-sm">
+          <NuxtLink to="/"
+            class="inline-flex items-center gap-2 rounded-full border border-transparent bg-white/5 px-4 py-2 text-white/70 transition hover:border-white/20 hover:bg-white/10 hover:text-cyan-200">
+            <v-icon icon="mdi-arrow-left" size="18" />
+            Zurück
+          </NuxtLink>
+          <div class="flex flex-col">
+            <span class="text-[10px] uppercase tracking-[0.35em] text-white/40">Dokumentation</span>
+            <span class="text-lg font-semibold text-white">OpenSquawk API</span>
           </div>
         </div>
-      </header>
+        <div class="flex w-full flex-1 items-center gap-3 sm:justify-end">
+          <label class="relative w-full max-w-md">
+            <span class="sr-only">Search endpoints</span>
+            <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-white/40">
+              <v-icon icon="mdi-magnify" size="18" />
+            </span>
+            <input ref="searchInputRef" v-model="searchTerm" type="search"
+              placeholder="/api/service/auth/login"
+              class="w-full rounded-full border border-white/15 bg-black/40 py-2.5 pl-11 pr-12 text-sm text-white placeholder:text-white/35 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+              @keydown.esc.prevent="clearSearch" />
+            <button v-if="hasActiveSearch" type="button"
+              class="absolute inset-y-1 right-2 inline-flex items-center justify-center rounded-full border border-transparent bg-white/10 px-3 text-[10px] uppercase tracking-[0.25em] text-white/60 transition hover:border-white/20 hover:bg-white/20"
+              @click="clearSearch">
+              Clear
+            </button>
+          </label>
+        </div>
+      </div>
+    </v-app-bar>
 
-      <div class="mt-12 grid gap-10 lg:grid-cols-[19rem,minmax(0,1fr)] xl:grid-cols-[20rem,minmax(0,1fr)]">
-        <aside class="flex flex-col gap-6 lg:sticky lg:top-10 lg:max-h-[calc(100vh-5rem)] lg:self-start">
-          <section class="space-y-3 rounded-3xl border border-white/10 bg-white/5 p-5">
-            <header class="space-y-1">
-              <h2 class="text-base font-semibold text-white">Schnellsuche</h2>
-              <p class="text-xs text-white/60">Finde Pfade, Methoden oder Schlagwörter.</p>
-            </header>
-            <label class="relative block">
-              <span class="sr-only">Search endpoints</span>
-              <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-white/40">
-                <v-icon icon="mdi-magnify" size="18" />
-              </span>
-              <input ref="searchInputRef" v-model="searchTerm" type="search"
-                placeholder="/api/service/auth/login"
-                class="w-full rounded-full border border-white/15 bg-black/40 py-2.5 pl-11 pr-11 text-sm text-white placeholder:text-white/35 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
-                @keydown.esc.prevent="clearSearch" />
-              <button v-if="hasActiveSearch" type="button"
-                class="absolute inset-y-1 right-2 inline-flex items-center justify-center rounded-full border border-transparent bg-white/10 px-3 text-[10px] uppercase tracking-[0.25em] text-white/60 transition hover:border-white/20 hover:bg-white/20"
-                @click="clearSearch">
-                Clear
-              </button>
-            </label>
-            <p class="text-[11px] uppercase tracking-[0.3em] text-white/35">
-              <template v-if="hasActiveSearch">
-                {{ resultCount }} {{ resultCount === 1 ? 'Treffer' : 'Treffer gesamt' }}
-              </template>
-              <template v-else>
-                {{ totalEndpointCount }} dokumentierte Routen
-              </template>
-            </p>
-          </section>
+    <div class="mx-auto w-full px-6 pb-12 pt-24 lg:px-14 xl:px-24">
+      <div class="grid gap-10 lg:grid-cols-[20rem,minmax(0,1fr)] xl:grid-cols-[22rem,minmax(0,1fr)]">
+        <aside class="lg:sticky lg:top-[6.25rem] lg:h-[calc(100vh-7rem)] lg:self-start">
+          <div class="flex h-full flex-col gap-6">
+            <nav class="flex-1 overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+              <header class="border-b border-white/5 p-5">
+                <h2 class="text-base font-semibold text-white">Kapitelübersicht</h2>
+                <p class="mt-1 text-xs text-white/60">Seitlich scrollen unabhängig vom Inhalt.</p>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.3em] text-white/35">
+                  <template v-if="hasActiveSearch">
+                    {{ resultCount }} {{ resultCount === 1 ? 'Treffer' : 'Treffer gesamt' }}
+                  </template>
+                  <template v-else>
+                    {{ totalEndpointCount }} dokumentierte Routen
+                  </template>
+                </p>
+              </header>
+              <div class="flex max-h-full flex-col gap-6 overflow-y-auto p-5 pr-4 text-sm text-white/70">
+                <NuxtLink :to="`#${generalAnchor}`" class="block rounded-2xl border px-4 py-3 transition"
+                  :class="activeAnchor === generalAnchor
+                    ? 'border-cyan-400/80 bg-cyan-500/15 text-white'
+                    : 'border-transparent bg-white/0 hover:border-cyan-400/60 hover:bg-cyan-500/10'"
+                  @click="handleAnchorClick(generalAnchor)">
+                  <span class="flex items-center justify-between gap-3">
+                    <span class="font-medium">About the API</span>
+                    <span class="text-[10px] uppercase tracking-[0.25em] text-white/40">Overview</span>
+                  </span>
+                </NuxtLink>
 
-          <nav class="flex-1 overflow-hidden rounded-3xl border border-white/10 bg-white/5">
-            <header class="border-b border-white/5 p-5">
-              <h2 class="text-base font-semibold text-white">Kapitelübersicht</h2>
-              <p class="mt-1 text-xs text-white/60">Seitlich scrollen unabhängig vom Inhalt.</p>
-            </header>
-            <div class="max-h-full space-y-6 overflow-y-auto p-5 text-sm text-white/70">
-              <div v-for="navSection in navigationSections" :key="navSection.title" class="space-y-3">
-                <p class="text-[11px] uppercase tracking-[0.3em] text-white/35">{{ navSection.title }}</p>
-                <ul class="space-y-2">
-                  <li v-for="group in navSection.groups" :key="group.anchor">
-                    <NuxtLink :to="`#${group.anchor}`" @click="handleAnchorClick(group.anchor)"
-                      :class="[
-                        'block rounded-2xl border px-4 py-3 transition',
-                        activeAnchor === group.anchor
-                          ? 'border-cyan-400/80 bg-cyan-500/15 text-white'
-                          : 'border-transparent bg-white/0 hover:border-cyan-400/60 hover:bg-cyan-500/10'
-                      ]">
-                      <span class="flex items-center justify-between gap-4 text-sm">
-                        <span class="font-medium">{{ group.title }}</span>
-                        <span class="text-[10px] uppercase tracking-[0.25em] text-white/40">{{ group.count }} {{ group.count === 1 ? 'Route' : 'Routen' }}</span>
-                      </span>
-                      <span v-if="group.description" class="mt-1 block text-xs text-white/50">{{ group.description }}</span>
-                    </NuxtLink>
-                  </li>
-                </ul>
+                <template v-if="navigationSections.length">
+                  <div v-for="navSection in navigationSections" :key="navSection.title" class="space-y-3">
+                    <p class="text-[11px] uppercase tracking-[0.3em] text-white/35">{{ navSection.title }}</p>
+                    <div class="space-y-2">
+                      <div v-for="group in navSection.groups" :key="group.title" class="space-y-1">
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">{{ group.title }}</p>
+                        <ul class="space-y-1">
+                          <li v-for="endpoint in group.endpoints" :key="endpoint.anchor">
+                            <NuxtLink :to="`#${endpoint.anchor}`" class="block rounded-xl border px-4 py-3 transition"
+                              :class="activeAnchor === endpoint.anchor
+                                ? 'border-cyan-400/80 bg-cyan-500/15 text-white'
+                                : 'border-transparent bg-white/0 hover:border-cyan-400/60 hover:bg-cyan-500/10'"
+                              @click="handleAnchorClick(endpoint.anchor)">
+                              <div class="flex items-start gap-2">
+                                <span :class="['inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
+                                  {{ endpoint.method }}
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                  <p class="truncate font-medium text-white">{{ endpoint.path }}</p>
+                                  <p class="line-clamp-2 text-xs text-white/60">{{ endpoint.summary }}</p>
+                                </div>
+                              </div>
+                            </NuxtLink>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <p v-else class="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-xs text-white/50">
+                  Keine Treffer für die aktuelle Suche.
+                </p>
               </div>
-            </div>
-          </nav>
+            </nav>
+          </div>
         </aside>
 
         <main class="space-y-12">
+          <section :id="generalAnchor" :ref="setAnchorRef(generalAnchor)"
+            class="space-y-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-8">
+            <header class="space-y-3">
+              <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Developer</p>
+              <h2 class="text-3xl font-semibold text-white">About the API</h2>
+              <p class="text-base text-white/70">
+                All endpoints speak JSON over HTTPS. Unless otherwise stated, successful responses follow the shape
+                <code class="bg-white/10 px-1">{ \"success\": true }</code> and failures raise an error object with
+                <code class="bg-white/10 px-1">statusCode</code> and <code class="bg-white/10 px-1">statusMessage</code>.
+              </p>
+            </header>
+            <div class="grid gap-6 text-sm text-white/70 lg:grid-cols-2">
+              <div class="space-y-2">
+                <h3 class="text-lg font-semibold text-white">Authentication</h3>
+                <p>
+                  Login returns a short-lived access token and sets an HTTP-only refresh cookie. Send the access token on
+                  protected routes via <code class="bg-white/10 px-1">Authorization: Bearer &lt;token&gt;</code>. Refresh the token by
+                  calling <code class="bg-white/10 px-1">POST /api/service/auth/refresh</code> with the refresh cookie present.
+                </p>
+              </div>
+              <div class="space-y-2">
+                <h3 class="text-lg font-semibold text-white">Base URLs</h3>
+                <ul class="list-disc space-y-1 pl-5">
+                  <li>Production: <code class="bg-white/10 px-1">https://opensquawk.de</code></li>
+                  <li>Local development: <code class="bg-white/10 px-1">http://localhost:3000</code></li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
           <section class="space-y-3">
             <header class="space-y-2">
               <h2 class="text-2xl font-semibold">Endpoint catalogue</h2>
@@ -126,9 +161,7 @@
 
               <div class="space-y-10">
                 <div v-for="group in section.groups" :id="groupAnchor(section.title, group.title)"
-                  :ref="setGroupRef(groupAnchor(section.title, group.title))"
-                  :key="`${section.title}-${group.title}`"
-                  class="space-y-4">
+                  :key="`${section.title}-${group.title}`" class="space-y-4">
                   <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="space-y-1">
                       <h4 class="text-lg font-semibold text-white">{{ group.title }}</h4>
@@ -140,7 +173,9 @@
                   </div>
 
                   <div class="space-y-5">
-                    <article v-for="endpoint in group.endpoints" :key="getEndpointKey(endpoint)"
+                    <article v-for="endpoint in group.endpoints" :id="endpointAnchor(section.title, group.title, endpoint)"
+                      :ref="setAnchorRef(endpointAnchor(section.title, group.title, endpoint))"
+                      :key="getEndpointKey(endpoint)"
                       class="group overflow-hidden rounded-3xl border border-white/10 bg-white/5">
                       <button type="button"
                         class="flex w-full flex-col gap-4 p-6 text-left transition hover:bg-white/10 focus:outline-none focus-visible:bg-white/10"
@@ -190,17 +225,21 @@
                                   <tr>
                                     <th scope="col" class="px-4 py-3 font-medium text-white/60">Parameter</th>
                                     <th scope="col" class="px-4 py-3 font-medium text-white/60">Typ</th>
-                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Pflicht</th>
                                     <th scope="col" class="px-4 py-3 font-medium text-white/60">Beschreibung</th>
                                   </tr>
                                 </thead>
                                 <tbody class="divide-y divide-white/5">
                                   <tr v-for="param in endpoint.query" :key="param.name" class="align-top">
-                                    <td class="px-4 py-3 font-medium text-white">{{ param.name }}</td>
-                                    <td class="px-4 py-3 text-xs uppercase tracking-wide text-white/50">{{ param.type }}</td>
-                                    <td class="px-4 py-3 text-xs uppercase tracking-wide text-white/50">
-                                      {{ param.required ? 'Ja' : 'Optional' }}
+                                    <td class="px-4 py-3">
+                                      <div class="space-y-1">
+                                        <span :class="['block text-white', param.required ? 'font-semibold' : 'font-medium']">{{ param.name }}</span>
+                                        <span class="text-[11px] uppercase tracking-[0.25em]"
+                                          :class="param.required ? 'text-white' : 'text-white/40'">
+                                          {{ param.required ? 'Erforderlich' : 'Optional' }}
+                                        </span>
+                                      </div>
                                     </td>
+                                    <td class="px-4 py-3 text-xs uppercase tracking-wide text-white/50">{{ param.type }}</td>
                                     <td class="px-4 py-3 text-sm text-white/70">{{ param.description }}</td>
                                   </tr>
                                 </tbody>
@@ -216,17 +255,21 @@
                                   <tr>
                                     <th scope="col" class="px-4 py-3 font-medium text-white/60">Feld</th>
                                     <th scope="col" class="px-4 py-3 font-medium text-white/60">Typ</th>
-                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Pflicht</th>
                                     <th scope="col" class="px-4 py-3 font-medium text-white/60">Beschreibung</th>
                                   </tr>
                                 </thead>
                                 <tbody class="divide-y divide-white/5">
                                   <tr v-for="field in endpoint.body" :key="field.name" class="align-top">
-                                    <td class="px-4 py-3 font-medium text-white">{{ field.name }}</td>
-                                    <td class="px-4 py-3 text-xs uppercase tracking-wide text-white/50">{{ field.type }}</td>
-                                    <td class="px-4 py-3 text-xs uppercase tracking-wide text-white/50">
-                                      {{ field.required ? 'Ja' : 'Optional' }}
+                                    <td class="px-4 py-3">
+                                      <div class="space-y-1">
+                                        <span :class="['block text-white', field.required ? 'font-semibold' : 'font-medium']">{{ field.name }}</span>
+                                        <span class="text-[11px] uppercase tracking-[0.25em]"
+                                          :class="field.required ? 'text-white' : 'text-white/40'">
+                                          {{ field.required ? 'Erforderlich' : 'Optional' }}
+                                        </span>
+                                      </div>
                                     </td>
+                                    <td class="px-4 py-3 text-xs uppercase tracking-wide text-white/50">{{ field.type }}</td>
                                     <td class="px-4 py-3 text-sm text-white/70">{{ field.description }}</td>
                                   </tr>
                                 </tbody>
@@ -322,6 +365,23 @@ interface CategorizedSection {
   title: string
   description?: string
   groups: EndpointGroup[]
+}
+
+interface NavigationEndpoint {
+  anchor: string
+  method: string
+  path: string
+  summary: string
+}
+
+interface NavigationGroupItem {
+  title: string
+  endpoints: NavigationEndpoint[]
+}
+
+interface NavigationSectionItem {
+  title: string
+  groups: NavigationGroupItem[]
 }
 
 const sectionCategoryOrder: Record<string, string[]> = {
@@ -875,9 +935,10 @@ const endpointSections: EndpointSection[] = [
 const searchTerm = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const openEndpoints = ref<Record<string, boolean>>({})
-const activeAnchor = ref('')
+const generalAnchor = 'about-the-api'
+const activeAnchor = ref(generalAnchor)
 
-const groupRefs = new Map<string, HTMLElement>()
+const anchorRefs = new Map<string, HTMLElement>()
 let scrollFrame: number | null = null
 
 function buildGroups(section: EndpointSection, endpoints: EndpointEntry[]): EndpointGroup[] {
@@ -973,39 +1034,45 @@ const sectionAnchor = (title: string) => slugify(title)
 const groupAnchor = (sectionTitle: string, groupTitle: string) =>
   `${sectionAnchor(sectionTitle)}-${slugify(groupTitle)}`
 
-const navigationSections = computed(() =>
-  endpointSections.map((section) => {
-    const groups = buildGroups(section, section.endpoints)
-    return {
+const endpointAnchor = (sectionTitle: string, groupTitle: string, endpoint: EndpointEntry) =>
+  `${groupAnchor(sectionTitle, groupTitle)}-${slugify(`${endpoint.method}-${endpoint.path}`)}`
+
+const navigationSections = computed<NavigationSectionItem[]>(() =>
+  filteredSections.value
+    .map((section) => ({
       title: section.title,
-      description: section.description,
-      groups: groups.map((group) => ({
-        title: group.title,
-        description: group.description,
-        count: group.endpoints.length,
-        anchor: groupAnchor(section.title, group.title),
-      })),
-    }
-  }),
+      groups: section.groups
+        .map((group) => ({
+          title: group.title,
+          endpoints: group.endpoints.map((endpoint) => ({
+            anchor: endpointAnchor(section.title, group.title, endpoint),
+            method: endpoint.method,
+            path: endpoint.path,
+            summary: endpoint.summary,
+          })),
+        }))
+        .filter((group) => group.endpoints.length > 0),
+    }))
+    .filter((section) => section.groups.length > 0),
 )
 
 const getEndpointKey = (endpoint: EndpointEntry) => `${endpoint.method.toUpperCase()}-${endpoint.path}`
 
-const setGroupRef = (anchor: string) => (el: HTMLElement | null) => {
+const setAnchorRef = (anchor: string) => (el: HTMLElement | null) => {
   if (el) {
-    groupRefs.set(anchor, el)
+    anchorRefs.set(anchor, el)
   } else {
-    groupRefs.delete(anchor)
+    anchorRefs.delete(anchor)
   }
 }
 
 const updateActiveAnchor = () => {
-  const sections = Array.from(groupRefs.entries())
+  const sections = Array.from(anchorRefs.entries())
     .map(([anchor, element]) => ({ anchor, rect: element.getBoundingClientRect() }))
     .sort((a, b) => a.rect.top - b.rect.top)
 
   if (!sections.length) {
-    activeAnchor.value = ''
+    activeAnchor.value = generalAnchor
     return
   }
 
@@ -1041,8 +1108,10 @@ const handleAnchorClick = (anchor: string) => {
 const clearSearch = () => {
   searchTerm.value = ''
   openEndpoints.value = {}
+  activeAnchor.value = generalAnchor
   nextTick(() => {
     searchInputRef.value?.focus()
+    updateActiveAnchor()
   })
 }
 
