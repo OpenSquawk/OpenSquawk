@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-[#0b1020] text-white">
-    <div class="mx-auto max-w-7xl px-6 py-12 lg:px-10">
+    <div class="mx-auto w-full px-6 py-12 lg:px-14 xl:px-24">
       <header class="space-y-6">
         <NuxtLink to="/" class="inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-cyan-300">
           <v-icon icon="mdi-arrow-left" size="18" /> Back to landing page
@@ -33,100 +33,58 @@
         </div>
       </header>
 
-      <section v-if="featuredEndpoints.length" class="mt-12 space-y-5">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 class="text-2xl font-semibold">Essential flows</h2>
-            <p class="text-sm text-white/60">Start with the endpoints most teams integrate first.</p>
-          </div>
-          <span class="text-xs uppercase tracking-[0.3em] text-white/40">Quick start</span>
-        </div>
-        <div class="grid gap-4 lg:grid-cols-2">
-          <article v-for="endpoint in featuredEndpoints" :key="getEndpointKey(endpoint)"
-            class="group relative overflow-hidden rounded-3xl border border-cyan-500/40 bg-gradient-to-br from-cyan-500/10 via-transparent to-cyan-500/10 p-6 transition hover:border-cyan-300/60 hover:from-cyan-500/20 hover:to-cyan-500/5">
-            <div class="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-cyan-200/80">
-              <span class="inline-flex items-center gap-2 font-semibold">
-                <v-icon icon="mdi-star" size="16" /> Featured
-              </span>
-              <span class="text-white/50">{{ [endpoint.sectionTitle, endpoint.groupTitle].filter(Boolean).join(' • ') }}</span>
-            </div>
-            <div class="mt-4 flex flex-wrap items-center gap-3">
-              <span
-                :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
-                {{ endpoint.method }}
-              </span>
-              <code class="rounded bg-black/50 px-2 py-1 text-sm font-mono text-cyan-100">{{ endpoint.path }}</code>
-            </div>
-            <p class="mt-4 text-sm text-white/80">{{ endpoint.summary }}</p>
-            <div class="mt-5 flex flex-wrap items-center gap-2 text-xs text-white/60">
-              <span v-if="endpoint.auth === 'protected'"
-                class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
-                <v-icon icon="mdi-lock" size="14" /> Access token required
-              </span>
-              <span v-else class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
-                <v-icon icon="mdi-earth" size="14" /> Public
-              </span>
-              <span v-if="endpoint.rateLimit" class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
-                <v-icon icon="mdi-timer-outline" size="14" /> {{ endpoint.rateLimit }}
-              </span>
-            </div>
-            <button type="button"
-              class="mt-6 inline-flex items-center gap-2 rounded-full border border-cyan-400/40 bg-cyan-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100 transition group-hover:border-cyan-200 group-hover:text-white"
-              @click="focusEndpoint(endpoint)">
-              Jump to details
-              <v-icon icon="mdi-arrow-down-right" size="16" />
-            </button>
-          </article>
-        </div>
-      </section>
-
-      <div class="mt-16 grid gap-10 lg:grid-cols-[22rem,1fr]">
-        <aside class="space-y-8 lg:sticky lg:top-10 lg:self-start">
-          <section class="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6">
+      <div class="mt-12 grid gap-10 lg:grid-cols-[19rem,minmax(0,1fr)] xl:grid-cols-[20rem,minmax(0,1fr)]">
+        <aside class="flex flex-col gap-6 lg:sticky lg:top-10 lg:max-h-[calc(100vh-5rem)] lg:self-start">
+          <section class="space-y-3 rounded-3xl border border-white/10 bg-white/5 p-5">
             <header class="space-y-1">
-              <h2 class="text-lg font-semibold text-white">Find endpoints</h2>
-              <p class="text-sm text-white/60">Search across paths, payload fields, and keywords.</p>
+              <h2 class="text-base font-semibold text-white">Schnellsuche</h2>
+              <p class="text-xs text-white/60">Finde Pfade, Methoden oder Schlagwörter.</p>
             </header>
             <label class="relative block">
               <span class="sr-only">Search endpoints</span>
               <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-white/40">
-                <v-icon icon="mdi-magnify" size="20" />
+                <v-icon icon="mdi-magnify" size="18" />
               </span>
               <input ref="searchInputRef" v-model="searchTerm" type="search"
-                placeholder="Search by path, verb, or keyword"
-                class="w-full rounded-full border border-white/20 bg-black/40 py-3 pl-12 pr-12 text-sm text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                placeholder="/api/service/auth/login"
+                class="w-full rounded-full border border-white/15 bg-black/40 py-2.5 pl-11 pr-11 text-sm text-white placeholder:text-white/35 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
                 @keydown.esc.prevent="clearSearch" />
               <button v-if="hasActiveSearch" type="button"
-                class="absolute inset-y-1.5 right-2 inline-flex items-center justify-center rounded-full border border-transparent bg-white/10 px-3 text-xs uppercase tracking-[0.2em] text-white/60 transition hover:border-white/20 hover:bg-white/20"
+                class="absolute inset-y-1 right-2 inline-flex items-center justify-center rounded-full border border-transparent bg-white/10 px-3 text-[10px] uppercase tracking-[0.25em] text-white/60 transition hover:border-white/20 hover:bg-white/20"
                 @click="clearSearch">
                 Clear
               </button>
             </label>
-            <p class="text-xs uppercase tracking-[0.3em] text-white/40">
+            <p class="text-[11px] uppercase tracking-[0.3em] text-white/35">
               <template v-if="hasActiveSearch">
-                {{ resultCount }} {{ resultCount === 1 ? 'match' : 'matches' }}
+                {{ resultCount }} {{ resultCount === 1 ? 'Treffer' : 'Treffer gesamt' }}
               </template>
               <template v-else>
-                {{ totalEndpointCount }} documented routes
+                {{ totalEndpointCount }} dokumentierte Routen
               </template>
             </p>
           </section>
 
-          <nav class="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
-            <header class="space-y-1">
-              <h2 class="text-lg font-semibold text-white">Catalogue map</h2>
-              <p class="text-sm text-white/60">Jump directly to the area you need.</p>
+          <nav class="flex-1 overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+            <header class="border-b border-white/5 p-5">
+              <h2 class="text-base font-semibold text-white">Kapitelübersicht</h2>
+              <p class="mt-1 text-xs text-white/60">Seitlich scrollen unabhängig vom Inhalt.</p>
             </header>
-            <div class="space-y-6">
+            <div class="max-h-full space-y-6 overflow-y-auto p-5 text-sm text-white/70">
               <div v-for="navSection in navigationSections" :key="navSection.title" class="space-y-3">
-                <p class="text-xs uppercase tracking-[0.3em] text-white/40">{{ navSection.title }}</p>
+                <p class="text-[11px] uppercase tracking-[0.3em] text-white/35">{{ navSection.title }}</p>
                 <ul class="space-y-2">
                   <li v-for="group in navSection.groups" :key="group.anchor">
-                    <NuxtLink :to="`#${group.anchor}`"
-                      class="group block rounded-2xl border border-white/0 bg-white/0 px-4 py-3 transition hover:border-cyan-400/60 hover:bg-cyan-500/10">
+                    <NuxtLink :to="`#${group.anchor}`" @click="handleAnchorClick(group.anchor)"
+                      :class="[
+                        'block rounded-2xl border px-4 py-3 transition',
+                        activeAnchor === group.anchor
+                          ? 'border-cyan-400/80 bg-cyan-500/15 text-white'
+                          : 'border-transparent bg-white/0 hover:border-cyan-400/60 hover:bg-cyan-500/10'
+                      ]">
                       <span class="flex items-center justify-between gap-4 text-sm">
-                        <span class="font-medium text-white">{{ group.title }}</span>
-                        <span class="text-xs uppercase tracking-[0.2em] text-white/40">{{ group.count }} {{ group.count === 1 ? 'route' : 'routes' }}</span>
+                        <span class="font-medium">{{ group.title }}</span>
+                        <span class="text-[10px] uppercase tracking-[0.25em] text-white/40">{{ group.count }} {{ group.count === 1 ? 'Route' : 'Routen' }}</span>
                       </span>
                       <span v-if="group.description" class="mt-1 block text-xs text-white/50">{{ group.description }}</span>
                     </NuxtLink>
@@ -167,7 +125,9 @@
               </div>
 
               <div class="space-y-10">
-                <div v-for="group in section.groups" :id="groupAnchor(section.title, group.title)" :key="`${section.title}-${group.title}`"
+                <div v-for="group in section.groups" :id="groupAnchor(section.title, group.title)"
+                  :ref="setGroupRef(groupAnchor(section.title, group.title))"
+                  :key="`${section.title}-${group.title}`"
                   class="space-y-4">
                   <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="space-y-1">
@@ -180,8 +140,7 @@
                   </div>
 
                   <div class="space-y-5">
-                    <article v-for="endpoint in group.endpoints" :ref="setEndpointRef(getEndpointKey(endpoint))"
-                      :key="getEndpointKey(endpoint)"
+                    <article v-for="endpoint in group.endpoints" :key="getEndpointKey(endpoint)"
                       class="group overflow-hidden rounded-3xl border border-white/10 bg-white/5">
                       <button type="button"
                         class="flex w-full flex-col gap-4 p-6 text-left transition hover:bg-white/10 focus:outline-none focus-visible:bg-white/10"
@@ -224,29 +183,55 @@
                         <div v-show="isEndpointExpanded(getEndpointKey(endpoint))"
                           class="space-y-4 border-t border-white/10 bg-black/40 p-6">
                           <div v-if="endpoint.query?.length" class="space-y-3">
-                            <h5 class="text-sm font-semibold text-white">Query parameters</h5>
-                            <dl class="grid gap-2 text-sm text-white/70 md:grid-cols-2">
-                              <div v-for="param in endpoint.query" :key="param.name"
-                                class="rounded-2xl border border-white/10 bg-black/40 p-3">
-                                <dt class="font-medium text-white">{{ param.name }}<span v-if="param.required"
-                                    class="text-cyan-300">*</span></dt>
-                                <dd class="text-xs uppercase tracking-wide text-white/40">{{ param.type }}</dd>
-                                <p class="mt-1 text-sm text-white/70">{{ param.description }}</p>
-                              </div>
-                            </dl>
+                            <h5 class="text-sm font-semibold text-white">Query parameter</h5>
+                            <div class="overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+                              <table class="w-full text-left text-sm text-white/70">
+                                <thead class="bg-white/5 text-xs uppercase tracking-[0.2em] text-white/50">
+                                  <tr>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Parameter</th>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Typ</th>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Pflicht</th>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Beschreibung</th>
+                                  </tr>
+                                </thead>
+                                <tbody class="divide-y divide-white/5">
+                                  <tr v-for="param in endpoint.query" :key="param.name" class="align-top">
+                                    <td class="px-4 py-3 font-medium text-white">{{ param.name }}</td>
+                                    <td class="px-4 py-3 text-xs uppercase tracking-wide text-white/50">{{ param.type }}</td>
+                                    <td class="px-4 py-3 text-xs uppercase tracking-wide text-white/50">
+                                      {{ param.required ? 'Ja' : 'Optional' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-white/70">{{ param.description }}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
 
                           <div v-if="endpoint.body?.length" class="space-y-3">
-                            <h5 class="text-sm font-semibold text-white">Request body</h5>
-                            <dl class="grid gap-2 text-sm text-white/70 md:grid-cols-2">
-                              <div v-for="field in endpoint.body" :key="field.name"
-                                class="rounded-2xl border border-white/10 bg-black/40 p-3">
-                                <dt class="font-medium text-white">{{ field.name }}<span v-if="field.required"
-                                    class="text-cyan-300">*</span></dt>
-                                <dd class="text-xs uppercase tracking-wide text-white/40">{{ field.type }}</dd>
-                                <p class="mt-1 text-sm text-white/70">{{ field.description }}</p>
-                              </div>
-                            </dl>
+                            <h5 class="text-sm font-semibold text-white">Request Body</h5>
+                            <div class="overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+                              <table class="w-full text-left text-sm text-white/70">
+                                <thead class="bg-white/5 text-xs uppercase tracking-[0.2em] text-white/50">
+                                  <tr>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Feld</th>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Typ</th>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Pflicht</th>
+                                    <th scope="col" class="px-4 py-3 font-medium text-white/60">Beschreibung</th>
+                                  </tr>
+                                </thead>
+                                <tbody class="divide-y divide-white/5">
+                                  <tr v-for="field in endpoint.body" :key="field.name" class="align-top">
+                                    <td class="px-4 py-3 font-medium text-white">{{ field.name }}</td>
+                                    <td class="px-4 py-3 text-xs uppercase tracking-wide text-white/50">{{ field.type }}</td>
+                                    <td class="px-4 py-3 text-xs uppercase tracking-wide text-white/50">
+                                      {{ field.required ? 'Ja' : 'Optional' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-white/70">{{ field.description }}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
 
                           <div v-if="endpoint.sampleRequest" class="space-y-3">
@@ -288,7 +273,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 type AuthLevel = 'public' | 'protected'
 
 interface QueryField {
@@ -337,11 +322,6 @@ interface CategorizedSection {
   title: string
   description?: string
   groups: EndpointGroup[]
-}
-
-interface FeaturedEndpoint extends EndpointEntry {
-  sectionTitle: string
-  groupTitle?: string
 }
 
 const sectionCategoryOrder: Record<string, string[]> = {
@@ -895,8 +875,10 @@ const endpointSections: EndpointSection[] = [
 const searchTerm = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const openEndpoints = ref<Record<string, boolean>>({})
-const endpointRefs = ref<Record<string, HTMLElement | null>>({})
-const isJumpingToEndpoint = ref(false)
+const activeAnchor = ref('')
+
+const groupRefs = new Map<string, HTMLElement>()
+let scrollFrame: number | null = null
 
 function buildGroups(section: EndpointSection, endpoints: EndpointEntry[]): EndpointGroup[] {
   const groups = new Map<string, EndpointEntry[]>()
@@ -972,18 +954,6 @@ const filteredSections = computed<CategorizedSection[]>(() => {
   }, [])
 })
 
-const featuredEndpoints = computed<FeaturedEndpoint[]>(() =>
-  endpointSections.flatMap((section) =>
-    section.endpoints
-      .filter((endpoint) => endpoint.featured)
-      .map((endpoint) => ({
-        ...endpoint,
-        sectionTitle: section.title,
-        groupTitle: endpoint.category,
-      })),
-  ),
-)
-
 const resultCount = computed(() =>
   filteredSections.value.reduce(
     (count, section) =>
@@ -1021,16 +991,54 @@ const navigationSections = computed(() =>
 
 const getEndpointKey = (endpoint: EndpointEntry) => `${endpoint.method.toUpperCase()}-${endpoint.path}`
 
-const setEndpointRef = (key: string) => (el: HTMLElement | null) => {
+const setGroupRef = (anchor: string) => (el: HTMLElement | null) => {
   if (el) {
-    endpointRefs.value[key] = el
+    groupRefs.set(anchor, el)
   } else {
-    delete endpointRefs.value[key]
+    groupRefs.delete(anchor)
   }
 }
 
+const updateActiveAnchor = () => {
+  const sections = Array.from(groupRefs.entries())
+    .map(([anchor, element]) => ({ anchor, rect: element.getBoundingClientRect() }))
+    .sort((a, b) => a.rect.top - b.rect.top)
+
+  if (!sections.length) {
+    activeAnchor.value = ''
+    return
+  }
+
+  const viewportOffset = 140
+  const current =
+    sections.find((section) => section.rect.top <= viewportOffset && section.rect.bottom >= viewportOffset) ??
+    sections.find((section) => section.rect.top >= viewportOffset) ??
+    sections[sections.length - 1]
+
+  activeAnchor.value = current.anchor
+}
+
+const scheduleActiveAnchorUpdate = () => {
+  if (scrollFrame !== null) {
+    return
+  }
+
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  scrollFrame = window.requestAnimationFrame(() => {
+    updateActiveAnchor()
+    scrollFrame = null
+  })
+}
+
+const handleAnchorClick = (anchor: string) => {
+  activeAnchor.value = anchor
+  scheduleActiveAnchorUpdate()
+}
+
 const clearSearch = () => {
-  isJumpingToEndpoint.value = false
   searchTerm.value = ''
   openEndpoints.value = {}
   nextTick(() => {
@@ -1039,8 +1047,41 @@ const clearSearch = () => {
 }
 
 watch(searchTerm, (value) => {
-  if (!value.trim() && !isJumpingToEndpoint.value) {
+  if (!value.trim()) {
     openEndpoints.value = {}
+  }
+
+  nextTick(() => {
+    updateActiveAnchor()
+  })
+})
+
+watch(filteredSections, () => {
+  nextTick(() => {
+    updateActiveAnchor()
+  })
+})
+
+onMounted(() => {
+  updateActiveAnchor()
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.addEventListener('scroll', scheduleActiveAnchorUpdate, { passive: true })
+  window.addEventListener('resize', scheduleActiveAnchorUpdate, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('scroll', scheduleActiveAnchorUpdate)
+    window.removeEventListener('resize', scheduleActiveAnchorUpdate)
+    if (scrollFrame !== null) {
+      window.cancelAnimationFrame(scrollFrame)
+    }
+  }
+
+  if (scrollFrame !== null) {
+    scrollFrame = null
   }
 })
 
@@ -1055,22 +1096,6 @@ const isEndpointExpanded = (key: string) => {
 const toggleEndpoint = (key: string) => {
   const next = !isEndpointExpanded(key)
   openEndpoints.value[key] = next
-}
-
-const focusEndpoint = (endpoint: EndpointEntry) => {
-  const key = getEndpointKey(endpoint)
-  openEndpoints.value[key] = true
-  isJumpingToEndpoint.value = true
-  searchTerm.value = ''
-  nextTick(() => {
-    const target = endpointRefs.value[key]
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    const trigger = target?.querySelector('button')
-    if (trigger instanceof HTMLButtonElement) {
-      trigger.focus({ preventScroll: true })
-    }
-    isJumpingToEndpoint.value = false
-  })
 }
 
 function methodColor(method: string) {
