@@ -41,7 +41,7 @@
               <span class="inline-flex items-center gap-2 font-semibold">
                 <v-icon icon="mdi-star" size="16" /> Featured
               </span>
-              <span class="text-white/50">{{ endpoint.sectionTitle }}</span>
+              <span class="text-white/50">{{ [endpoint.sectionTitle, endpoint.groupTitle].filter(Boolean).join(' • ') }}</span>
             </div>
             <div class="mt-3 flex flex-wrap items-center gap-3">
               <span :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
@@ -88,11 +88,13 @@
             <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-white/40">
               <v-icon icon="mdi-magnify" size="20" />
             </span>
-            <input v-model="searchTerm" type="search" placeholder="Search by path, verb, or keyword"
-              class="w-full rounded-full border border-white/20 bg-black/40 py-3 pl-12 pr-12 text-sm text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
+            <input ref="searchInputRef" v-model="searchTerm" type="search"
+              placeholder="Search by path, verb, or keyword"
+              class="w-full rounded-full border border-white/20 bg-black/40 py-3 pl-12 pr-12 text-sm text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+              @keydown.esc.prevent="clearSearch" />
             <button v-if="hasActiveSearch" type="button"
               class="absolute inset-y-0 right-3 inline-flex items-center justify-center rounded-full bg-white/10 px-3 text-xs uppercase tracking-[0.2em] text-white/60 transition hover:bg-white/20"
-              @click="searchTerm = ''">
+              @click="clearSearch">
               Clear
             </button>
           </label>
@@ -108,93 +110,107 @@
         </div>
 
         <div v-else class="space-y-10">
-          <div v-for="section in filteredSections" :key="section.title" class="space-y-6">
+          <div v-for="section in filteredSections" :key="section.title" class="space-y-8">
             <div>
               <h3 class="text-xl font-semibold text-white">{{ section.title }}</h3>
               <p v-if="section.description" class="text-sm text-white/60">{{ section.description }}</p>
             </div>
 
-            <div class="space-y-5">
-              <article v-for="endpoint in section.endpoints" :key="getEndpointKey(endpoint)"
-                class="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <div class="flex flex-col gap-4">
-                  <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div class="space-y-1">
-                      <div class="flex flex-wrap items-center gap-3">
-                        <span :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
-                          {{ endpoint.method }}
-                        </span>
-                        <code class="rounded bg-black/50 px-2 py-1 text-sm font-mono text-cyan-200">{{ endpoint.path }}</code>
-                      </div>
-                      <p class="text-sm text-white/70">{{ endpoint.summary }}</p>
-                    </div>
-                    <div class="flex flex-col items-stretch gap-3 sm:items-end">
-                      <div class="flex flex-wrap items-center gap-2 text-xs text-white/60">
-                        <span v-if="endpoint.auth === 'protected'"
-                          class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
-                          <v-icon icon="mdi-lock" size="14" /> Access token required
-                        </span>
-                        <span v-else class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
-                          <v-icon icon="mdi-earth" size="14" /> Public
-                        </span>
-                        <span v-if="endpoint.rateLimit"
-                          class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
-                          <v-icon icon="mdi-timer-outline" size="14" /> {{ endpoint.rateLimit }}
-                        </span>
-                      </div>
-                      <button type="button"
-                        class="inline-flex items-center justify-end gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/60 transition hover:text-white"
-                        :aria-expanded="isEndpointExpanded(getEndpointKey(endpoint))"
-                        @click="toggleEndpoint(getEndpointKey(endpoint))">
-                        <span>{{ isEndpointExpanded(getEndpointKey(endpoint)) ? 'Hide details' : 'Show details' }}</span>
-                        <v-icon :icon="isEndpointExpanded(getEndpointKey(endpoint)) ? 'mdi-chevron-up' : 'mdi-chevron-down'"
-                          size="18" />
-                      </button>
-                    </div>
-                  </header>
-
-                  <div v-show="isEndpointExpanded(getEndpointKey(endpoint))"
-                    class="space-y-4 border-t border-white/10 pt-4">
-                    <div v-if="endpoint.query?.length" class="space-y-2">
-                      <h4 class="text-sm font-semibold text-white">Query parameters</h4>
-                      <dl class="grid gap-2 text-sm text-white/70 sm:grid-cols-2">
-                        <div v-for="param in endpoint.query" :key="param.name"
-                          class="rounded-xl border border-white/10 bg-black/30 p-3">
-                          <dt class="font-medium text-white">{{ param.name }}<span v-if="param.required"
-                              class="text-cyan-300">*</span></dt>
-                          <dd class="text-xs uppercase tracking-wide text-white/40">{{ param.type }}</dd>
-                          <p class="mt-1 text-sm text-white/70">{{ param.description }}</p>
-                        </div>
-                      </dl>
-                    </div>
-
-                    <div v-if="endpoint.body?.length" class="space-y-2">
-                      <h4 class="text-sm font-semibold text-white">Request body</h4>
-                      <dl class="grid gap-2 text-sm text-white/70 sm:grid-cols-2">
-                        <div v-for="field in endpoint.body" :key="field.name"
-                          class="rounded-xl border border-white/10 bg-black/30 p-3">
-                          <dt class="font-medium text-white">{{ field.name }}<span v-if="field.required"
-                              class="text-cyan-300">*</span></dt>
-                          <dd class="text-xs uppercase tracking-wide text-white/40">{{ field.type }}</dd>
-                          <p class="mt-1 text-sm text-white/70">{{ field.description }}</p>
-                        </div>
-                      </dl>
-                    </div>
-
-                    <div v-if="endpoint.sampleRequest" class="space-y-2">
-                      <h4 class="text-sm font-semibold text-white">Sample request</h4>
-                      <pre class="overflow-x-auto rounded-xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleRequest }}</code></pre>
-                    </div>
-
-                    <div v-if="endpoint.sampleResponse" class="space-y-2">
-                      <h4 class="text-sm font-semibold text-white">Sample response</h4>
-                      <pre class="overflow-x-auto rounded-xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleResponse }}</code></pre>
-                    </div>
-
-                    <p v-if="endpoint.notes" class="text-sm text-white/60">{{ endpoint.notes }}</p>
+            <div class="space-y-8">
+              <div v-for="group in section.groups" :key="`${section.title}-${group.title}`" class="space-y-4">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h4 class="text-lg font-semibold text-white">{{ group.title }}</h4>
+                    <p v-if="group.description" class="text-sm text-white/60">{{ group.description }}</p>
                   </div>
+                  <span class="inline-flex items-center justify-center rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-white/40">
+                    {{ group.endpoints.length }} {{ group.endpoints.length === 1 ? 'route' : 'routes' }}
+                  </span>
                 </div>
-              </article>
+
+                <div class="space-y-5">
+                  <article v-for="endpoint in group.endpoints" :key="getEndpointKey(endpoint)"
+                    class="rounded-2xl border border-white/10 bg-white/5 p-6">
+                    <div class="flex flex-col gap-4">
+                      <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div class="space-y-1">
+                          <div class="flex flex-wrap items-center gap-3">
+                            <span :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
+                              {{ endpoint.method }}
+                            </span>
+                            <code class="rounded bg-black/50 px-2 py-1 text-sm font-mono text-cyan-200">{{ endpoint.path }}</code>
+                          </div>
+                          <p class="text-sm text-white/70">{{ endpoint.summary }}</p>
+                        </div>
+                        <div class="flex flex-col items-stretch gap-3 sm:items-end">
+                          <div class="flex flex-wrap items-center gap-2 text-xs text-white/60">
+                            <span v-if="endpoint.auth === 'protected'"
+                              class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                              <v-icon icon="mdi-lock" size="14" /> Access token required
+                            </span>
+                            <span v-else class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                              <v-icon icon="mdi-earth" size="14" /> Public
+                            </span>
+                            <span v-if="endpoint.rateLimit"
+                              class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                              <v-icon icon="mdi-timer-outline" size="14" /> {{ endpoint.rateLimit }}
+                            </span>
+                          </div>
+                          <button type="button"
+                            class="inline-flex items-center justify-end gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/60 transition hover:text-white"
+                            :aria-expanded="isEndpointExpanded(getEndpointKey(endpoint))"
+                            @click="toggleEndpoint(getEndpointKey(endpoint))">
+                            <span>{{ isEndpointExpanded(getEndpointKey(endpoint)) ? 'Hide details' : 'Show details' }}</span>
+                            <v-icon :icon="isEndpointExpanded(getEndpointKey(endpoint)) ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                              size="18" />
+                          </button>
+                        </div>
+                      </header>
+
+                      <div v-show="isEndpointExpanded(getEndpointKey(endpoint))"
+                        class="space-y-4 border-t border-white/10 pt-4">
+                        <div v-if="endpoint.query?.length" class="space-y-2">
+                          <h5 class="text-sm font-semibold text-white">Query parameters</h5>
+                          <dl class="grid gap-2 text-sm text-white/70 sm:grid-cols-2">
+                            <div v-for="param in endpoint.query" :key="param.name"
+                              class="rounded-xl border border-white/10 bg-black/30 p-3">
+                              <dt class="font-medium text-white">{{ param.name }}<span v-if="param.required"
+                                  class="text-cyan-300">*</span></dt>
+                              <dd class="text-xs uppercase tracking-wide text-white/40">{{ param.type }}</dd>
+                              <p class="mt-1 text-sm text-white/70">{{ param.description }}</p>
+                            </div>
+                          </dl>
+                        </div>
+
+                        <div v-if="endpoint.body?.length" class="space-y-2">
+                          <h5 class="text-sm font-semibold text-white">Request body</h5>
+                          <dl class="grid gap-2 text-sm text-white/70 sm:grid-cols-2">
+                            <div v-for="field in endpoint.body" :key="field.name"
+                              class="rounded-xl border border-white/10 bg-black/30 p-3">
+                              <dt class="font-medium text-white">{{ field.name }}<span v-if="field.required"
+                                  class="text-cyan-300">*</span></dt>
+                              <dd class="text-xs uppercase tracking-wide text-white/40">{{ field.type }}</dd>
+                              <p class="mt-1 text-sm text-white/70">{{ field.description }}</p>
+                            </div>
+                          </dl>
+                        </div>
+
+                        <div v-if="endpoint.sampleRequest" class="space-y-2">
+                          <h5 class="text-sm font-semibold text-white">Sample request</h5>
+                          <pre class="overflow-x-auto rounded-xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleRequest }}</code></pre>
+                        </div>
+
+                        <div v-if="endpoint.sampleResponse" class="space-y-2">
+                          <h5 class="text-sm font-semibold text-white">Sample response</h5>
+                          <pre class="overflow-x-auto rounded-xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleResponse }}</code></pre>
+                        </div>
+
+                        <p v-if="endpoint.notes" class="text-sm text-white/60">{{ endpoint.notes }}</p>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -215,7 +231,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 type AuthLevel = 'public' | 'protected'
 
 interface QueryField {
@@ -236,6 +252,7 @@ interface EndpointEntry {
   method: string
   path: string
   summary: string
+  category: string
   auth: AuthLevel
   rateLimit?: string
   query?: QueryField[]
@@ -253,8 +270,40 @@ interface EndpointSection {
   endpoints: EndpointEntry[]
 }
 
+interface EndpointGroup {
+  title: string
+  description?: string
+  endpoints: EndpointEntry[]
+}
+
+interface CategorizedSection {
+  title: string
+  description?: string
+  groups: EndpointGroup[]
+}
+
 interface FeaturedEndpoint extends EndpointEntry {
   sectionTitle: string
+  groupTitle?: string
+}
+
+const sectionCategoryOrder: Record<string, string[]> = {
+  'Public endpoints': ['Waitlist & marketing', 'Authentication & onboarding', 'Tools & diagnostics'],
+  'Protected endpoints': ['Session controls', 'Invitation management', 'ATC synthesis', 'Decision engine'],
+}
+
+const sectionCategoryDescriptions: Record<string, Record<string, string>> = {
+  'Public endpoints': {
+    'Waitlist & marketing': 'Capture interest, collect consent, and gauge roadmap sentiment.',
+    'Authentication & onboarding': 'Account creation, recovery, and invitation flows during the alpha programme.',
+    'Tools & diagnostics': 'Helper utilities for simulator integrations and latency checks.',
+  },
+  'Protected endpoints': {
+    'Session controls': 'Inspect or terminate the current authenticated session.',
+    'Invitation management': 'Review existing codes or mint new invitations once eligible.',
+    'ATC synthesis': 'Voice generation and transcription endpoints for ATC training scenarios.',
+    'Decision engine': 'LLM router access for orchestrating scenario logic.',
+  },
 }
 
 const endpointSections: EndpointSection[] = [
@@ -266,6 +315,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/service/waitlist',
         summary: 'Join the waitlist and optionally opt-in to product updates.',
+        category: 'Waitlist & marketing',
         auth: 'public',
         body: [
           { name: 'email', type: 'string', required: true, description: 'Contact email address. Used to deduplicate entries.' },
@@ -296,6 +346,7 @@ const endpointSections: EndpointSection[] = [
         method: 'GET',
         path: '/api/service/waitlist',
         summary: 'Returns anonymised waitlist metrics for marketing use.',
+        category: 'Waitlist & marketing',
         auth: 'public',
         sampleResponse: `{
   "count": 87,
@@ -312,6 +363,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/service/updates',
         summary: 'Subscribe to product updates with explicit marketing consent.',
+        category: 'Waitlist & marketing',
         auth: 'public',
         body: [
           { name: 'email', type: 'string', required: true, description: 'Subscriber email address.' },
@@ -337,6 +389,7 @@ const endpointSections: EndpointSection[] = [
         method: 'GET',
         path: '/api/service/roadmap',
         summary: 'Fetches the public roadmap including aggregated community votes.',
+        category: 'Waitlist & marketing',
         auth: 'public',
         sampleResponse: `{
   "items": [
@@ -360,6 +413,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/service/roadmap',
         summary: 'Submit 1–5 importance votes for roadmap entries.',
+        category: 'Waitlist & marketing',
         auth: 'public',
         rateLimit: 'Max 1 payload / 10 s per IP',
         body: [
@@ -383,6 +437,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/service/roadmap-suggestions',
         summary: 'Send roadmap ideas to the OpenSquawk team.',
+        category: 'Waitlist & marketing',
         auth: 'public',
         body: [
           { name: 'title', type: 'string', required: true, description: 'At least 4 characters.' },
@@ -409,6 +464,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/service/auth/login',
         summary: 'Authenticate with email and password. Returns an access token and sets a refresh cookie.',
+        category: 'Authentication & onboarding',
         auth: 'public',
         featured: true,
         keywords: ['auth', 'login', 'token', 'authentication'],
@@ -438,6 +494,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/service/auth/register',
         summary: 'Register a new account using an invitation code.',
+        category: 'Authentication & onboarding',
         auth: 'public',
         featured: true,
         keywords: ['auth', 'register', 'signup', 'invitation'],
@@ -475,6 +532,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/service/auth/refresh',
         summary: 'Rotate the refresh token and receive a new access token.',
+        category: 'Authentication & onboarding',
         auth: 'public',
         notes: 'Requires a valid refresh cookie from a prior login or registration response.',
         sampleRequest: `curl -X POST https://opensquawk.de/api/service/auth/refresh \
@@ -488,6 +546,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/service/auth/forgot-password',
         summary: 'Send a password reset link if the email exists.',
+        category: 'Authentication & onboarding',
         auth: 'public',
         body: [
           { name: 'email', type: 'string', required: true, description: 'Email address tied to the account.' },
@@ -504,6 +563,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/service/auth/reset-password',
         summary: 'Complete a password reset using the emailed token.',
+        category: 'Authentication & onboarding',
         auth: 'public',
         body: [
           { name: 'token', type: 'string', required: true, description: 'Token received via the reset email.' },
@@ -523,6 +583,7 @@ const endpointSections: EndpointSection[] = [
         method: 'GET',
         path: '/api/service/invitations/{code}',
         summary: 'Validate an invitation code before registration.',
+        category: 'Authentication & onboarding',
         auth: 'public',
         notes: 'Returns { valid: false, reason?: "used" | "expired" } when unusable.',
         sampleResponse: `{
@@ -536,6 +597,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/service/invitations/bootstrap',
         summary: 'Issue a bootstrap invitation code during the onboarding window.',
+        category: 'Authentication & onboarding',
         auth: 'public',
         body: [
           { name: 'label', type: 'string', description: 'Optional tag that is stored with the invitation.' },
@@ -555,6 +617,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/service/invitations/manual',
         summary: 'Create an invitation with a shared password (internal tooling).',
+        category: 'Authentication & onboarding',
         auth: 'public',
         body: [
           { name: 'password', type: 'string', required: true, description: 'Shared secret defined in runtime config.' },
@@ -577,6 +640,7 @@ const endpointSections: EndpointSection[] = [
         method: 'GET',
         path: '/api/service/tools/latency',
         summary: 'Run a lightweight latency check against the configured LLM model.',
+        category: 'Tools & diagnostics',
         auth: 'public',
         sampleResponse: `{
   "result": 1,
@@ -589,6 +653,7 @@ const endpointSections: EndpointSection[] = [
         method: 'GET',
         path: '/api/service/tools/taxiroute',
         summary: 'Compute a taxi route between two coordinates using OpenStreetMap data.',
+        category: 'Tools & diagnostics',
         auth: 'public',
         query: [
           { name: 'origin_lat', type: 'number', required: true, description: 'Origin latitude in decimal degrees.' },
@@ -619,6 +684,7 @@ const endpointSections: EndpointSection[] = [
         method: 'GET',
         path: '/api/auth/me',
         summary: 'Retrieve the authenticated user profile.',
+        category: 'Session controls',
         auth: 'protected',
         featured: true,
         keywords: ['profile', 'session', 'identity'],
@@ -636,6 +702,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/auth/logout',
         summary: 'Invalidate the active session and clear refresh cookies.',
+        category: 'Session controls',
         auth: 'protected',
         sampleResponse: `{
   "success": true
@@ -645,6 +712,7 @@ const endpointSections: EndpointSection[] = [
         method: 'GET',
         path: '/api/auth/invitations',
         summary: 'List invitation codes previously generated by the user.',
+        category: 'Invitation management',
         auth: 'protected',
         sampleResponse: `[
   {
@@ -660,6 +728,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/auth/invitations',
         summary: 'Mint a new invitation code (14 day account age, max two active codes).',
+        category: 'Invitation management',
         auth: 'protected',
         sampleResponse: `{
   "success": true,
@@ -672,6 +741,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/atc/say',
         summary: 'Generate ATC audio using the configured TTS pipeline.',
+        category: 'ATC synthesis',
         auth: 'protected',
         featured: true,
         keywords: ['tts', 'audio', 'speech', 'radio'],
@@ -711,6 +781,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/atc/ptt',
         summary: 'Upload pilot audio, receive a Whisper transcription, and optionally trigger automatic decision logic.',
+        category: 'ATC synthesis',
         auth: 'protected',
         body: [
           { name: 'audio', type: 'string (base64)', required: true, description: 'Encoded audio clip (<= 2 MB).' },
@@ -734,6 +805,7 @@ const endpointSections: EndpointSection[] = [
         method: 'POST',
         path: '/api/llm/decide',
         summary: 'Run the LLM router against the provided decision graph state.',
+        category: 'Decision engine',
         auth: 'protected',
         body: [
           { name: 'state_id', type: 'string', required: true, description: 'Identifier of the current node in the flow.' },
@@ -764,39 +836,74 @@ const endpointSections: EndpointSection[] = [
 ]
 
 const searchTerm = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
 const openEndpoints = ref<Record<string, boolean>>({})
+
+function buildGroups(section: EndpointSection, endpoints: EndpointEntry[]): EndpointGroup[] {
+  const groups = new Map<string, EndpointEntry[]>()
+
+  endpoints.forEach((endpoint) => {
+    if (!groups.has(endpoint.category)) {
+      groups.set(endpoint.category, [])
+    }
+    groups.get(endpoint.category)!.push(endpoint)
+  })
+
+  const preferredOrder = sectionCategoryOrder[section.title] ?? []
+  const orderedKeys = [
+    ...preferredOrder.filter((category) => groups.has(category)),
+    ...Array.from(groups.keys()).filter((category) => !preferredOrder.includes(category)),
+  ]
+
+  return orderedKeys
+    .map((category) => ({
+      title: category,
+      description: sectionCategoryDescriptions[section.title]?.[category],
+      endpoints: groups.get(category) ?? [],
+    }))
+    .filter((group) => group.endpoints.length > 0)
+}
 
 const hasActiveSearch = computed(() => searchTerm.value.trim().length > 0)
 
-const filteredSections = computed<EndpointSection[]>(() => {
+const filteredSections = computed<CategorizedSection[]>(() => {
   const term = searchTerm.value.trim().toLowerCase()
-  if (!term) {
-    return endpointSections
-  }
+  return endpointSections.reduce<CategorizedSection[]>((acc, section) => {
+    const scopedEndpoints = term
+      ? section.endpoints.filter((endpoint) => {
+          const haystack = [
+            section.title,
+            endpoint.method,
+            endpoint.path,
+            endpoint.summary,
+            endpoint.category,
+            endpoint.notes ?? '',
+            ...(endpoint.keywords ?? []),
+            ...(endpoint.query?.flatMap((param) => [param.name, param.description]) ?? []),
+            ...(endpoint.body?.flatMap((field) => [field.name, field.description]) ?? []),
+          ]
+            .join(' ')
+            .toLowerCase()
 
-  return endpointSections.reduce<EndpointSection[]>((acc, section) => {
-    const matching = section.endpoints.filter((endpoint) => {
-      const haystack = [
-        endpoint.method,
-        endpoint.path,
-        endpoint.summary,
-        endpoint.notes ?? '',
-        ...(endpoint.keywords ?? []),
-        ...(endpoint.query?.flatMap((param) => [param.name, param.description]) ?? []),
-        ...(endpoint.body?.flatMap((field) => [field.name, field.description]) ?? []),
-      ]
-        .join(' ')
-        .toLowerCase()
+          return haystack.includes(term)
+        })
+      : section.endpoints
 
-      return haystack.includes(term)
-    })
-
-    if (matching.length) {
-      acc.push({
-        ...section,
-        endpoints: matching,
-      })
+    if (!scopedEndpoints.length) {
+      return acc
     }
+
+    const groups = buildGroups(section, scopedEndpoints)
+
+    if (!groups.length) {
+      return acc
+    }
+
+    acc.push({
+      title: section.title,
+      description: section.description,
+      groups,
+    })
 
     return acc
   }, [])
@@ -809,15 +916,34 @@ const featuredEndpoints = computed<FeaturedEndpoint[]>(() =>
       .map((endpoint) => ({
         ...endpoint,
         sectionTitle: section.title,
+        groupTitle: endpoint.category,
       })),
   ),
 )
 
 const resultCount = computed(() =>
-  filteredSections.value.reduce((count, section) => count + section.endpoints.length, 0),
+  filteredSections.value.reduce(
+    (count, section) =>
+      count + section.groups.reduce((groupTotal, group) => groupTotal + group.endpoints.length, 0),
+    0,
+  ),
 )
 
 const getEndpointKey = (endpoint: EndpointEntry) => `${endpoint.method.toUpperCase()}-${endpoint.path}`
+
+const clearSearch = () => {
+  searchTerm.value = ''
+  openEndpoints.value = {}
+  nextTick(() => {
+    searchInputRef.value?.focus()
+  })
+}
+
+watch(searchTerm, (value) => {
+  if (!value.trim()) {
+    openEndpoints.value = {}
+  }
+})
 
 const isEndpointExpanded = (key: string) => {
   if (hasActiveSearch.value) {
@@ -836,6 +962,9 @@ const focusEndpoint = (endpoint: EndpointEntry) => {
   const key = getEndpointKey(endpoint)
   openEndpoints.value[key] = true
   searchTerm.value = endpoint.path
+  nextTick(() => {
+    searchInputRef.value?.focus()
+  })
 }
 
 function methodColor(method: string) {
