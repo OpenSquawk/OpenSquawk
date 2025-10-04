@@ -1,26 +1,30 @@
 <template>
-  <div class="min-h-screen bg-[#0b1020] text-white py-12 px-6">
-    <div class="mx-auto max-w-5xl space-y-12">
-      <header class="space-y-4">
-        <NuxtLink to="/" class="inline-flex items-center gap-2 text-sm text-white/60 hover:text-cyan-300">
+  <div class="min-h-screen bg-[#0b1020] text-white">
+    <div class="mx-auto max-w-7xl px-6 py-12 lg:px-10">
+      <header class="space-y-6">
+        <NuxtLink to="/" class="inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-cyan-300">
           <v-icon icon="mdi-arrow-left" size="18" /> Back to landing page
         </NuxtLink>
-        <div class="space-y-2">
+        <div class="max-w-3xl space-y-3">
           <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Developer</p>
-          <h1 class="text-3xl font-semibold">OpenSquawk API reference</h1>
-          <p class="text-white/70">All endpoints speak JSON over HTTPS. Unless otherwise stated, successful responses follow the
-            shape <code class="bg-white/10 px-1">{ "success": true }</code> and failures raise an error object with
-            <code class="bg-white/10 px-1">statusCode</code> and <code class="bg-white/10 px-1">statusMessage</code>.</p>
+          <h1 class="text-4xl font-semibold">OpenSquawk API reference</h1>
+          <p class="text-base text-white/70">
+            All endpoints speak JSON over HTTPS. Unless otherwise stated, successful responses follow the shape
+            <code class="bg-white/10 px-1">{ \"success\": true }</code> and failures raise an error object with
+            <code class="bg-white/10 px-1">statusCode</code> and <code class="bg-white/10 px-1">statusMessage</code>.
+          </p>
         </div>
-        <div class="grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70 md:grid-cols-2">
-          <div>
-            <h2 class="mb-2 text-lg font-semibold text-white">Authentication</h2>
-            <p>Login returns a short-lived access token and sets an HTTP-only refresh cookie. Send the access token on
-              protected routes via <code class="bg-white/10 px-1">Authorization: Bearer &lt;token&gt;</code>. Refresh the token by
-              calling <code class="bg-white/10 px-1">POST /api/service/auth/refresh</code> with the refresh cookie present.</p>
+        <div class="grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/70 lg:grid-cols-2">
+          <div class="space-y-2">
+            <h2 class="text-lg font-semibold text-white">Authentication</h2>
+            <p>
+              Login returns a short-lived access token and sets an HTTP-only refresh cookie. Send the access token on protected
+              routes via <code class="bg-white/10 px-1">Authorization: Bearer &lt;token&gt;</code>. Refresh the token by calling
+              <code class="bg-white/10 px-1">POST /api/service/auth/refresh</code> with the refresh cookie present.
+            </p>
           </div>
-          <div>
-            <h2 class="mb-2 text-lg font-semibold text-white">Base URLs</h2>
+          <div class="space-y-2">
+            <h2 class="text-lg font-semibold text-white">Base URLs</h2>
             <ul class="list-disc space-y-1 pl-5">
               <li>Production: <code class="bg-white/10 px-1">https://opensquawk.de</code></li>
               <li>Local development: <code class="bg-white/10 px-1">http://localhost:3000</code></li>
@@ -29,29 +33,34 @@
         </div>
       </header>
 
-      <section v-if="featuredEndpoints.length" class="space-y-4">
-        <div class="flex items-center justify-between gap-4">
-          <h2 class="text-2xl font-semibold">Essential flows</h2>
+      <section v-if="featuredEndpoints.length" class="mt-12 space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-semibold">Essential flows</h2>
+            <p class="text-sm text-white/60">Start with the endpoints most teams integrate first.</p>
+          </div>
           <span class="text-xs uppercase tracking-[0.3em] text-white/40">Quick start</span>
         </div>
-        <div class="grid gap-4 md:grid-cols-2">
+        <div class="grid gap-4 lg:grid-cols-2">
           <article v-for="endpoint in featuredEndpoints" :key="getEndpointKey(endpoint)"
-            class="relative rounded-2xl border border-cyan-500/40 bg-cyan-500/10 p-5 transition hover:border-cyan-300/60 hover:bg-cyan-500/20">
+            class="group relative overflow-hidden rounded-3xl border border-cyan-500/40 bg-gradient-to-br from-cyan-500/10 via-transparent to-cyan-500/10 p-6 transition hover:border-cyan-300/60 hover:from-cyan-500/20 hover:to-cyan-500/5">
             <div class="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-cyan-200/80">
               <span class="inline-flex items-center gap-2 font-semibold">
                 <v-icon icon="mdi-star" size="16" /> Featured
               </span>
               <span class="text-white/50">{{ [endpoint.sectionTitle, endpoint.groupTitle].filter(Boolean).join(' • ') }}</span>
             </div>
-            <div class="mt-3 flex flex-wrap items-center gap-3">
-              <span :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
+            <div class="mt-4 flex flex-wrap items-center gap-3">
+              <span
+                :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
                 {{ endpoint.method }}
               </span>
               <code class="rounded bg-black/50 px-2 py-1 text-sm font-mono text-cyan-100">{{ endpoint.path }}</code>
             </div>
-            <p class="mt-3 text-sm text-white/80">{{ endpoint.summary }}</p>
-            <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/60">
-              <span v-if="endpoint.auth === 'protected'" class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+            <p class="mt-4 text-sm text-white/80">{{ endpoint.summary }}</p>
+            <div class="mt-5 flex flex-wrap items-center gap-2 text-xs text-white/60">
+              <span v-if="endpoint.auth === 'protected'"
+                class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
                 <v-icon icon="mdi-lock" size="14" /> Access token required
               </span>
               <span v-else class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
@@ -62,7 +71,7 @@
               </span>
             </div>
             <button type="button"
-              class="mt-5 inline-flex items-center gap-2 rounded-full border border-cyan-400/50 bg-cyan-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100 transition hover:border-cyan-200 hover:text-white"
+              class="mt-6 inline-flex items-center gap-2 rounded-full border border-cyan-400/40 bg-cyan-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100 transition group-hover:border-cyan-200 group-hover:text-white"
               @click="focusEndpoint(endpoint)">
               Jump to details
               <v-icon icon="mdi-arrow-down-right" size="16" />
@@ -71,161 +80,209 @@
         </div>
       </section>
 
-      <section class="space-y-8">
-        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div class="space-y-2">
-            <div class="flex items-center justify-between gap-4">
-              <h2 class="text-2xl font-semibold">Endpoint catalogue</h2>
-              <span class="text-xs uppercase tracking-[0.3em] text-white/40">Live alpha</span>
-            </div>
-            <p class="text-sm text-white/60">
-              Endpoints are grouped by audience. Public endpoints do not require a bearer token. Protected endpoints require a
-              valid access token. Rate limits and additional business rules are documented per route.
+      <div class="mt-16 grid gap-10 lg:grid-cols-[22rem,1fr]">
+        <aside class="space-y-8 lg:sticky lg:top-10 lg:self-start">
+          <section class="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6">
+            <header class="space-y-1">
+              <h2 class="text-lg font-semibold text-white">Find endpoints</h2>
+              <p class="text-sm text-white/60">Search across paths, payload fields, and keywords.</p>
+            </header>
+            <label class="relative block">
+              <span class="sr-only">Search endpoints</span>
+              <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-white/40">
+                <v-icon icon="mdi-magnify" size="20" />
+              </span>
+              <input ref="searchInputRef" v-model="searchTerm" type="search"
+                placeholder="Search by path, verb, or keyword"
+                class="w-full rounded-full border border-white/20 bg-black/40 py-3 pl-12 pr-12 text-sm text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                @keydown.esc.prevent="clearSearch" />
+              <button v-if="hasActiveSearch" type="button"
+                class="absolute inset-y-1.5 right-2 inline-flex items-center justify-center rounded-full border border-transparent bg-white/10 px-3 text-xs uppercase tracking-[0.2em] text-white/60 transition hover:border-white/20 hover:bg-white/20"
+                @click="clearSearch">
+                Clear
+              </button>
+            </label>
+            <p class="text-xs uppercase tracking-[0.3em] text-white/40">
+              <template v-if="hasActiveSearch">
+                {{ resultCount }} {{ resultCount === 1 ? 'match' : 'matches' }}
+              </template>
+              <template v-else>
+                {{ totalEndpointCount }} documented routes
+              </template>
             </p>
-          </div>
-          <label class="relative block w-full md:w-80">
-            <span class="sr-only">Search endpoints</span>
-            <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-white/40">
-              <v-icon icon="mdi-magnify" size="20" />
-            </span>
-            <input ref="searchInputRef" v-model="searchTerm" type="search"
-              placeholder="Search by path, verb, or keyword"
-              class="w-full rounded-full border border-white/20 bg-black/40 py-3 pl-12 pr-12 text-sm text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
-              @keydown.esc.prevent="clearSearch" />
-            <button v-if="hasActiveSearch" type="button"
-              class="absolute inset-y-0 right-3 inline-flex items-center justify-center rounded-full bg-white/10 px-3 text-xs uppercase tracking-[0.2em] text-white/60 transition hover:bg-white/20"
-              @click="clearSearch">
-              Clear
-            </button>
-          </label>
-        </div>
+          </section>
 
-        <p v-if="hasActiveSearch && filteredSections.length" class="text-sm text-white/50">
-          Showing {{ resultCount }} matched {{ resultCount === 1 ? 'endpoint' : 'endpoints' }}.
-        </p>
-
-        <div v-if="!filteredSections.length"
-          class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-white/60">
-          <p>No endpoints match your search. Try different keywords or reset the filter.</p>
-        </div>
-
-        <div v-else class="space-y-10">
-          <div v-for="section in filteredSections" :key="section.title" class="space-y-8">
-            <div>
-              <h3 class="text-xl font-semibold text-white">{{ section.title }}</h3>
-              <p v-if="section.description" class="text-sm text-white/60">{{ section.description }}</p>
-            </div>
-
-            <div class="space-y-8">
-              <div v-for="group in section.groups" :key="`${section.title}-${group.title}`" class="space-y-4">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h4 class="text-lg font-semibold text-white">{{ group.title }}</h4>
-                    <p v-if="group.description" class="text-sm text-white/60">{{ group.description }}</p>
-                  </div>
-                  <span class="inline-flex items-center justify-center rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-white/40">
-                    {{ group.endpoints.length }} {{ group.endpoints.length === 1 ? 'route' : 'routes' }}
-                  </span>
-                </div>
-
-                <div class="space-y-5">
-                  <article v-for="endpoint in group.endpoints" :key="getEndpointKey(endpoint)"
-                    class="rounded-2xl border border-white/10 bg-white/5 p-6">
-                    <div class="flex flex-col gap-4">
-                      <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div class="space-y-1">
-                          <div class="flex flex-wrap items-center gap-3">
-                            <span :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
-                              {{ endpoint.method }}
-                            </span>
-                            <code class="rounded bg-black/50 px-2 py-1 text-sm font-mono text-cyan-200">{{ endpoint.path }}</code>
-                          </div>
-                          <p class="text-sm text-white/70">{{ endpoint.summary }}</p>
-                        </div>
-                        <div class="flex flex-col items-stretch gap-3 sm:items-end">
-                          <div class="flex flex-wrap items-center gap-2 text-xs text-white/60">
-                            <span v-if="endpoint.auth === 'protected'"
-                              class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
-                              <v-icon icon="mdi-lock" size="14" /> Access token required
-                            </span>
-                            <span v-else class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
-                              <v-icon icon="mdi-earth" size="14" /> Public
-                            </span>
-                            <span v-if="endpoint.rateLimit"
-                              class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
-                              <v-icon icon="mdi-timer-outline" size="14" /> {{ endpoint.rateLimit }}
-                            </span>
-                          </div>
-                          <button type="button"
-                            class="inline-flex items-center justify-end gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/60 transition hover:text-white"
-                            :aria-expanded="isEndpointExpanded(getEndpointKey(endpoint))"
-                            @click="toggleEndpoint(getEndpointKey(endpoint))">
-                            <span>{{ isEndpointExpanded(getEndpointKey(endpoint)) ? 'Hide details' : 'Show details' }}</span>
-                            <v-icon :icon="isEndpointExpanded(getEndpointKey(endpoint)) ? 'mdi-chevron-up' : 'mdi-chevron-down'"
-                              size="18" />
-                          </button>
-                        </div>
-                      </header>
-
-                      <div v-show="isEndpointExpanded(getEndpointKey(endpoint))"
-                        class="space-y-4 border-t border-white/10 pt-4">
-                        <div v-if="endpoint.query?.length" class="space-y-2">
-                          <h5 class="text-sm font-semibold text-white">Query parameters</h5>
-                          <dl class="grid gap-2 text-sm text-white/70 sm:grid-cols-2">
-                            <div v-for="param in endpoint.query" :key="param.name"
-                              class="rounded-xl border border-white/10 bg-black/30 p-3">
-                              <dt class="font-medium text-white">{{ param.name }}<span v-if="param.required"
-                                  class="text-cyan-300">*</span></dt>
-                              <dd class="text-xs uppercase tracking-wide text-white/40">{{ param.type }}</dd>
-                              <p class="mt-1 text-sm text-white/70">{{ param.description }}</p>
-                            </div>
-                          </dl>
-                        </div>
-
-                        <div v-if="endpoint.body?.length" class="space-y-2">
-                          <h5 class="text-sm font-semibold text-white">Request body</h5>
-                          <dl class="grid gap-2 text-sm text-white/70 sm:grid-cols-2">
-                            <div v-for="field in endpoint.body" :key="field.name"
-                              class="rounded-xl border border-white/10 bg-black/30 p-3">
-                              <dt class="font-medium text-white">{{ field.name }}<span v-if="field.required"
-                                  class="text-cyan-300">*</span></dt>
-                              <dd class="text-xs uppercase tracking-wide text-white/40">{{ field.type }}</dd>
-                              <p class="mt-1 text-sm text-white/70">{{ field.description }}</p>
-                            </div>
-                          </dl>
-                        </div>
-
-                        <div v-if="endpoint.sampleRequest" class="space-y-2">
-                          <h5 class="text-sm font-semibold text-white">Sample request</h5>
-                          <pre class="overflow-x-auto rounded-xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleRequest }}</code></pre>
-                        </div>
-
-                        <div v-if="endpoint.sampleResponse" class="space-y-2">
-                          <h5 class="text-sm font-semibold text-white">Sample response</h5>
-                          <pre class="overflow-x-auto rounded-xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleResponse }}</code></pre>
-                        </div>
-
-                        <p v-if="endpoint.notes" class="text-sm text-white/60">{{ endpoint.notes }}</p>
-                      </div>
-                    </div>
-                  </article>
-                </div>
+          <nav class="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
+            <header class="space-y-1">
+              <h2 class="text-lg font-semibold text-white">Catalogue map</h2>
+              <p class="text-sm text-white/60">Jump directly to the area you need.</p>
+            </header>
+            <div class="space-y-6">
+              <div v-for="navSection in navigationSections" :key="navSection.title" class="space-y-3">
+                <p class="text-xs uppercase tracking-[0.3em] text-white/40">{{ navSection.title }}</p>
+                <ul class="space-y-2">
+                  <li v-for="group in navSection.groups" :key="group.anchor">
+                    <NuxtLink :to="`#${group.anchor}`"
+                      class="group block rounded-2xl border border-white/0 bg-white/0 px-4 py-3 transition hover:border-cyan-400/60 hover:bg-cyan-500/10">
+                      <span class="flex items-center justify-between gap-4 text-sm">
+                        <span class="font-medium text-white">{{ group.title }}</span>
+                        <span class="text-xs uppercase tracking-[0.2em] text-white/40">{{ group.count }} {{ group.count === 1 ? 'route' : 'routes' }}</span>
+                      </span>
+                      <span v-if="group.description" class="mt-1 block text-xs text-white/50">{{ group.description }}</span>
+                    </NuxtLink>
+                  </li>
+                </ul>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </nav>
+        </aside>
 
-      <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
-        <h2 class="text-xl font-semibold">Errors</h2>
-        <p class="text-sm text-white/70">Errors follow the Nitro <code class="bg-white/10 px-1">createError</code> payload. The
-          <code class="bg-white/10 px-1">statusMessage</code> describes the failure reason. Additional diagnostic data may be
-          returned in <code class="bg-white/10 px-1">data</code> for some endpoints.</p>
-        <pre class="overflow-x-auto rounded-xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{
+        <main class="space-y-12">
+          <section class="space-y-3">
+            <header class="space-y-2">
+              <h2 class="text-2xl font-semibold">Endpoint catalogue</h2>
+              <p class="text-sm text-white/60">
+                Endpoints are grouped by audience. Public endpoints do not require a bearer token. Protected endpoints require a
+                valid access token. Rate limits and additional business rules are documented per route.
+              </p>
+            </header>
+            <p v-if="hasActiveSearch && filteredSections.length" class="text-sm text-white/50">
+              Showing {{ resultCount }} matched {{ resultCount === 1 ? 'endpoint' : 'endpoints' }}.
+            </p>
+          </section>
+
+          <div v-if="!filteredSections.length"
+            class="rounded-3xl border border-white/10 bg-white/5 p-10 text-center text-sm text-white/60">
+            <p>No endpoints match your search. Try different keywords or reset the filter.</p>
+          </div>
+
+          <div v-else class="space-y-12">
+            <section v-for="section in filteredSections" :id="sectionAnchor(section.title)" :key="section.title" class="space-y-8">
+              <div class="space-y-2">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <h3 class="text-xl font-semibold text-white">{{ section.title }}</h3>
+                  <span class="text-xs uppercase tracking-[0.3em] text-white/40">{{ section.groups.reduce((total, group) => total + group.endpoints.length, 0) }} routes</span>
+                </div>
+                <p v-if="section.description" class="text-sm text-white/60">{{ section.description }}</p>
+              </div>
+
+              <div class="space-y-10">
+                <div v-for="group in section.groups" :id="groupAnchor(section.title, group.title)" :key="`${section.title}-${group.title}`"
+                  class="space-y-4">
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="space-y-1">
+                      <h4 class="text-lg font-semibold text-white">{{ group.title }}</h4>
+                      <p v-if="group.description" class="text-sm text-white/60">{{ group.description }}</p>
+                    </div>
+                    <span class="inline-flex items-center justify-center rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-white/40">
+                      {{ group.endpoints.length }} {{ group.endpoints.length === 1 ? 'route' : 'routes' }}
+                    </span>
+                  </div>
+
+                  <div class="space-y-5">
+                    <article v-for="endpoint in group.endpoints" :ref="setEndpointRef(getEndpointKey(endpoint))"
+                      :key="getEndpointKey(endpoint)"
+                      class="group overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+                      <button type="button"
+                        class="flex w-full flex-col gap-4 p-6 text-left transition hover:bg-white/10 focus:outline-none focus-visible:bg-white/10"
+                        :aria-expanded="isEndpointExpanded(getEndpointKey(endpoint))"
+                        @click="toggleEndpoint(getEndpointKey(endpoint))">
+                        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                          <div class="space-y-2">
+                            <div class="flex flex-wrap items-center gap-3">
+                              <span
+                                :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
+                                {{ endpoint.method }}
+                              </span>
+                              <code class="rounded bg-black/50 px-2 py-1 text-sm font-mono text-cyan-200">{{ endpoint.path }}</code>
+                            </div>
+                            <p class="text-sm text-white/70">{{ endpoint.summary }}</p>
+                          </div>
+                          <div class="flex flex-col items-start gap-3 text-xs text-white/60 lg:items-end">
+                            <div class="flex flex-wrap items-center gap-2">
+                              <span v-if="endpoint.auth === 'protected'"
+                                class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                                <v-icon icon="mdi-lock" size="14" /> Access token required
+                              </span>
+                              <span v-else class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                                <v-icon icon="mdi-earth" size="14" /> Public
+                              </span>
+                              <span v-if="endpoint.rateLimit"
+                                class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                                <v-icon icon="mdi-timer-outline" size="14" /> {{ endpoint.rateLimit }}
+                              </span>
+                            </div>
+                            <span class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
+                              <v-icon :icon="isEndpointExpanded(getEndpointKey(endpoint)) ? 'mdi-minus' : 'mdi-plus'" size="18" />
+                              {{ isEndpointExpanded(getEndpointKey(endpoint)) ? 'Collapse' : 'Expand' }} details
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+
+                      <transition name="fade-slide">
+                        <div v-show="isEndpointExpanded(getEndpointKey(endpoint))"
+                          class="space-y-4 border-t border-white/10 bg-black/40 p-6">
+                          <div v-if="endpoint.query?.length" class="space-y-3">
+                            <h5 class="text-sm font-semibold text-white">Query parameters</h5>
+                            <dl class="grid gap-2 text-sm text-white/70 md:grid-cols-2">
+                              <div v-for="param in endpoint.query" :key="param.name"
+                                class="rounded-2xl border border-white/10 bg-black/40 p-3">
+                                <dt class="font-medium text-white">{{ param.name }}<span v-if="param.required"
+                                    class="text-cyan-300">*</span></dt>
+                                <dd class="text-xs uppercase tracking-wide text-white/40">{{ param.type }}</dd>
+                                <p class="mt-1 text-sm text-white/70">{{ param.description }}</p>
+                              </div>
+                            </dl>
+                          </div>
+
+                          <div v-if="endpoint.body?.length" class="space-y-3">
+                            <h5 class="text-sm font-semibold text-white">Request body</h5>
+                            <dl class="grid gap-2 text-sm text-white/70 md:grid-cols-2">
+                              <div v-for="field in endpoint.body" :key="field.name"
+                                class="rounded-2xl border border-white/10 bg-black/40 p-3">
+                                <dt class="font-medium text-white">{{ field.name }}<span v-if="field.required"
+                                    class="text-cyan-300">*</span></dt>
+                                <dd class="text-xs uppercase tracking-wide text-white/40">{{ field.type }}</dd>
+                                <p class="mt-1 text-sm text-white/70">{{ field.description }}</p>
+                              </div>
+                            </dl>
+                          </div>
+
+                          <div v-if="endpoint.sampleRequest" class="space-y-3">
+                            <h5 class="text-sm font-semibold text-white">Sample request</h5>
+                            <pre class="overflow-x-auto rounded-2xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleRequest }}</code></pre>
+                          </div>
+
+                          <div v-if="endpoint.sampleResponse" class="space-y-3">
+                            <h5 class="text-sm font-semibold text-white">Sample response</h5>
+                            <pre class="overflow-x-auto rounded-2xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleResponse }}</code></pre>
+                          </div>
+
+                          <p v-if="endpoint.notes" class="text-sm text-white/60">{{ endpoint.notes }}</p>
+                        </div>
+                      </transition>
+                    </article>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <section class="rounded-3xl border border-white/10 bg-white/5 p-6 space-y-4">
+            <h2 class="text-xl font-semibold">Errors</h2>
+            <p class="text-sm text-white/70">
+              Errors follow the Nitro <code class="bg-white/10 px-1">createError</code> payload. The
+              <code class="bg-white/10 px-1">statusMessage</code> describes the failure reason. Additional diagnostic data may be
+              returned in <code class="bg-white/10 px-1">data</code> for some endpoints.
+            </p>
+            <pre class="overflow-x-auto rounded-2xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{
   "statusCode": 401,
   "statusMessage": "Authentication required"
 }</code></pre>
-      </section>
+          </section>
+        </main>
+      </div>
     </div>
   </div>
 </template>
@@ -838,6 +895,8 @@ const endpointSections: EndpointSection[] = [
 const searchTerm = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const openEndpoints = ref<Record<string, boolean>>({})
+const endpointRefs = ref<Record<string, HTMLElement | null>>({})
+const isJumpingToEndpoint = ref(false)
 
 function buildGroups(section: EndpointSection, endpoints: EndpointEntry[]): EndpointGroup[] {
   const groups = new Map<string, EndpointEntry[]>()
@@ -865,6 +924,10 @@ function buildGroups(section: EndpointSection, endpoints: EndpointEntry[]): Endp
 }
 
 const hasActiveSearch = computed(() => searchTerm.value.trim().length > 0)
+
+const totalEndpointCount = computed(() =>
+  endpointSections.reduce((count, section) => count + section.endpoints.length, 0),
+)
 
 const filteredSections = computed<CategorizedSection[]>(() => {
   const term = searchTerm.value.trim().toLowerCase()
@@ -929,9 +992,45 @@ const resultCount = computed(() =>
   ),
 )
 
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+const sectionAnchor = (title: string) => slugify(title)
+
+const groupAnchor = (sectionTitle: string, groupTitle: string) =>
+  `${sectionAnchor(sectionTitle)}-${slugify(groupTitle)}`
+
+const navigationSections = computed(() =>
+  endpointSections.map((section) => {
+    const groups = buildGroups(section, section.endpoints)
+    return {
+      title: section.title,
+      description: section.description,
+      groups: groups.map((group) => ({
+        title: group.title,
+        description: group.description,
+        count: group.endpoints.length,
+        anchor: groupAnchor(section.title, group.title),
+      })),
+    }
+  }),
+)
+
 const getEndpointKey = (endpoint: EndpointEntry) => `${endpoint.method.toUpperCase()}-${endpoint.path}`
 
+const setEndpointRef = (key: string) => (el: HTMLElement | null) => {
+  if (el) {
+    endpointRefs.value[key] = el
+  } else {
+    delete endpointRefs.value[key]
+  }
+}
+
 const clearSearch = () => {
+  isJumpingToEndpoint.value = false
   searchTerm.value = ''
   openEndpoints.value = {}
   nextTick(() => {
@@ -940,7 +1039,7 @@ const clearSearch = () => {
 }
 
 watch(searchTerm, (value) => {
-  if (!value.trim()) {
+  if (!value.trim() && !isJumpingToEndpoint.value) {
     openEndpoints.value = {}
   }
 })
@@ -961,9 +1060,16 @@ const toggleEndpoint = (key: string) => {
 const focusEndpoint = (endpoint: EndpointEntry) => {
   const key = getEndpointKey(endpoint)
   openEndpoints.value[key] = true
-  searchTerm.value = endpoint.path
+  isJumpingToEndpoint.value = true
+  searchTerm.value = ''
   nextTick(() => {
-    searchInputRef.value?.focus()
+    const target = endpointRefs.value[key]
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const trigger = target?.querySelector('button')
+    if (trigger instanceof HTMLButtonElement) {
+      trigger.focus({ preventScroll: true })
+    }
+    isJumpingToEndpoint.value = false
   })
 }
 
@@ -982,3 +1088,16 @@ function methodColor(method: string) {
   }
 }
 </script>
+
+<style scoped>
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.2s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+</style>
