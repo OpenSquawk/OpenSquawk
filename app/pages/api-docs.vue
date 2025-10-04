@@ -91,25 +91,14 @@
         </aside>
 
         <main class="space-y-12">
-          <section class="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
-            <div class="h-56 w-full bg-cover bg-center"
-              style="background-image: url('/img/learn/missions/full-flight/briefing-weather.png');"></div>
-            <div class="space-y-3 p-6 sm:p-8">
-              <div class="flex flex-wrap gap-2">
-                <NuxtLink v-for="target in quickJumpTargets" :key="target.anchor" :to="`#${target.anchor}`"
-                  class="inline-flex items-center rounded-full border px-4 py-2 text-sm transition"
-                  :class="activeAnchor === target.anchor
-                    ? 'border-cyan-300/70 bg-cyan-500/20 text-white'
-                    : 'border-white/15 bg-black/40 text-white/70 hover:border-cyan-400/60 hover:text-white'"
-                  @click="handleAnchorClick(target.anchor)">
-                  {{ target.label }}
-                </NuxtLink>
-              </div>
-            </div>
-          </section>
-
           <section :id="generalAnchor" :ref="setAnchorRef(generalAnchor)"
             class="space-y-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-8">
+            <div class="overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+              <div class="relative aspect-[3/1]">
+                <img src="/img/learn/missions/full-flight/briefing-weather.png" alt="Weather briefing overview"
+                  class="absolute inset-0 h-full w-full object-cover" />
+              </div>
+            </div>
             <header class="space-y-3">
               <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Developer</p>
               <h2 class="text-3xl font-semibold text-white">About the API</h2>
@@ -1094,18 +1083,6 @@ const navigationSections = computed<NavigationSectionItem[]>(() =>
 )
 
 const fullEndpointUrl = (path: string) => `${BASE_URL}${path}`
-
-const quickJumpTargets = computed(() => {
-  const sectionTargets = filteredSections.value.map((section) => ({
-    label: section.title,
-    anchor: sectionAnchor(section.title),
-  }))
-
-  return [
-    { label: 'About the API', anchor: generalAnchor },
-    ...sectionTargets,
-  ]
-})
 
 const getEndpointKey = (endpoint: EndpointEntry) => `${endpoint.method.toUpperCase()}-${endpoint.path}`
 
