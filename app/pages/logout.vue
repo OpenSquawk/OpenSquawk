@@ -3,13 +3,13 @@
     <div class="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-6 px-6 text-center">
       <div class="space-y-3">
         <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">OpenSquawk</p>
-        <h1 class="text-3xl font-semibold">Du wirst abgemeldet…</h1>
+        <h1 class="text-3xl font-semibold">Signing you out…</h1>
         <p class="text-sm text-white/70">
-          Wir melden dich ab und leiten dich gleich weiter.
+          We're logging you out and will redirect you in a moment.
         </p>
       </div>
       <v-progress-circular indeterminate size="40" width="3" color="cyan" />
-      <NuxtLink to="/login" class="text-sm text-cyan-300 underline">Zum Login</NuxtLink>
+      <NuxtLink to="/login" class="text-sm text-cyan-300 underline">Back to login</NuxtLink>
     </div>
   </div>
 </template>

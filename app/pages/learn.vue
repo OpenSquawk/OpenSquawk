@@ -950,10 +950,10 @@
               <v-icon size="20">mdi-dice-multiple</v-icon>
             </div>
             <div class="lesson-tip-body">
-              <div class="lesson-tip-title">Schon gewusst?</div>
+              <div class="lesson-tip-title">Did you know?</div>
               <p class="muted small">
-                Mit dem Würfel-Icon „New scenario“ kannst du denselben Call sofort mit neuen Daten üben. Einfach anklicken und du
-                bekommst andere Werte – wenn du das pro Lesson 5–10x wiederholst, sitzt der Funkspruch wirklich.
+                Use the dice icon “New scenario” to rehearse the same call with fresh data instantly. Just click it and you'll
+                get different values — repeat that 5–10 times per lesson and the radio call will really stick.
               </p>
             </div>
           </div>
