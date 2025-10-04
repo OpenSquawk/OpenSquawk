@@ -114,16 +114,16 @@
             </p>
             <ul class="mt-6 space-y-2 text-white/70 text-sm sm:text-base">
               <li class="flex items-start gap-2">
-                <v-icon icon="mdi-microphone-message" size="18" class="mt-[3px] text-cyan-300"/>
-                <span>PTT → STT → LLM-guided decision tree → TTS. Built for natural radio without losing procedural control.</span>
+                <v-icon icon="mdi-microphone" size="18" class="mt-[3px] text-cyan-300"/>
+                <span>Built for natural radio without losing procedural control.</span>
               </li>
               <li class="flex items-start gap-2">
-                <v-icon icon="mdi-airplane-clock" size="18" class="mt-[3px] text-cyan-300"/>
-                <span>MSFS plug-in streams flight state so the controller can react – even proactively when separation is at risk.</span>
+                <v-icon icon="mdi-microsoft" size="18" class="mt-[3px] text-cyan-300"/>
+                <span>MSFS plug-in streams flight state so the controller can react</span>
               </li>
               <li class="flex items-start gap-2">
-                <v-icon icon="mdi-headset" size="18" class="mt-[3px] text-cyan-300"/>
-                <span><strong>Product lineup</strong>: Live ATC (in development) and Classroom listening drills (alpha, invite only).</span>
+                <v-icon icon="mdi-package-variant" size="18" class="mt-[3px] text-cyan-300"/>
+                <span><strong>Product lineup</strong>: Live ATC (in development) and Classroom listening drills (alpha, invite only)</span>
               </li>
             </ul>
             <p class="mt-2 text-sm text-white/70">
@@ -221,11 +221,11 @@
           </div>
           <div class="flex items-center justify-center gap-2 text-white/60">
             <v-icon icon="mdi-waveform" class="opacity-70"/>
-            PTT → STT → LLM → TTS pipeline
+            STT → LLM → TTS Pipeline
           </div>
           <div class="flex items-center justify-center gap-2 text-white/60">
-            <v-icon icon="mdi-microsoft-xbox" class="opacity-70"/>
-            MSFS 2020 plug-in first · 2024+ roadmap
+            <v-icon icon="mdi-microsoft" class="opacity-70"/>
+            MSFS 2020 first · 2024+ roadmap
           </div>
         </div>
       </div>
@@ -262,7 +262,7 @@
           <div class="card" data-aos="fade-up" data-aos-delay="100">
             <div class="flex items-center gap-3">
               <div class="p-2 rounded-lg bg-cyan-500/20 border border-cyan-400/20">
-                <v-icon icon="mdi-airplane-clock" class="text-cyan-300"/>
+                <v-icon icon="mdi-airplane-takeoff" class="text-cyan-300"/>
               </div>
               <h3 class="font-semibold text-lg">
                 Flight-state aware logic
@@ -323,11 +323,11 @@
               </div>
               <div class="glass rounded-xl p-3 flex items-center gap-2">
                 <v-icon icon="mdi-account-hard-hat"/>
-                Invite-only feedback
+                Invite-only alpha
               </div>
               <div class="glass rounded-xl p-3 flex items-center gap-2">
                 <v-icon icon="mdi-source-branch"/>
-                Scenarios expand weekly
+                Open source code
               </div>
             </div>
           </div>
@@ -808,15 +808,15 @@
               </li>
               <li class="glass rounded-xl p-3 flex items-center gap-2">
                 <v-icon icon="mdi-docker"/>
-                Docker‑Compose / Helm
+                Docker‑based microservices
               </li>
               <li class="glass rounded-xl p-3 flex items-center gap-2">
                 <v-icon icon="mdi-puzzle"/>
-                Plugin‑SDK (TS/JS)
+                Plugin SDK for sims
               </li>
               <li class="glass rounded-xl p-3 flex items-center gap-2">
                 <v-icon icon="mdi-console"/>
-                CLI & REST API
+                REST API for extensions
               </li>
             </ul>
             <div class="mt-6 flex flex-col sm:flex-row gap-3">
@@ -875,7 +875,7 @@ POST /api/route/taxi
             <p class="mt-2 text-white/80">Whisper-class STT normalises radio noise; the LLM interprets intent.</p></div>
           <div class="card" data-aos="fade-up" data-aos-delay="200">
             <h3 class="font-semibold flex items-center gap-2">
-              <v-icon icon="mdi-logic-gate-and"/>
+              <v-icon icon="mdi-brain"/>
               3 · Decide
             </h3>
             <p class="mt-2 text-white/80">A curated state machine enforces valid clearances and cross-checks flight data.</p></div>
@@ -935,7 +935,7 @@ POST /api/route/taxi
             <ul class="mt-3 space-y-2 text-white/70 text-sm list-disc list-inside">
               <li>Stabilise the alpha prototype & simplify setup
               </li>
-              <li>Verify MSFS & X-Plane integration
+              <li>Verify Decision Tree logic
               </li>
               <li>Review & prioritise roadmap ideas
               </li>
