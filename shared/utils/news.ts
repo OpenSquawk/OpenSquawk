@@ -123,6 +123,7 @@ function firstParagraph(body: string): string {
       if (collected.length) break
       continue
     }
+
     if (line.startsWith('#') || line.startsWith('- ')) {
       if (collected.length) break
       continue
@@ -150,54 +151,116 @@ function markdownToHtml(markdown: string): string {
   const lines = markdown.split(/\r?\n/)
   let html = ''
   let inList = false
+  let paraParts: string[] = [] // <-- sammelt Zeilen eines Absatzes
 
-  const closeList = () => {
-    if (inList) {
-      html += '</ul>'
-      inList = false
+  const closeList = () => { if (inList) { html += '</ul>'; inList = false } }
+  const flushPara = () => {
+    if (paraParts.length) {
+      // Soft line breaks: Zeilen mit zwei Leerzeichen am Ende -> <br>
+      const joined = paraParts
+          .map(s => s.replace(/ {2}$/, '<br>'))
+          .join(' ')
+      html += `<p>${formatInline(joined)}</p>`
+      paraParts = []
     }
   }
 
   for (const rawLine of lines) {
-    const line = rawLine.trim()
-    if (!line) {
-      closeList()
+    const line = rawLine.replace(/\s+$/,'') // trailing spaces relevant (2 = <br>), rest säubern
+    const trimmed = line.trim()
+
+    // Leere Zeile: Absatz beenden
+    if (!trimmed) { flushPara(); closeList(); continue }
+
+    // Horizontal rule
+    if (/^ {0,3}(?:-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+      flushPara(); closeList()
+      html += '<hr>'
       continue
     }
-    if (line.startsWith('#')) {
-      closeList()
-      const level = Math.min(line.match(/^#+/)?.[0].length ?? 1, 6)
-      const content = line.replace(/^#+/, '').trim()
+
+    // Überschriften
+    if (trimmed.startsWith('#')) {
+      flushPara(); closeList()
+      const level = Math.min(trimmed.match(/^#+/)?.[0].length ?? 1, 6)
+      const content = trimmed.replace(/^#+/, '').trim()
       html += `<h${level}>${formatInline(content)}</h${level}>`
       continue
     }
-    if (line.startsWith('- ')) {
-      if (!inList) {
-        html += '<ul>'
-        inList = true
-      }
-      html += `<li>${formatInline(line.slice(2).trim())}</li>`
+
+    // Listen
+    if (trimmed.startsWith('- ')) {
+      flushPara()
+      if (!inList) { html += '<ul>'; inList = true }
+      html += `<li>${formatInline(trimmed.slice(2).trim())}</li>`
       continue
     }
-    closeList()
-    html += `<p>${formatInline(line)}</p>`
+
+    // Standard-Text: NICHT sofort <p> erzeugen, sondern sammeln
+    paraParts.push(trimmed)
   }
 
+  flushPara()
   closeList()
   return html
 }
 
+
+
 function formatInline(value: string): string {
-  let text = escapeHtml(value)
-  text = text.replace(/\[([^\]]+)]\(([^)]+)\)/g, (_match, label, href) => {
-    const url = escapeAttribute(String(href))
-    return `<a href="${url}" class="text-cyan-300 underline">${String(label)}</a>`
+  let text = value
+
+  // 2.1 Markdown-Links [label](url) zuerst in echte <a> umwandeln
+  text = text.replace(/\[([^\]]+)]\(([^)]+)\)/g, (_m, label, href) => {
+    const url = sanitizeUrl(String(href))
+    const inner = escapeHtml(String(label))
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${inner}</a>`
   })
-  text = text.replace(/`([^`]+)`/g, (_match, code) => `<code>${String(code)}</code>`)
+
+  // 2.2 Bereits im Markdown vorhandene <a ...>...</a> erlauben (whitelist & sanitize)
+  const placeholders: string[] = []
+  text = text.replace(/<a\b[^>]*>.*?<\/a>/gis, (raw) => {
+    const safe = sanitizeAnchor(raw)
+    placeholders.push(safe)
+    return `@@A${placeholders.length - 1}@@`
+  })
+
+  // 2.3 Rest escapen
+  text = escapeHtml(text)
+
+  // 2.4 Platzhalter zurücksetzen (echte erlaubte <a> bleiben unescaped)
+  text = text.replace(/@@A(\d+)@@/g, (_m, i) => placeholders[Number(i)])
+
+  // 2.5 Inline-Code/Bold/Italic nach dem Escaping anwenden
+  text = text.replace(/`([^`]+)`/g, (_m, code) => `<code>${String(code)}</code>`)
   text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
   text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+
   return text
 }
+
+// ---- Helpers ----
+function sanitizeUrl(url: string): string {
+  try {
+    const u = new URL(url, 'https://dummy.local') // Basis nötig für relative
+    const proto = u.protocol.toLowerCase()
+    if (proto === 'http:' || proto === 'https:' || proto === 'mailto:' || proto === 'tel:') {
+      return escapeAttribute(url)
+    }
+  } catch {}
+  return '#'
+}
+
+function sanitizeAnchor(raw: string): string {
+  // href extrahieren
+  const hrefMatch = raw.match(/href\s*=\s*"(.*?)"/i) || raw.match(/href\s*=\s*'(.*?)'/i)
+  const innerMatch = raw.match(/>([\s\S]*?)<\/a>/i)
+  const href = hrefMatch ? sanitizeUrl(hrefMatch[1]) : '#'
+  const inner = innerMatch ? escapeHtml(innerMatch[1]) : ''
+  return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-cyan-300 underline">${inner}</a>`
+}
+
+
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => {

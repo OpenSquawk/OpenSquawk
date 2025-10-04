@@ -7,7 +7,7 @@
 
       <article v-if="post" class="card space-y-6">
         <header class="space-y-2">
-          <span class="chip text-[10px] uppercase tracking-[0.3em]">{{ formatNewsDate(post.publishedAt) }}</span>
+          <span class="chip text-[10px] mb-8 uppercase tracking-[0.3em]">{{ formatNewsDate(post.publishedAt) }}</span>
           <h1 class="text-3xl md:text-4xl font-semibold">{{ post.title }}</h1>
           <p class="text-sm text-white/60">{{ post.readingTime }}</p>
         </header>
@@ -67,6 +67,11 @@ const formatNewsDate = (iso: string) => new Date(iso).toLocaleDateString('en-US'
 .news-body :deep(p) { @apply text-white/80 leading-relaxed mb-4; }
 .news-body :deep(ul) { @apply list-disc list-inside text-white/75 mb-4 space-y-2; }
 .news-body :deep(code) { @apply bg-white/10 px-1 py-0.5 rounded text-xs; }
-.news-body :deep(a) { @apply text-cyan-300 underline; }
+.news-body :deep(a) { @apply text-cyan-300; }
 .glass { background: rgba(255,255,255,.06); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.08); }
+</style>
+<style>
+.news-body p a::before { content: '↗ '; }
+.news-body p a:hover { background: rgba(34,211,238,.3); }
+.news-body hr { border-color: rgba(255,255,255,.1); margin: 2rem 0; }
 </style>
