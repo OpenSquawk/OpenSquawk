@@ -9,8 +9,7 @@
             <v-icon icon="mdi-arrow-left" size="18" />
             Back
           </NuxtLink>
-          <div class="flex flex-col">
-            <span class="text-[10px] uppercase tracking-[0.35em] text-white/40">Documentation</span>
+          <div class="flex text-center gap-4 items-center">
             <span class="text-lg font-semibold text-white">OpenSquawk API</span>
           </div>
         </div>
@@ -36,11 +35,11 @@
 
     <div class="mx-auto w-full px-6 pb-12 pt-24 lg:px-14 xl:px-24">
       <div class="grid gap-10 lg:grid-cols-[20rem,minmax(0,1fr)] xl:grid-cols-[22rem,minmax(0,1fr)]">
-        <aside class="lg:sticky lg:top-[6.25rem] lg:h-[calc(100vh-7rem)] lg:self-start">
+        <aside class="lg:sticky lg:top-[5.25rem] lg:h-[calc(100vh-7rem)] lg:self-start">
           <div class="flex h-full flex-col">
             <nav class="flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5">
               <header class="border-b border-white/10 px-4 py-3">
-                <h2 class="text-base font-semibold text-white">Catalog</h2>
+                <h2 class="text-base font-semibold text-white">API Docs</h2>
                 <p v-if="hasActiveSearch" class="mt-1 text-[11px] uppercase tracking-[0.3em] text-white/50">
                   {{ resultCount }} {{ resultCount === 1 ? 'match' : 'matches' }}
                 </p>
@@ -57,7 +56,7 @@
 
                 <template v-if="navigationSections.length">
                   <div v-for="navSection in navigationSections" :key="navSection.title" class="space-y-3">
-                    <p class="text-[11px] uppercase tracking-[0.3em] text-white/35">{{ navSection.title }}</p>
+<!--                    <p class="text-[11px] uppercase tracking-[0.3em] text-white/35">{{ navSection.title }}</p>-->
                     <div class="space-y-1.5">
                       <div v-for="group in navSection.groups" :key="group.title" class="space-y-1">
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">{{ group.title }}</p>
@@ -69,7 +68,9 @@
                                 ? 'bg-cyan-500/20 text-white'
                                 : 'text-white/70 hover:bg-white/10 hover:text-white'"
                               @click="handleAnchorClick(endpoint.anchor)">
-                              <p class="line-clamp-2 font-medium">{{ endpoint.path }}</p>
+                              <p class="font-medium">
+                                <!-- icon if private or public -->
+                                {{ endpoint.path.replace("/api/","") }}</p>
                             </NuxtLink>
                           </li>
                         </ul>
@@ -115,8 +116,8 @@
               <div class="space-y-2">
                 <h3 class="text-lg font-semibold text-white">Base URLs</h3>
                 <ul class="list-disc space-y-1 pl-5">
-                  <li>Production: <code class="bg-white/10 px-1">https://opensquawk.de</code></li>
-                  <li>Local development: <code class="bg-white/10 px-1">http://localhost:3000</code></li>
+                  <li>Production: <code class="bg-white/10 px-1">https://opensquawk.de/api/</code></li>
+                  <li>Local development: <code class="bg-white/10 px-1">http://localhost:3000/api/</code></li>
                 </ul>
               </div>
             </div>
@@ -182,13 +183,14 @@
                                 {{ endpoint.method }}
                               </span>
                               <div class="flex flex-wrap items-center gap-2">
-                                <code class="rounded bg-black/50 px-2 py-1 text-sm font-mono text-cyan-200">{{ fullEndpointUrl(endpoint.path) }}</code>
-                                <button type="button"
-                                  class="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/60 transition hover:border-cyan-300/60 hover:text-white"
-                                  @click.stop="copyToClipboard(fullEndpointUrl(endpoint.path), getCopyKey(endpoint, 'url'))">
-                                  <v-icon icon="mdi-content-copy" size="14" />
-                                  <span>{{ copyStates[getCopyKey(endpoint, 'url')] ? 'Copied' : 'Copy URL' }}</span>
-                                </button>
+                                <code
+                                    @click.stop="copyToClipboard(fullEndpointUrl(endpoint.path), getCopyKey(endpoint, 'url'))"
+                                    class="rounded cursor-pointer hover:bg-cyan-950 active:bg-cyan-900 bg-black/50 px-2 py-1 text-sm font-mono text-cyan-200">{{ endpoint.path.replaceAll('/api/',"") }}</code>
+<!--                                <button type="button"-->
+<!--                                  class="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/60 transition hover:border-cyan-300/60 hover:text-white"-->
+<!--                                  <v-icon icon="mdi-content-copy" size="14" />-->
+<!--                                  <span>{{ copyStates[getCopyKey(endpoint, 'url')] ? 'Copied' : 'Copy'}}</span>-->
+<!--                                </button>-->
                               </div>
                             </div>
                             <p class="text-sm text-white/70">{{ endpoint.summary }}</p>
