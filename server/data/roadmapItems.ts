@@ -48,8 +48,8 @@ export const ROADMAP_ITEMS: RoadmapItemDefinition[] = [
     icon: 'mdi-map-marker-path',
   },
   {
-    key: 'atc-learning-platform',
-    title: 'ATC-only learning platform',
+    key: 'atc-classroom-platform',
+    title: 'ATC-only classroom platform',
     description:
       'Browser trainings for listening, spelling and filtering interference — ICAO alphabet, speed drills and readback checks without a simulator.',
     category: 'Academy',
