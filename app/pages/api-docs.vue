@@ -22,91 +22,178 @@
           <div>
             <h2 class="mb-2 text-lg font-semibold text-white">Base URLs</h2>
             <ul class="list-disc space-y-1 pl-5">
-              <li>Production: <code class="bg-white/10 px-1">https://app.opensquawk.com</code></li>
+              <li>Production: <code class="bg-white/10 px-1">https://opensquawk.de</code></li>
               <li>Local development: <code class="bg-white/10 px-1">http://localhost:3000</code></li>
             </ul>
           </div>
         </div>
       </header>
 
-      <section class="space-y-6">
+      <section v-if="featuredEndpoints.length" class="space-y-4">
         <div class="flex items-center justify-between gap-4">
-          <h2 class="text-2xl font-semibold">Endpoint catalogue</h2>
-          <span class="text-xs uppercase tracking-[0.3em] text-white/40">Live alpha</span>
+          <h2 class="text-2xl font-semibold">Essential flows</h2>
+          <span class="text-xs uppercase tracking-[0.3em] text-white/40">Quick start</span>
         </div>
-        <p class="text-sm text-white/60">Endpoints are grouped by audience. Public endpoints do not require a bearer token. Protected
-          endpoints require a valid access token. Rate limits and additional business rules are documented per route.</p>
+        <div class="grid gap-4 md:grid-cols-2">
+          <article v-for="endpoint in featuredEndpoints" :key="getEndpointKey(endpoint)"
+            class="relative rounded-2xl border border-cyan-500/40 bg-cyan-500/10 p-5 transition hover:border-cyan-300/60 hover:bg-cyan-500/20">
+            <div class="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-cyan-200/80">
+              <span class="inline-flex items-center gap-2 font-semibold">
+                <v-icon icon="mdi-star" size="16" /> Featured
+              </span>
+              <span class="text-white/50">{{ endpoint.sectionTitle }}</span>
+            </div>
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+              <span :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
+                {{ endpoint.method }}
+              </span>
+              <code class="rounded bg-black/50 px-2 py-1 text-sm font-mono text-cyan-100">{{ endpoint.path }}</code>
+            </div>
+            <p class="mt-3 text-sm text-white/80">{{ endpoint.summary }}</p>
+            <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/60">
+              <span v-if="endpoint.auth === 'protected'" class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                <v-icon icon="mdi-lock" size="14" /> Access token required
+              </span>
+              <span v-else class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                <v-icon icon="mdi-earth" size="14" /> Public
+              </span>
+              <span v-if="endpoint.rateLimit" class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                <v-icon icon="mdi-timer-outline" size="14" /> {{ endpoint.rateLimit }}
+              </span>
+            </div>
+            <button type="button"
+              class="mt-5 inline-flex items-center gap-2 rounded-full border border-cyan-400/50 bg-cyan-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100 transition hover:border-cyan-200 hover:text-white"
+              @click="focusEndpoint(endpoint)">
+              Jump to details
+              <v-icon icon="mdi-arrow-down-right" size="16" />
+            </button>
+          </article>
+        </div>
+      </section>
 
-        <div class="space-y-10">
-          <div v-for="section in endpointSections" :key="section.title" class="space-y-6">
+      <section class="space-y-8">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-4">
+              <h2 class="text-2xl font-semibold">Endpoint catalogue</h2>
+              <span class="text-xs uppercase tracking-[0.3em] text-white/40">Live alpha</span>
+            </div>
+            <p class="text-sm text-white/60">
+              Endpoints are grouped by audience. Public endpoints do not require a bearer token. Protected endpoints require a
+              valid access token. Rate limits and additional business rules are documented per route.
+            </p>
+          </div>
+          <label class="relative block w-full md:w-80">
+            <span class="sr-only">Search endpoints</span>
+            <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-white/40">
+              <v-icon icon="mdi-magnify" size="20" />
+            </span>
+            <input v-model="searchTerm" type="search" placeholder="Search by path, verb, or keyword"
+              class="w-full rounded-full border border-white/20 bg-black/40 py-3 pl-12 pr-12 text-sm text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
+            <button v-if="hasActiveSearch" type="button"
+              class="absolute inset-y-0 right-3 inline-flex items-center justify-center rounded-full bg-white/10 px-3 text-xs uppercase tracking-[0.2em] text-white/60 transition hover:bg-white/20"
+              @click="searchTerm = ''">
+              Clear
+            </button>
+          </label>
+        </div>
+
+        <p v-if="hasActiveSearch && filteredSections.length" class="text-sm text-white/50">
+          Showing {{ resultCount }} matched {{ resultCount === 1 ? 'endpoint' : 'endpoints' }}.
+        </p>
+
+        <div v-if="!filteredSections.length"
+          class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-white/60">
+          <p>No endpoints match your search. Try different keywords or reset the filter.</p>
+        </div>
+
+        <div v-else class="space-y-10">
+          <div v-for="section in filteredSections" :key="section.title" class="space-y-6">
             <div>
               <h3 class="text-xl font-semibold text-white">{{ section.title }}</h3>
               <p v-if="section.description" class="text-sm text-white/60">{{ section.description }}</p>
             </div>
 
             <div class="space-y-5">
-              <article v-for="endpoint in section.endpoints" :key="`${endpoint.method}-${endpoint.path}`"
-                class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
-                <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div class="space-y-1">
-                    <div class="flex items-center gap-3">
-                      <span :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
-                        {{ endpoint.method }}
-                      </span>
-                      <code class="rounded bg-black/50 px-2 py-1 text-sm font-mono text-cyan-200">{{ endpoint.path }}</code>
+              <article v-for="endpoint in section.endpoints" :key="getEndpointKey(endpoint)"
+                class="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <div class="flex flex-col gap-4">
+                  <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="space-y-1">
+                      <div class="flex flex-wrap items-center gap-3">
+                        <span :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', methodColor(endpoint.method)]">
+                          {{ endpoint.method }}
+                        </span>
+                        <code class="rounded bg-black/50 px-2 py-1 text-sm font-mono text-cyan-200">{{ endpoint.path }}</code>
+                      </div>
+                      <p class="text-sm text-white/70">{{ endpoint.summary }}</p>
                     </div>
-                    <p class="text-sm text-white/70">{{ endpoint.summary }}</p>
+                    <div class="flex flex-col items-stretch gap-3 sm:items-end">
+                      <div class="flex flex-wrap items-center gap-2 text-xs text-white/60">
+                        <span v-if="endpoint.auth === 'protected'"
+                          class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                          <v-icon icon="mdi-lock" size="14" /> Access token required
+                        </span>
+                        <span v-else class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                          <v-icon icon="mdi-earth" size="14" /> Public
+                        </span>
+                        <span v-if="endpoint.rateLimit"
+                          class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                          <v-icon icon="mdi-timer-outline" size="14" /> {{ endpoint.rateLimit }}
+                        </span>
+                      </div>
+                      <button type="button"
+                        class="inline-flex items-center justify-end gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/60 transition hover:text-white"
+                        :aria-expanded="isEndpointExpanded(getEndpointKey(endpoint))"
+                        @click="toggleEndpoint(getEndpointKey(endpoint))">
+                        <span>{{ isEndpointExpanded(getEndpointKey(endpoint)) ? 'Hide details' : 'Show details' }}</span>
+                        <v-icon :icon="isEndpointExpanded(getEndpointKey(endpoint)) ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                          size="18" />
+                      </button>
+                    </div>
+                  </header>
+
+                  <div v-show="isEndpointExpanded(getEndpointKey(endpoint))"
+                    class="space-y-4 border-t border-white/10 pt-4">
+                    <div v-if="endpoint.query?.length" class="space-y-2">
+                      <h4 class="text-sm font-semibold text-white">Query parameters</h4>
+                      <dl class="grid gap-2 text-sm text-white/70 sm:grid-cols-2">
+                        <div v-for="param in endpoint.query" :key="param.name"
+                          class="rounded-xl border border-white/10 bg-black/30 p-3">
+                          <dt class="font-medium text-white">{{ param.name }}<span v-if="param.required"
+                              class="text-cyan-300">*</span></dt>
+                          <dd class="text-xs uppercase tracking-wide text-white/40">{{ param.type }}</dd>
+                          <p class="mt-1 text-sm text-white/70">{{ param.description }}</p>
+                        </div>
+                      </dl>
+                    </div>
+
+                    <div v-if="endpoint.body?.length" class="space-y-2">
+                      <h4 class="text-sm font-semibold text-white">Request body</h4>
+                      <dl class="grid gap-2 text-sm text-white/70 sm:grid-cols-2">
+                        <div v-for="field in endpoint.body" :key="field.name"
+                          class="rounded-xl border border-white/10 bg-black/30 p-3">
+                          <dt class="font-medium text-white">{{ field.name }}<span v-if="field.required"
+                              class="text-cyan-300">*</span></dt>
+                          <dd class="text-xs uppercase tracking-wide text-white/40">{{ field.type }}</dd>
+                          <p class="mt-1 text-sm text-white/70">{{ field.description }}</p>
+                        </div>
+                      </dl>
+                    </div>
+
+                    <div v-if="endpoint.sampleRequest" class="space-y-2">
+                      <h4 class="text-sm font-semibold text-white">Sample request</h4>
+                      <pre class="overflow-x-auto rounded-xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleRequest }}</code></pre>
+                    </div>
+
+                    <div v-if="endpoint.sampleResponse" class="space-y-2">
+                      <h4 class="text-sm font-semibold text-white">Sample response</h4>
+                      <pre class="overflow-x-auto rounded-xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleResponse }}</code></pre>
+                    </div>
+
+                    <p v-if="endpoint.notes" class="text-sm text-white/60">{{ endpoint.notes }}</p>
                   </div>
-                  <div class="flex flex-wrap items-center gap-2 text-xs text-white/60">
-                    <span v-if="endpoint.auth === 'protected'" class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
-                      <v-icon icon="mdi-lock" size="14" /> Access token required
-                    </span>
-                    <span v-else class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
-                      <v-icon icon="mdi-earth" size="14" /> Public
-                    </span>
-                    <span v-if="endpoint.rateLimit" class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
-                      <v-icon icon="mdi-timer-outline" size="14" /> {{ endpoint.rateLimit }}
-                    </span>
-                  </div>
-                </header>
-
-                <div v-if="endpoint.query?.length" class="space-y-2">
-                  <h4 class="text-sm font-semibold text-white">Query parameters</h4>
-                  <dl class="grid gap-2 text-sm text-white/70 sm:grid-cols-2">
-                    <div v-for="param in endpoint.query" :key="param.name"
-                      class="rounded-xl border border-white/10 bg-black/30 p-3">
-                      <dt class="font-medium text-white">{{ param.name }}<span v-if="param.required"
-                          class="text-cyan-300">*</span></dt>
-                      <dd class="text-xs uppercase tracking-wide text-white/40">{{ param.type }}</dd>
-                      <p class="mt-1 text-sm text-white/70">{{ param.description }}</p>
-                    </div>
-                  </dl>
                 </div>
-
-                <div v-if="endpoint.body?.length" class="space-y-2">
-                  <h4 class="text-sm font-semibold text-white">Request body</h4>
-                  <dl class="grid gap-2 text-sm text-white/70 sm:grid-cols-2">
-                    <div v-for="field in endpoint.body" :key="field.name"
-                      class="rounded-xl border border-white/10 bg-black/30 p-3">
-                      <dt class="font-medium text-white">{{ field.name }}<span v-if="field.required"
-                          class="text-cyan-300">*</span></dt>
-                      <dd class="text-xs uppercase tracking-wide text-white/40">{{ field.type }}</dd>
-                      <p class="mt-1 text-sm text-white/70">{{ field.description }}</p>
-                    </div>
-                  </dl>
-                </div>
-
-                <div v-if="endpoint.sampleRequest" class="space-y-2">
-                  <h4 class="text-sm font-semibold text-white">Sample request</h4>
-                  <pre class="overflow-x-auto rounded-xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleRequest }}</code></pre>
-                </div>
-
-                <div v-if="endpoint.sampleResponse" class="space-y-2">
-                  <h4 class="text-sm font-semibold text-white">Sample response</h4>
-                  <pre class="overflow-x-auto rounded-xl bg-black/60 p-4 text-xs leading-5 text-white/80"><code>{{ endpoint.sampleResponse }}</code></pre>
-                </div>
-
-                <p v-if="endpoint.notes" class="text-sm text-white/60">{{ endpoint.notes }}</p>
               </article>
             </div>
           </div>
@@ -128,6 +215,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 type AuthLevel = 'public' | 'protected'
 
 interface QueryField {
@@ -155,12 +243,18 @@ interface EndpointEntry {
   sampleRequest?: string
   sampleResponse?: string
   notes?: string
+  featured?: boolean
+  keywords?: string[]
 }
 
 interface EndpointSection {
   title: string
   description?: string
   endpoints: EndpointEntry[]
+}
+
+interface FeaturedEndpoint extends EndpointEntry {
+  sectionTitle: string
 }
 
 const endpointSections: EndpointSection[] = [
@@ -182,7 +276,7 @@ const endpointSections: EndpointSection[] = [
           { name: 'consentTerms', type: 'boolean', required: true, description: 'Must be true to join the waitlist.' },
           { name: 'wantsProductUpdates', type: 'boolean', description: 'Set true to subscribe to the newsletter.' },
         ],
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/service/waitlist \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/service/waitlist \
   -H 'Content-Type: application/json' \
   -d '{
     "email": "jane.pilot@example.com",
@@ -226,7 +320,7 @@ const endpointSections: EndpointSection[] = [
           { name: 'consentPrivacy', type: 'boolean', required: true, description: 'Must be true to store the subscriber.' },
           { name: 'consentMarketing', type: 'boolean', required: true, description: 'Required to receive email updates.' },
         ],
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/service/updates \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/service/updates \
   -H 'Content-Type: application/json' \
   -d '{
     "email": "avgeek@example.com",
@@ -271,7 +365,7 @@ const endpointSections: EndpointSection[] = [
         body: [
           { name: 'votes', type: 'Array<{ key: string; importance: 1..5 }>', required: true, description: 'Unique roadmap item keys with rating per submission.' },
         ],
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/service/roadmap \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/service/roadmap \
   -H 'Content-Type: application/json' \
   -d '{
     "votes": [
@@ -297,7 +391,7 @@ const endpointSections: EndpointSection[] = [
           { name: 'allowContact', type: 'boolean', description: 'Enable follow-up via the provided email. Requires email.' },
           { name: 'consentPrivacy', type: 'boolean', required: true, description: 'Must be true to store the suggestion.' },
         ],
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/service/roadmap-suggestions \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/service/roadmap-suggestions \
   -H 'Content-Type: application/json' \
   -d '{
     "title": "More IFR lessons",
@@ -316,11 +410,13 @@ const endpointSections: EndpointSection[] = [
         path: '/api/service/auth/login',
         summary: 'Authenticate with email and password. Returns an access token and sets a refresh cookie.',
         auth: 'public',
+        featured: true,
+        keywords: ['auth', 'login', 'token', 'authentication'],
         body: [
           { name: 'email', type: 'string', required: true, description: 'User email address.' },
           { name: 'password', type: 'string', required: true, description: 'User password.' },
         ],
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/service/auth/login \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/service/auth/login \
   -H 'Content-Type: application/json' \
   -d '{
     "email": "jane.pilot@example.com",
@@ -343,6 +439,8 @@ const endpointSections: EndpointSection[] = [
         path: '/api/service/auth/register',
         summary: 'Register a new account using an invitation code.',
         auth: 'public',
+        featured: true,
+        keywords: ['auth', 'register', 'signup', 'invitation'],
         body: [
           { name: 'email', type: 'string', required: true, description: 'Valid email address. Stored in lower case.' },
           { name: 'password', type: 'string', required: true, description: 'Must pass strength validation (>= 8 characters, numbers, etc.).' },
@@ -351,7 +449,7 @@ const endpointSections: EndpointSection[] = [
           { name: 'acceptTerms', type: 'boolean', required: true, description: 'Must be true.' },
           { name: 'acceptPrivacy', type: 'boolean', required: true, description: 'Must be true.' },
         ],
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/service/auth/register \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/service/auth/register \
   -H 'Content-Type: application/json' \
   -d '{
     "email": "jane.pilot@example.com",
@@ -379,7 +477,7 @@ const endpointSections: EndpointSection[] = [
         summary: 'Rotate the refresh token and receive a new access token.',
         auth: 'public',
         notes: 'Requires a valid refresh cookie from a prior login or registration response.',
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/service/auth/refresh \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/service/auth/refresh \
   --cookie 'refreshToken=<http-only-cookie>'`,
         sampleResponse: `{
   "success": true,
@@ -394,7 +492,7 @@ const endpointSections: EndpointSection[] = [
         body: [
           { name: 'email', type: 'string', required: true, description: 'Email address tied to the account.' },
         ],
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/service/auth/forgot-password \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/service/auth/forgot-password \
   -H 'Content-Type: application/json' \
   -d '{ "email": "jane.pilot@example.com" }'`,
         sampleResponse: `{
@@ -411,7 +509,7 @@ const endpointSections: EndpointSection[] = [
           { name: 'token', type: 'string', required: true, description: 'Token received via the reset email.' },
           { name: 'password', type: 'string', required: true, description: 'New password (minimum 8 characters).' },
         ],
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/service/auth/reset-password \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/service/auth/reset-password \
   -H 'Content-Type: application/json' \
   -d '{
     "token": "6a1b...",
@@ -442,7 +540,7 @@ const endpointSections: EndpointSection[] = [
         body: [
           { name: 'label', type: 'string', description: 'Optional tag that is stored with the invitation.' },
         ],
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/service/invitations/bootstrap \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/service/invitations/bootstrap \
   -H 'Content-Type: application/json' \
   -d '{ "label": "sim-club" }'`,
         sampleResponse: `{
@@ -462,7 +560,7 @@ const endpointSections: EndpointSection[] = [
           { name: 'password', type: 'string', required: true, description: 'Shared secret defined in runtime config.' },
           { name: 'label', type: 'string', description: 'Optional label to track the invite origin.' },
         ],
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/service/invitations/manual \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/service/invitations/manual \
   -H 'Content-Type: application/json' \
   -d '{
     "password": "<shared-secret>",
@@ -499,7 +597,7 @@ const endpointSections: EndpointSection[] = [
           { name: 'dest_lng', type: 'number', required: true, description: 'Destination longitude in decimal degrees.' },
           { name: 'radius', type: 'number', description: 'Search radius in metres (default 2000).' },
         ],
-        sampleRequest: `curl "https://app.opensquawk.com/api/service/tools/taxiroute?origin_lat=50.0506&origin_lng=8.5708&dest_lat=50.0473&dest_lng=8.5610&radius=2500"`,
+        sampleRequest: `curl "https://opensquawk.de/api/service/tools/taxiroute?origin_lat=50.0506&origin_lng=8.5708&dest_lat=50.0473&dest_lng=8.5610&radius=2500"`,
         sampleResponse: `{
   "origin": { "lat": 50.0506, "lon": 8.5708 },
   "dest": { "lat": 50.0473, "lon": 8.561 },
@@ -522,6 +620,8 @@ const endpointSections: EndpointSection[] = [
         path: '/api/auth/me',
         summary: 'Retrieve the authenticated user profile.',
         auth: 'protected',
+        featured: true,
+        keywords: ['profile', 'session', 'identity'],
         sampleResponse: `{
   "id": "661e2a...",
   "email": "jane.pilot@example.com",
@@ -573,6 +673,8 @@ const endpointSections: EndpointSection[] = [
         path: '/api/atc/say',
         summary: 'Generate ATC audio using the configured TTS pipeline.',
         auth: 'protected',
+        featured: true,
+        keywords: ['tts', 'audio', 'speech', 'radio'],
         body: [
           { name: 'text', type: 'string', required: true, description: 'Clearance or transmission to synthesise.' },
           { name: 'level', type: 'number', description: 'Radio quality (1–5). Defaults to 4.' },
@@ -583,7 +685,7 @@ const endpointSections: EndpointSection[] = [
           { name: 'tag', type: 'string', description: 'Custom tag stored with the transmission log.' },
           { name: 'format', type: '"wav" | "mp3" | "flac" | "pcm" | "smallest"', description: 'Desired audio format. "smallest" resolves to MP3 when available.' },
         ],
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/atc/say \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/atc/say \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -640,7 +742,7 @@ const endpointSections: EndpointSection[] = [
           { name: 'variables', type: 'object', description: 'Arbitrary variables passed to the router.' },
           { name: 'flags', type: 'object', description: 'Boolean flags controlling heuristics.' },
         ],
-        sampleRequest: `curl -X POST https://app.opensquawk.com/api/llm/decide \
+        sampleRequest: `curl -X POST https://opensquawk.de/api/llm/decide \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -660,6 +762,81 @@ const endpointSections: EndpointSection[] = [
     ],
   },
 ]
+
+const searchTerm = ref('')
+const openEndpoints = ref<Record<string, boolean>>({})
+
+const hasActiveSearch = computed(() => searchTerm.value.trim().length > 0)
+
+const filteredSections = computed<EndpointSection[]>(() => {
+  const term = searchTerm.value.trim().toLowerCase()
+  if (!term) {
+    return endpointSections
+  }
+
+  return endpointSections.reduce<EndpointSection[]>((acc, section) => {
+    const matching = section.endpoints.filter((endpoint) => {
+      const haystack = [
+        endpoint.method,
+        endpoint.path,
+        endpoint.summary,
+        endpoint.notes ?? '',
+        ...(endpoint.keywords ?? []),
+        ...(endpoint.query?.flatMap((param) => [param.name, param.description]) ?? []),
+        ...(endpoint.body?.flatMap((field) => [field.name, field.description]) ?? []),
+      ]
+        .join(' ')
+        .toLowerCase()
+
+      return haystack.includes(term)
+    })
+
+    if (matching.length) {
+      acc.push({
+        ...section,
+        endpoints: matching,
+      })
+    }
+
+    return acc
+  }, [])
+})
+
+const featuredEndpoints = computed<FeaturedEndpoint[]>(() =>
+  endpointSections.flatMap((section) =>
+    section.endpoints
+      .filter((endpoint) => endpoint.featured)
+      .map((endpoint) => ({
+        ...endpoint,
+        sectionTitle: section.title,
+      })),
+  ),
+)
+
+const resultCount = computed(() =>
+  filteredSections.value.reduce((count, section) => count + section.endpoints.length, 0),
+)
+
+const getEndpointKey = (endpoint: EndpointEntry) => `${endpoint.method.toUpperCase()}-${endpoint.path}`
+
+const isEndpointExpanded = (key: string) => {
+  if (hasActiveSearch.value) {
+    return openEndpoints.value[key] !== false
+  }
+
+  return openEndpoints.value[key] === true
+}
+
+const toggleEndpoint = (key: string) => {
+  const next = !isEndpointExpanded(key)
+  openEndpoints.value[key] = next
+}
+
+const focusEndpoint = (endpoint: EndpointEntry) => {
+  const key = getEndpointKey(endpoint)
+  openEndpoints.value[key] = true
+  searchTerm.value = endpoint.path
+}
 
 function methodColor(method: string) {
   switch (method.toUpperCase()) {
