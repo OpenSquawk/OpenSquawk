@@ -1540,7 +1540,7 @@ const hasRoadmapVote = computed(() => Object.values(roadmapTouched).some(Boolean
 const roadmapStatsLabel = computed(() => {
   const total = formatNumber(roadmapTotals.value)
   const recent = formatNumber(roadmapRecent7Days.value)
-  return `${total} votes submitted · last 7 days: +${recent}`
+  return `${total} votes submitted`
 })
 
 const roadmapImportanceLabel = (value?: number) => {
