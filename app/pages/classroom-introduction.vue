@@ -13,10 +13,10 @@
             <p class="text-sm text-white/60">Guided preflight briefing</p>
           </div>
         </div>
-        <NuxtLink to="/classroom" class="btn primary">
+        <button type="button" class="btn primary" @click="handleEnterClassroom">
           Enter Classroom hub
           <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
-        </NuxtLink>
+        </button>
       </div>
     </header>
 
@@ -382,10 +382,15 @@
                           Next stop
                           <v-icon icon="mdi-arrow-right" size="18" class="text-[#061318]" />
                         </button>
-                      <NuxtLink v-else to="/classroom" class="btn primary">
+                      <button
+                        v-else
+                        type="button"
+                        class="btn primary"
+                        @click="handleEnterClassroom"
+                      >
                         Enter Classroom hub
                           <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
-                        </NuxtLink>
+                      </button>
                       </div>
                     </div>
                   </div>
@@ -401,11 +406,12 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { useHead } from '#imports'
+import { useHead, useRouter } from '#imports'
 import { useApi } from '~/composables/useApi'
 import type { PizzicatoLite } from '~~/shared/utils/pizzicatoLite'
 import { loadPizzicatoLite } from '~~/shared/utils/pizzicatoLite'
 import { clampReadability, createNoiseGenerators, getReadabilityProfile } from '~~/shared/utils/radioEffects'
+import { markClassroomIntroCompleted } from '~/utils/classroomIntro'
 
 type VoiceMode = 'text' | 'radio'
 
@@ -420,7 +426,11 @@ interface StageStop {
   voiceLine: string
 }
 
+definePageMeta({ middleware: 'require-auth' })
+
 useHead({ title: 'Classroom orientation • OpenSquawk' })
+
+const router = useRouter()
 
 const stages: StageStop[] = [
   {
@@ -530,6 +540,11 @@ const progressLabel = computed(() => {
   return `Leg ${stageIndex.value + 1} · ${stageProgress.value}% ready`
 })
 const startDisabled = computed(() => voiceMode.value === 'radio' && !hasCompletedRadioCheck.value)
+
+async function handleEnterClassroom() {
+  markClassroomIntroCompleted()
+  await router.push('/classroom')
+}
 
 async function ensureSpeechAudioContext(): Promise<AudioContext | null> {
   if (!isClient) return null
