@@ -1,7 +1,8 @@
 <template>
   <div class="bg-[#0b1020] text-white antialiased selection:bg-cyan-400/30">
     <!-- NAV -->
-    <header ref="headerRef" class="fixed left-0 right-0 top-0 z-50 bg-[#0b1020]/70 backdrop-blur border-b border-white/10"
+    <header ref="headerRef"
+            class="fixed left-0 right-0 top-0 z-50 bg-[#0b1020]/70 backdrop-blur border-b border-white/10"
             data-aos="fade-down">
       <nav class="container-outer flex items-center justify-between py-3">
         <NuxtLink to="#" class="flex items-center gap-2 font-semibold tracking-tight">
@@ -1280,7 +1281,7 @@ interface ScrollOptions {
   updateUrl?: boolean
 }
 
-let sectionElements: {hash: string; element: HTMLElement}[] = []
+let sectionElements: { hash: string; element: HTMLElement }[] = []
 let isInternalNavigation = false
 
 const updateHeaderHeight = () => {
@@ -1296,7 +1297,7 @@ const updateSectionElements = () => {
         const element = document.querySelector<HTMLElement>(link.to)
         return element ? {hash: link.to, element} : null
       })
-      .filter((value): value is {hash: string; element: HTMLElement} => value !== null)
+      .filter((value): value is { hash: string; element: HTMLElement } => value !== null)
 }
 
 const updateActiveSection = () => {
@@ -1916,8 +1917,8 @@ onMounted(async () => {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(7, 11, 24, 0.55) 0%, rgba(9, 14, 28, 0.78) 55%, rgba(11, 16, 32, 0.95) 100%),
-  url('/img/bridge/goldengate_front.jpeg') center/cover no-repeat;
+  background: linear-gradient(180deg, rgba(7, 11, 24, 0.05) 0%, rgba(9, 14, 28, 0.1) 55%, rgba(11, 16, 32, 0.5) 100%),
+  url('/img/learn/missions/full-flight/briefing-weather.png') center/cover no-repeat;
   opacity: 1;
   pointer-events: none;
   z-index: 0;

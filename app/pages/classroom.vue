@@ -1169,8 +1169,7 @@
       <div v-else class="container footer-container">
         <div class="footer-meta">
           <span class="muted small">&copy; 2025 OpenSquawk. All rights reserved.</span>
-          <span aria-hidden="true" class="muted small">·</span>
-          <NuxtLink to="/feedback" class="link small">Feedback &amp; ideas</NuxtLink>
+          <NuxtLink to="/feedback" target="_blank" class="link ml-2">Give feedback ›</NuxtLink>
         </div>
       </div>
     </footer>
