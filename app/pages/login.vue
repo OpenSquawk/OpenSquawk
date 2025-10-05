@@ -1,6 +1,6 @@
 <template>
   <div
-      class="relative flex min-h-screen max-h-screen flex-col overflow-hidden bg-gradient-to-br from-[#050713] via-[#080d1f] to-[#010208] text-white">
+      class="relative flex min-h-screen flex-col overflow-y-auto bg-gradient-to-br from-[#050713] via-[#080d1f] to-[#010208] text-white lg:max-h-screen lg:overflow-hidden">
     <div class="pointer-events-none absolute inset-0 -z-20">
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.22),_transparent_65%)]"/>
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_rgba(129,140,248,0.16),_transparent_70%)]"/>
@@ -13,7 +13,7 @@
     </div>
 
     <div
-        class="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden px-5 py-8 sm:px-8 lg:flex-row lg:items-stretch lg:py-12 lg:pl-0 min-h-0">
+        class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-6 sm:gap-10 sm:px-6 sm:py-8 lg:h-full lg:flex-row lg:items-stretch lg:gap-0 lg:px-8 lg:py-12 lg:pl-0 min-h-0">
       <div
           class="relative hidden h-full min-h-0 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:flex lg:w-[48%]">
         <img :src="img" alt="Guiding lights on a runway"
@@ -49,7 +49,7 @@
       <div class="flex w-full flex-1 flex-col min-h-0 lg:pl-8">
         <div
             class="flex flex-1 flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#0b1020]/85 shadow-2xl backdrop-blur">
-          <div class="flex-1 overflow-y-auto px-6 pt-6 pb-10 md:px-8 lg:pr-4">
+          <div class="flex-1 overflow-y-auto px-5 pt-6 pb-10 sm:px-6 md:px-8 lg:pr-4">
             <div
                 class="floating-card relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:hidden">
               <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway" class="h-56 w-full object-cover"/>
