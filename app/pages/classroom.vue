@@ -122,6 +122,10 @@
         </div>
 
         <div class="hud-right">
+          <NuxtLink class="btn ghost" to="/feedback" title="Share feedback or ideas">
+            <v-icon size="18">mdi-message-draw</v-icon>
+            Feedback
+          </NuxtLink>
 
           <!-- ATC Einstellungen -->
           <button class="btn ghost" @click="showSettings=true" title="Settings">
@@ -1165,6 +1169,8 @@
       <div v-else class="container footer-container">
         <div class="footer-meta">
           <span class="muted small">&copy; 2025 OpenSquawk. All rights reserved.</span>
+          <span aria-hidden="true" class="muted small">·</span>
+          <NuxtLink to="/feedback" class="link small">Feedback &amp; ideas</NuxtLink>
         </div>
       </div>
     </footer>
@@ -1278,7 +1284,7 @@ import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
 
-definePageMeta({middleware: 'require-auth'})
+definePageMeta({middleware: ['require-auth', 'require-classroom-intro']})
 
 type Objective = {
   id: string

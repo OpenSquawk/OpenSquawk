@@ -406,13 +406,14 @@ interface NavigationSectionItem {
 const BASE_URL = 'https://opensquawk.de'
 
 const sectionCategoryOrder: Record<string, string[]> = {
-  'Public endpoints': ['Waitlist & marketing', 'Authentication & onboarding', 'Tools & diagnostics'],
+  'Public endpoints': ['Waitlist & marketing', 'Feedback & insights', 'Authentication & onboarding', 'Tools & diagnostics'],
   'Protected endpoints': ['Session controls', 'Invitation management', 'ATC synthesis', 'Decision engine'],
 }
 
 const sectionCategoryDescriptions: Record<string, Record<string, string>> = {
   'Public endpoints': {
     'Waitlist & marketing': 'Capture interest, collect consent, and gauge roadmap sentiment.',
+    'Feedback & insights': 'Let pilots report issues, share classroom notes, and highlight what works.',
     'Authentication & onboarding': 'Account creation, recovery, and invitation flows during the alpha programme.',
     'Tools & diagnostics': 'Helper utilities for simulator integrations and latency checks.',
   },
@@ -577,6 +578,80 @@ const endpointSections: EndpointSection[] = [
   "success": true,
   "suggestionId": "6625c9f0e1f8f5d4068a1234"
 }`,
+      },
+      {
+        method: 'POST',
+        path: '/api/service/feedback',
+        summary: 'Submit structured classroom feedback and hosting requests.',
+        category: 'Feedback & insights',
+        auth: 'public',
+        body: [
+          { name: 'excitement', type: 'number (1..5)', required: true, description: 'Overall excitement rating.' },
+          { name: 'name', type: 'string', description: 'Optional display name.' },
+          { name: 'email', type: 'string', description: 'Optional reply-to address for follow-ups.' },
+          {
+            name: 'highlightSelections',
+            type: 'string[]',
+            description: 'Checklist entries that already work well (e.g. "Lesson console and radio playback").',
+          },
+          { name: 'highlightNotes', type: 'string', description: 'Long-form context about the highlights.' },
+          { name: 'frictionSelections', type: 'string[]', description: 'Checklist entries that feel rough or broken.' },
+          { name: 'frictionNotes', type: 'string', description: 'Details about the rough spots that should be prioritised.' },
+          { name: 'classroomNotes', type: 'string', description: 'Stories from the classroom missions and instructors.' },
+          { name: 'hostingInterest', type: 'string', description: 'Self-hosting plans or managed hosting requirements.' },
+          { name: 'otherIdeas', type: 'string', description: 'Any other ideas, integrations, or feature requests.' },
+          { name: 'contactConsent', type: 'boolean', description: 'Set true to allow follow-up via the provided email.' },
+        ],
+        sampleRequest: `curl -X POST https://opensquawk.de/api/service/feedback \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "excitement": 5,
+    "name": "Sam", 
+    "email": "sam@example.com",
+    "highlightSelections": ["Lesson console and radio playback"],
+    "highlightNotes": "The timing of the instructor prompts feels great.",
+    "frictionSelections": ["Latency or responsiveness"],
+    "frictionNotes": "Occasional stutters when switching frequencies.",
+    "contactConsent": true
+  }'`,
+        sampleResponse: `{
+  "success": true
+}`,
+        notes: 'Triggers an internal notification so the team can review submissions without requiring the user to send an email manually.',
+      },
+      {
+        method: 'POST',
+        path: '/api/feedback/issues',
+        summary: 'Create a public feedback ticket similar to a GitHub issue.',
+        category: 'Feedback & insights',
+        auth: 'public',
+        body: [
+          {
+            name: 'category',
+            type: '"bug" | "improvement" | "idea" | "question" | "praise" | "other"',
+            description: 'Issue classification. Defaults to "other".',
+          },
+          { name: 'title', type: 'string', required: true, description: 'Short summary (≥ 4 characters).' },
+          { name: 'description', type: 'string', required: true, description: 'Detailed description (≥ 20 characters).' },
+          { name: 'email', type: 'string', description: 'Optional email address for follow-up.' },
+          { name: 'allowContact', type: 'boolean', description: 'Enable follow-up using the provided email.' },
+          { name: 'consentPrivacy', type: 'boolean', required: true, description: 'Must be true to record the ticket.' },
+        ],
+        sampleRequest: `curl -X POST https://opensquawk.de/api/feedback/issues \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "category": "bug",
+    "title": "Audio mutes after 10 minutes",
+    "description": "While flying the EDDF mission the radio stops playing back instructions after about ten minutes.",
+    "email": "pilot@example.com",
+    "allowContact": true,
+    "consentPrivacy": true
+  }'`,
+        sampleResponse: `{
+  "success": true,
+  "ticketId": "9a0d9fbf-d2a5-40b7-ae8f-1db9f3f3f4cd"
+}`,
+        notes: 'Generates a UUID ticket reference and forwards the payload to the internal notification channel.',
       },
       {
         method: 'POST',
