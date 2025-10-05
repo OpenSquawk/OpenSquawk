@@ -23,6 +23,17 @@
         </NuxtLink>
       </nav>
 
+      <div class="mt-10 overflow-hidden rounded-[28px] border border-white/10 shadow-[0_22px_65px_rgba(4,8,24,0.5)]">
+        <div class="relative aspect-[3/1] w-full">
+          <img
+              src="/img/learn/modules/img14.jpeg"
+              alt="Golden Gate Bridge at sunset"
+              class="h-full w-full object-cover"
+          >
+          <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(11,16,32,0.05),rgba(11,16,32,0.65))]"/>
+        </div>
+      </div>
+
       <header class="mt-10 space-y-5 text-center sm:text-left">
         <p class="text-xs font-semibold uppercase tracking-[0.45em] text-[#16BBD7]">OpenSquawk Bridge</p>
         <h1 class="text-3xl font-semibold sm:text-4xl">Your simulator, connected in under a minute.</h1>
@@ -167,6 +178,15 @@ const downloads = [
     available: false,
     href: '#',
     icon: 'mdi-microsoft',
+  },
+  {
+    id: 'flightgear',
+    title: 'FlightGear',
+    description: 'FlightGear support is on the roadmap, starting with Linux builds, then macOS, and finally Windows.',
+    status: 'Planned',
+    available: false,
+    href: '#',
+    icon: 'mdi-earth',
   },
   {
     id: 'xplane',
