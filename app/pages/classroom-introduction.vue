@@ -565,6 +565,26 @@ async function ensurePizzicato(ctx: AudioContext | null): Promise<PizzicatoLite 
   return pizzicatoLiteInstance
 }
 
+function setMediaElementPreservesPitch(media: HTMLMediaElement | null, preserve: boolean) {
+  if (!media) return
+  const target = !!preserve
+  try {
+    ;(media as any).preservesPitch = target
+  } catch {
+    // ignore unsupported assignments
+  }
+  try {
+    ;(media as any).mozPreservesPitch = target
+  } catch {
+    // ignore unsupported assignments
+  }
+  try {
+    ;(media as any).webkitPreservesPitch = target
+  } catch {
+    // ignore unsupported assignments
+  }
+}
+
 function releaseRadio(cleanups: Array<() => void>, sound: RadioSoundInstance | null) {
   if (activeRadioSound === sound) {
     activeRadioSound = null
@@ -753,6 +773,8 @@ async function speak(text: string, stageId?: string): Promise<boolean> {
     }
 
     const audio = new Audio(`data:${mime};base64,${base64}`)
+    audio.preload = 'auto'
+    setMediaElementPreservesPitch(audio, true)
 
     audio.onended = () => {
       if (speechRequestId === requestId) {

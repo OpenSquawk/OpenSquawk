@@ -13,6 +13,31 @@
           <span class="mode">Classroom</span>
         </div>
 
+        <div class="hud-center">
+          <div class="lesson-search" role="search">
+            <label class="sr-only" for="lesson-search">Lesson search</label>
+            <div class="lesson-search-control">
+              <v-icon size="18" class="lesson-search-icon">mdi-magnify</v-icon>
+              <input
+                  id="lesson-search"
+                  v-model="lessonSearch"
+                  type="search"
+                  autocomplete="off"
+                  placeholder="Search lessons by title, keyword or phrase"
+              />
+              <button
+                  v-if="lessonSearch"
+                  class="lesson-search-clear"
+                  type="button"
+                  @click="clearLessonSearch"
+                  aria-label="Clear lesson search"
+              >
+                <v-icon size="16">mdi-close</v-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="hud-right">
 
           <!-- ATC Einstellungen -->
@@ -38,31 +63,7 @@
         <div class="muted">Start with the ICAO alphabet & numbers, then basics, ground, and more.</div>
       </div>
 
-      <div class="hub-search" role="search">
-        <label class="hub-search-label" for="lesson-search">Lesson search</label>
-        <div class="hub-search-control">
-          <v-icon size="18" class="hub-search-icon">mdi-magnify</v-icon>
-          <input
-              id="lesson-search"
-              v-model="lessonSearch"
-              type="search"
-              autocomplete="off"
-              placeholder="Search lessons by title, keyword or phrase"
-          />
-          <button
-              v-if="lessonSearch"
-              class="hub-search-clear"
-              type="button"
-              @click="clearLessonSearch"
-              aria-label="Clear lesson search"
-          >
-            <v-icon size="16">mdi-close</v-icon>
-          </button>
-        </div>
-        <p class="muted small">Filter every mission lesson instantly and jump right into practice.</p>
-      </div>
-
-      <div v-if="hasLessonSearch" class="hub-search-results">
+      <div v-if="hasLessonSearch" class="lesson-search-results">
         <div class="search-results-meta">
           <span>{{ lessonSearchResults.length }} {{ lessonSearchResults.length === 1 ? 'match' : 'matches' }}</span>
           <button class="link small" type="button" @click="clearLessonSearch">Clear</button>
@@ -3705,6 +3706,26 @@ const providerSupportsNativeSpeed = (model?: string | null) => {
   return normalized.includes('tts')
 }
 
+const setMediaElementPreservesPitch = (media: HTMLMediaElement | null, preserve: boolean) => {
+  if (!media) return
+  const target = !!preserve
+  try {
+    ;(media as any).preservesPitch = target
+  } catch {
+    // ignore unsupported assignment
+  }
+  try {
+    ;(media as any).mozPreservesPitch = target
+  } catch {
+    // ignore unsupported assignment
+  }
+  try {
+    ;(media as any).webkitPreservesPitch = target
+  } catch {
+    // ignore unsupported assignment
+  }
+}
+
 async function playAudioSource(source: CachedAudio, targetRate: number) {
   if (!source?.base64) return
 
@@ -3725,7 +3746,9 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
 
   const playWithoutEffects = async () => {
     const audio = new Audio(dataUrl)
+    audio.preload = 'auto'
     audio.playbackRate = playbackRate
+    setMediaElementPreservesPitch(audio, true)
     audioElement.value = audio
     audio.onended = () => {
       if (audioElement.value === audio) {
@@ -3749,6 +3772,11 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
     const pizzicato = await ensurePizzicato(ctx)
     if (!ctx || !pizzicato) {
       throw new Error('Audio engine unavailable')
+    }
+
+    if (!supportsNativeSpeed && Math.abs(playbackRate - 1) > 0.0001) {
+      await playWithoutEffects()
+      return
     }
 
     const sound = await pizzicato.createSoundFromBase64(ctx, source.base64)
@@ -4108,17 +4136,25 @@ onMounted(() => {
   background: color-mix(in srgb, var(--bg) 85%, transparent)
 }
 
+
 .hud-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px
+  gap: 16px;
+  padding: 10px;
 }
 
 .hud-left {
   display: flex;
   align-items: center;
   gap: 10px
+}
+
+.hud-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
 }
 
 .hud-logo {
@@ -4170,7 +4206,9 @@ onMounted(() => {
 .hud-right {
   display: flex;
   gap: 8px;
-  align-items: center
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .next-objective {
@@ -4526,23 +4564,13 @@ onMounted(() => {
 }
 
 
-/* HUB search */
-.hub-search {
-  margin: 18px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* Lesson search */
+.lesson-search {
+  width: 100%;
   max-width: 560px;
 }
 
-.hub-search-label {
-  font-size: 12px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: var(--t3);
-}
-
-.hub-search-control {
+.lesson-search-control {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -4553,7 +4581,7 @@ onMounted(() => {
   box-shadow: 0 12px 24px rgba(0, 0, 0, .18);
 }
 
-.hub-search-control input {
+.lesson-search-control input {
   border: none;
   background: transparent;
   color: var(--text);
@@ -4562,19 +4590,19 @@ onMounted(() => {
   min-width: 0;
 }
 
-.hub-search-control input:focus {
+.lesson-search-control input:focus {
   outline: none;
 }
 
-.hub-search-control input::placeholder {
+.lesson-search-control input::placeholder {
   color: var(--t3);
 }
 
-.hub-search-icon {
+.lesson-search-icon {
   color: var(--t3);
 }
 
-.hub-search-clear {
+.lesson-search-clear {
   border: none;
   background: transparent;
   color: var(--t3);
@@ -4586,16 +4614,38 @@ onMounted(() => {
   transition: color .2s ease, background .2s ease;
 }
 
-.hub-search-clear:hover {
+.lesson-search-clear:hover {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent);
 }
 
-.hub-search-results {
+.lesson-search-results {
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin: 10px 0 20px;
+}
+
+@media (max-width: 900px) {
+  .hud-inner {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .hud-center {
+    order: 3;
+    width: 100%;
+    padding: 10px 0 0;
+  }
+
+  .lesson-search {
+    width: 100%;
+  }
+
+  .hud-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 .search-results-meta {
