@@ -73,11 +73,7 @@
               </div>
               <div class="rounded-3xl border border-white/10 bg-[#0b1328]/90 p-6 shadow-xl shadow-cyan-500/10">
                 <div class="flex items-center gap-4">
-                  <img
-                    src="/img/learn/instructor.png"
-                    alt="Avery, the Classroom instructor"
-                    class="h-14 w-14 rounded-2xl border border-cyan-400/40 object-cover"
-                  />
+                  <img src="/img/learn/instructor.png" alt="Avery, the Classroom instructor" class="h-14 w-14 rounded-2xl border border-cyan-400/40 object-cover" />
                   <div>
                     <p class="text-base font-semibold">Avery</p>
                     <p class="text-sm text-white/60">Your Classroom instructor</p>

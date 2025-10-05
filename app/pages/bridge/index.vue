@@ -8,8 +8,10 @@
           aria-modal="true"
           aria-labelledby="bridge-notice-title"
       >
-        <div class="relative w-full max-w-4xl overflow-hidden rounded-[32px] border border-white/10 bg-[#0E1630]/95 px-6 py-8 shadow-[0_30px_100px_rgba(5,10,35,0.65)] sm:px-10 sm:py-12">
-          <div class="pointer-events-none absolute -left-20 top-1/2 h-72 w-72 -translate-y-1/2 rounded-full bg-[#16BBD7]/20 blur-3xl"/>
+        <div
+            class="relative w-full max-w-4xl overflow-hidden rounded-[32px] border border-white/10 bg-[#0E1630]/95 px-6 py-8 shadow-[0_30px_100px_rgba(5,10,35,0.65)] sm:px-10 sm:py-12">
+          <div
+              class="pointer-events-none absolute -left-20 top-1/2 h-72 w-72 -translate-y-1/2 rounded-full bg-[#16BBD7]/20 blur-3xl"/>
           <div class="pointer-events-none absolute -right-10 -top-24 h-64 w-64 rounded-full bg-[#7B4DFF]/20 blur-3xl"/>
           <button
               type="button"
@@ -21,8 +23,9 @@
           </button>
 
           <div class="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-12">
-            <div class="flex flex-col gap-6 lg:w-[58%]">
-              <span class="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-[#84E8F6]">
+            <div class="flex flex-col gap-6">
+              <span
+                  class="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-[#84E8F6]">
                 <span class="h-1.5 w-1.5 rounded-full bg-[#16BBD7] shadow-[0_0_10px_rgba(22,187,215,0.9)]"/>
                 Heads up
               </span>
@@ -30,13 +33,15 @@
                 Live ATC is still in the works
               </h2>
               <p class="text-sm text-white/75 sm:text-base">
-                We&rsquo;re actively building this part of the Bridge experience. There isn&rsquo;t a hosted version yet, but we&rsquo;re lining everything up for launch in the coming weeks and months.
+                We&rsquo;re actively building this part of the Bridge experience. There isn&rsquo;t a hosted version
+                yet, but we&rsquo;re lining everything up for launch in the coming weeks and months.
               </p>
               <div class="grid gap-4 sm:grid-cols-2">
                 <div class="rounded-2xl border border-[#16BBD7]/25 bg-[#16BBD7]/10 p-4 text-left">
                   <p class="text-sm font-semibold text-[#16BBD7]">For confident developers</p>
                   <p class="mt-1 text-sm text-white/75">
-                    Grab the current developer builds for the supported simulators and run them locally if you&rsquo;d like to tinker early.
+                    Grab the current developer builds for the supported simulators and run them locally if you&rsquo;d
+                    like to tinker early.
                   </p>
                   <a
                       href="https://github.com/itsrubberduck/OpenSquawk-MSFS-Bridge/"
@@ -51,37 +56,30 @@
                 <div class="rounded-2xl border border-white/12 bg-white/5 p-4 text-left">
                   <p class="text-sm font-semibold text-white">For everyone else</p>
                   <p class="mt-1 text-sm text-white/70">
-                    Keep exploring OpenSquawk&mdash;the Classroom is ready today and works great without any simulator setup.
+                    Keep exploring OpenSquawk&mdash;the Classroom is ready today and works great without any simulator
+                    setup.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div class="flex flex-1 flex-col gap-5 rounded-2xl border border-white/10 bg-white/5 p-5 text-left backdrop-blur">
-              <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.28em] text-white/60">While you wait</p>
-                <p class="mt-3 text-sm text-white/75">
-                  Jump into the Classroom to keep your skills sharp, or continue to the download section to grab existing Bridge releases.
-                </p>
-              </div>
-              <div class="flex flex-col gap-3">
-                <NuxtLink
-                    to="/classroom"
-                    class="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea]"
-                >
-                  <v-icon icon="mdi-compass" class="h-5 w-5"/>
-                  Visit the Classroom
-                </NuxtLink>
-                <button
-                    type="button"
-                    class="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white/25 hover:bg-white/10"
-                    @click="showNotice = false"
-                >
-                  <v-icon icon="mdi-download" class="h-5 w-5"/>
-                  Browse downloads anyway
-                </button>
-              </div>
-            </div>
+
+          </div>
+          <div class="flex gap-6 mt-6 flex-col sm:flex-row sm:items-center" >
+            <button
+                to="/classroom"
+            >
+              <v-icon icon="mdi-chevron-left" class="h-5 w-5"/>
+              Back to the Classroom
+            </button>
+
+            <button
+                type="button"
+                @click="showNotice = false"
+            >
+              <v-icon icon="mdi-download" class="h-5 w-5"/>
+              Browse downloads anyway
+            </button>
           </div>
         </div>
       </div>
@@ -102,7 +100,7 @@
         </NuxtLink>
         <NuxtLink
             to="/bridge/connect"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-white transition sm:w-auto hover:bg-white/5 " >
+            class="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-white transition sm:w-auto hover:bg-white/5 ">
           <v-icon icon="mdi-link" class="h-5 w-5"/>
           Link a token
         </NuxtLink>
