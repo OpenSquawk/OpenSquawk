@@ -88,9 +88,9 @@
         <div class="hud-right">
 
           <!-- ATC Einstellungen -->
-          <button class="btn ghost" @click="showSettings=true" title="ATC settings">
+          <button class="btn ghost" @click="showSettings=true" title="Settings">
             <v-icon size="18">mdi-tune</v-icon>
-            ATC
+            Settings
           </button>
 
           <NuxtLink class="btn ghost" to="/logout" title="Logout">
@@ -1135,7 +1135,7 @@
     <!-- SETTINGS DIALOG -->
     <v-dialog v-model="showSettings" max-width="720">
       <div class="panel dialog">
-        <h3 class="h3">ATC settings</h3>
+        <h3 class="h3">Settings</h3>
 
         <div class="settings">
           <div class="set-row">
