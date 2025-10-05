@@ -1184,6 +1184,11 @@ POST /api/route/taxi
                     Get involved
                   </NuxtLink>
                 </li>
+                <li>
+                  <NuxtLink to="/feedback" class="hover:text-cyan-300">
+                    Feedback & ideas
+                  </NuxtLink>
+                </li>
                 <li><a href="mailto:info@opensquawk.de" class="hover:text-cyan-300">info@opensquawk.de</a></li>
               </ul>
             </div>
