@@ -40,6 +40,29 @@
         </p>
       </header>
 
+      <section
+          v-if="showNotice"
+          class="mt-10 rounded-3xl border border-white/10 bg-[#111832]/80 p-6 text-left text-sm text-white/70 shadow-[0_20px_60px_rgba(4,8,24,0.45)]"
+      >
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div class="space-y-2">
+            <p class="text-base font-semibold text-white">Coming from the Classroom?</p>
+            <p>Head back to the Classroom hub to keep training, or continue to browse the desktop downloads below.</p>
+          </div>
+          <div class="notice-actions">
+            <NuxtLink to="/classroom" class="notice-button--secondary">
+              <v-icon icon="mdi-chevron-left" class="h-5 w-5"/>
+              Back to the Classroom
+            </NuxtLink>
+
+            <button type="button" class="notice-button--primary" @click="showNotice = false">
+              <v-icon icon="mdi-download" class="h-5 w-5"/>
+              Browse downloads anyway
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section class="mt-14 space-y-4">
         <div class="space-y-2 text-center sm:text-left">
           <h2 class="text-2xl font-semibold">Choose your simulator</h2>
@@ -154,9 +177,11 @@
 </template>
 
 <script setup lang="ts">
-import {useHead} from '#imports'
+import {ref, useHead} from '#imports'
 
 useHead({title: 'Bridge Downloads · OpenSquawk'})
+
+const showNotice = ref(true)
 
 const downloads = [
   {
@@ -220,6 +245,22 @@ const steps = [
 </script>
 
 <style scoped>
+.notice-actions {
+  @apply flex flex-col gap-6 mt-6 sm:mt-0 sm:flex-row sm:items-center;
+}
+
+.notice-actions > * {
+  @apply inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea] sm:px-5 sm:py-3;
+}
+
+.notice-button--secondary {
+  @apply border border-white/15 bg-white/5 text-white hover:border-white/25 hover:bg-white/10 sm:flex-1;
+}
+
+.notice-button--primary {
+  @apply bg-[#16BBD7] text-[#0B1020] shadow-[0_18px_45px_rgba(22,187,215,0.35)] hover:bg-[#13a7c4] sm:w-auto;
+}
+
 code {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
