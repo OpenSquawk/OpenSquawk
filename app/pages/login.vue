@@ -157,6 +157,7 @@
                       v-model.trim="registerForm.name"
                       type="text"
                       autocomplete="name"
+                      autofocus
                       placeholder="First Last"
                       class="field-input"
                   />
