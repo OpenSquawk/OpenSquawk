@@ -1,5 +1,67 @@
 <template>
   <div class="relative min-h-screen bg-[#0B1020] text-white">
+    <Transition name="fade">
+      <div
+          v-if="showNotice"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6 backdrop-blur"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bridge-notice-title"
+      >
+        <div class="relative w-full max-w-3xl overflow-hidden rounded-[32px] border border-white/10 bg-[#0F162B]/95 shadow-[0_32px_120px_rgba(4,8,24,0.65)]">
+          <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(22,187,215,0.28),transparent_65%)]"/>
+          <div class="pointer-events-none absolute inset-x-10 -top-20 h-52 rounded-full bg-[#16BBD7]/15 blur-3xl"/>
+          <div class="pointer-events-none absolute -bottom-20 right-0 h-64 w-64 rounded-full bg-[#487BFF]/10 blur-3xl"/>
+          <button
+              type="button"
+              class="absolute right-6 top-6 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition hover:border-white/20 hover:bg-white/10"
+              @click="showNotice = false"
+              aria-label="Close notice"
+          >
+            <v-icon icon="mdi-close" class="h-5 w-5"/>
+          </button>
+
+          <div class="relative grid gap-8 px-8 py-10 sm:grid-cols-[auto_1fr] sm:items-start sm:gap-10 sm:px-12 sm:py-12">
+            <span class="flex h-16 w-16 items-center justify-center rounded-3xl border border-[#16BBD7]/40 bg-[#16BBD7]/15 text-[#16BBD7] shadow-[0_18px_45px_rgba(22,187,215,0.35)]">
+              <v-icon icon="mdi-headset" class="h-7 w-7"/>
+            </span>
+
+            <div class="space-y-6 text-center sm:text-left">
+              <div class="space-y-4">
+                <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.32em] text-white/70">Development update</span>
+                <div class="space-y-3">
+                  <h2 id="bridge-notice-title" class="text-3xl font-semibold leading-tight sm:text-[2.1rem]">Live ATC is still taxiing to the runway</h2>
+                  <p class="text-sm text-white/70">
+                    We&rsquo;re still polishing the Live ATC area of Bridge. If you&rsquo;re a seasoned developer and eager to explore, you can already pull the developer builds for the supported flight sims and get them running locally. A fully hosted release isn&rsquo;t ready just yet, but it will roll out here in the coming weeks or months.
+                  </p>
+                  <p class="text-sm text-white/70">
+                    Until then, make yourself at home in the Classroom&mdash;it works great even without a simulator or any extra setup.
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-start">
+                <NuxtLink
+                    to="/classroom"
+                    class="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#0B1020] shadow-[0_16px_45px_rgba(22,187,215,0.4)] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea]"
+                >
+                  Visit the Classroom
+                </NuxtLink>
+                <button
+                    type="button"
+                    class="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white/25 hover:bg-white/10"
+                    @click="showNotice = false"
+                >
+                  Continue to downloads
+                </button>
+              </div>
+
+              <p class="text-xs text-white/50">Thank you for helping us test and shape the next release.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
     <div
         class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(22,187,215,0.15),transparent_55%)]"/>
     <div
@@ -154,9 +216,12 @@
 </template>
 
 <script setup lang="ts">
+import {ref} from 'vue'
 import {useHead} from '#imports'
 
 useHead({title: 'Bridge Downloads · OpenSquawk'})
+
+const showNotice = ref(true)
 
 const downloads = [
   {
@@ -222,5 +287,15 @@ const steps = [
 <style scoped>
 code {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
