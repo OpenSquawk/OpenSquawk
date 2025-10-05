@@ -1,11 +1,12 @@
 <template>
   <div class="relative min-h-screen bg-[#050914] text-white">
     <img
-        src="/img/landing/groundpath.jpeg"
-        alt="Path through a forest"
+        src="/img/bridge/goldengate_front.jpeg"
+        alt="Golden Gate Bridge from the front"
         class="absolute inset-0 -z-20 h-full w-full object-cover object-center brightness-[0.55]"
     />
-    <div class="absolute inset-0 -z-10 bg-[#050914]/85 backdrop-blur"/>
+    <div class="absolute inset-0 -z-10 bg-[#050914]/80 backdrop-blur"/>
+    <div class="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-64 bg-gradient-to-t from-[#050914] via-[#050914]/95 to-transparent"/>
     <div
         class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(22,187,215,0.12),transparent_60%)]"/>
     <div
@@ -29,7 +30,7 @@
         <div class="flex flex-wrap items-center justify-center gap-3 text-sm text-white/60">
           <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
             <v-icon icon="mdi-bell-ring" size="18" class="text-cyan-300"/>
-            Honest takes only – thanks!
+            Candid feedback welcome — thank you!
           </span>
           <a class="inline-flex items-center gap-2 text-cyan-200 transition hover:text-cyan-100" href="mailto:info@opensquawk.de">
             <v-icon icon="mdi-email-fast" size="18"/>
@@ -39,11 +40,11 @@
       </header>
 
       <section class="container mx-auto">
-        <div class="">
+        <div class="mx-auto max-w-3xl">
 
 
           <form
-              class="space-y-8 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_30px_80px_rgba(5,10,35,0.45)] backdrop-blur"
+              class="space-y-8 rounded-[28px] border border-white/15 bg-white/10 p-6 shadow-[0_40px_120px_rgba(5,10,35,0.5)] backdrop-blur-xl"
               @submit.prevent="handleSubmit" novalidate>
             <div class="grid gap-4 md:grid-cols-3">
               <div class="space-y-2 md:col-span-1">
@@ -215,9 +216,13 @@
               <button
                   type="submit"
                   :disabled="submissionState === 'submitting'"
-                  class="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-6 py-3 text-base font-semibold text-slate-950 shadow-[0_16px_40px_rgba(56,189,248,0.35)] transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:bg-cyan-400"
+                  class="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-400/90 px-6 py-3 text-base font-semibold text-slate-950 shadow-[0_16px_40px_rgba(56,189,248,0.35)] transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:bg-cyan-400/90"
               >
-                <v-icon :icon="submissionState === 'submitting' ? 'mdi-dots-circle' : 'mdi-send'" size="20" class="text-slate-950"/>
+                <v-icon
+                    :icon="submissionState === 'submitting' ? 'mdi-loading' : 'mdi-send'"
+                    size="20"
+                    :class="submissionState === 'submitting' ? 'text-white animate-spin' : 'text-white'"
+                />
                 <span>{{ submissionState === 'submitting' ? 'Sending…' : 'Send feedback' }}</span>
               </button>
             </div>
@@ -226,7 +231,7 @@
 
         <section
             v-if="submissionState === 'success'"
-            class="space-y-4 rounded-3xl border border-emerald-400/30 bg-emerald-400/10 p-6 mt-8 text-sm text-emerald-100 shadow-[0_20px_60px_rgba(12,61,48,0.45)]"
+            class="mx-auto mt-8 max-w-3xl space-y-4 rounded-3xl border border-emerald-400/30 bg-emerald-400/10 p-6 text-sm text-emerald-100 shadow-[0_20px_60px_rgba(12,61,48,0.45)]"
         >
           <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
             <v-icon icon="mdi-check-decagram" size="28" class="text-emerald-200"/>
@@ -239,7 +244,7 @@
 
         <section
             v-else-if="submissionState === 'error'"
-            class="space-y-4 rounded-3xl border border-rose-400/40 bg-rose-400/10 p-6 text-sm text-rose-100 shadow-[0_20px_60px_rgba(83,24,41,0.45)]"
+            class="mx-auto max-w-3xl space-y-4 rounded-3xl border border-rose-400/40 bg-rose-400/10 p-6 text-sm text-rose-100 shadow-[0_20px_60px_rgba(83,24,41,0.45)]"
         >
           <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
             <v-icon icon="mdi-alert" size="26" class="text-rose-200"/>
