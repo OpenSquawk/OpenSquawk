@@ -981,6 +981,7 @@
                             :aria-label="fieldLabel(segment.key)"
                             :placeholder="fieldPlaceholder(segment.key)"
                             :inputmode="fieldInputmode(segment.key)"
+                            :ref="el => assignReadbackFieldRef(segment.key, el as HTMLInputElement | null)"
                         />
                         <v-icon v-if="fieldPass(segment.key)" size="16" class="blank-status ok">mdi-check</v-icon>
                         <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert
@@ -2513,6 +2514,7 @@ const hasSpokenTarget = ref(false)
 const pendingAutoSay = ref(false)
 const activeFrequency = ref<Frequency | null>(null)
 const userAnswers = reactive<Record<string, string>>({})
+const readbackFieldRefs = new Map<string, HTMLInputElement>()
 const result = ref<ScoreResult | null>(null)
 const evaluating = ref(false)
 const ttsLoading = ref(false)
@@ -2942,6 +2944,39 @@ const fieldMap = computed<Record<string, LessonField>>(() => {
   return map
 })
 
+const firstReadbackFieldKey = computed<string | null>(() => {
+  const lesson = activeLesson.value
+  if (!lesson) return null
+  const firstField = lesson.readback.find(segment => segment.type === 'field')
+  if (!firstField || firstField.type !== 'field') return null
+  return firstField.key
+})
+
+function assignReadbackFieldRef(key: string, el: HTMLInputElement | null) {
+  if (!el) {
+    readbackFieldRefs.delete(key)
+    return
+  }
+  readbackFieldRefs.set(key, el)
+}
+
+function focusFirstReadbackField() {
+  const key = firstReadbackFieldKey.value
+  if (!key) return
+  const target = readbackFieldRefs.get(key)
+  if (target) {
+    target.focus()
+    target.select?.()
+    return
+  }
+  void nextTick(() => {
+    const fallback = readbackFieldRefs.get(key)
+    if (!fallback) return
+    fallback.focus()
+    fallback.select?.()
+  })
+}
+
 const fieldStates = computed<Record<string, FieldState>>(() => {
   const map: Record<string, FieldState> = {}
   if (!activeLesson.value || !scenario.value) return map
@@ -3231,6 +3266,9 @@ async function speakTarget(auto = false) {
     pendingAutoSay.value = false
   }
   hasSpokenTarget.value = true
+  if (auto) {
+    focusFirstReadbackField()
+  }
   await say(phrase)
 }
 
@@ -3914,14 +3952,17 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
   const nativeRate = supportsNativeSpeed
       ? clampRate(typeof source.speed === 'number' && Number.isFinite(source.speed) ? source.speed : desiredRate, 0.5, 2)
       : 1
-  const playbackRate = supportsNativeSpeed
+  const basePlaybackRate = supportsNativeSpeed
       ? clampRate(desiredRate / (nativeRate || 1), 0.5, 2)
       : desiredRate
+  const needsRateFallback = !supportsNativeSpeed && Math.abs(basePlaybackRate - 1) > 0.0001
+  const playbackRate = needsRateFallback ? 1 : basePlaybackRate
+  const htmlPlaybackRate = needsRateFallback ? basePlaybackRate : playbackRate
 
   const playWithoutEffects = async () => {
     const audio = new Audio(dataUrl)
     audio.preload = 'auto'
-    audio.playbackRate = playbackRate
+    audio.playbackRate = htmlPlaybackRate
     setMediaElementPreservesPitch(audio, true)
     audioElement.value = audio
     audio.onended = () => {
@@ -3946,11 +3987,6 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
     const pizzicato = await ensurePizzicato(ctx)
     if (!ctx || !pizzicato) {
       throw new Error('Audio engine unavailable')
-    }
-
-    if (!supportsNativeSpeed && Math.abs(playbackRate - 1) > 0.0001) {
-      await playWithoutEffects()
-      return
     }
 
     const sound = await pizzicato.createSoundFromBase64(ctx, source.base64)
