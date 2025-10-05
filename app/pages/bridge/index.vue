@@ -25,11 +25,11 @@
 
       <div
           class="mt-10 overflow-hidden rounded-3xl border border-white/10"
-          style="aspect-ratio: 3 / 1;"
+          style="aspect-ratio: 2.5 / 1;"
       >
         <div
             class="h-full w-full bg-cover bg-center"
-            style="background-image: url('http://localhost:3000/img/learn/modules/img14.jpeg');"
+            style="background-image: url('http://localhost:3000/img/bridge/goldengate_angle.jpeg');"
         />
       </div>
 
@@ -185,7 +185,7 @@ const downloads = [
     status: 'Planned',
     available: false,
     href: '#',
-    icon: 'mdi-earth',
+    icon: 'mdi-git',
   },
   {
     id: 'xplane',
