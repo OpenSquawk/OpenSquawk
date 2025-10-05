@@ -1,7 +1,7 @@
 <template>
   <div class="bg-[#0b1020] text-white antialiased selection:bg-cyan-400/30">
     <!-- NAV -->
-    <header class="fixed left-0 right-0 top-0 z-50 bg-[#0b1020]/70 backdrop-blur border-b border-white/10"
+    <header ref="headerRef" class="fixed left-0 right-0 top-0 z-50 bg-[#0b1020]/70 backdrop-blur border-b border-white/10"
             data-aos="fade-down">
       <nav class="container-outer flex items-center justify-between py-3">
         <NuxtLink to="#" class="flex items-center gap-2 font-semibold tracking-tight">
@@ -13,7 +13,8 @@
               v-for="item in navLinks"
               :key="item.to"
               :to="item.to"
-              class="hover:text-cyan-300"
+              :class="['transition-colors hover:text-cyan-300', isNavLinkActive(item.to) ? 'text-cyan-300' : 'text-white/70']"
+              @click.prevent="handleAnchorNavigation(item.to)"
           >
             {{ item.label }}
           </NuxtLink>
@@ -74,7 +75,7 @@
                   :target="item.external ? '_blank' : undefined"
                   :rel="item.external ? 'noopener' : undefined"
                   class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 transition hover:bg-white/10"
-                  @click="closeMobileNav"
+                  @click="handleMobileNavLinkClick($event, item)"
               >
                 <span class="flex items-center gap-3">
                   <v-icon v-if="item.icon" :icon="item.icon" size="18" class="text-white/60"/>
@@ -1224,8 +1225,8 @@ POST /api/route/taxi
 
 
 <script setup lang="ts">
-import {ref, reactive, computed, onMounted, watch, onBeforeUnmount} from 'vue'
-import {useHead, useRoute} from '#imports'
+import {ref, reactive, computed, onMounted, watch, onBeforeUnmount, nextTick} from 'vue'
+import {useHead, useRoute, useRouter} from '#imports'
 import {useApi} from '~/composables/useApi'
 import {getAllNews} from '~~/shared/utils/news'
 import type {NewsPost} from '~~/shared/utils/news'
@@ -1258,12 +1259,162 @@ const mobileNavLinks = computed<ExtendedNavLink[]>(() => [
   {label: 'GitHub', to: GITHUB_URL, external: true, icon: 'mdi-github'},
 ])
 
+const router = useRouter()
+
+const headerRef = ref<HTMLElement | null>(null)
+const headerHeight = ref(0)
+const activeSection = ref<string>('')
+
+const SCROLL_MARGIN = 24
+
+const isNavLinkActive = (hash: string) => activeSection.value === hash
+
+interface ScrollOptions {
+  updateUrl?: boolean
+}
+
+let sectionElements: {hash: string; element: HTMLElement}[] = []
+let isInternalNavigation = false
+
+const updateHeaderHeight = () => {
+  if (!import.meta.client) return
+  headerHeight.value = headerRef.value?.offsetHeight ?? 0
+}
+
+const updateSectionElements = () => {
+  if (!import.meta.client) return
+  sectionElements = navLinks
+      .map((link) => {
+        if (!link.to.startsWith('#')) return null
+        const element = document.querySelector<HTMLElement>(link.to)
+        return element ? {hash: link.to, element} : null
+      })
+      .filter((value): value is {hash: string; element: HTMLElement} => value !== null)
+}
+
+const updateActiveSection = () => {
+  if (!import.meta.client) return
+  if (!sectionElements.length) {
+    activeSection.value = ''
+    return
+  }
+
+  const scrollPosition = window.scrollY + headerHeight.value + SCROLL_MARGIN + 1
+  for (let index = sectionElements.length - 1; index >= 0; index -= 1) {
+    const {hash, element} = sectionElements[index]
+    if (scrollPosition >= element.offsetTop) {
+      activeSection.value = hash
+      return
+    }
+  }
+
+  activeSection.value = ''
+}
+
+const handleScroll = () => {
+  updateActiveSection()
+}
+
+const handleResize = () => {
+  updateHeaderHeight()
+  updateSectionElements()
+  updateActiveSection()
+}
+
+const scrollToSection = (hash: string, behavior: ScrollBehavior = 'smooth', options: ScrollOptions = {}) => {
+  if (!import.meta.client || !hash.startsWith('#')) return
+
+  const target = document.querySelector<HTMLElement>(hash)
+  if (!target) return
+
+  const top = target.getBoundingClientRect().top + window.scrollY - headerHeight.value - SCROLL_MARGIN
+  window.scrollTo({
+    top: Math.max(0, top),
+    behavior,
+  })
+  activeSection.value = hash
+
+  if (options.updateUrl !== false && route.hash !== hash) {
+    isInternalNavigation = true
+    router.replace({hash}).catch(() => {
+    }).finally(() => {
+      isInternalNavigation = false
+    })
+  }
+}
+
+const handleAnchorNavigation = (hash: string, behavior: ScrollBehavior = 'smooth', options: ScrollOptions = {}) => {
+  if (!import.meta.client) return
+
+  if (!hash || hash === '#') {
+    window.scrollTo({top: 0, behavior})
+    updateActiveSection()
+    return
+  }
+
+  scrollToSection(hash, behavior, options)
+}
+
+const handleDocumentClick = (event: MouseEvent) => {
+  if (!import.meta.client || event.defaultPrevented) return
+
+  const target = event.target as HTMLElement | null
+  if (!target) return
+
+  const anchor = target.closest('a[href]') as HTMLAnchorElement | null
+  if (!anchor) return
+
+  if (anchor.target === '_blank' || anchor.hasAttribute('download') || anchor.getAttribute('data-scroll-ignore') === 'true') {
+    return
+  }
+
+  const href = anchor.getAttribute('href') ?? ''
+  if (!href) return
+
+  const isHashOnly = href.startsWith('#')
+  const samePage = anchor.host === window.location.host && anchor.pathname === window.location.pathname
+  const hash = anchor.hash || (isHashOnly ? href : '')
+
+  if (!hash || (!isHashOnly && !samePage)) return
+
+  event.preventDefault()
+  handleAnchorNavigation(hash)
+}
+
+const handleHashChange = () => {
+  if (!import.meta.client || isInternalNavigation) return
+
+  const {hash} = window.location
+  if (!hash) {
+    updateActiveSection()
+    return
+  }
+
+  handleAnchorNavigation(hash, 'auto', {updateUrl: false})
+}
+
 const isMobileNavOpen = ref(false)
 const toggleMobileNav = () => {
   isMobileNavOpen.value = !isMobileNavOpen.value
 }
 const closeMobileNav = () => {
   isMobileNavOpen.value = false
+}
+
+const handleMobileNavLinkClick = (event: MouseEvent, item: ExtendedNavLink) => {
+  if (item.external) {
+    closeMobileNav()
+    return
+  }
+
+  if (item.to.startsWith('#')) {
+    event.preventDefault()
+    handleAnchorNavigation(item.to)
+    closeMobileNav()
+    return
+  }
+
+  closeMobileNav()
 }
 
 const route = useRoute()
@@ -1274,13 +1425,46 @@ watch(
     },
 )
 
+onMounted(() => {
+  if (!import.meta.client) return
+
+  nextTick(() => {
+    updateHeaderHeight()
+    updateSectionElements()
+    updateActiveSection()
+
+    if (route.hash) {
+      handleAnchorNavigation(route.hash, 'auto', {updateUrl: false})
+    }
+
+    window.addEventListener('scroll', handleScroll, {passive: true})
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('hashchange', handleHashChange)
+    document.addEventListener('click', handleDocumentClick)
+
+    window.setTimeout(() => {
+      updateHeaderHeight()
+      updateSectionElements()
+      updateActiveSection()
+    }, 300)
+  })
+})
+
 if (import.meta.client) {
   watch(isMobileNavOpen, (open) => {
     document.body.classList.toggle('overflow-hidden', open)
+    nextTick(() => {
+      updateHeaderHeight()
+      updateActiveSection()
+    })
   })
 
   onBeforeUnmount(() => {
     document.body.classList.remove('overflow-hidden')
+    window.removeEventListener('scroll', handleScroll)
+    window.removeEventListener('resize', handleResize)
+    window.removeEventListener('hashchange', handleHashChange)
+    document.removeEventListener('click', handleDocumentClick)
   })
 }
 
