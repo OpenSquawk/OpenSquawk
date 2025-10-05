@@ -1645,6 +1645,7 @@ const experiences: ExperienceOption[] = [
     description: 'Mission hub & drills',
     icon: 'mdi-school',
     to: '/classroom',
+    target: '_self',
     matches: path => path.startsWith('/classroom') || path.startsWith('/classroom-introduction')
   },
   {
@@ -1652,7 +1653,8 @@ const experiences: ExperienceOption[] = [
     label: 'Live ATC',
     description: 'Live radio with AI controllers',
     icon: 'mdi-radio-handheld',
-    to: '/pm',
+    to: '/bridge',
+    target: '_blank',
     matches: path => path.startsWith('/pm')
   }
 ]
@@ -1666,6 +1668,10 @@ const activeExperience = computed<ExperienceOption>(() => {
 async function handleExperienceSelect(option: ExperienceOption) {
   experienceMenu.value = false
   if (option.matches(route.path)) return
+  if( option.target === '_blank') {
+    window.open(option.to, '_blank')
+    return
+  }
   await router.push(option.to)
 }
 
