@@ -1,22 +1,20 @@
 <template>
   <div class="relative min-h-screen bg-[#050914] text-white">
     <img
-        src="/img/landing/groundpath.jpeg"
+        src="/img/landing/feedback.jpeg"
         alt="Path through a forest"
-        class="absolute inset-0 -z-20 h-full w-full object-cover object-center brightness-[0.55]"
+        class="fixed inset-0 h-screen w-full object-cover object-center brightness-[0.55]"
     />
-    <div class="absolute inset-0 -z-10 bg-[#050914]/85 backdrop-blur"/>
+    <div class="absolute inset-0 backdrop-blur-sm"/>
     <div
         class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(22,187,215,0.12),transparent_60%)]"/>
     <div
         class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_bottom,_rgba(123,77,255,0.12),transparent_70%)]"/>
 
     <main class="relative z-10 pb-16 lg:pb-24">
-      <header class="container-outer flex flex-col items-center gap-5 py-20 text-center sm:gap-6 sm:py-24 lg:py-28">
+      <header class="flex flex-col items-center gap-5 py-20 text-center sm:gap-6 sm:py-24 lg:py-28">
         <span
-            class="chip inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-cyan-200/80"
-        >
-          <span class="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.8)]" aria-hidden="true"/>
+            class="chip inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white" >
           Feedback loop
         </span>
         <h1 class="max-w-3xl text-3xl font-semibold leading-tight text-white sm:text-4xl md:text-5xl">
@@ -31,19 +29,13 @@
             <v-icon icon="mdi-bell-ring" size="18" class="text-cyan-300"/>
             Candid notes welcome — thank you!
           </span>
-          <a class="inline-flex items-center gap-2 text-cyan-200 transition hover:text-cyan-100" href="mailto:info@opensquawk.de">
-            <v-icon icon="mdi-email-fast" size="18"/>
-            Prefer email? info@opensquawk.de
-          </a>
         </div>
       </header>
 
-      <section class="container mx-auto">
+      <section class="max-w-5xl mx-auto">
         <div class="">
-
-
           <form
-              class="space-y-8 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_30px_80px_rgba(5,10,35,0.45)] backdrop-blur"
+              class="space-y-8 rounded-3xl border border-white/10 bg-white/10 p-6 shadow-[0_30px_80px_rgba(5,10,35,0.45)] backdrop-blur-3xl"
               @submit.prevent="handleSubmit" novalidate>
             <div class="grid gap-4 md:grid-cols-3">
               <div class="space-y-2 md:col-span-1">
