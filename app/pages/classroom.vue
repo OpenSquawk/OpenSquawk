@@ -30,14 +30,24 @@
                   type="button"
                   role="menuitemradio"
                   class="experience-option"
-                  :class="{ 'is-active': option.id === activeExperience.id }"
+                  :class="{
+                    'is-active': option.id === activeExperience.id,
+                    'is-disabled': option.disabled
+                  }"
                   :aria-checked="option.id === activeExperience.id"
-                  @click="handleExperienceSelect(option)"
+                  :aria-disabled="option.disabled ? 'true' : 'false'"
+                  :disabled="option.disabled"
+                  @click="!option.disabled && handleExperienceSelect(option)"
               >
                 <v-icon size="18" class="experience-option-icon">{{ option.icon }}</v-icon>
                 <div class="experience-option-body">
                   <div class="experience-option-title">{{ option.label }}</div>
                   <div v-if="option.description" class="experience-option-sub">{{ option.description }}</div>
+                </div>
+                <span v-if="option.disabled" class="sr-only">In Entwicklung</span>
+                <div v-if="option.disabled" class="experience-option-development" aria-hidden="true">
+                  <v-icon size="22">mdi-construction</v-icon>
+                  <span>In Entwicklung</span>
                 </div>
                 <v-icon
                     v-if="option.id === activeExperience.id"
@@ -1636,6 +1646,7 @@ type ExperienceOption = {
   icon: string
   to: string
   matches: (path: string) => boolean
+  disabled?: boolean
 }
 
 const experiences: ExperienceOption[] = [
@@ -1653,7 +1664,8 @@ const experiences: ExperienceOption[] = [
     description: 'Live radio with AI controllers',
     icon: 'mdi-radio-handheld',
     to: '/pm',
-    matches: path => path.startsWith('/pm')
+    matches: path => path.startsWith('/pm'),
+    disabled: true
   }
 ]
 
@@ -4537,6 +4549,8 @@ onMounted(() => {
   text-align: left;
   font: inherit;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
   transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
 
@@ -4552,6 +4566,54 @@ onMounted(() => {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   border-color: color-mix(in srgb, var(--accent) 32%, transparent);
   color: var(--accent);
+}
+
+.experience-option.is-disabled,
+.experience-option.is-disabled:hover,
+.experience-option.is-disabled:focus-visible {
+  background: color-mix(in srgb, var(--bg) 90%, var(--border) 10%);
+  border-color: color-mix(in srgb, var(--border) 40%, transparent);
+  color: color-mix(in srgb, var(--t3) 70%, var(--t4) 30%);
+  cursor: not-allowed;
+}
+
+.experience-option.is-disabled .experience-option-sub {
+  color: color-mix(in srgb, var(--t4) 70%, white 10%);
+}
+
+.experience-option.is-disabled::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--border) 25%, transparent) 0 8px,
+      color-mix(in srgb, var(--border) 45%, transparent) 8px 16px
+  );
+  opacity: .65;
+  pointer-events: none;
+}
+
+.experience-option-development {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: color-mix(in srgb, var(--t1) 80%, white 20%);
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.experience-option-development .v-icon {
+  color: currentColor;
 }
 
 .experience-option-icon,
