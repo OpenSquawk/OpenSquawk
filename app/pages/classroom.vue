@@ -10,7 +10,43 @@
           <div class="hud-divider" aria-hidden="true"></div>
           <span class="brand">OpenSquawk</span>
           <span class="sep">|</span>
-          <span class="mode">Classroom</span>
+          <v-menu v-model="experienceMenu" :offset="[0, 8]" location="bottom start" transition="scale-transition">
+            <template #activator="{ props }">
+              <button
+                  class="mode-switch"
+                  type="button"
+                  v-bind="props"
+                  aria-haspopup="menu"
+                  :aria-expanded="experienceMenu ? 'true' : 'false'"
+              >
+                <span class="mode-switch-label">{{ activeExperience.label }}</span>
+                <v-icon size="16" class="mode-switch-icon">mdi-chevron-down</v-icon>
+              </button>
+            </template>
+            <div class="experience-menu" role="menu" aria-label="Select experience">
+              <button
+                  v-for="option in experiences"
+                  :key="option.id"
+                  type="button"
+                  role="menuitemradio"
+                  class="experience-option"
+                  :class="{ 'is-active': option.id === activeExperience.id }"
+                  :aria-checked="option.id === activeExperience.id"
+                  @click="handleExperienceSelect(option)"
+              >
+                <v-icon size="18" class="experience-option-icon">{{ option.icon }}</v-icon>
+                <div class="experience-option-body">
+                  <div class="experience-option-title">{{ option.label }}</div>
+                  <div v-if="option.description" class="experience-option-sub">{{ option.description }}</div>
+                </div>
+                <v-icon
+                    v-if="option.id === activeExperience.id"
+                    size="16"
+                    class="experience-option-check"
+                >mdi-check</v-icon>
+              </button>
+            </div>
+          </v-menu>
         </div>
 
         <div class="hud-right">
@@ -1387,6 +1423,47 @@ const manualSectionsOpen = reactive<Record<ManualSection, boolean>>({
 
 const router = useRouter()
 const route = useRoute()
+
+type ExperienceId = 'classroom' | 'live'
+type ExperienceOption = {
+  id: ExperienceId
+  label: string
+  description: string
+  icon: string
+  to: string
+  matches: (path: string) => boolean
+}
+
+const experiences: ExperienceOption[] = [
+  {
+    id: 'classroom',
+    label: 'Classroom',
+    description: 'Mission hub & drills',
+    icon: 'mdi-school',
+    to: '/classroom',
+    matches: path => path.startsWith('/classroom') || path.startsWith('/classroom-introduction')
+  },
+  {
+    id: 'live',
+    label: 'Live ATC',
+    description: 'Live radio with AI controllers',
+    icon: 'mdi-radio-handheld',
+    to: '/pm',
+    matches: path => path.startsWith('/pm')
+  }
+]
+
+const experienceMenu = ref(false)
+const activeExperience = computed<ExperienceOption>(() => {
+  const path = route.path
+  return experiences.find(option => option.matches(path)) ?? experiences[0]
+})
+
+async function handleExperienceSelect(option: ExperienceOption) {
+  experienceMenu.value = false
+  if (option.matches(route.path)) return
+  await router.push(option.to)
+}
 
 const ROUTE_STATE_KEYS = ['panel', 'module', 'stage', 'lesson', 'plan'] as const
 type RouteStateKey = typeof ROUTE_STATE_KEYS[number]
@@ -4032,8 +4109,102 @@ onMounted(() => {
   font-weight: 600
 }
 
-.mode {
-  color: var(--t2)
+.mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--t2);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color .2s ease, background .2s ease, border-color .2s ease;
+}
+
+.mode-switch:hover,
+.mode-switch:focus-visible {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  outline: none;
+}
+
+.mode-switch:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.mode-switch-icon {
+  color: currentColor;
+}
+
+.experience-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, .4);
+}
+
+.experience-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--t2);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.experience-option:hover,
+.experience-option:focus-visible {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 26%, transparent);
+  color: var(--accent);
+  outline: none;
+}
+
+.experience-option.is-active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+  color: var(--accent);
+}
+
+.experience-option-icon,
+.experience-option-check {
+  color: currentColor;
+}
+
+.experience-option-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.experience-option-title {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.experience-option-sub {
+  font-size: 12px;
+  color: var(--t3);
+}
+
+.experience-option.is-active .experience-option-sub {
+  color: color-mix(in srgb, var(--accent) 36%, white 14%);
 }
 
 .sep {
