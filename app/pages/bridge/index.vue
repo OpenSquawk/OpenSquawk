@@ -23,12 +23,25 @@
         </NuxtLink>
       </nav>
 
-      <header class="mt-10 space-y-5 text-center sm:text-left">
-        <p class="text-xs font-semibold uppercase tracking-[0.45em] text-[#16BBD7]">OpenSquawk Bridge</p>
-        <h1 class="text-3xl font-semibold sm:text-4xl">Your simulator, connected in under a minute.</h1>
-        <p class="mx-auto max-w-2xl text-sm text-white/70 sm:mx-0">
-          Download the Bridge for your sim, sign in once, and let the desktop app keep your flights in sync.
-        </p>
+      <header
+          class="mt-10 overflow-hidden rounded-3xl border border-white/10 shadow-[0_32px_90px_rgba(4,8,24,0.55)]"
+      >
+        <div class="relative aspect-[3/1]">
+          <img
+              src="http://localhost:3000/img/learn/modules/img14.jpeg"
+              alt="Golden Gate Bridge at sunset"
+              class="h-full w-full object-cover"
+          >
+          <div class="absolute inset-0 bg-gradient-to-r from-[#0B1020]/85 via-[#0B1020]/65 to-transparent">
+            <div class="flex h-full flex-col justify-center gap-4 px-6 py-10 text-center sm:px-10 sm:text-left">
+              <p class="text-xs font-semibold uppercase tracking-[0.45em] text-[#16BBD7]">OpenSquawk Bridge</p>
+              <h1 class="text-3xl font-semibold sm:text-4xl">Your simulator, connected in under a minute.</h1>
+              <p class="mx-auto max-w-2xl text-sm text-white/80 sm:mx-0">
+                Download the Bridge for your sim, sign in once, and let the desktop app keep your flights in sync.
+              </p>
+            </div>
+          </div>
+        </div>
       </header>
 
       <section class="mt-14 space-y-4">
@@ -167,6 +180,15 @@ const downloads = [
     available: false,
     href: '#',
     icon: 'mdi-microsoft',
+  },
+  {
+    id: 'flightgear',
+    title: 'FlightGear',
+    description: 'Linux builds land first, with macOS and Windows packages following right behind.',
+    status: 'Planned',
+    available: false,
+    href: '#',
+    icon: 'mdi-earth',
   },
   {
     id: 'xplane',
