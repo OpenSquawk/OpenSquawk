@@ -1,4 +1,4 @@
-import { createBaseScenario, createScenarioSeries, formatTemp } from '~~/shared/learn/scenario'
+import { createBaseScenario, createScenarioSeries, digitsToWords, formatTemp, lettersToNato } from '~~/shared/learn/scenario'
 import type { ModuleDef, Scenario } from '~~/shared/learn/types'
 
 function gradientArt(colors: string[]): string {
@@ -7,6 +7,72 @@ function gradientArt(colors: string[]): string {
     .join('')
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">${stops}</linearGradient></defs><rect fill="url(#g)" width="400" height="240"/></svg>`
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+}
+
+function randInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+function sample<T>(values: readonly T[]): T {
+  return values[randInt(0, values.length - 1)]
+}
+
+const identifierCharacters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
+function randomIdentifier(length: number): string {
+  let value = ''
+  for (let i = 0; i < length; i++) {
+    value += identifierCharacters[randInt(0, identifierCharacters.length - 1)]
+  }
+  return value
+}
+
+function toPhoneticBlocks(value: string): string {
+  return value
+    .toUpperCase()
+    .split('')
+    .map(char => {
+      if (/[A-Z]/.test(char)) {
+        return lettersToNato(char)
+      }
+      if (/[0-9]/.test(char)) {
+        return digitsToWords(char)
+      }
+      return char
+    })
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function createExtendedIdentifierScenario(length = 10): Scenario {
+  const scenario = createBaseScenario()
+  const identifier = randomIdentifier(length)
+  scenario.phoneticCode = identifier
+  scenario.phoneticCodeWords = toPhoneticBlocks(identifier)
+  return scenario
+}
+
+const taxiPrefixes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'R', 'S', 'T', 'U', 'V', 'W', 'Y', 'Z']
+const taxiNumbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '15', '16']
+
+function randomTaxiWaypoint(): string {
+  const prefix = sample(taxiPrefixes)
+  const number = sample(taxiNumbers)
+  return `${prefix}${number}`
+}
+
+function createComplexTaxiScenario(): Scenario {
+  const scenario = createBaseScenario()
+  const segments: string[] = []
+  const total = randInt(5, 8)
+  while (segments.length < total) {
+    const next = randomTaxiWaypoint()
+    if (segments[segments.length - 1] === next) continue
+    segments.push(next)
+  }
+  scenario.taxiRoute = segments.join(' ')
+  return scenario
 }
 
 const fundamentalsLessons = [
@@ -56,6 +122,47 @@ const fundamentalsLessons = [
       `Identifier: ${scenario.phoneticCode}`
     ],
     generate: createBaseScenario
+  },
+  {
+    id: 'icao-marathon',
+    title: 'ICAO Marathon Drill',
+    desc: 'Copy extended identifiers with up to ten characters',
+    keywords: ['Alphabet', 'Numbers', 'Advanced'],
+    hints: [
+      'Scan for natural breaks every two to three characters to keep long identifiers manageable.',
+      'Say the full sequence back without pauses, including letters and digits exactly as transmitted.'
+    ],
+    fields: [
+      {
+        key: 'icao-long-code',
+        label: 'Identifier',
+        expected: scenario => scenario.phoneticCode,
+        alternatives: scenario => {
+          const value = scenario.phoneticCode
+          const upper = value.toUpperCase()
+          const lower = upper.toLowerCase()
+          const spacedUpper = upper.split('').join(' ')
+          const spacedLower = lower.split('').join(' ')
+          const spelled = scenario.phoneticCodeWords
+          return Array.from(
+            new Set([upper, lower, spacedUpper, spacedLower, spelled, spelled.toLowerCase()])
+          )
+        },
+        placeholder: 'Enter long identifier',
+        width: 'xl'
+      }
+    ],
+    readback: [
+      { type: 'text', text: 'Identifier ' },
+      { type: 'field', key: 'icao-long-code', width: 'xl' }
+    ],
+    defaultFrequency: 'DEL',
+    phrase: scenario => scenario.phoneticCodeWords,
+    info: scenario => [
+      `Heard: ${scenario.phoneticCodeWords}`,
+      `Identifier: ${scenario.phoneticCode}`
+    ],
+    generate: () => createExtendedIdentifierScenario(10)
   },
   {
     id: 'radio-call',
@@ -751,6 +858,67 @@ const readbackLessons = [
       `Hold short: ${scenario.runway}`
     ],
     generate: createBaseScenario
+  },
+  {
+    id: 'taxi-complex',
+    title: 'Complex Taxi Route',
+    desc: 'Handle long taxi instructions with multiple waypoints',
+    keywords: ['Ground', 'Taxi', 'Advanced'],
+    hints: [
+      'Copy the entire route, including every waypoint in the order delivered.',
+      'Group waypoints into small chunks so you can read the route back smoothly.'
+    ],
+    fields: [
+      {
+        key: 'taxi-complex-runway',
+        label: 'Runway',
+        expected: scenario => scenario.runway,
+        alternatives: scenario => [scenario.runway.replace(/^0/, ''), scenario.runwayWords],
+        width: 'sm'
+      },
+      {
+        key: 'taxi-complex-route',
+        label: 'Route',
+        expected: scenario => scenario.taxiRoute,
+        alternatives: scenario => [scenario.taxiRoute, `via ${scenario.taxiRoute}`],
+        width: 'xl'
+      },
+      {
+        key: 'taxi-complex-hold',
+        label: 'Hold Short',
+        expected: scenario => scenario.runway,
+        alternatives: scenario => [scenario.runway.replace(/^0/, ''), scenario.runwayWords],
+        width: 'sm'
+      },
+      {
+        key: 'taxi-complex-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: scenario => [
+          scenario.radioCall,
+          `${scenario.airlineCall} ${scenario.flightNumber}`,
+          scenario.callsign
+        ],
+        width: 'lg'
+      }
+    ],
+    readback: [
+      { type: 'text', text: 'Taxi to runway ' },
+      { type: 'field', key: 'taxi-complex-runway', width: 'sm' },
+      { type: 'text', text: ' via ' },
+      { type: 'field', key: 'taxi-complex-route', width: 'xl' },
+      { type: 'text', text: ', holding short runway ' },
+      { type: 'field', key: 'taxi-complex-hold', width: 'sm' },
+      { type: 'text', text: ', ' },
+      { type: 'field', key: 'taxi-complex-callsign', width: 'lg' }
+    ],
+    defaultFrequency: 'GND',
+    phrase: scenario => `${scenario.radioCall}, taxi to runway ${scenario.runway} via ${scenario.taxiRoute}, hold short runway ${scenario.runway}.`,
+    info: scenario => [
+      `Taxi route: ${scenario.taxiRoute}`,
+      `Hold short: ${scenario.runway}`
+    ],
+    generate: createComplexTaxiScenario
   },
   {
     id: 'lineup',

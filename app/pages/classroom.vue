@@ -38,6 +38,61 @@
         <div class="muted">Start with the ICAO alphabet & numbers, then basics, ground, and more.</div>
       </div>
 
+      <div class="hub-search" role="search">
+        <label class="hub-search-label" for="lesson-search">Lesson search</label>
+        <div class="hub-search-control">
+          <v-icon size="18" class="hub-search-icon">mdi-magnify</v-icon>
+          <input
+              id="lesson-search"
+              v-model="lessonSearch"
+              type="search"
+              autocomplete="off"
+              placeholder="Search lessons by title, keyword or phrase"
+          />
+          <button
+              v-if="lessonSearch"
+              class="hub-search-clear"
+              type="button"
+              @click="clearLessonSearch"
+              aria-label="Clear lesson search"
+          >
+            <v-icon size="16">mdi-close</v-icon>
+          </button>
+        </div>
+        <p class="muted small">Filter every mission lesson instantly and jump right into practice.</p>
+      </div>
+
+      <div v-if="hasLessonSearch" class="hub-search-results">
+        <div class="search-results-meta">
+          <span>{{ lessonSearchResults.length }} {{ lessonSearchResults.length === 1 ? 'match' : 'matches' }}</span>
+          <button class="link small" type="button" @click="clearLessonSearch">Clear</button>
+        </div>
+        <div v-if="lessonSearchResults.length" class="search-results-list">
+          <button
+              v-for="hit in lessonSearchResults"
+              :key="`${hit.module.id}-${hit.lesson.id}`"
+              type="button"
+              class="search-hit"
+              @click="openLessonFromSearch(hit.module.id, hit.lesson.id)"
+          >
+            <div class="search-hit-top">
+              <div class="search-hit-title">{{ hit.lesson.title }}</div>
+              <span class="lesson-score" :class="lessonScoreClass(hit.module.id, hit.lesson.id)">
+                <v-icon size="14">{{ lessonScoreIcon(hit.module.id, hit.lesson.id) }}</v-icon>
+                {{ lessonScoreLabel(hit.module.id, hit.lesson.id) }}
+              </span>
+            </div>
+            <div class="muted small">{{ hit.lesson.desc }}</div>
+            <div class="tags">
+              <span v-if="lessonOrderTag(hit.module.id, hit.lesson.id)" class="tag tag-index">{{ lessonOrderTag(hit.module.id, hit.lesson.id) }}</span>
+              <span class="tag">{{ hit.module.title }}</span>
+              <span v-for="tag in hit.lesson.keywords" :key="tag" class="tag">{{ tag }}</span>
+            </div>
+          </button>
+        </div>
+        <p v-else class="muted small">No lessons found for “{{ lessonSearch }}”.</p>
+      </div>
+
       <div class="tiles">
         <div
             v-for="m in modules"
@@ -1245,6 +1300,60 @@ function similarity(a: string, b: string): number {
 
 const modules = shallowRef<ModuleDef[]>(learnModules)
 
+type LessonSearchHit = {
+  module: ModuleDef
+  lesson: Lesson
+  score: number
+}
+
+const lessonSearch = ref('')
+const normalizedLessonSearch = computed(() => norm(lessonSearch.value))
+const hasLessonSearch = computed(() => normalizedLessonSearch.value.length > 0)
+const lessonSearchResults = computed<LessonSearchHit[]>(() => {
+  const query = normalizedLessonSearch.value
+  if (!query) return []
+  const terms = query.split(' ').filter(Boolean)
+  const results: LessonSearchHit[] = []
+
+  modules.value.forEach(module => {
+    module.lessons.forEach(lesson => {
+      const searchable = [lesson.title, lesson.desc, module.title, module.subtitle, (lesson.keywords || []).join(' ')]
+        .filter(Boolean)
+        .join(' ')
+      const haystack = norm(searchable)
+      const matchesTerms = terms.every(term => haystack.includes(term))
+      const scores = [
+        similarity(lesson.title, lessonSearch.value),
+        similarity(lesson.desc || '', lessonSearch.value),
+        similarity(module.title, lessonSearch.value),
+        similarity(module.subtitle || '', lessonSearch.value),
+        similarity((lesson.keywords || []).join(' '), lessonSearch.value)
+      ]
+      const bestScore = Math.max(...scores)
+      if (!matchesTerms && bestScore <= 0.45) {
+        return
+      }
+      const boost = matchesTerms ? 0.2 : 0
+      results.push({
+        module,
+        lesson,
+        score: Math.min(1, bestScore + boost)
+      })
+    })
+  })
+
+  return results
+    .sort((a, b) => {
+      if (b.score === a.score) {
+        const moduleCompare = a.module.title.localeCompare(b.module.title)
+        if (moduleCompare !== 0) return moduleCompare
+        return a.lesson.title.localeCompare(b.lesson.title)
+      }
+      return b.score - a.score
+    })
+    .slice(0, 20)
+})
+
 type FlightPlanMode = 'random' | 'manual' | 'simbrief'
 type MissionPlanState = { scenario: Scenario; mode: FlightPlanMode; updatedAt: number }
 type MissionPlanInput = {
@@ -1316,6 +1425,7 @@ const current = ref<ModuleDef | null>(null)
 const activeLesson = ref<Lesson | null>(null)
 const scenario = ref<Scenario | null>(null)
 const moduleStage = ref<'lessons' | 'setup' | 'briefing'>('lessons')
+const pendingLessonId = ref<string | null>(null)
 
 function displayCallsign(value?: string | null, source?: CallsignContext | null): string {
   if (!value) return ''
@@ -2203,9 +2313,16 @@ function restartCurrentMission() {
 function startLessonsForCurrent() {
   if (!current.value) return
   const mod = current.value
-  const prog = progress.value[mod.id] || {}
-  const next = mod.lessons.find(lesson => !(prog[lesson.id]?.done)) || mod.lessons[0]
+  let next: Lesson | undefined
+  if (pendingLessonId.value) {
+    next = mod.lessons.find(lesson => lesson.id === pendingLessonId.value)
+  }
+  if (!next) {
+    const prog = progress.value[mod.id] || {}
+    next = mod.lessons.find(lesson => !(prog[lesson.id]?.done)) || mod.lessons[0]
+  }
   activeLesson.value = next || null
+  pendingLessonId.value = null
 }
 
 function goToHub() {
@@ -3299,6 +3416,16 @@ function moduleSecondaryLabel(modId: string) {
 
 function moduleSecondaryIcon(modId: string) {
   return moduleHasProgress(modId) ? 'mdi-view-grid-outline' : 'mdi-information-outline'
+}
+
+function clearLessonSearch() {
+  lessonSearch.value = ''
+}
+
+function openLessonFromSearch(modId: string, lesId: string) {
+  pendingLessonId.value = lesId
+  lessonSearch.value = ''
+  openModule(modId, {autoStart: true})
 }
 
 function moduleStatusText(modId: string) {
@@ -4398,6 +4525,133 @@ onMounted(() => {
   margin-top: 0
 }
 
+
+/* HUB search */
+.hub-search {
+  margin: 18px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 560px;
+}
+
+.hub-search-label {
+  font-size: 12px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.hub-search-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, .18);
+}
+
+.hub-search-control input {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  flex: 1;
+  min-width: 0;
+}
+
+.hub-search-control input:focus {
+  outline: none;
+}
+
+.hub-search-control input::placeholder {
+  color: var(--t3);
+}
+
+.hub-search-icon {
+  color: var(--t3);
+}
+
+.hub-search-clear {
+  border: none;
+  background: transparent;
+  color: var(--t3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 999px;
+  transition: color .2s ease, background .2s ease;
+}
+
+.hub-search-clear:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+.hub-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0 20px;
+}
+
+.search-results-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.link.small {
+  font-size: 12px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.search-results-list {
+  display: grid;
+  gap: 10px;
+}
+
+.search-hit {
+  text-align: left;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  border-radius: 18px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .22);
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.search-hit:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, .28);
+}
+
+.search-hit-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.search-hit-title {
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
 
 /* HUB tiles */
 .hub-head {
