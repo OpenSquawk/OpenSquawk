@@ -13,7 +13,7 @@
             <p class="text-sm text-white/60">Guided preflight briefing</p>
           </div>
         </div>
-        <NuxtLink to="/classroom" class="btn primary">
+        <NuxtLink to="/classroom" class="btn primary" @click="handleClassroomEntry">
           Enter Classroom hub
           <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
         </NuxtLink>
@@ -167,7 +167,7 @@
                     <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#061318]" />
                     Start guided tour
                   </button>
-                  <NuxtLink to="/classroom" class="btn ghost">
+                  <NuxtLink to="/classroom" class="btn ghost" @click="handleClassroomEntry">
                     Skip to Classroom
                     <v-icon icon="mdi-arrow-right" size="16" />
                   </NuxtLink>
@@ -382,10 +382,10 @@
                           Next stop
                           <v-icon icon="mdi-arrow-right" size="18" class="text-[#061318]" />
                         </button>
-                      <NuxtLink v-else to="/classroom" class="btn primary">
+                      <NuxtLink v-else to="/classroom" class="btn primary" @click="handleClassroomEntry">
                         Enter Classroom hub
                           <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
-                        </NuxtLink>
+                      </NuxtLink>
                       </div>
                     </div>
                   </div>
@@ -403,6 +403,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useHead } from '#imports'
 import { useApi } from '~/composables/useApi'
+import { CLASSROOM_INTRO_STORAGE_KEY } from '~~/shared/constants/storage'
 import type { PizzicatoLite } from '~~/shared/utils/pizzicatoLite'
 import { loadPizzicatoLite } from '~~/shared/utils/pizzicatoLite'
 import { clampReadability, createNoiseGenerators, getReadabilityProfile } from '~~/shared/utils/radioEffects'
@@ -419,6 +420,8 @@ interface StageStop {
   imageAlt: string
   voiceLine: string
 }
+
+definePageMeta({ middleware: 'require-auth' })
 
 useHead({ title: 'Classroom orientation • OpenSquawk' })
 
@@ -496,6 +499,15 @@ const stages: StageStop[] = [
 ]
 
 const api = useApi()
+
+function markClassroomIntroComplete() {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(CLASSROOM_INTRO_STORAGE_KEY, 'true')
+}
+
+function handleClassroomEntry() {
+  markClassroomIntroComplete()
+}
 
 const voiceMode = ref<VoiceMode>('text')
 const radioLevel = ref(3)
