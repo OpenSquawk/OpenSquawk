@@ -23,6 +23,16 @@
         </NuxtLink>
       </nav>
 
+      <div
+          class="mt-10 overflow-hidden rounded-3xl border border-white/10"
+          style="aspect-ratio: 3 / 1;"
+      >
+        <div
+            class="h-full w-full bg-cover bg-center"
+            style="background-image: url('http://localhost:3000/img/learn/modules/img14.jpeg');"
+        />
+      </div>
+
       <header class="mt-10 space-y-5 text-center sm:text-left">
         <p class="text-xs font-semibold uppercase tracking-[0.45em] text-[#16BBD7]">OpenSquawk Bridge</p>
         <h1 class="text-3xl font-semibold sm:text-4xl">Your simulator, connected in under a minute.</h1>
@@ -167,6 +177,15 @@ const downloads = [
     available: false,
     href: '#',
     icon: 'mdi-microsoft',
+  },
+  {
+    id: 'flightgear',
+    title: 'FlightGear',
+    description: 'Our open-source bridge launches on Linux first, followed by macOS and Windows.',
+    status: 'Planned',
+    available: false,
+    href: '#',
+    icon: 'mdi-earth',
   },
   {
     id: 'xplane',
