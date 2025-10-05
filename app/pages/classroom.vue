@@ -7581,6 +7581,27 @@ onMounted(() => {
   box-shadow: 0 -4px 12px rgba(2, 6, 23, .1);
   z-index: 50;
 }
+
+/* In Webseite enthaltenes Stil-Dokument | http://localhost:3000/classroom */
+
+@media (max-width: 900px) {
+  .hud-inner[data-v-06cbe329] {
+    /* flex-wrap: wrap; */
+    /* justify-content: flex-start; */
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+  .hud-right[data-v-06cbe329] {
+    /* justify-content: flex-start; */
+    justify-content: flex-end;
+  }
+  .hud-inner {
+    .sep, .hud-divider, .brand {
+      @apply hidden
+    }
+  }
+}
+
 </style>
 <style>
 .panel.dialog .btn {
