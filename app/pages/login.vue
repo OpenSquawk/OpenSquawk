@@ -285,6 +285,7 @@
 <script setup lang="ts">
 import {reactive, ref, computed, watch, onMounted} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
+import type {LocationQueryValue} from 'vue-router'
 import {useHead} from '#imports'
 import {useAuthStore} from '~/stores/auth'
 import {useApi} from '~/composables/useApi'
@@ -337,6 +338,34 @@ const registerForm = reactive({
 const registerLoading = ref(false)
 const registerError = ref('')
 const invitationStatus = ref<'unknown' | 'checking' | 'valid' | 'invalid'>('unknown')
+
+function getQueryParam(query: LocationQueryValue | LocationQueryValue[] | undefined) {
+  if (Array.isArray(query)) return query[0] ?? ''
+  return query ?? ''
+}
+
+watch(
+    () => route.query,
+    () => {
+      const queryMode = getQueryParam(route.query.mode)
+      if (queryMode === 'register' || queryMode === 'login') {
+        mode.value = queryMode as Mode
+      }
+
+      const emailParam = getQueryParam(route.query.email)
+      if (emailParam) {
+        registerForm.email = emailParam
+        loginForm.email = emailParam
+      }
+
+      const inviteParam =
+          getQueryParam(route.query.invite || route.query.invitationCode || route.query.code)
+      if (inviteParam) {
+        registerForm.invitationCode = inviteParam
+      }
+    },
+    {immediate: true}
+)
 
 const canRegister = computed(() =>
     Boolean(
