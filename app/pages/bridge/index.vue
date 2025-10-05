@@ -3,43 +3,75 @@
     <Transition name="fade">
       <div
           v-if="showNotice"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-5"
+          class="notice-backdrop"
           role="dialog"
           aria-modal="true"
           aria-labelledby="bridge-notice-title"
       >
-        <div class="relative w-full max-w-2xl rounded-3xl border border-white/10 bg-[#111832] p-8 text-center shadow-[0_28px_90px_rgba(4,8,24,0.6)]">
+        <div class="notice-card">
+          <span class="notice-glow notice-glow--cyan" aria-hidden="true"/>
+          <span class="notice-glow notice-glow--violet" aria-hidden="true"/>
           <button
               type="button"
-              class="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition hover:border-white/20 hover:bg-white/10"
+              class="notice-close"
               @click="showNotice = false"
               aria-label="Close notice"
           >
             <v-icon icon="mdi-close" class="h-5 w-5"/>
           </button>
-          <h2 id="bridge-notice-title" class="text-2xl font-semibold">Live ATC is still in the works</h2>
-          <p class="mt-4 text-sm text-white/70">
-            We&rsquo;re actively building this part of the Bridge experience. If you&rsquo;re a confident developer, feel free to grab the
-            current developer builds for the supported simulators and experiment locally, but there isn&rsquo;t a fully running release yet.
-            Expect the live version to land here in the next few weeks or months.
-          </p>
-          <p class="mt-4 text-sm text-white/70">
-            In the meantime, you can already explore the Classroom without a simulator or any extra setup.
-          </p>
-          <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <NuxtLink
-                to="/classroom"
-                class="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea]"
-            >
-              Visit the Classroom
-            </NuxtLink>
-            <button
-                type="button"
-                class="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white/25 hover:bg-white/10"
-                @click="showNotice = false"
-            >
-              Browse downloads anyway
-            </button>
+          <div class="notice-content">
+            <span class="notice-badge">Live ATC preview</span>
+            <h2 id="bridge-notice-title" class="notice-title">Live ATC is still in the works</h2>
+            <p class="notice-lead">
+              We&rsquo;re putting the finishing touches on the live ATC area of Bridge. There isn&rsquo;t a production-ready download just yet,
+              but it&rsquo;s coming to this page in the next few weeks and months.
+            </p>
+            <div class="notice-highlight">
+              <v-icon icon="mdi-hammer-wrench" class="h-5 w-5 flex-shrink-0"/>
+              <p>
+                Comfortable shipping your own builds? Grab the developer packages for the supported simulators and explore ahead of
+                launch.
+              </p>
+            </div>
+            <div class="notice-divider" aria-hidden="true"/>
+            <div class="notice-grid">
+              <div class="notice-panel">
+                <h3>While you wait</h3>
+                <p>
+                  Dive into the OpenSquawk Classroom today &mdash; it works beautifully even without a simulator connected.
+                </p>
+                <NuxtLink
+                    to="/classroom"
+                    class="notice-primary"
+                >
+                  Visit the Classroom
+                </NuxtLink>
+              </div>
+              <div class="notice-panel">
+                <h3>Ready to tinker?</h3>
+                <ul class="notice-list">
+                  <li>
+                    <v-icon icon="mdi-download" class="h-4 w-4"/>
+                    Download the current developer builds for your sim
+                  </li>
+                  <li>
+                    <v-icon icon="mdi-console" class="h-4 w-4"/>
+                    Wire everything up locally and share feedback with us
+                  </li>
+                  <li>
+                    <v-icon icon="mdi-timer-sand" class="h-4 w-4"/>
+                    Expect the hosted live version to roll out soon
+                  </li>
+                </ul>
+                <button
+                    type="button"
+                    class="notice-ghost"
+                    @click="showNotice = false"
+                >
+                  Browse downloads anyway
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -269,6 +301,229 @@ const steps = [
 <style scoped>
 code {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.notice-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: radial-gradient(circle at top, rgba(22, 187, 215, 0.12), transparent 55%),
+    radial-gradient(circle at bottom, rgba(88, 97, 175, 0.18), transparent 60%),
+    rgba(3, 5, 16, 0.82);
+  backdrop-filter: blur(18px);
+}
+
+.notice-card {
+  position: relative;
+  width: 100%;
+  max-width: 780px;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(145deg, rgba(13, 18, 38, 0.95), rgba(17, 24, 50, 0.85));
+  box-shadow: 0 40px 120px rgba(4, 8, 24, 0.65);
+}
+
+.notice-glow {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 999px;
+  filter: blur(40px);
+  opacity: 0.7;
+}
+
+.notice-glow--cyan {
+  top: -120px;
+  right: -80px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(22, 187, 215, 0.38), transparent 60%);
+}
+
+.notice-glow--violet {
+  bottom: -140px;
+  left: -60px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(113, 88, 226, 0.32), transparent 65%);
+}
+
+.notice-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.65);
+  transition: all 0.25s ease;
+}
+
+.notice-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.notice-content {
+  position: relative;
+  padding: 3.5rem 3rem 3rem;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.notice-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(22, 187, 215, 0.16);
+  border: 1px solid rgba(22, 187, 215, 0.3);
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #72d9ea;
+}
+
+.notice-title {
+  margin-top: 1.5rem;
+  font-size: clamp(1.9rem, 2.3vw + 1.4rem, 2.6rem);
+  font-weight: 600;
+}
+
+.notice-lead {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.notice-highlight {
+  margin-top: 1.75rem;
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border-radius: 20px;
+  background: rgba(17, 33, 54, 0.75);
+  border: 1px solid rgba(22, 187, 215, 0.18);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.notice-divider {
+  margin: 2.25rem 0 2rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+}
+
+.notice-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.notice-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.6rem;
+  border-radius: 22px;
+  background: rgba(10, 15, 32, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.notice-panel h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.notice-panel p {
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+}
+
+.notice-list {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.notice-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.notice-primary,
+.notice-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.9rem 1.2rem;
+  border-radius: 18px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.notice-primary {
+  background: linear-gradient(135deg, #16bbd7, #12a0d7);
+  color: #061423;
+  box-shadow: 0 18px 35px rgba(22, 187, 215, 0.28);
+}
+
+.notice-primary:hover {
+  background: linear-gradient(135deg, #22cfe9, #16b0ff);
+  box-shadow: 0 22px 45px rgba(22, 187, 215, 0.35);
+}
+
+.notice-ghost {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.notice-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.notice-ghost:focus-visible,
+.notice-primary:focus-visible,
+.notice-close:focus-visible {
+  outline: 2px solid rgba(22, 187, 215, 0.65);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .notice-content {
+    padding: 3rem 1.75rem 2.4rem;
+  }
+
+  .notice-panel {
+    padding: 1.35rem;
+  }
 }
 
 .fade-enter-active,
