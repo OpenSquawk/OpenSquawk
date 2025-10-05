@@ -288,6 +288,7 @@ import {useRoute, useRouter} from 'vue-router'
 import {useHead} from '#imports'
 import {useAuthStore} from '~/stores/auth'
 import {useApi} from '~/composables/useApi'
+import {CLASSROOM_INTRO_STORAGE_KEY} from '~~/shared/constants/storage'
 
 type Mode = 'login' | 'register'
 
@@ -355,7 +356,7 @@ async function submitLogin() {
   try {
     await auth.login({...loginForm})
     await auth.fetchUser()
-    const target = redirectTarget.value || '/classroom'
+    const target = resolvePostAuthTarget(redirectTarget.value || null)
     await router.replace(target)
   } catch (err: any) {
     const message = err?.data?.statusMessage || err?.message || 'Login failed'
@@ -366,6 +367,28 @@ async function submitLogin() {
 }
 
 const img = '/img/login/img' + (Math.ceil(Math.random() * 3)) + '.jpeg'
+
+function hasCompletedClassroomIntroduction(): boolean {
+  if (typeof window === 'undefined') return false
+  return localStorage.getItem(CLASSROOM_INTRO_STORAGE_KEY) === 'true'
+}
+
+function setClassroomIntroductionComplete(completed: boolean) {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(CLASSROOM_INTRO_STORAGE_KEY, completed ? 'true' : 'false')
+}
+
+function resolvePostAuthTarget(preferred?: string | null) {
+  const introCompleted = hasCompletedClassroomIntroduction()
+  const fallback = introCompleted ? '/classroom' : '/classroom-introduction'
+  let target = preferred || fallback
+
+  if (!introCompleted && target.startsWith('/classroom') && target !== '/classroom-introduction') {
+    target = '/classroom-introduction'
+  }
+
+  return target
+}
 
 async function checkInvitationCode() {
   if (!registerForm.invitationCode) {
@@ -408,8 +431,8 @@ async function submitRegister() {
       acceptPrivacy: registerForm.acceptPrivacy,
     })
     await auth.fetchUser()
-    const target = redirectTarget.value || '/classroom'
-    await router.replace(target)
+    setClassroomIntroductionComplete(false)
+    await router.replace('/classroom-introduction')
   } catch (err: any) {
     const message = err?.data?.statusMessage || err?.message || 'Registration failed'
     registerError.value = message
@@ -427,7 +450,7 @@ useHead({
 
 onMounted(() => {
   if (auth.isAuthenticated) {
-    const target = redirectTarget.value || '/classroom'
+    const target = resolvePostAuthTarget(redirectTarget.value || null)
     router.replace(target)
   }
 })
