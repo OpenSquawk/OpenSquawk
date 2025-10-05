@@ -69,6 +69,17 @@
                   class="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
               />
             </div>
+            <div class="space-y-2">
+              <label for="discord" class="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">Discord
+                (optional)</label>
+              <input
+                  id="discord"
+                  v-model.trim="form.discordHandle"
+                  type="text"
+                  placeholder="Discord username if you'd like to chat"
+                  class="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
+              />
+            </div>
           </div>
 
           <div class="space-y-4">
@@ -229,7 +240,7 @@
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="space-y-2">
               <h2 class="text-lg font-semibold text-white">Prefer to talk it through?</h2>
-              <p>We are more than happy to jump on Discord or TeamSpeak for a quick debrief about your ideas.</p>
+              <p>Drop your Discord handle above or ping us for a quick Discord or TeamSpeak debrief about your ideas.</p>
             </div>
             <div class="flex flex-col gap-3 sm:flex-row">
               <a
@@ -256,7 +267,7 @@
 
 <script setup lang="ts">
 import {reactive, ref} from 'vue'
-import {useHead, useNuxtApp} from '#imports'
+import {useHead} from '#imports'
 
 useHead({title: 'Feedback & ideas • OpenSquawk'})
 
@@ -283,6 +294,7 @@ const frictionOptions = [
 const form = reactive({
   name: '',
   email: '',
+  discordHandle: '',
   excitement: 4,
   highlightSelections: [] as string[],
   highlightNotes: '',
@@ -297,22 +309,46 @@ const form = reactive({
 const submissionState = ref<'idle' | 'submitting' | 'success' | 'error'>('idle')
 const submissionError = ref<string | null>(null)
 
-const {$fetch} = useNuxtApp()
-
 async function handleSubmit() {
   submissionError.value = null
   submissionState.value = 'submitting'
 
   try {
-    await $fetch('/api/service/feedback', {
+    const response = await fetch('/api/service/feedback', {
       method: 'POST',
-      body: {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         ...form,
         excitement: form.excitement,
         highlightSelections: [...form.highlightSelections],
         frictionSelections: [...form.frictionSelections],
-      },
+      }),
     })
+
+    if (!response.ok) {
+      let errorMessage: string | null = null
+
+      try {
+        const errorBody = await response.json()
+        if (errorBody && typeof errorBody === 'object') {
+          if (typeof errorBody.statusMessage === 'string') {
+            errorMessage = errorBody.statusMessage
+          } else if (typeof errorBody.message === 'string') {
+            errorMessage = errorBody.message
+          }
+        }
+      } catch (parseError) {
+        // ignore JSON parse errors and fall back to status text
+      }
+
+      if (!errorMessage || errorMessage.length === 0) {
+        errorMessage = response.statusText || 'Failed to send feedback.'
+      }
+
+      throw new Error(errorMessage)
+    }
 
     submissionState.value = 'success'
 
@@ -323,19 +359,13 @@ async function handleSubmit() {
     form.classroomNotes = ''
     form.hostingInterest = ''
     form.otherIdeas = ''
+    form.discordHandle = ''
   } catch (error: unknown) {
     submissionState.value = 'error'
-    if (error && typeof error === 'object') {
-      const statusMessage =
-          (error as any).statusMessage ||
-          ((error as any).data && typeof (error as any).data?.statusMessage === 'string' ? (error as any).data.statusMessage : null)
-      if (typeof statusMessage === 'string' && statusMessage.length > 0) {
-        submissionError.value = statusMessage
-        return
-      }
-    }
     if (error instanceof Error) {
       submissionError.value = error.message
+    } else if (error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string') {
+      submissionError.value = (error as any).message
     } else {
       submissionError.value = 'Unknown error occurred.'
     }

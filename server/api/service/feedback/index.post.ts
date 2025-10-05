@@ -4,6 +4,7 @@ import { sendAdminNotification } from '../../../utils/notifications'
 interface FeedbackRequestBody {
   name?: string
   email?: string
+  discordHandle?: string
   excitement?: number
   highlightSelections?: string[]
   highlightNotes?: string
@@ -52,6 +53,7 @@ export default defineEventHandler(async (event) => {
 
   const name = normaliseText(body.name)
   const email = normaliseText(body.email)
+  const discordHandle = normaliseText(body.discordHandle)
   const highlightNotes = normaliseText(body.highlightNotes)
   const frictionNotes = normaliseText(body.frictionNotes)
   const classroomNotes = normaliseText(body.classroomNotes)
@@ -64,6 +66,10 @@ export default defineEventHandler(async (event) => {
   const details: string[] = []
   details.push(`Overall excitement: ${excitement}/5`)
   details.push(`Highlights: ${highlightSelections.length ? highlightSelections.join(', ') : '—'}`)
+  if (discordHandle) {
+    details.push('')
+    details.push(`Discord: ${discordHandle}`)
+  }
   if (highlightNotes) {
     details.push('')
     details.push('Highlight notes:')
@@ -98,6 +104,7 @@ export default defineEventHandler(async (event) => {
     data: [
       ['Name', name || '—'],
       ['Email', email || '—'],
+      ['Discord', discordHandle || '—'],
       ['Okay to contact', allowContact ? 'Yes' : 'No'],
     ],
     from: email || undefined,
