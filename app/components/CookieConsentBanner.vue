@@ -110,7 +110,7 @@ watch(
   }
 );
 
-const restrictedRoute = computed(() => route.path.startsWith('/classroom') || route.path.startsWith('/pm'));
+const restrictedRoute = computed(() => route.path.startsWith('/classroom') || route.path.startsWith('/pm') || route.path.startsWith('/login'));
 
 const showManageButton = computed(() => hasConsent.value && !isDialogVisible.value && !restrictedRoute.value);
 
@@ -427,4 +427,5 @@ const openManager = () => {
   white-space: nowrap;
   border: 0;
 }
+
 </style>
