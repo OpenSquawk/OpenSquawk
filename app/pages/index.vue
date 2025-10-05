@@ -1247,8 +1247,8 @@ interface ExtendedNavLink extends NavLink {
 
 const navLinks: NavLink[] = [
   {label: 'Live ATC', to: '#features'},
-  {label: 'Classroom', to: '#classroom'},
   {label: 'Roadmap', to: '#roadmap'},
+  {label: 'Classroom', to: '#classroom'},
   {label: 'Lineup', to: '#pricing'},
   {label: 'Get involved', to: '#contributing'},
   {label: 'FAQ', to: '#faq'},
