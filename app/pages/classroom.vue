@@ -30,9 +30,14 @@
                   type="button"
                   role="menuitemradio"
                   class="experience-option"
-                  :class="{ 'is-active': option.id === activeExperience.id }"
+                  :class="{
+                    'is-active': option.id === activeExperience.id,
+                    'is-disabled': option.disabled
+                  }"
                   :aria-checked="option.id === activeExperience.id"
-                  @click="handleExperienceSelect(option)"
+                  :aria-disabled="option.disabled ? 'true' : 'false'"
+                  :disabled="option.disabled"
+                  @click="handleExperienceClick(option)"
               >
                 <v-icon size="18" class="experience-option-icon">{{ option.icon }}</v-icon>
                 <div class="experience-option-body">
@@ -44,6 +49,16 @@
                     size="16"
                     class="experience-option-check"
                 >mdi-check</v-icon>
+                <div
+                    v-if="option.disabled"
+                    class="experience-option-overlay"
+                    aria-hidden="true"
+                >
+                  <div class="experience-option-overlay-inner">
+                    <v-icon size="20">mdi-traffic-cone</v-icon>
+                    <span>{{ option.disabledLabel || 'In Entwicklung' }}</span>
+                  </div>
+                </div>
               </button>
             </div>
           </v-menu>
@@ -1635,6 +1650,8 @@ type ExperienceOption = {
   description: string
   icon: string
   to: string
+  disabled?: boolean
+  disabledLabel?: string
   matches: (path: string) => boolean
 }
 
@@ -1653,6 +1670,8 @@ const experiences: ExperienceOption[] = [
     description: 'Live radio with AI controllers',
     icon: 'mdi-radio-handheld',
     to: '/pm',
+    disabled: true,
+    disabledLabel: 'In Entwicklung',
     matches: path => path.startsWith('/pm')
   }
 ]
@@ -1667,6 +1686,14 @@ async function handleExperienceSelect(option: ExperienceOption) {
   experienceMenu.value = false
   if (option.matches(route.path)) return
   await router.push(option.to)
+}
+
+async function handleExperienceClick(option: ExperienceOption) {
+  if (option.disabled) {
+    experienceMenu.value = false
+    return
+  }
+  await handleExperienceSelect(option)
 }
 
 const ROUTE_STATE_KEYS = ['panel', 'module', 'stage', 'lesson', 'plan'] as const
@@ -4538,6 +4565,7 @@ onMounted(() => {
   font: inherit;
   cursor: pointer;
   transition: background .2s ease, border-color .2s ease, color .2s ease;
+  position: relative;
 }
 
 .experience-option:hover,
@@ -4552,6 +4580,19 @@ onMounted(() => {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   border-color: color-mix(in srgb, var(--accent) 32%, transparent);
   color: var(--accent);
+}
+
+.experience-option.is-disabled {
+  cursor: not-allowed;
+  color: color-mix(in srgb, var(--t3) 86%, white 14%);
+  border-color: color-mix(in srgb, var(--border) 66%, transparent);
+}
+
+.experience-option.is-disabled:hover,
+.experience-option.is-disabled:focus-visible {
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  border-color: color-mix(in srgb, var(--border) 72%, transparent);
+  color: color-mix(in srgb, var(--t3) 86%, white 14%);
 }
 
 .experience-option-icon,
@@ -4578,6 +4619,43 @@ onMounted(() => {
 
 .experience-option.is-active .experience-option-sub {
   color: color-mix(in srgb, var(--accent) 36%, white 14%);
+}
+
+.experience-option.is-disabled .experience-option-sub {
+  color: color-mix(in srgb, var(--t3) 80%, white 20%);
+}
+
+.experience-option-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: color-mix(in srgb, var(--t2) 72%, white 28%);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .35);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--border) 60%, transparent) 0,
+      color-mix(in srgb, var(--border) 60%, transparent) 12px,
+      transparent 12px,
+      transparent 24px
+    ),
+    color-mix(in srgb, var(--bg) 78%, rgba(15, 23, 42, .72) 22%);
+  backdrop-filter: blur(1.5px);
+}
+
+.experience-option-overlay-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 11px;
 }
 
 .sep {
