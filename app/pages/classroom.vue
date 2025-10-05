@@ -124,18 +124,18 @@
         <div class="hud-right">
           <NuxtLink class="btn ghost" to="/feedback" title="Share feedback or ideas">
             <v-icon size="18">mdi-message-draw</v-icon>
-            Feedback
+            <span class="btn-label">Feedback</span>
           </NuxtLink>
 
           <!-- ATC Einstellungen -->
           <button class="btn ghost" @click="showSettings=true" title="Settings">
             <v-icon size="18">mdi-tune</v-icon>
-            Settings
+            <span class="btn-label">Settings</span>
           </button>
 
           <NuxtLink class="btn ghost" to="/logout" title="Logout">
             <v-icon size="18">mdi-logout</v-icon>
-            Logout
+            <span class="btn-label">Logout</span>
           </NuxtLink>
         </div>
       </nav>
@@ -4601,6 +4601,40 @@ onMounted(() => {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
+  margin-left: auto;
+}
+
+.hud-right .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+
+.hud-right .btn-label {
+  white-space: nowrap;
+}
+
+@media (max-width: 1180px) {
+  .hud-center {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .hud-right {
+    gap: 6px;
+  }
+
+  .hud-right .btn {
+    padding: 10px;
+    min-width: 44px;
+    justify-content: center;
+  }
+
+  .hud-right .btn-label {
+    display: none;
+  }
 }
 
 .next-objective {
@@ -5165,6 +5199,7 @@ onMounted(() => {
   .hud-right {
     width: 100%;
     justify-content: flex-start;
+    margin-left: 0;
   }
 }
 
