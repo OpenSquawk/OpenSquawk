@@ -181,6 +181,16 @@
           </div>
 
           <div class="space-y-3">
+            <div class="space-y-2">
+              <label for="discord-handle" class="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">Discord handle (optional)</label>
+              <input
+                  id="discord-handle"
+                  v-model.trim="form.discordHandle"
+                  type="text"
+                  placeholder="Your Discord name if a call sounds good"
+                  class="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
+              />
+            </div>
             <label class="flex items-start gap-3 text-sm text-white/80">
               <input type="checkbox" class="mt-1 accent-cyan-400" v-model="form.contactConsent"/>
               <span>I am happy for you to email me back about this feedback or to invite me to jam on the roadmap.</span>
@@ -229,7 +239,7 @@
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="space-y-2">
               <h2 class="text-lg font-semibold text-white">Prefer to talk it through?</h2>
-              <p>We are more than happy to jump on Discord or TeamSpeak for a quick debrief about your ideas.</p>
+              <p>We are more than happy to jump on Discord or TeamSpeak for a quick debrief about your ideas. Drop your Discord handle above and we will reach out if chatting helps.</p>
             </div>
             <div class="flex flex-col gap-3 sm:flex-row">
               <a
@@ -256,7 +266,7 @@
 
 <script setup lang="ts">
 import {reactive, ref} from 'vue'
-import {useHead, useNuxtApp} from '#imports'
+import {useHead} from '#imports'
 
 useHead({title: 'Feedback & ideas • OpenSquawk'})
 
@@ -283,6 +293,7 @@ const frictionOptions = [
 const form = reactive({
   name: '',
   email: '',
+  discordHandle: '',
   excitement: 4,
   highlightSelections: [] as string[],
   highlightNotes: '',
@@ -297,22 +308,51 @@ const form = reactive({
 const submissionState = ref<'idle' | 'submitting' | 'success' | 'error'>('idle')
 const submissionError = ref<string | null>(null)
 
-const {$fetch} = useNuxtApp()
-
 async function handleSubmit() {
   submissionError.value = null
   submissionState.value = 'submitting'
 
   try {
-    await $fetch('/api/service/feedback', {
+    const response = await fetch('/api/service/feedback', {
       method: 'POST',
-      body: {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         ...form,
-        excitement: form.excitement,
         highlightSelections: [...form.highlightSelections],
         frictionSelections: [...form.frictionSelections],
-      },
+      }),
     })
+
+    const contentType = response.headers.get('content-type')
+    let responsePayload: unknown = null
+
+    if (contentType && contentType.includes('application/json')) {
+      responsePayload = await response.json().catch(() => null)
+    } else {
+      const textPayload = await response.text().catch(() => '')
+      responsePayload = textPayload.length > 0 ? textPayload : null
+    }
+
+    if (!response.ok) {
+      const responseObject =
+          responsePayload && typeof responsePayload === 'object'
+              ? (responsePayload as Record<string, unknown>)
+              : null
+      const message =
+          typeof responsePayload === 'string'
+              ? responsePayload
+              : typeof responseObject?.message === 'string'
+                  ? (responseObject.message as string)
+                  : typeof responseObject?.statusMessage === 'string'
+                      ? (responseObject.statusMessage as string)
+                      : null
+
+      throw new Error(
+          message && message.length > 0 ? message : `Request failed with status ${response.status}`,
+      )
+    }
 
     submissionState.value = 'success'
 
@@ -323,6 +363,7 @@ async function handleSubmit() {
     form.classroomNotes = ''
     form.hostingInterest = ''
     form.otherIdeas = ''
+    form.discordHandle = ''
   } catch (error: unknown) {
     submissionState.value = 'error'
     if (error && typeof error === 'object') {
