@@ -397,9 +397,23 @@
             <v-icon icon="mdi-account-group" size="18" class="text-cyan-300"/>
             <span>{{ roadmapStatsLabel }}</span>
           </div>
+          <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <button
+                type="button"
+                class="btn btn-ghost w-full sm:w-auto"
+                @click="toggleRoadmap"
+                :aria-expanded="roadmapExpanded"
+            >
+              <span v-if="roadmapExpanded">Hide roadmap details</span>
+              <span v-else>Show roadmap details</span>
+            </button>
+            <span v-if="!roadmapExpanded" class="text-xs text-white/50 text-center sm:text-left">
+              Expand to explore priorities and submit your votes.
+            </span>
+          </div>
         </div>
 
-        <div class="space-y-6">
+        <div v-if="roadmapExpanded" class="space-y-6">
           <div v-if="roadmapLoading" class="card text-white/70" data-aos="fade-up">
             Loading current roadmap priorities…
           </div>
@@ -1511,6 +1525,7 @@ const formatNewsDate = (iso: string) => {
   return date.toLocaleDateString(dateLocale, shortDateOptions)
 }
 
+const roadmapExpanded = ref(false)
 const roadmapItems = ref<RoadmapItemWithStats[]>([])
 const roadmapLoading = ref(false)
 const roadmapTotals = ref(0)
@@ -1556,6 +1571,10 @@ const selectRoadmapImportance = (key: string, value: number) => {
   roadmapSelections[key] = value
   roadmapTouched[key] = true
   roadmapSuccess.value = false
+}
+
+const toggleRoadmap = () => {
+  roadmapExpanded.value = !roadmapExpanded.value
 }
 
 async function loadRoadmap() {
