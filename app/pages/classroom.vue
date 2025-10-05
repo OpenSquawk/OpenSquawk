@@ -16,7 +16,7 @@
         <div class="hud-center">
           <div class="lesson-search" role="search">
             <label class="sr-only" for="lesson-search">Lesson search</label>
-            <div class="lesson-search-control">
+            <div ref="lessonSearchAnchor" class="lesson-search-control">
               <v-icon size="18" class="lesson-search-icon">mdi-magnify</v-icon>
               <input
                   id="lesson-search"
@@ -36,6 +36,53 @@
               </button>
             </div>
           </div>
+          <Teleport to="body">
+            <div v-if="hasLessonSearch" class="lesson-search-overlay">
+              <div
+                  class="lesson-search-popover"
+                  :style="lessonSearchOverlayStyle"
+                  role="listbox"
+                  aria-label="Lesson search results"
+              >
+                <div class="lesson-search-header">
+                  <span>{{ lessonSearchResults.length }} {{ lessonSearchResults.length === 1 ? 'match' : 'matches' }}</span>
+                  <button class="link small" type="button" @click="clearLessonSearch">Clear</button>
+                </div>
+                <div v-if="lessonSearchResults.length" class="lesson-search-groups" role="presentation">
+                  <div
+                      v-for="group in lessonSearchGroups"
+                      :key="group.module.id"
+                      class="lesson-search-group"
+                      role="group"
+                      :aria-label="group.module.title"
+                  >
+                    <div class="lesson-search-group-header">
+                      <div class="lesson-search-group-title">{{ group.module.title }}</div>
+                      <div v-if="group.module.subtitle" class="lesson-search-group-sub">{{ group.module.subtitle }}</div>
+                    </div>
+                    <button
+                        v-for="hit in group.hits"
+                        :key="`${hit.module.id}-${hit.lesson.id}`"
+                        type="button"
+                        class="lesson-search-item"
+                        role="option"
+                        @click="openLessonFromSearch(hit.module.id, hit.lesson.id)"
+                    >
+                      <div class="lesson-search-item-text">
+                        <div class="lesson-search-item-title">{{ hit.lesson.title }}</div>
+                        <div class="lesson-search-item-desc">{{ hit.lesson.desc || 'Practice radio calls with ATC' }}</div>
+                      </div>
+                      <span class="lesson-score lesson-search-item-score" :class="lessonScoreClass(hit.module.id, hit.lesson.id)">
+                        <v-icon size="14">{{ lessonScoreIcon(hit.module.id, hit.lesson.id) }}</v-icon>
+                        {{ lessonScoreLabel(hit.module.id, hit.lesson.id) }}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+                <p v-else class="lesson-search-empty">No lessons found for “{{ lessonSearch }}”.</p>
+              </div>
+            </div>
+          </Teleport>
         </div>
 
         <div class="hud-right">
@@ -61,37 +108,6 @@
       <div class="hub-head">
         <h2 class="h2">Training Mission Hub</h2>
         <div class="muted">Start with the ICAO alphabet & numbers, then basics, ground, and more.</div>
-      </div>
-
-      <div v-if="hasLessonSearch" class="lesson-search-results">
-        <div class="search-results-meta">
-          <span>{{ lessonSearchResults.length }} {{ lessonSearchResults.length === 1 ? 'match' : 'matches' }}</span>
-          <button class="link small" type="button" @click="clearLessonSearch">Clear</button>
-        </div>
-        <div v-if="lessonSearchResults.length" class="search-results-list">
-          <button
-              v-for="hit in lessonSearchResults"
-              :key="`${hit.module.id}-${hit.lesson.id}`"
-              type="button"
-              class="search-hit"
-              @click="openLessonFromSearch(hit.module.id, hit.lesson.id)"
-          >
-            <div class="search-hit-top">
-              <div class="search-hit-title">{{ hit.lesson.title }}</div>
-              <span class="lesson-score" :class="lessonScoreClass(hit.module.id, hit.lesson.id)">
-                <v-icon size="14">{{ lessonScoreIcon(hit.module.id, hit.lesson.id) }}</v-icon>
-                {{ lessonScoreLabel(hit.module.id, hit.lesson.id) }}
-              </span>
-            </div>
-            <div class="muted small">{{ hit.lesson.desc }}</div>
-            <div class="tags">
-              <span v-if="lessonOrderTag(hit.module.id, hit.lesson.id)" class="tag tag-index">{{ lessonOrderTag(hit.module.id, hit.lesson.id) }}</span>
-              <span class="tag">{{ hit.module.title }}</span>
-              <span v-for="tag in hit.lesson.keywords" :key="tag" class="tag">{{ tag }}</span>
-            </div>
-          </button>
-        </div>
-        <p v-else class="muted small">No lessons found for “{{ lessonSearch }}”.</p>
       </div>
 
       <div class="tiles">
@@ -1097,13 +1113,14 @@
               New scenario
             </button>
             <button
-                class="btn primary"
+                class="btn primary mission-footer-primary"
                 type="button"
-                :disabled="!nextLessonMeta && !nextMissionMeta"
-                @click="goToNextLesson"
+                :class="missionFooterPrimary.mode"
+                :disabled="missionFooterPrimary.disabled"
+                @click="missionFooterPrimary.action()"
             >
-              <v-icon size="18">mdi-arrow-right</v-icon>
-              {{ nextActionLabel }}
+              <v-icon size="18">{{ missionFooterPrimary.icon }}</v-icon>
+              {{ missionFooterPrimary.label }}
             </button>
           </div>
         </div>
@@ -1308,6 +1325,8 @@ type LessonSearchHit = {
 }
 
 const lessonSearch = ref('')
+const lessonSearchAnchor = ref<HTMLElement | null>(null)
+const lessonSearchOverlayStyle = ref<Record<string, string>>({})
 const normalizedLessonSearch = computed(() => norm(lessonSearch.value))
 const hasLessonSearch = computed(() => normalizedLessonSearch.value.length > 0)
 const lessonSearchResults = computed<LessonSearchHit[]>(() => {
@@ -1354,6 +1373,79 @@ const lessonSearchResults = computed<LessonSearchHit[]>(() => {
     })
     .slice(0, 20)
 })
+
+type LessonSearchGroup = {
+  module: ModuleDef
+  hits: LessonSearchHit[]
+  score: number
+}
+
+const lessonSearchGroups = computed<LessonSearchGroup[]>(() => {
+  const groups = new Map<string, LessonSearchGroup>()
+  for (const hit of lessonSearchResults.value) {
+    const existing = groups.get(hit.module.id)
+    if (existing) {
+      existing.hits.push(hit)
+      existing.score = Math.max(existing.score, hit.score)
+    } else {
+      groups.set(hit.module.id, {
+        module: hit.module,
+        hits: [hit],
+        score: hit.score
+      })
+    }
+  }
+
+  return Array.from(groups.values())
+    .map(group => ({
+      ...group,
+      hits: group.hits.sort((a, b) => b.score - a.score)
+    }))
+    .sort((a, b) => {
+      if (b.score === a.score) {
+        return a.module.title.localeCompare(b.module.title)
+      }
+      return b.score - a.score
+    })
+})
+
+function computeLessonSearchOverlayStyle(): Record<string, string> {
+  if (!isClient) return {}
+  const anchor = lessonSearchAnchor.value
+  if (!anchor) return {}
+
+  const rect = anchor.getBoundingClientRect()
+  const padding = 16
+  const available = Math.max(window.innerWidth - padding * 2, rect.width)
+  const width = Math.min(Math.max(rect.width, 320), available)
+  const maxLeft = Math.max(padding, window.innerWidth - width - padding)
+  const left = Math.min(Math.max(rect.left, padding), maxLeft)
+  const top = rect.bottom + 12
+
+  return {
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${width}px`
+  }
+}
+
+function updateLessonSearchOverlay() {
+  lessonSearchOverlayStyle.value = computeLessonSearchOverlayStyle()
+}
+
+let lessonSearchOverlayCleanup: (() => void) | null = null
+
+function bindLessonSearchOverlay() {
+  if (!isClient || lessonSearchOverlayCleanup) return
+  const handler = () => updateLessonSearchOverlay()
+  window.addEventListener('resize', handler, {passive: true})
+  window.addEventListener('scroll', handler, true)
+  lessonSearchOverlayCleanup = () => {
+    window.removeEventListener('resize', handler)
+    window.removeEventListener('scroll', handler, true)
+    lessonSearchOverlayCleanup = null
+  }
+}
 
 type FlightPlanMode = 'random' | 'manual' | 'simbrief'
 type MissionPlanState = { scenario: Scenario; mode: FlightPlanMode; updatedAt: number }
@@ -2835,6 +2927,9 @@ onBeforeUnmount(() => {
     void ctx.close().catch(() => {
     })
   }
+  if (lessonSearchOverlayCleanup) {
+    lessonSearchOverlayCleanup()
+  }
 })
 
 const fieldMap = computed<Record<string, LessonField>>(() => {
@@ -2998,6 +3093,57 @@ const nextActionLabel = computed(() => {
   return 'Next lesson'
 })
 
+const lessonHasInput = computed(() => {
+  if (!activeLesson.value) return false
+  return activeLesson.value.fields.some(field => {
+    const value = userAnswers[field.key]
+    return typeof value === 'string' && value.trim().length > 0
+  })
+})
+
+const canAdvanceLesson = computed(() => Boolean(nextLessonMeta.value || nextMissionMeta.value))
+
+const missionFooterNoop = () => {
+}
+
+const missionFooterPrimary = computed(() => {
+  if (lessonHasInput.value && !result.value) {
+    return {
+      label: evaluating.value ? 'Checking…' : 'Check lesson',
+      icon: 'mdi-check',
+      disabled: evaluating.value,
+      action: evaluating.value ? missionFooterNoop : evaluate,
+      mode: 'is-check'
+    }
+  }
+
+  if (!lessonHasInput.value) {
+    return {
+      label: 'Skip lesson',
+      icon: 'mdi-skip-next',
+      disabled: !canAdvanceLesson.value,
+      action: canAdvanceLesson.value ? goToNextLesson : missionFooterNoop,
+      mode: 'is-skip'
+    }
+  }
+
+  const icon = nextLessonMeta.value ? 'mdi-arrow-right' : nextMissionMeta.value ? 'mdi-flag-checkered' : 'mdi-arrow-right'
+  return {
+    label: nextActionLabel.value,
+    icon,
+    disabled: !canAdvanceLesson.value,
+    action: canAdvanceLesson.value ? goToNextLesson : missionFooterNoop,
+    mode: 'is-next'
+  }
+})
+
+const lessonAnswerSignature = computed(() => {
+  if (!activeLesson.value) return ''
+  return activeLesson.value.fields
+    .map(field => (userAnswers[field.key] ?? '').trim())
+    .join('|')
+})
+
 const previousActionLabel = computed(() => {
   if (prevLessonMeta.value) return 'Previous lesson'
   if (prevMissionMeta.value) return 'Previous module'
@@ -3020,6 +3166,34 @@ watch(activeLesson, lesson => {
   } else {
     stopAudio()
     scenario.value = null
+  }
+})
+
+watch(lessonAnswerSignature, (signature, previous) => {
+  if (previous === undefined) return
+  if (!result.value) return
+  if (signature !== previous) {
+    result.value = null
+  }
+})
+
+watch(hasLessonSearch, active => {
+  if (active) {
+    updateLessonSearchOverlay()
+    bindLessonSearchOverlay()
+    nextTick(() => {
+      updateLessonSearchOverlay()
+    })
+  } else if (lessonSearchOverlayCleanup) {
+    lessonSearchOverlayCleanup()
+  }
+})
+
+watch(lessonSearchAnchor, anchor => {
+  if (anchor && hasLessonSearch.value) {
+    nextTick(() => {
+      updateLessonSearchOverlay()
+    })
   }
 })
 
@@ -4619,11 +4793,135 @@ onMounted(() => {
   color: var(--accent);
 }
 
-.lesson-search-results {
+.lesson-search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  pointer-events: none;
+}
+
+.lesson-search-popover {
+  position: absolute;
+  background: color-mix(in srgb, var(--bg) 96%, rgba(20, 24, 31, .92));
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 18px;
+  box-shadow: 0 32px 64px rgba(0, 0, 0, .35);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 10px 0 20px;
+  gap: 8px;
+  max-height: min(70vh, 540px);
+  overflow: hidden;
+  pointer-events: auto;
+  backdrop-filter: blur(18px);
+}
+
+.lesson-search-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  font-size: 12px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.link.small {
+  font-size: 12px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.lesson-search-groups {
+  overflow-y: auto;
+  padding: 4px 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.lesson-search-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lesson-search-group-header {
+  padding: 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lesson-search-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--t2);
+}
+
+.lesson-search-group-sub {
+  font-size: 12px;
+  color: var(--t3);
+  line-height: 1.4;
+}
+
+.lesson-search-item {
+  border: none;
+  background: transparent;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  color: inherit;
+  transition: background .18s ease, transform .18s ease;
+}
+
+.lesson-search-item:focus-visible,
+.lesson-search-item:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  transform: translateY(-1px);
+}
+
+.lesson-search-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lesson-search-item-title {
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.3;
+  color: var(--t2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lesson-search-item-desc {
+  font-size: 12px;
+  color: var(--t3);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lesson-search-item-score {
+  font-size: 12px;
+  padding: 2px 10px;
+}
+
+.lesson-search-empty {
+  padding: 0 18px 18px;
+  font-size: 13px;
+  color: var(--t3);
 }
 
 @media (max-width: 900px) {
@@ -4642,65 +4940,14 @@ onMounted(() => {
     width: 100%;
   }
 
+  .lesson-search-popover {
+    max-width: calc(100vw - 24px);
+  }
+
   .hud-right {
     width: 100%;
     justify-content: flex-start;
   }
-}
-
-.search-results-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--t3);
-}
-
-.link.small {
-  font-size: 12px;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
-.search-results-list {
-  display: grid;
-  gap: 10px;
-}
-
-.search-hit {
-  text-align: left;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--text) 5%, transparent);
-  border-radius: 18px;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, .22);
-  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
-}
-
-.search-hit:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
-  box-shadow: 0 18px 36px rgba(0, 0, 0, .28);
-}
-
-.search-hit-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.search-hit-title {
-  font-weight: 600;
-  font-size: 16px;
-  line-height: 1.3;
-  flex: 1;
-  min-width: 0;
 }
 
 /* HUB tiles */
@@ -5678,6 +5925,24 @@ onMounted(() => {
 .mission-footer-right .btn {
   min-width: 150px;
   justify-content: center;
+}
+
+.mission-footer-primary {
+  min-width: 170px;
+  justify-content: center;
+}
+
+.mission-footer-primary.is-skip {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--t2);
+}
+
+.mission-footer-primary.is-skip:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.mission-footer-primary.is-skip .v-icon {
+  color: currentColor;
 }
 
 .mission-footer-prev {
