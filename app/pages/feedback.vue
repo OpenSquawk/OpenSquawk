@@ -23,24 +23,14 @@
               We are currently a German development team, but all public docs and tools start in English so we can reach as many people as possible.
             </p>
           </div>
-          <div class="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-5 text-amber-100 shadow-lg shadow-amber-500/10">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div class="space-y-1">
-                <p class="text-sm font-semibold uppercase tracking-[0.25em] text-amber-50/80">Quick heads-up</p>
-                <p class="text-sm text-amber-50/80">All notes are sent by email. When you submit below we prepare an email to <strong>info@opensquawk.de</strong> with your answers, just like the rest of our forms.</p>
-              </div>
-              <a
-                class="inline-flex items-center gap-2 rounded-xl border border-amber-200/40 bg-amber-200/10 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:bg-amber-200/20"
-                href="mailto:info@opensquawk.de?subject=OpenSquawk%20feedback%20call"
-              >
-                <v-icon icon="mdi-phone" size="18" class="text-amber-100" />
-                Request a call
-              </a>
+          <div class="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
+            <div class="relative aspect-[3/1]">
+              <img src="/img/landing/path.jpeg" alt="OpenSquawk community charting the path forward" class="absolute inset-0 h-full w-full object-cover" />
             </div>
           </div>
         </header>
 
-        <form class="space-y-10 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-cyan-500/10 backdrop-blur" @submit.prevent="handleSubmit">
+        <form class="space-y-10 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-cyan-500/10 backdrop-blur" @submit.prevent="handleSubmit" novalidate>
           <div class="grid gap-6 md:grid-cols-2">
             <div class="space-y-2">
               <label for="name" class="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">Name (optional)</label>
@@ -170,36 +160,61 @@
               <input type="checkbox" class="mt-1 accent-cyan-400" v-model="form.contactConsent" />
               <span>I am happy for you to email me back about this feedback or to invite me to jam on the roadmap.</span>
             </label>
-            <p class="text-xs text-white/50">Submitting prepares an email draft to <strong>info@opensquawk.de</strong>. Please review it and hit send from your client.</p>
+            <p class="text-xs text-white/50">Submissions are routed straight to <strong>info@opensquawk.de</strong> so the team can read and respond quickly.</p>
             <button
               type="submit"
-              class="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-6 py-3 text-base font-semibold text-slate-950 shadow-[0_16px_40px_rgba(56,189,248,0.35)] transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+              :disabled="submissionState === 'submitting'"
+              class="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-6 py-3 text-base font-semibold text-slate-950 shadow-[0_16px_40px_rgba(56,189,248,0.35)] transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:bg-cyan-400"
             >
-              <v-icon icon="mdi-send" size="20" class="text-slate-950" />
-              Prepare email
+              <v-icon :icon="submissionState === 'submitting' ? 'mdi-dots-circle' : 'mdi-send'" size="20" class="text-slate-950" />
+              <span>{{ submissionState === 'submitting' ? 'Sending…' : 'Send feedback' }}</span>
             </button>
           </div>
         </form>
 
-        <section v-if="submissionState !== 'idle'" class="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/80 shadow-xl shadow-cyan-500/10">
-          <h2 class="text-lg font-semibold text-white">Email preview</h2>
-          <p class="mt-2 text-white/70">
-            Your email client should open automatically. If not, copy the text below and send it to <a class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
-          </p>
-          <div class="mt-4 rounded-2xl border border-white/10 bg-black/50 p-4">
-            <pre class="whitespace-pre-wrap break-words text-sm text-white/80">{{ emailBody }}</pre>
+        <section v-if="submissionState === 'success'" class="space-y-4 rounded-3xl border border-emerald-400/30 bg-emerald-400/10 p-6 text-sm text-emerald-100 shadow-xl shadow-emerald-500/10">
+          <div class="flex items-start gap-3">
+            <v-icon icon="mdi-check-decagram" size="28" class="mt-0.5 text-emerald-200" />
+            <div class="space-y-2">
+              <h2 class="text-lg font-semibold text-white">Thank you for steering the mission!</h2>
+              <p>Your notes are already on their way to the cockpit at info@opensquawk.de. We will follow up if you checked that it’s okay.</p>
+            </div>
           </div>
-          <button
-            type="button"
-            class="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:border-cyan-400 hover:text-cyan-100"
-            @click="copyToClipboard"
-          >
-            <v-icon :icon="copyStatus === 'copied' ? 'mdi-check' : 'mdi-content-copy'" size="18" />
-            <span v-if="copyStatus === 'copied'">Copied to clipboard</span>
-            <span v-else-if="copyStatus === 'failed'">Copy not available</span>
-            <span v-else>Copy email text</span>
-          </button>
-          <p v-if="copyStatus === 'failed'" class="mt-2 text-xs text-rose-200/80">Please copy the text manually if your browser blocks clipboard access.</p>
+        </section>
+
+        <section v-else-if="submissionState === 'error'" class="space-y-4 rounded-3xl border border-rose-400/40 bg-rose-400/10 p-6 text-sm text-rose-100 shadow-xl shadow-rose-500/10">
+          <div class="flex items-start gap-3">
+            <v-icon icon="mdi-alert" size="26" class="mt-0.5 text-rose-200" />
+            <div class="space-y-2">
+              <h2 class="text-lg font-semibold text-white">Something jammed on the way out</h2>
+              <p>{{ submissionError || 'We could not send this feedback. Please try again in a moment or email info@opensquawk.de directly.' }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/80 shadow-xl shadow-cyan-500/10">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="space-y-2">
+              <h2 class="text-lg font-semibold text-white">Prefer to talk it through?</h2>
+              <p>We are more than happy to jump on Discord or TeamSpeak for a quick debrief about your ideas.</p>
+            </div>
+            <div class="flex flex-col gap-3 sm:flex-row">
+              <a
+                class="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-200/40 bg-cyan-200/10 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-200/20"
+                href="mailto:info@opensquawk.de?subject=OpenSquawk%20feedback%20call&body=I'd%20love%20to%20chat%20about%20feedback%20on%20Discord%20or%20TeamSpeak."
+              >
+                <v-icon icon="mdi-discord" size="20" />
+                Request Discord call
+              </a>
+              <a
+                class="inline-flex items-center justify-center gap-2 rounded-2xl border border-indigo-200/40 bg-indigo-200/10 px-5 py-3 text-sm font-semibold text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-200/20"
+                href="mailto:info@opensquawk.de?subject=OpenSquawk%20feedback%20call&body=TeamSpeak%20works%20great%20for%20me%20%E2%80%93%20let's%20connect!"
+              >
+                <v-icon icon="mdi-headset" size="20" />
+                Request TeamSpeak call
+              </a>
+            </div>
+          </div>
         </section>
       </div>
     </div>
@@ -207,8 +222,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { useHead } from '#imports'
+import { reactive, ref } from 'vue'
+import { useHead, useNuxtApp } from '#imports'
 
 useHead({ title: 'Feedback & ideas • OpenSquawk' })
 
@@ -246,93 +261,55 @@ const form = reactive({
   contactConsent: true,
 })
 
-const submissionState = ref<'idle' | 'ready'>('idle')
-const emailBody = ref('')
-const copyStatus = ref<'idle' | 'copied' | 'failed'>('idle')
+const submissionState = ref<'idle' | 'submitting' | 'success' | 'error'>('idle')
+const submissionError = ref<string | null>(null)
 
-const formattedHighlights = computed(() => (form.highlightSelections.length ? form.highlightSelections.join(', ') : '—'))
-const formattedFrictions = computed(() => (form.frictionSelections.length ? form.frictionSelections.join(', ') : '—'))
-
-function clipboardAvailable() {
-  return typeof navigator !== 'undefined' && !!navigator.clipboard && 'writeText' in navigator.clipboard
-}
-
-function buildEmailBody() {
-  const lines: string[] = []
-  lines.push('Hey OpenSquawk team,', '')
-  lines.push(`Name: ${form.name || '—'}`)
-  lines.push(`Email: ${form.email || '—'}`)
-  lines.push(`Okay to follow up: ${form.contactConsent ? 'Yes' : 'No'}`)
-  lines.push('')
-  lines.push(`Overall excitement (1-5): ${form.excitement}`)
-  lines.push(`What feels great: ${formattedHighlights.value}`)
-  if (form.highlightNotes) {
-    lines.push(form.highlightNotes)
-  }
-  lines.push('')
-  lines.push(`What feels rough: ${formattedFrictions.value}`)
-  if (form.frictionNotes) {
-    lines.push(form.frictionNotes)
-  }
-  lines.push('')
-  lines.push('Classroom stories:')
-  lines.push(form.classroomNotes || '—')
-  lines.push('')
-  lines.push('Hosting & deployment thoughts:')
-  lines.push(form.hostingInterest || '—')
-  lines.push('')
-  lines.push('Big ideas & requests:')
-  lines.push(form.otherIdeas || '—')
-  lines.push('')
-  lines.push('Thank you for building something ambitious and keeping it accessible!')
-
-  while (lines[lines.length - 1] === '') {
-    lines.pop()
-  }
-
-  return lines.join('\n')
-}
+const { $fetch } = useNuxtApp()
 
 async function handleSubmit() {
-  const body = buildEmailBody()
-  emailBody.value = body
-  submissionState.value = 'ready'
-  copyStatus.value = 'idle'
-
-  const subject = `OpenSquawk feedback – excitement ${form.excitement}`
-  const mailto = `mailto:info@opensquawk.de?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-
-  if (typeof window !== 'undefined') {
-    try {
-      if (clipboardAvailable()) {
-        await navigator.clipboard.writeText(body)
-        copyStatus.value = 'copied'
-      }
-    } catch {
-      copyStatus.value = 'failed'
-    }
-
-    window.location.href = mailto
-  }
-}
-
-async function copyToClipboard() {
-  if (!clipboardAvailable()) {
-    copyStatus.value = 'failed'
-    return
-  }
+  submissionError.value = null
+  submissionState.value = 'submitting'
 
   try {
-    await navigator.clipboard.writeText(emailBody.value)
-    copyStatus.value = 'copied'
-  } catch {
-    copyStatus.value = 'failed'
+    await $fetch('/api/service/feedback', {
+      method: 'POST',
+      body: {
+        ...form,
+        excitement: form.excitement,
+        highlightSelections: [...form.highlightSelections],
+        frictionSelections: [...form.frictionSelections],
+      },
+    })
+
+    submissionState.value = 'success'
+
+    form.highlightSelections = []
+    form.frictionSelections = []
+    form.highlightNotes = ''
+    form.frictionNotes = ''
+    form.classroomNotes = ''
+    form.hostingInterest = ''
+    form.otherIdeas = ''
+  } catch (error: unknown) {
+    submissionState.value = 'error'
+    if (error && typeof error === 'object') {
+      const statusMessage =
+        (error as any).statusMessage ||
+        ((error as any).data && typeof (error as any).data?.statusMessage === 'string' ? (error as any).data.statusMessage : null)
+      if (typeof statusMessage === 'string' && statusMessage.length > 0) {
+        submissionError.value = statusMessage
+        return
+      }
+    }
+    if (error instanceof Error) {
+      submissionError.value = error.message
+    } else {
+      submissionError.value = 'Unknown error occurred.'
+    }
+  } finally {
+    if (submissionState.value === 'submitting') {
+      submissionState.value = 'idle'
+    }
   }
 }
 </script>
-
-<style scoped>
-pre {
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-}
-</style>
