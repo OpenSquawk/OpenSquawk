@@ -101,7 +101,8 @@
       </div>
 
       <div class="container-outer relative z-10 mt-8 pt-14 pb-10 sm:pt-20 sm:pb-16 md:pt-24 md:pb-20">
-        <div class="hero-grid grid gap-10 lg:my-20 xl:gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-center">
+        <div
+            class="hero-grid grid gap-10 lg:my-20 xl:gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-center">
           <div class="hero-copy max-w-2xl" data-aos="fade-up">
             <span class="chip mb-4">In development · Live AI ATC</span>
             <h1 class="text-3xl sm:text-5xl md:text-6xl font-semibold leading-tight">
@@ -127,7 +128,8 @@
               </li>
             </ul>
             <p class="mt-2 text-sm text-white/70">
-              We build in the open and welcome collaborators – engineers, ATC SMEs, voice nerds and sim pilots. Say hi at
+              We build in the open and welcome collaborators – engineers, ATC SMEs, voice nerds and sim pilots. Say hi
+              at
               <a class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
             </p>
             <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
@@ -589,18 +591,21 @@
         <div class="grid gap-6 md:grid-cols-2 md:gap-8 items-center">
           <div data-aos="fade-right">
             <h2 class="text-3xl md:text-4xl font-semibold">
-              Classroom alpha modules
+              Classroom
             </h2>
             <p class="mt-3 text-white/80">
               Invitation-only cohorts practise listening comprehension: extract the clearance, compare with the answer
               key and repeat until every call sticks.
             </p>
             <ol class="mt-5 space-y-3 text-white/80">
-              <li class="flex gap-3"><span class="chip">1</span><span><b>Basics</b> (concept): numbers, letters, standard readbacks.</span></li>
-              <li class="flex gap-3"><span class="chip">2</span><span><b>Ground</b> (alpha): taxi flows, hotspots, hold short calls.</span></li>
-              <li class="flex gap-3"><span class="chip">3</span><span><b>Departure</b> (alpha): SID expectations, climb/heading changes.</span></li>
-              <li class="flex gap-3"><span class="chip">4</span><span><b>Arrival</b> (planned): STAR shortcuts, vectoring, approach clearance.</span></li>
-              <li class="flex gap-3"><span class="chip">5</span><span><b>Network drills</b> (planned): etiquette before joining VATSIM/IVAO.</span></li>
+              <li class="flex gap-3"><span class="chip">1</span><span><b>Basics</b> (concept): numbers, letters, standard readbacks.</span>
+              </li>
+              <li class="flex gap-3"><span class="chip">2</span><span><b>Simples</b> (alpha): taxi, takeoff, initial climb, basic vectors.</span>
+              </li>
+              <li class="flex gap-3"><span class="chip">3</span><span><b>Patterns</b> (bravo): full pattern work, touch-and-go, exit instructions.</span>
+              </li>
+              <li class="flex gap-3"><span class="chip">5</span><span><b>Full flight</b>  clearance to destination, enroute calls, approach handoff.</span>
+              </li>
             </ol>
             <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
               <NuxtLink to="#cta" class="btn btn-primary">
@@ -611,10 +616,7 @@
               </a>
             </div>
           </div>
-          <div class="card" data-aos="fade-left">
-            <!-- 5 -->
-            <img src="/img/landing/path.jpeg" alt="Runway" class="rounded-lg w-full object-cover"/>
-          </div>
+          <img src="/img/landing/simulator.jpeg" alt="Runway" class="rounded-lg card w-full object-cover"/>
         </div>
       </div>
     </section>
@@ -878,7 +880,8 @@ POST /api/route/taxi
               <v-icon icon="mdi-brain"/>
               3 · Decide
             </h3>
-            <p class="mt-2 text-white/80">A curated state machine enforces valid clearances and cross-checks flight data.</p></div>
+            <p class="mt-2 text-white/80">A curated state machine enforces valid clearances and cross-checks flight
+              data.</p></div>
           <div class="card" data-aos="fade-up" data-aos-delay="300">
             <h3 class="font-semibold flex items-center gap-2">
               <v-icon icon="mdi-microphone"/>
@@ -1089,7 +1092,8 @@ POST /api/route/taxi
             </h3>
             <p class="mt-2 text-white/80">
               The Classroom is invitation-only during alpha. Join the waitlist and mention “Classroom” or email
-              <a href="mailto:info@opensquawk.de" class="text-cyan-300 underline">info@opensquawk.de</a> to request an invite.
+              <a href="mailto:info@opensquawk.de" class="text-cyan-300 underline">info@opensquawk.de</a> to request an
+              invite.
             </p>
           </div>
         </div>
@@ -1895,5 +1899,9 @@ onMounted(async () => {
 
 .chip.absolute {
   background: #434752;
+}
+
+img.card {
+  padding: 0
 }
 </style>
