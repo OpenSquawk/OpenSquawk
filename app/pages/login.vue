@@ -13,7 +13,7 @@
     </div>
 
     <div
-        class="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden px-5 py-8 sm:px-8 lg:flex-row lg:items-stretch lg:py-12 lg:pl-0 min-h-0">
+        class="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden sm:py-8 sm:px-8 lg:flex-row lg:items-stretch lg:py-12 lg:pl-0 min-h-0">
       <div
           class="relative hidden h-full min-h-0 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:flex lg:w-[48%]">
         <img :src="img" alt="Guiding lights on a runway"
@@ -191,6 +191,7 @@
                         type="button"
                         class="check-code-btn"
                         @click="checkInvitationCode"
+                        v-if="false"
                         :disabled="!registerForm.invitationCode"
                     >
                       Check code
@@ -201,7 +202,7 @@
                       type="text"
                       required
                       class="field-input tracking-[0.6em] uppercase"
-                      placeholder="e.g. ABCD1234"
+                      placeholder="ABCD1234"
                   />
                   <p v-if="invitationStatus === 'valid'" class="mt-2 text-xs font-medium text-green-300">Code is
                     valid.</p>
@@ -558,6 +559,12 @@ onMounted(() => {
 .floating-card {
   animation: cardFloat 10s ease-in-out infinite;
 }
+ /* small screens hide floating-card */
+@media (max-width: 1024px) {
+  .floating-card {
+    display: none;
+  }
+}
 
 .card-footer {
   background: linear-gradient(180deg, rgba(12, 20, 42, 0.35) 0%, rgba(4, 7, 19, 0.82) 100%);
@@ -676,7 +683,7 @@ onMounted(() => {
   }
 
   .consent-option {
-    @apply flex-col gap-2 p-4 text-sm;
+    @apply gap-2 p-4 text-sm;
   }
 
   .consent-option input {
