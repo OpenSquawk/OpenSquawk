@@ -16,8 +16,7 @@
         </NuxtLink>
         <NuxtLink
             to="/bridge/connect"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#292D3B] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#353a4c] sm:w-auto"
-        >
+            class="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-white transition sm:w-auto hover:bg-white/5 " >
           <v-icon icon="mdi-link" class="h-5 w-5"/>
           Link a token
         </NuxtLink>

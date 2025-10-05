@@ -6,17 +6,11 @@
     <main class="relative mx-auto w-full max-w-3xl px-5 py-12 sm:px-6 lg:px-8">
       <nav class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <NuxtLink
-          to="/"
+          to="/bridge"
           class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:border-white/20 hover:bg-white/10 sm:w-auto"
         >
           <span aria-hidden="true">←</span>
-          Back to opensquawk.de
-        </NuxtLink>
-        <NuxtLink
-          to="/bridge"
-          class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#292D3B] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#353a4c] sm:w-auto"
-        >
-          Bridge landing
+          Download the Bridge
         </NuxtLink>
       </nav>
 
