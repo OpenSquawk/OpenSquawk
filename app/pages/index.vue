@@ -1142,6 +1142,10 @@ POST /api/route/taxi
                 <v-icon icon="mdi-login" size="18" class="text-white/70"/>
                 <span>Login</span>
               </NuxtLink>
+              <NuxtLink to="/feedback" class="footer-action">
+                <v-icon icon="mdi-message-draw" size="18" class="text-white/70"/>
+                <span>Feedback</span>
+              </NuxtLink>
             </div>
           </div>
           <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -1182,6 +1186,11 @@ POST /api/route/taxi
                 <li>
                   <NuxtLink to="#contributing" class="hover:text-cyan-300">
                     Get involved
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink to="/feedback" class="hover:text-cyan-300">
+                    Feedback &amp; ideas form
                   </NuxtLink>
                 </li>
                 <li><a href="mailto:info@opensquawk.de" class="hover:text-cyan-300">info@opensquawk.de</a></li>

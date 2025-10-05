@@ -13,10 +13,10 @@
             <p class="text-sm text-white/60">Guided preflight briefing</p>
           </div>
         </div>
-        <NuxtLink to="/classroom" class="btn primary">
+        <button type="button" class="btn primary" @click="goToClassroomHub">
           Enter Classroom hub
           <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
-        </NuxtLink>
+        </button>
       </div>
     </header>
 
@@ -171,10 +171,10 @@
                     <v-icon icon="mdi-gesture-tap-button" size="18" class="text-[#061318]" />
                     Start guided tour
                   </button>
-                  <NuxtLink to="/classroom" class="btn ghost">
+                  <button type="button" class="btn ghost" @click="goToClassroomHub">
                     Skip to Classroom
                     <v-icon icon="mdi-arrow-right" size="16" />
-                  </NuxtLink>
+                  </button>
                 </div>
                 <p v-if="startDisabled && voiceMode === 'radio'" class="mt-2 text-xs text-amber-200/80">
                   Run the radio check once so I know you can hear me before we roll.
@@ -386,10 +386,10 @@
                           Next stop
                           <v-icon icon="mdi-arrow-right" size="18" class="text-[#061318]" />
                         </button>
-                      <NuxtLink v-else to="/classroom" class="btn primary">
+                      <button v-else type="button" class="btn primary" @click="goToClassroomHub">
                         Enter Classroom hub
-                          <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
-                        </NuxtLink>
+                        <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
+                      </button>
                       </div>
                     </div>
                   </div>
@@ -405,7 +405,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { useHead } from '#imports'
+import { useHead, useRouter } from '#imports'
 import { useApi } from '~/composables/useApi'
 import type { PizzicatoLite } from '~~/shared/utils/pizzicatoLite'
 import { loadPizzicatoLite } from '~~/shared/utils/pizzicatoLite'
@@ -425,6 +425,19 @@ interface StageStop {
 }
 
 useHead({ title: 'Classroom orientation • OpenSquawk' })
+
+const router = useRouter()
+const CLASSROOM_INTRO_STORAGE_KEY = 'os_classroom_intro_completed'
+
+function markClassroomIntroComplete() {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(CLASSROOM_INTRO_STORAGE_KEY, 'true')
+}
+
+async function goToClassroomHub() {
+  markClassroomIntroComplete()
+  await router.push('/classroom')
+}
 
 const stages: StageStop[] = [
   {

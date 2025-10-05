@@ -124,6 +124,10 @@
         <div class="hud-right">
 
           <!-- ATC Einstellungen -->
+          <NuxtLink class="btn ghost" to="/feedback" title="Share feedback or ideas">
+            <v-icon size="18">mdi-message-draw</v-icon>
+            Feedback
+          </NuxtLink>
           <button class="btn ghost" @click="showSettings=true" title="Settings">
             <v-icon size="18">mdi-tune</v-icon>
             Settings
@@ -1165,6 +1169,9 @@
       <div v-else class="container footer-container">
         <div class="footer-meta">
           <span class="muted small">&copy; 2025 OpenSquawk. All rights reserved.</span>
+          <div>
+            <NuxtLink to="/feedback" class="muted small">Feedback · Bugs · Ideas</NuxtLink>
+          </div>
         </div>
       </div>
     </footer>
@@ -1279,6 +1286,8 @@ import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
 
 definePageMeta({middleware: 'require-auth'})
+
+const CLASSROOM_INTRO_STORAGE_KEY = 'os_classroom_intro_completed'
 
 type Objective = {
   id: string
@@ -1627,6 +1636,13 @@ const manualSectionsOpen = reactive<Record<ManualSection, boolean>>({
 
 const router = useRouter()
 const route = useRoute()
+
+if (typeof window !== 'undefined') {
+  const hasCompletedIntro = window.localStorage.getItem(CLASSROOM_INTRO_STORAGE_KEY) === 'true'
+  if (!hasCompletedIntro) {
+    router.replace('/classroom-introduction').catch(() => {})
+  }
+}
 
 type ExperienceId = 'classroom' | 'live'
 type ExperienceOption = {
@@ -6472,6 +6488,10 @@ onMounted(() => {
 
 .footer-meta {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .footer a {
