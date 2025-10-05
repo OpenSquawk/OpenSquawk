@@ -13,7 +13,7 @@
             <p class="text-sm text-white/60">Guided preflight briefing</p>
           </div>
         </div>
-        <NuxtLink to="/classroom" class="btn primary" @click="handleClassroomEntry">
+        <NuxtLink v-if="false" to="/classroom" class="btn primary" @click="handleClassroomEntry">
           Enter Classroom hub
           <v-icon icon="mdi-launch" size="18" class="text-[#061318]" />
         </NuxtLink>
