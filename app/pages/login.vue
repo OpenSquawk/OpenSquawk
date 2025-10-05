@@ -299,6 +299,9 @@ const api = useApi()
 const mode = ref<Mode>('login')
 const showAccessDetails = ref(false)
 
+const CLASSROOM_INTRO_STORAGE_KEY = 'os_classroom_intro_completed'
+const isClient = typeof window !== 'undefined'
+
 const redirectTarget = computed(() => {
   const redirectParam = route.query.redirect
   const redirectValue = Array.isArray(redirectParam) ? redirectParam[0] : redirectParam
@@ -348,6 +351,17 @@ const canRegister = computed(() =>
     )
 )
 
+function determinePostAuthRedirect() {
+  if (redirectTarget.value) {
+    return redirectTarget.value
+  }
+  if (isClient) {
+    const hasCompletedIntro = window.localStorage.getItem(CLASSROOM_INTRO_STORAGE_KEY) === 'true'
+    return hasCompletedIntro ? '/classroom' : '/classroom-introduction'
+  }
+  return '/classroom-introduction'
+}
+
 async function submitLogin() {
   if (loginLoading.value) return
   loginLoading.value = true
@@ -355,7 +369,7 @@ async function submitLogin() {
   try {
     await auth.login({...loginForm})
     await auth.fetchUser()
-    const target = redirectTarget.value || '/classroom'
+    const target = determinePostAuthRedirect()
     await router.replace(target)
   } catch (err: any) {
     const message = err?.data?.statusMessage || err?.message || 'Login failed'
@@ -408,7 +422,10 @@ async function submitRegister() {
       acceptPrivacy: registerForm.acceptPrivacy,
     })
     await auth.fetchUser()
-    const target = redirectTarget.value || '/classroom'
+    if (isClient) {
+      window.localStorage.setItem(CLASSROOM_INTRO_STORAGE_KEY, 'false')
+    }
+    const target = determinePostAuthRedirect()
     await router.replace(target)
   } catch (err: any) {
     const message = err?.data?.statusMessage || err?.message || 'Registration failed'
@@ -427,7 +444,7 @@ useHead({
 
 onMounted(() => {
   if (auth.isAuthenticated) {
-    const target = redirectTarget.value || '/classroom'
+    const target = determinePostAuthRedirect()
     router.replace(target)
   }
 })
