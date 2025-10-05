@@ -49,7 +49,7 @@
       <div class="flex w-full flex-1 flex-col min-h-0 lg:pl-8">
         <div
             class="flex flex-1 flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#0b1020]/85 shadow-2xl backdrop-blur">
-          <div class="flex-1 overflow-y-auto px-6 pt-6 pb-10 md:px-8 lg:pr-4">
+          <div class="flex-1 overflow-y-auto px-5 pt-6 pb-10 sm:px-6 md:px-8 lg:pr-4">
             <div
                 class="floating-card relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:hidden">
               <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway" class="h-56 w-full object-cover"/>
@@ -60,7 +60,7 @@
               </div>
             </div>
 
-            <div class="flex items-center justify-between gap-3 text-sm text-white/60">
+            <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-white/60">
               <NuxtLink to="/"
                         class="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 font-medium text-white/70 transition hover:bg-white/10 hover:text-white">
                 <v-icon icon="mdi-arrow-left" size="18"/>
@@ -79,7 +79,7 @@
             </div>
 
             <div class="mt-6">
-              <div class="mode-toggle" :data-mode="mode" role="group" aria-label="Switch between login and register">
+            <div class="mode-toggle" :data-mode="mode" role="group" aria-label="Switch between login and register">
                 <span class="mode-toggle__glow" aria-hidden="true"/>
                 <button
                     type="button"
@@ -186,11 +186,11 @@
                     character.</p>
                 </div>
                 <div>
-                  <div class="flex items-center justify-between">
+                  <div class="mobile-form-header">
                     <label class="field-label">Invitation code</label>
                     <button
                         type="button"
-                        class="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-300/80 transition hover:text-cyan-100 disabled:cursor-not-allowed disabled:text-white/30"
+                        class="check-code-btn"
                         @click="checkInvitationCode"
                         :disabled="!registerForm.invitationCode"
                     >
@@ -214,12 +214,12 @@
               </div>
 
               <div class="space-y-3 text-xs text-white/60">
-                <label class="flex items-start gap-3">
+                <label class="consent-option">
                   <input type="checkbox" v-model="registerForm.acceptTerms" class="mt-1" required/>
                   <span>I accept the <NuxtLink to="/agb"
                                                class="text-cyan-300 underline decoration-dotted underline-offset-4">Terms of Service</NuxtLink>.</span>
                 </label>
-                <label class="flex items-start gap-3">
+                <label class="consent-option">
                   <input type="checkbox" v-model="registerForm.acceptPrivacy" class="mt-1" required/>
                   <span>I have read the <NuxtLink to="/datenschutz"
                                                   class="text-cyan-300 underline decoration-dotted underline-offset-4">privacy policy</NuxtLink> and consent to data processing.</span>
@@ -622,6 +622,22 @@ onMounted(() => {
   opacity: 0.5;
 }
 
+.mobile-form-header {
+  @apply flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.check-code-btn {
+  @apply inline-flex items-center justify-center rounded-full px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-300/80 transition hover:text-cyan-100 disabled:cursor-not-allowed disabled:text-white/30;
+}
+
+.consent-option {
+  @apply flex items-start gap-3 rounded-2xl bg-white/5 p-3 text-left transition hover:bg-white/10;
+}
+
+.consent-option input {
+  @apply mt-1;
+}
+
 .collapse-enter-active,
 .collapse-leave-active {
   transition: max-height 0.35s ease, opacity 0.35s ease, transform 0.35s ease;
@@ -668,6 +684,33 @@ onMounted(() => {
 
   .mode-toggle__glow {
     transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .mode-toggle {
+    padding: 0.25rem;
+  }
+
+  .mode-toggle__btn {
+    padding-inline: 0.75rem;
+    padding-block: 0.65rem;
+  }
+
+  .mode-toggle__btn-inner {
+    @apply text-sm;
+  }
+
+  .check-code-btn {
+    @apply w-full tracking-[0.2em] py-2.5;
+  }
+
+  .consent-option {
+    @apply flex-col gap-2 p-4 text-sm;
+  }
+
+  .consent-option input {
+    @apply mt-0;
   }
 }
 </style>
