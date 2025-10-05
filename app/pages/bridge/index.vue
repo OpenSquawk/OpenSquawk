@@ -32,55 +32,35 @@
               <h2 id="bridge-notice-title" class="text-3xl font-semibold leading-tight sm:text-4xl">
                 Live ATC is still in the works
               </h2>
+              <img src="/img/bridge/goldengate_night.jpeg" alt="Bridge app screenshot" style="aspect-ratio: 3/1;object-fit: cover" class="rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(4,8,24,0.45)]"/>
               <p class="text-sm text-white/75 sm:text-base">
                 We&rsquo;re actively building this part of the Bridge experience. There isn&rsquo;t a hosted version
                 yet, but we&rsquo;re lining everything up for launch in the coming weeks and months.
               </p>
-              <div class="grid gap-4 sm:grid-cols-2">
-                <div class="rounded-2xl border border-[#16BBD7]/25 bg-[#16BBD7]/10 p-4 text-left">
-                  <p class="text-sm font-semibold text-[#16BBD7]">For confident developers</p>
-                  <p class="mt-1 text-sm text-white/75">
-                    Grab the current developer builds for the supported simulators and run them locally if you&rsquo;d
-                    like to tinker early.
-                  </p>
-                  <a
-                      href="https://github.com/itsrubberduck/OpenSquawk-MSFS-Bridge/"
-                      target="_blank"
-                      rel="noopener"
-                      class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#84E8F6] transition hover:text-white"
-                  >
-                    <v-icon icon="mdi-github" class="h-5 w-5"/>
-                    View developer builds
-                  </a>
-                </div>
-                <div class="rounded-2xl border border-white/12 bg-white/5 p-4 text-left">
-                  <p class="text-sm font-semibold text-white">For everyone else</p>
-                  <p class="mt-1 text-sm text-white/70">
-                    Keep exploring OpenSquawk&mdash;the Classroom is ready today and works great without any simulator
-                    setup.
-                  </p>
-                </div>
-              </div>
+
             </div>
 
 
           </div>
-          <div class="flex gap-6 mt-6 flex-col sm:flex-row sm:items-center" >
-            <button
+          <div class="flex gap-6 mt-6 justify-between flex-col sm:flex-row sm:items-center">
+            <NuxtLink
                 to="/classroom"
+                class="btn primary flex flex-none items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition"
             >
-              <v-icon icon="mdi-chevron-left" class="h-5 w-5"/>
+              <v-icon icon="mdi-arrow-left" class="h-5 w-5"/>
               Back to the Classroom
-            </button>
+            </NuxtLink>
 
             <button
                 type="button"
                 @click="showNotice = false"
+                class=" btn secondary flex flex-none items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white/80 transition hover:border-white/25 hover:bg-white/10"
             >
-              <v-icon icon="mdi-download" class="h-5 w-5"/>
-              Browse downloads anyway
+              Continue anyway
+              <v-icon icon="mdi-arrow-right" class="h-5 w-5"/>
             </button>
           </div>
+
         </div>
       </div>
     </Transition>
