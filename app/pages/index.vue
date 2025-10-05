@@ -144,10 +144,12 @@
               </NuxtLink>
             </div>
           </div>
-          <div class="hero-form w-full max-w-xl lg:justify-self-end
-         backdrop-blur-md
-" data-aos="fade-left" data-aos-delay="140">
-            <form class="rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-5 space-y-4"
+          <div
+              class="hero-form w-full max-w-lg lg:justify-self-end"
+              data-aos="fade-left"
+              data-aos-delay="140"
+          >
+            <form class="hero-form-panel rounded-3xl p-5 sm:p-6 space-y-4"
                   @submit.prevent="submitUpdates">
               <div class="space-y-3">
                 <h3 class="text-2xl font-semibold">
@@ -1905,24 +1907,37 @@ onMounted(async () => {
 }
 
 .gradient-hero {
-  background: radial-gradient(1200px 600px at 10% -10%, rgba(6, 182, 212, .35), transparent),
-  radial-gradient(900px 480px at 100% 10%, rgba(59, 130, 246, .25), transparent),
-  linear-gradient(180deg, #0b1020 0%, #0b1020 60%, #0a0f1c 100%);
+  background: radial-gradient(1200px 600px at 12% -20%, rgba(6, 182, 212, .32), transparent),
+  radial-gradient(900px 520px at 100% 5%, rgba(59, 130, 246, .22), transparent),
+  linear-gradient(180deg, rgba(11, 16, 32, 0.92) 0%, rgba(11, 16, 32, 0.94) 42%, rgba(11, 16, 32, 0.98) 68%, #0a0f1c 100%);
 }
 
 .gradient-hero::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: url('/img/learn/modules/img6.jpeg') center/cover no-repeat;
-  opacity: 0.45;
+  background: linear-gradient(180deg, rgba(7, 11, 24, 0.55) 0%, rgba(9, 14, 28, 0.78) 55%, rgba(11, 16, 32, 0.95) 100%),
+  url('/img/bridge/goldengate_front.jpeg') center/cover no-repeat;
+  opacity: 1;
   pointer-events: none;
   z-index: 0;
 }
 
 .hero-overlay {
-  background: linear-gradient(90deg, rgba(11, 16, 32, 0.9) 0%, rgba(11, 16, 32, 0.68) 45%, rgba(11, 16, 32, 0.15) 100%);
+  background: linear-gradient(90deg, rgba(11, 16, 32, 0.88) 0%, rgba(11, 16, 32, 0.62) 46%, rgba(11, 16, 32, 0.22) 100%);
   z-index: 1;
+}
+
+.hero-form {
+  position: relative;
+  z-index: 2;
+}
+
+.hero-form-panel {
+  background: linear-gradient(140deg, rgba(15, 23, 42, 0.72), rgba(12, 20, 38, 0.48));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 42px 120px rgba(5, 12, 32, 0.45);
 }
 
 .glass {
