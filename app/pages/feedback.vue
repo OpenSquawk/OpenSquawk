@@ -38,35 +38,9 @@
         </div>
       </header>
 
-      <section class="container-outer space-y-8 pb-16 lg:pb-24">
-        <div class="grid gap-8 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-          <aside class="flex flex-col gap-6 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_24px_70px_rgba(5,10,35,0.4)] backdrop-blur">
-            <div class="space-y-3">
-              <h2 class="text-2xl font-semibold text-white">How to leave stellar feedback</h2>
-              <p class="text-sm text-white/70">
-                You&rsquo;re already part of the squad. Drop a quick note after a mission, highlight the magic moments and
-                flag anything that broke immersion.
-              </p>
-            </div>
-            <ul class="space-y-3 text-sm text-white/65">
-              <li class="flex items-start gap-3">
-                <v-icon icon="mdi-compass-outline" size="18" class="mt-0.5 text-cyan-300"/>
-                <span>Keep it concise &ndash; bullet thoughts are perfect.</span>
-              </li>
-              <li class="flex items-start gap-3">
-                <v-icon icon="mdi-headset" size="18" class="mt-0.5 text-cyan-300"/>
-                <span>Tell us when radio clarity shines or drops out.</span>
-              </li>
-              <li class="flex items-start gap-3">
-                <v-icon icon="mdi-rocket-launch-outline" size="18" class="mt-0.5 text-cyan-300"/>
-                <span>Dream big &ndash; wild feature ideas are welcome.</span>
-              </li>
-            </ul>
-            <div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/60">
-              <p class="font-semibold text-white">Need a live debrief?</p>
-              <p>Ping us in the form or via Discord to hop on a quick call.</p>
-            </div>
-          </aside>
+      <section class="container mx-auto">
+        <div class="">
+
 
           <form
               class="space-y-8 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_30px_80px_rgba(5,10,35,0.45)] backdrop-blur"
@@ -252,7 +226,7 @@
 
         <section
             v-if="submissionState === 'success'"
-            class="space-y-4 rounded-3xl border border-emerald-400/30 bg-emerald-400/10 p-6 text-sm text-emerald-100 shadow-[0_20px_60px_rgba(12,61,48,0.45)]"
+            class="space-y-4 rounded-3xl border border-emerald-400/30 bg-emerald-400/10 p-6 mt-8 text-sm text-emerald-100 shadow-[0_20px_60px_rgba(12,61,48,0.45)]"
         >
           <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
             <v-icon icon="mdi-check-decagram" size="28" class="text-emerald-200"/>
@@ -276,30 +250,7 @@
           </div>
         </section>
 
-        <section class="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/80 shadow-[0_24px_70px_rgba(5,10,35,0.4)]">
-          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div class="space-y-2">
-              <h2 class="text-lg font-semibold text-white">Want to talk it through?</h2>
-              <p>Drop your Discord tag above or send us a message to line up a quick Discord or TeamSpeak chat.</p>
-            </div>
-            <div class="flex flex-col gap-3 sm:flex-row">
-              <a
-                  class="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-200/40 bg-cyan-200/10 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-200/20"
-                  href="mailto:info@opensquawk.de?subject=OpenSquawk%20feedback%20call&body=I'd%20love%20to%20chat%20about%20feedback%20on%20Discord%20or%20TeamSpeak."
-              >
-                <v-icon icon="mdi-discord" size="20"/>
-                Request Discord call
-              </a>
-              <a
-                  class="inline-flex items-center justify-center gap-2 rounded-2xl border border-indigo-200/40 bg-indigo-200/10 px-5 py-3 text-sm font-semibold text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-200/20"
-                  href="mailto:info@opensquawk.de?subject=OpenSquawk%20feedback%20call&body=TeamSpeak%20works%20great%20for%20me%20%E2%80%93%20let's%20connect!"
-              >
-                <v-icon icon="mdi-headset" size="20"/>
-                Request TeamSpeak call
-              </a>
-            </div>
-          </div>
-        </section>
+
       </section>
     </main>
   </div>
