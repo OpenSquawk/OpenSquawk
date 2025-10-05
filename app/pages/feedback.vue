@@ -29,7 +29,7 @@
         <div class="flex flex-wrap items-center justify-center gap-3 text-sm text-white/60">
           <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
             <v-icon icon="mdi-bell-ring" size="18" class="text-cyan-300"/>
-            Honest takes only – thanks!
+            Candid notes welcome — thank you!
           </span>
           <a class="inline-flex items-center gap-2 text-cyan-200 transition hover:text-cyan-100" href="mailto:info@opensquawk.de">
             <v-icon icon="mdi-email-fast" size="18"/>
@@ -217,8 +217,14 @@
                   :disabled="submissionState === 'submitting'"
                   class="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-6 py-3 text-base font-semibold text-slate-950 shadow-[0_16px_40px_rgba(56,189,248,0.35)] transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:bg-cyan-400"
               >
-                <v-icon :icon="submissionState === 'submitting' ? 'mdi-dots-circle' : 'mdi-send'" size="20" class="text-slate-950"/>
-                <span>{{ submissionState === 'submitting' ? 'Sending…' : 'Send feedback' }}</span>
+                <template v-if="submissionState === 'submitting'">
+                  <v-progress-circular indeterminate size="18" width="2" color="white"/>
+                  <span>Sending…</span>
+                </template>
+                <template v-else>
+                  <v-icon icon="mdi-send" size="20" class="text-white"/>
+                  <span>Send feedback</span>
+                </template>
               </button>
             </div>
           </form>
