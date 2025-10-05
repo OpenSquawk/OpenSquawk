@@ -1,5 +1,49 @@
 <template>
   <div class="relative min-h-screen bg-[#0B1020] text-white">
+    <Transition name="fade">
+      <div
+          v-if="showNotice"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-5"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bridge-notice-title"
+      >
+        <div class="relative w-full max-w-2xl rounded-3xl border border-white/10 bg-[#111832] p-8 text-center shadow-[0_28px_90px_rgba(4,8,24,0.6)]">
+          <button
+              type="button"
+              class="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition hover:border-white/20 hover:bg-white/10"
+              @click="showNotice = false"
+              aria-label="Close notice"
+          >
+            <v-icon icon="mdi-close" class="h-5 w-5"/>
+          </button>
+          <h2 id="bridge-notice-title" class="text-2xl font-semibold">Live ATC is still in the works</h2>
+          <p class="mt-4 text-sm text-white/70">
+            We&rsquo;re actively building this part of the Bridge experience. If you&rsquo;re a confident developer, feel free to grab the
+            current developer builds for the supported simulators and experiment locally, but there isn&rsquo;t a fully running release yet.
+            Expect the live version to land here in the next few weeks or months.
+          </p>
+          <p class="mt-4 text-sm text-white/70">
+            In the meantime, you can already explore the Classroom without a simulator or any extra setup.
+          </p>
+          <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <NuxtLink
+                to="/classroom"
+                class="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea]"
+            >
+              Visit the Classroom
+            </NuxtLink>
+            <button
+                type="button"
+                class="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white/25 hover:bg-white/10"
+                @click="showNotice = false"
+            >
+              Browse downloads anyway
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
     <div
         class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(22,187,215,0.15),transparent_55%)]"/>
     <div
@@ -154,9 +198,12 @@
 </template>
 
 <script setup lang="ts">
+import {ref} from 'vue'
 import {useHead} from '#imports'
 
 useHead({title: 'Bridge Downloads · OpenSquawk'})
+
+const showNotice = ref(true)
 
 const downloads = [
   {
@@ -222,5 +269,15 @@ const steps = [
 <style scoped>
 code {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
