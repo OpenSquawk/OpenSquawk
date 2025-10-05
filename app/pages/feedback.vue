@@ -1,246 +1,286 @@
 <template>
-  <div class="min-h-screen text-white"
-       style="background: radial-gradient(circle at top, rgba(22,187,215,0.15), transparent 55%), radial-gradient(circle at bottom, rgba(41,45,59,0.4), transparent 65%);"
-  >
-    <div class="relative isolate overflow-hidden">
-      <header class="space-y-6
-              text-white/90 px-4 py-20 text-center lg:py-32 lg:px-0
-              before:absolute before:inset-0 before:-z-10 before:opacity-30 before:blur-lg before:content-['']
-              flex flex-col items-center gap-6"
-      >
-        <img src="/img/landing/groundpath.jpeg" alt="Path through a forest"
-             class="fixed  inset-0 h-screen w-full object-cover object-center brightness-75 mix-blend-overlay"/>
-        <div class="absolute inset-0 -z-10 bg-blue-950/60 backdrop-blur-lg"/>
-        <div
-            class="inline-flex items-center gap-3 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-100 shadow-lg shadow-cyan-500/10 "
-            style="backdrop-filter: blur(20px);"
-        >
-          <v-icon icon="mdi-message-bulleted" size="22" class="text-cyan-200"/>
-          <span>Feedback makes the product</span>
-        </div>
-        <div class="space-y-4">
-          <h1 class="text-3xl font-semibold sm:text-4xl md:text-5xl">Help us shape OpenSquawk</h1>
-          <p class="max-w-3xl text-base text-white/80 sm:text-lg">
-            We are trying to build something wonderful that stays free – and if you want it hosted by us, the goal is to
-            keep it as affordable as possible without compromising on quality. Your feedback is unbelievably valuable
-            and helps us make smart decisions about what to ship next.
-          </p>
-          <p class="max-w-3xl text-base font-semibold text-cyan-100/80">
-            Seriously: every insight you share steers the roadmap. Thank you for lending us your perspective.
-          </p>
-          <p class="max-w-3xl text-sm text-white/70 sm:text-base">
-            Thank you for testing in spite of the rough edges. So many things are still work-in-progress and your notes
-            make it possible to keep leveling up the experience for everyone. If you would like to jump on a quick call
-            or even co-build with us (coding experience not required!), send a message to <a
-              class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
-          </p>
-          <p class="max-w-3xl text-xs uppercase tracking-[0.3em] text-cyan-100/70">
-            We are currently a German development team, but all public docs and tools start in English so we can reach
-            as many people as possible.
-          </p>
-        </div>
+  <div class="relative min-h-screen bg-[#050914] text-white">
+    <img
+        src="/img/landing/groundpath.jpeg"
+        alt="Path through a forest"
+        class="absolute inset-0 -z-20 h-full w-full object-cover object-center brightness-[0.55]"
+    />
+    <div class="absolute inset-0 -z-10 bg-[#050914]/85 backdrop-blur"/>
+    <div
+        class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(22,187,215,0.12),transparent_60%)]"/>
+    <div
+        class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_bottom,_rgba(123,77,255,0.12),transparent_70%)]"/>
 
+    <main class="relative z-10 pb-16 lg:pb-24">
+      <header class="container-outer flex flex-col items-center gap-5 py-20 text-center sm:gap-6 sm:py-24 lg:py-28">
+        <span
+            class="chip inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-cyan-200/80"
+        >
+          <span class="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.8)]" aria-hidden="true"/>
+          Feedback loop
+        </span>
+        <h1 class="max-w-3xl text-3xl font-semibold leading-tight text-white sm:text-4xl md:text-5xl">
+          Shape the next OpenSquawk releases with your field notes
+        </h1>
+        <p class="max-w-2xl text-base text-white/75 sm:text-lg">
+          Share what already feels like real-world ATC and where we should smooth the edges next. Every response goes
+          straight to the crew building Bridge, Classroom and Live ATC.
+        </p>
+        <div class="flex flex-wrap items-center justify-center gap-3 text-sm text-white/60">
+          <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+            <v-icon icon="mdi-bell-ring" size="18" class="text-cyan-300"/>
+            Honest takes only – thanks!
+          </span>
+          <a class="inline-flex items-center gap-2 text-cyan-200 transition hover:text-cyan-100" href="mailto:info@opensquawk.de">
+            <v-icon icon="mdi-email-fast" size="18"/>
+            Prefer email? info@opensquawk.de
+          </a>
+        </div>
       </header>
 
-      <div class="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-14 sm:px-6 md:px-8 lg:py-20">
-        <form
-            class="space-y-10 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-cyan-500/10 backdrop-blur"
-            @submit.prevent="handleSubmit" novalidate>
-          <div class="grid gap-6 md:grid-cols-2">
-            <div class="space-y-2">
-              <label for="name" class="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">Name
-                (optional)</label>
-              <input
-                  id="name"
-                  v-model.trim="form.name"
-                  type="text"
-                  placeholder="How should we address you?"
-                  class="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
-              />
+      <section class="container-outer space-y-8 pb-16 lg:pb-24">
+        <div class="grid gap-8 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+          <aside class="flex flex-col gap-6 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_24px_70px_rgba(5,10,35,0.4)] backdrop-blur">
+            <div class="space-y-3">
+              <h2 class="text-2xl font-semibold text-white">How to leave stellar feedback</h2>
+              <p class="text-sm text-white/70">
+                You&rsquo;re already part of the squad. Drop a quick note after a mission, highlight the magic moments and
+                flag anything that broke immersion.
+              </p>
             </div>
-            <div class="space-y-2">
-              <label for="email" class="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">Email
-                (optional)</label>
-              <input
-                  id="email"
-                  v-model.trim="form.email"
-                  type="email"
-                  placeholder="Where we can reach you if needed"
-                  class="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
-              />
+            <ul class="space-y-3 text-sm text-white/65">
+              <li class="flex items-start gap-3">
+                <v-icon icon="mdi-compass-outline" size="18" class="mt-0.5 text-cyan-300"/>
+                <span>Keep it concise &ndash; bullet thoughts are perfect.</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <v-icon icon="mdi-headset" size="18" class="mt-0.5 text-cyan-300"/>
+                <span>Tell us when radio clarity shines or drops out.</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <v-icon icon="mdi-rocket-launch-outline" size="18" class="mt-0.5 text-cyan-300"/>
+                <span>Dream big &ndash; wild feature ideas are welcome.</span>
+              </li>
+            </ul>
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/60">
+              <p class="font-semibold text-white">Need a live debrief?</p>
+              <p>Ping us in the form or via Discord to hop on a quick call.</p>
             </div>
-            <div class="space-y-2">
-              <label for="discord" class="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">Discord
-                (optional)</label>
-              <input
-                  id="discord"
-                  v-model.trim="form.discordHandle"
-                  type="text"
-                  placeholder="Discord username if you'd like to chat"
-                  class="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
-              />
-            </div>
-          </div>
+          </aside>
 
-          <div class="space-y-4">
-            <p class="text-sm font-semibold uppercase tracking-[0.35em] text-white/60">Overall excitement</p>
-            <p class="text-sm text-white/70">How excited are you about OpenSquawk right now?</p>
-            <div class="flex flex-wrap gap-3">
-              <label
-                  v-for="score in ratingScale"
-                  :key="score"
-                  class="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/40 px-4 py-2 text-sm font-medium text-white/80 transition hover:border-cyan-400/70 hover:text-white"
-              >
+          <form
+              class="space-y-8 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_30px_80px_rgba(5,10,35,0.45)] backdrop-blur"
+              @submit.prevent="handleSubmit" novalidate>
+            <div class="grid gap-4 md:grid-cols-3">
+              <div class="space-y-2 md:col-span-1">
+                <label for="name" class="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">Name (optional)</label>
                 <input
-                    class="accent-cyan-400"
-                    type="radio"
-                    name="excitement"
-                    :value="score"
-                    v-model.number="form.excitement"
+                    id="name"
+                    v-model.trim="form.name"
+                    type="text"
+                    placeholder="How should we address you?"
+                    class="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/35 focus:border-cyan-400 focus:outline-none focus-visible:ring-0"
                 />
-                <span>{{ score }}</span>
+              </div>
+              <div class="space-y-2 md:col-span-1">
+                <label for="email" class="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">Email (optional)</label>
+                <input
+                    id="email"
+                    v-model.trim="form.email"
+                    type="email"
+                    placeholder="Where we can reach you"
+                    class="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/35 focus:border-cyan-400 focus:outline-none focus-visible:ring-0"
+                />
+              </div>
+              <div class="space-y-2 md:col-span-1">
+                <label for="discord" class="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">Discord (optional)</label>
+                <input
+                    id="discord"
+                    v-model.trim="form.discordHandle"
+                    type="text"
+                    placeholder="Discord handle if you want to chat"
+                    class="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/35 focus:border-cyan-400 focus:outline-none focus-visible:ring-0"
+                />
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <p class="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">Overall excitement</p>
+              <p class="text-sm text-white/65">How hyped are you about OpenSquawk right now?</p>
+              <div class="flex flex-wrap gap-3">
+                <label
+                    v-for="score in ratingScale"
+                    :key="score"
+                    class="group flex cursor-pointer items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition"
+                    :class="form.excitement === score
+                      ? 'border-cyan-400 bg-cyan-400/10 text-white'
+                      : 'border-white/10 bg-white/5 text-white/70 hover:border-cyan-300/60 hover:text-white'"
+                >
+                  <input
+                      class="sr-only"
+                      type="radio"
+                      name="excitement"
+                      :value="score"
+                      v-model.number="form.excitement"
+                  />
+                  <span
+                      class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-base transition group-hover:border-cyan-300/60"
+                      :class="form.excitement === score ? 'border-cyan-400 bg-cyan-400/20 text-white' : 'text-white/70'"
+                  >
+                    {{ score }}
+                  </span>
+                  <span class="hidden text-xs uppercase tracking-[0.3em] text-white/50 sm:inline">
+                    {{ score === 5 ? 'Stellar' : `Level ${score}` }}
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div class="grid gap-8 lg:grid-cols-2">
+              <fieldset class="space-y-4">
+                <legend class="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">What works well</legend>
+                <p class="text-sm text-white/65">Tick the areas already sparking joy and add a quick note.</p>
+                <div class="grid gap-3">
+                  <label
+                      v-for="option in highlightOptions"
+                      :key="option"
+                      class="group flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3 text-sm transition"
+                      :class="form.highlightSelections.includes(option)
+                        ? 'border-emerald-400/70 bg-emerald-400/10 text-white'
+                        : 'border-white/10 bg-white/5 text-white/70 hover:border-emerald-300/60 hover:text-white'"
+                  >
+                    <input
+                        type="checkbox"
+                        class="mt-1 h-4 w-4 rounded border-white/20 bg-white/10 text-emerald-400 focus:ring-emerald-300"
+                        :value="option"
+                        v-model="form.highlightSelections"
+                    />
+                    <span>{{ option }}</span>
+                  </label>
+                </div>
+                <textarea
+                    v-model.trim="form.highlightNotes"
+                    rows="4"
+                    placeholder="Share the story behind the highlights"
+                    class="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/35 focus:border-emerald-400 focus:outline-none focus-visible:ring-0"
+                ></textarea>
+              </fieldset>
+
+              <fieldset class="space-y-4">
+                <legend class="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">Where it hurts</legend>
+                <p class="text-sm text-white/65">Flag pain points so we can triage the sharp edges first.</p>
+                <div class="grid gap-3">
+                  <label
+                      v-for="option in frictionOptions"
+                      :key="option"
+                      class="group flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3 text-sm transition"
+                      :class="form.frictionSelections.includes(option)
+                        ? 'border-rose-400/70 bg-rose-400/10 text-white'
+                        : 'border-white/10 bg-white/5 text-white/70 hover:border-rose-300/60 hover:text-white'"
+                  >
+                    <input
+                        type="checkbox"
+                        class="mt-1 h-4 w-4 rounded border-white/20 bg-white/10 text-rose-400 focus:ring-rose-300"
+                        :value="option"
+                        v-model="form.frictionSelections"
+                    />
+                    <span>{{ option }}</span>
+                  </label>
+                </div>
+                <textarea
+                    v-model.trim="form.frictionNotes"
+                    rows="4"
+                    placeholder="Help us understand what to fix first"
+                    class="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/35 focus:border-rose-400 focus:outline-none focus-visible:ring-0"
+                ></textarea>
+              </fieldset>
+            </div>
+
+            <div class="space-y-4">
+              <label for="classroom-notes" class="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">Classroom stories</label>
+              <p class="text-sm text-white/65">Which drills or instructor moments stood out?</p>
+              <textarea
+                  id="classroom-notes"
+                  v-model.trim="form.classroomNotes"
+                  rows="5"
+                  placeholder="What happened in the Classroom? What should we double down on?"
+                  class="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/35 focus:border-cyan-400 focus:outline-none focus-visible:ring-0"
+              ></textarea>
+            </div>
+
+            <div class="space-y-4">
+              <label for="hosting-interest" class="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">Hosting or deployment</label>
+              <p class="text-sm text-white/65">Planning to self-host or need us to do it for you?</p>
+              <textarea
+                  id="hosting-interest"
+                  v-model.trim="form.hostingInterest"
+                  rows="4"
+                  placeholder="Tell us about your setup, budget expectations, or blockers"
+                  class="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/35 focus:border-cyan-400 focus:outline-none focus-visible:ring-0"
+              ></textarea>
+            </div>
+
+            <div class="space-y-4">
+              <label for="other-ideas" class="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">Big ideas &amp; requests</label>
+              <p class="text-sm text-white/65">Dream loud – features, integrations, workflows, anything goes.</p>
+              <textarea
+                  id="other-ideas"
+                  v-model.trim="form.otherIdeas"
+                  rows="5"
+                  placeholder="Share every idea. Wild and small ones welcome."
+                  class="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/35 focus:border-cyan-400 focus:outline-none focus-visible:ring-0"
+              ></textarea>
+            </div>
+
+            <div class="space-y-3">
+              <label class="flex items-start gap-3 text-sm text-white/75">
+                <input type="checkbox" class="mt-1 h-4 w-4 rounded border-white/20 bg-white/10 text-cyan-400 focus:ring-cyan-300" v-model="form.contactConsent"/>
+                <span>I&rsquo;m happy for you to follow up about this feedback or invite me to roadmap sessions.</span>
               </label>
+              <p class="text-xs text-white/55">Every submission lands in the inbox at <strong>info@opensquawk.de</strong>.</p>
+              <button
+                  type="submit"
+                  :disabled="submissionState === 'submitting'"
+                  class="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-6 py-3 text-base font-semibold text-slate-950 shadow-[0_16px_40px_rgba(56,189,248,0.35)] transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:bg-cyan-400"
+              >
+                <v-icon :icon="submissionState === 'submitting' ? 'mdi-dots-circle' : 'mdi-send'" size="20" class="text-slate-950"/>
+                <span>{{ submissionState === 'submitting' ? 'Sending…' : 'Send feedback' }}</span>
+              </button>
             </div>
-          </div>
+          </form>
+        </div>
 
-          <div class="grid gap-8 lg:grid-cols-2">
-            <fieldset class="space-y-4">
-              <legend class="text-sm font-semibold uppercase tracking-[0.35em] text-white/60">What works well</legend>
-              <p class="text-sm text-white/70">Tick anything that feels promising already and tell us why.</p>
-              <div class="grid gap-3">
-                <label
-                    v-for="option in highlightOptions"
-                    :key="option"
-                    class="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white/80 transition hover:border-cyan-400/60"
-                >
-                  <input type="checkbox" class="mt-1 accent-cyan-400" :value="option"
-                         v-model="form.highlightSelections"/>
-                  <span>{{ option }}</span>
-                </label>
-              </div>
-              <textarea
-                  v-model.trim="form.highlightNotes"
-                  rows="4"
-                  placeholder="Share the story behind the highlights"
-                  class="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
-              ></textarea>
-            </fieldset>
-
-            <fieldset class="space-y-4">
-              <legend class="text-sm font-semibold uppercase tracking-[0.35em] text-white/60">Where it hurts</legend>
-              <p class="text-sm text-white/70">Checkbox anything that feels rough or confusing and describe it.</p>
-              <div class="grid gap-3">
-                <label
-                    v-for="option in frictionOptions"
-                    :key="option"
-                    class="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white/80 transition hover:border-rose-400/60"
-                >
-                  <input type="checkbox" class="mt-1 accent-rose-400" :value="option"
-                         v-model="form.frictionSelections"/>
-                  <span>{{ option }}</span>
-                </label>
-              </div>
-              <textarea
-                  v-model.trim="form.frictionNotes"
-                  rows="4"
-                  placeholder="Help us understand what should be fixed first"
-                  class="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-rose-400 focus:outline-none"
-              ></textarea>
-            </fieldset>
-          </div>
-
-          <div class="space-y-4">
-            <label for="classroom-notes" class="text-sm font-semibold uppercase tracking-[0.35em] text-white/60">Classroom
-              stories</label>
-            <p class="text-sm text-white/70">Tell us about the missions you tried, the radio training flow, anything
-              that stood out.</p>
-            <textarea
-                id="classroom-notes"
-                v-model.trim="form.classroomNotes"
-                rows="5"
-                placeholder="What happened in the Classroom? What should we double down on?"
-                class="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
-            ></textarea>
-          </div>
-
-          <div class="space-y-4">
-            <label for="hosting-interest" class="text-sm font-semibold uppercase tracking-[0.35em] text-white/60">Hosting
-              or deployment</label>
-            <p class="text-sm text-white/70">If you are planning to self-host or need us to host for you, what would
-              make it a no-brainer?</p>
-            <textarea
-                id="hosting-interest"
-                v-model.trim="form.hostingInterest"
-                rows="4"
-                placeholder="Tell us about your setup, budget expectations, or blockers"
-                class="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
-            ></textarea>
-          </div>
-
-          <div class="space-y-4">
-            <label for="other-ideas" class="text-sm font-semibold uppercase tracking-[0.35em] text-white/60">Big ideas
-              &amp; requests</label>
-            <p class="text-sm text-white/70">Dream loud – features, integrations, workflows, anything that would make
-              OpenSquawk remarkable for you.</p>
-            <textarea
-                id="other-ideas"
-                v-model.trim="form.otherIdeas"
-                rows="5"
-                placeholder="Share every idea. Wild and small ones welcome."
-                class="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
-            ></textarea>
-          </div>
-
-          <div class="space-y-3">
-            <label class="flex items-start gap-3 text-sm text-white/80">
-              <input type="checkbox" class="mt-1 accent-cyan-400" v-model="form.contactConsent"/>
-              <span>I am happy for you to email me back about this feedback or to invite me to jam on the roadmap.</span>
-            </label>
-            <p class="text-xs text-white/50">Submissions are routed straight to <strong>info@opensquawk.de</strong> so
-              the team can read and respond quickly.</p>
-            <button
-                type="submit"
-                :disabled="submissionState === 'submitting'"
-                class="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-6 py-3 text-base font-semibold text-slate-950 shadow-[0_16px_40px_rgba(56,189,248,0.35)] transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:bg-cyan-400"
-            >
-              <v-icon :icon="submissionState === 'submitting' ? 'mdi-dots-circle' : 'mdi-send'" size="20"
-                      class="text-slate-950"/>
-              <span>{{ submissionState === 'submitting' ? 'Sending…' : 'Send feedback' }}</span>
-            </button>
-          </div>
-        </form>
-
-        <section v-if="submissionState === 'success'"
-                 class="space-y-4 rounded-3xl border border-emerald-400/30 bg-emerald-400/10 p-6 text-sm text-emerald-100 shadow-xl shadow-emerald-500/10">
-          <div class="flex items-start gap-3">
-            <v-icon icon="mdi-check-decagram" size="28" class="mt-0.5 text-emerald-200"/>
+        <section
+            v-if="submissionState === 'success'"
+            class="space-y-4 rounded-3xl border border-emerald-400/30 bg-emerald-400/10 p-6 text-sm text-emerald-100 shadow-[0_20px_60px_rgba(12,61,48,0.45)]"
+        >
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+            <v-icon icon="mdi-check-decagram" size="28" class="text-emerald-200"/>
             <div class="space-y-2">
-              <h2 class="text-lg font-semibold text-white">Thank you for steering the mission!</h2>
-              <p>Your notes are already on their way to the cockpit at info@opensquawk.de. We will follow up if you
-                checked that it’s okay.</p>
-            </div>
-          </div>
-        </section>
-
-        <section v-else-if="submissionState === 'error'"
-                 class="space-y-4 rounded-3xl border border-rose-400/40 bg-rose-400/10 p-6 text-sm text-rose-100 shadow-xl shadow-rose-500/10">
-          <div class="flex items-start gap-3">
-            <v-icon icon="mdi-alert" size="26" class="mt-0.5 text-rose-200"/>
-            <div class="space-y-2">
-              <h2 class="text-lg font-semibold text-white">Something jammed on the way out</h2>
-              <p>{{
-                  submissionError || 'We could not send this feedback. Please try again in a moment or email info@opensquawk.de directly.'
-                }}</p>
+              <h2 class="text-lg font-semibold text-white">Thanks for steering the mission!</h2>
+              <p>Your notes are already inbound to info@opensquawk.de. We&rsquo;ll reach out if you said it&rsquo;s okay.</p>
             </div>
           </div>
         </section>
 
         <section
-            class="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/80 shadow-xl shadow-cyan-500/10">
+            v-else-if="submissionState === 'error'"
+            class="space-y-4 rounded-3xl border border-rose-400/40 bg-rose-400/10 p-6 text-sm text-rose-100 shadow-[0_20px_60px_rgba(83,24,41,0.45)]"
+        >
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+            <v-icon icon="mdi-alert" size="26" class="text-rose-200"/>
+            <div class="space-y-2">
+              <h2 class="text-lg font-semibold text-white">Something jammed on the way out</h2>
+              <p>{{ submissionError || 'We couldn’t send this feedback. Please try again or email info@opensquawk.de directly.' }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/80 shadow-[0_24px_70px_rgba(5,10,35,0.4)]">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="space-y-2">
-              <h2 class="text-lg font-semibold text-white">Prefer to talk it through?</h2>
-              <p>Drop your Discord handle above or ping us for a quick Discord or TeamSpeak debrief about your ideas.</p>
+              <h2 class="text-lg font-semibold text-white">Want to talk it through?</h2>
+              <p>Drop your Discord tag above or send us a message to line up a quick Discord or TeamSpeak chat.</p>
             </div>
             <div class="flex flex-col gap-3 sm:flex-row">
               <a
@@ -260,8 +300,8 @@
             </div>
           </div>
         </section>
-      </div>
-    </div>
+      </section>
+    </main>
   </div>
 </template>
 
