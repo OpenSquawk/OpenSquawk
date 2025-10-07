@@ -264,37 +264,79 @@
                   :key="user.id"
                   class="border border-white/10 bg-black/40"
                 >
-                  <v-card-text class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div class="space-y-1">
-                      <p class="text-sm text-white/50">{{ formatDateTime(user.createdAt) }}</p>
-                      <h3 class="text-lg font-semibold">{{ user.email }}</h3>
-                      <p v-if="user.name" class="text-sm text-white/60">{{ user.name }}</p>
-                      <div class="flex flex-wrap gap-2 text-xs text-white/50">
-                        <span>Invitations created: {{ user.invitationCodesIssued }}</span>
-                        <span v-if="user.lastLoginAt">Last login: {{ formatRelative(user.lastLoginAt) }}</span>
+                  <v-card-text class="space-y-4">
+                    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div class="space-y-1">
+                        <p class="text-sm text-white/50">{{ formatDateTime(user.createdAt) }}</p>
+                        <h3 class="text-lg font-semibold">{{ user.email }}</h3>
+                        <p v-if="user.name" class="text-sm text-white/60">{{ user.name }}</p>
+                        <div class="flex flex-wrap gap-2 text-xs text-white/50">
+                          <span>Invitations created: {{ user.invitationCodesIssued }}</span>
+                          <span v-if="user.lastLoginAt">Last login: {{ formatRelative(user.lastLoginAt) }}</span>
+                        </div>
+                      </div>
+                      <div class="flex flex-col items-start gap-2 md:w-48 md:items-end">
+                        <v-select
+                          v-model="userRoleDraft[user.id]"
+                          :items="userRoleEditOptions"
+                          label="Role"
+                          density="comfortable"
+                          variant="outlined"
+                          color="cyan"
+                          hide-details
+                          class="w-44 md:w-full"
+                        />
+                        <v-btn
+                          color="cyan"
+                          variant="flat"
+                          size="small"
+                          :loading="userRoleUpdating === user.id"
+                          :disabled="userRoleDraft[user.id] === user.role"
+                          @click="applyRoleChange(user.id)"
+                        >
+                          Update role
+                        </v-btn>
                       </div>
                     </div>
-                    <div class="flex flex-col items-start gap-2 md:items-end">
-                      <v-select
-                        v-model="userRoleDraft[user.id]"
-                        :items="userRoleEditOptions"
-                        label="Role"
-                        density="comfortable"
+                    <v-divider class="border-white/10" />
+                    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                      <v-textarea
+                        v-model="userNotesDraft[user.id]"
+                        label="Internal notes"
+                        auto-grow
+                        rows="2"
                         variant="outlined"
+                        density="comfortable"
                         color="cyan"
-                        hide-details
-                        class="w-44"
+                        :counter="2000"
+                        maxlength="2000"
+                        hide-details="auto"
+                        class="md:flex-1"
                       />
-                      <v-btn
-                        color="cyan"
-                        variant="flat"
-                        size="small"
-                        :loading="userRoleUpdating === user.id"
-                        :disabled="userRoleDraft[user.id] === user.role"
-                        @click="applyRoleChange(user.id)"
-                      >
-                        Update role
-                      </v-btn>
+                      <div class="flex flex-col gap-2 md:w-48">
+                        <v-btn
+                          color="cyan"
+                          variant="tonal"
+                          size="small"
+                          prepend-icon="mdi-content-save-outline"
+                          :loading="userNotesSaving === user.id"
+                          :disabled="(userNotesDraft[user.id] || '') === (user.adminNotes || '')"
+                          @click="saveUserNotes(user.id)"
+                        >
+                          Save notes
+                        </v-btn>
+                        <v-btn
+                          v-if="user.role === 'user'"
+                          color="red"
+                          variant="text"
+                          size="small"
+                          prepend-icon="mdi-delete-outline"
+                          :loading="userDeleteLoading === user.id"
+                          @click="deleteUserAccount(user)"
+                        >
+                          Delete user
+                        </v-btn>
+                      </div>
                     </div>
                   </v-card-text>
                 </v-card>
@@ -1224,12 +1266,18 @@ interface OverviewData {
 
 interface AdminUser extends OverviewUser {
   invitationCodesIssued: number
+  adminNotes?: string
 }
 
 interface UsersResponse {
   items: AdminUser[]
   pagination: { total: number; page: number; pageSize: number; pages: number }
   roles: { user: number; admin: number; dev: number }
+}
+
+interface UpdateNotesResponse {
+  success: boolean
+  notes: string
 }
 
 interface InvitationItem extends OverviewInvitation {
@@ -1424,6 +1472,9 @@ const userRoleEditOptions = [
 ]
 const userRoleUpdating = ref<string | null>(null)
 const userRoleDraft = reactive<Record<string, 'user' | 'admin' | 'dev'>>({})
+const userNotesDraft = reactive<Record<string, string>>({})
+const userNotesSaving = ref<string | null>(null)
+const userDeleteLoading = ref<string | null>(null)
 
 const invitations = ref<InvitationItem[]>([])
 const invitationPagination = reactive({ total: 0, page: 1, pages: 1, pageSize: 12 })
@@ -1699,8 +1750,15 @@ async function fetchUsers(resetPage = false) {
     if (userRoleFilter.value !== 'all') query.role = userRoleFilter.value
     const response = await api.get<UsersResponse>('/api/admin/users', { query })
     users.value = response.items
+    const itemIds = new Set(response.items.map((user) => user.id))
+    Object.keys(userNotesDraft).forEach((key) => {
+      if (!itemIds.has(key)) {
+        delete userNotesDraft[key]
+      }
+    })
     response.items.forEach((user) => {
       userRoleDraft[user.id] = user.role as 'user' | 'admin' | 'dev'
+      userNotesDraft[user.id] = user.adminNotes ?? ''
     })
     Object.assign(userPagination, response.pagination)
     Object.assign(userRoleStats, response.roles)
@@ -1733,6 +1791,47 @@ async function applyRoleChange(userId: string) {
     userError.value = extractErrorMessage(error, 'Could not update role.')
   } finally {
     userRoleUpdating.value = null
+  }
+}
+
+async function saveUserNotes(userId: string) {
+  userNotesSaving.value = userId
+  try {
+    const notes = userNotesDraft[userId] ?? ''
+    const response = await api.request<UpdateNotesResponse>(`/api/admin/users/${userId}/notes`, {
+      method: 'PATCH',
+      body: { notes },
+    })
+    const target = users.value.find((u) => u.id === userId)
+    if (target) {
+      target.adminNotes = response.notes
+    }
+    userNotesDraft[userId] = response.notes
+  } catch (error) {
+    userError.value = extractErrorMessage(error, 'Could not save notes.')
+  } finally {
+    userNotesSaving.value = null
+  }
+}
+
+async function deleteUserAccount(user: AdminUser) {
+  if (typeof window !== 'undefined') {
+    const confirmed = window.confirm(`Delete user ${user.email}? This action cannot be undone.`)
+    if (!confirmed) return
+  }
+
+  userDeleteLoading.value = user.id
+  try {
+    await api.request(`/api/admin/users/${user.id}`, { method: 'DELETE' })
+    const shouldMoveBack = users.value.length === 1 && userPagination.page > 1
+    if (shouldMoveBack) {
+      userPagination.page -= 1
+    }
+    await fetchUsers()
+  } catch (error) {
+    userError.value = extractErrorMessage(error, 'Could not delete user.')
+  } finally {
+    userDeleteLoading.value = null
   }
 }
 

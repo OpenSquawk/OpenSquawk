@@ -11,6 +11,7 @@ type UserListItem = {
   createdAt: string
   lastLoginAt?: string
   invitationCodesIssued: number
+  adminNotes?: string
 }
 
 function mapUser(doc: any): UserListItem {
@@ -22,6 +23,7 @@ function mapUser(doc: any): UserListItem {
     createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : new Date().toISOString(),
     lastLoginAt: doc.lastLoginAt ? new Date(doc.lastLoginAt).toISOString() : undefined,
     invitationCodesIssued: doc.invitationCodesIssued || 0,
+    adminNotes: doc.adminNotes || '',
   }
 }
 

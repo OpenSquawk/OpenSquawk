@@ -13,6 +13,7 @@ export interface UserDocument extends mongoose.Document {
   invitationCodesIssued: number
   acceptedTermsAt: Date
   acceptedPrivacyAt: Date
+  adminNotes?: string
 }
 
 const userSchema = new mongoose.Schema<UserDocument>({
@@ -26,6 +27,7 @@ const userSchema = new mongoose.Schema<UserDocument>({
   invitationCodesIssued: { type: Number, default: 0 },
   acceptedTermsAt: { type: Date, required: true },
   acceptedPrivacyAt: { type: Date, required: true },
+  adminNotes: { type: String, trim: true, default: '' },
 })
 
 export const User =
