@@ -1,5 +1,7 @@
 import mongoose from 'mongoose'
 
+const { Schema } = mongoose
+
 export interface WaitlistEntryDocument extends mongoose.Document {
   email: string
   name?: string
@@ -11,6 +13,8 @@ export interface WaitlistEntryDocument extends mongoose.Document {
   activatedAt?: Date
   wantsProductUpdates?: boolean
   updatesOptedInAt?: Date
+  invitationCode?: mongoose.Types.ObjectId
+  invitationSentAt?: Date
 }
 
 const waitlistSchema = new mongoose.Schema<WaitlistEntryDocument>({
@@ -24,6 +28,8 @@ const waitlistSchema = new mongoose.Schema<WaitlistEntryDocument>({
   activatedAt: { type: Date },
   wantsProductUpdates: { type: Boolean, default: false },
   updatesOptedInAt: { type: Date },
+  invitationCode: { type: Schema.Types.ObjectId, ref: 'InvitationCode' },
+  invitationSentAt: { type: Date },
 })
 
 export const WaitlistEntry =

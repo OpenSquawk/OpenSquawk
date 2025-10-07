@@ -1,7 +1,8 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createError, readBody } from 'h3'
 import { useRuntimeConfig } from '#imports'
 import { InvitationCode } from '../../../models/InvitationCode'
+import { generateInvitationCode } from '../../../utils/invitations'
 
 interface ManualInviteRequestBody {
   password?: string
@@ -13,10 +14,6 @@ interface ManualInviteResponse {
   code: string
   expiresAt: string
   label: string | null
-}
-
-function generateCode() {
-  return randomBytes(4).toString('hex').toUpperCase()
 }
 
 function safeComparePassword(provided: string, expected: string) {
@@ -42,7 +39,7 @@ export default defineEventHandler<ManualInviteResponse>(async (event) => {
   }
 
   const now = new Date()
-  const code = generateCode()
+  const code = generateInvitationCode()
   const expiresAt = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30)
   const label = body.label?.trim() || undefined
 

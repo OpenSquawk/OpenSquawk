@@ -1,6 +1,6 @@
-import { randomBytes } from 'node:crypto'
 import { createError, readBody } from 'h3'
 import { InvitationCode } from '../../../models/InvitationCode'
+import { generateInvitationCode } from '../../../utils/invitations'
 
 const CREATION_DEADLINE = new Date(process.env.BOOTSTRAP_INVITE_DEADLINE ?? '2025-10-01T00:00:00Z')
 
@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody<{ label?: string }>(event).catch(() => ({ label: undefined }))
-  const code = randomBytes(4).toString('hex').toUpperCase()
+  const code = generateInvitationCode()
   const expiresAt = CREATION_DEADLINE
 
   await InvitationCode.create({

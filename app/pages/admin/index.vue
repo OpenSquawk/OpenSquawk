@@ -481,6 +481,17 @@
               {{ waitlistError }}
             </v-alert>
 
+            <v-alert
+              v-else-if="waitlistSuccessMessage"
+              type="success"
+              variant="tonal"
+              border="start"
+              density="comfortable"
+              class="bg-emerald-500/10 text-emerald-100"
+            >
+              {{ waitlistSuccessMessage }}
+            </v-alert>
+
             <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div class="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <v-text-field
@@ -533,6 +544,7 @@
                     <th class="font-semibold">Joined</th>
                     <th class="font-semibold">Opt-in</th>
                     <th class="font-semibold">Status</th>
+                    <th class="font-semibold">Invitation</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -579,6 +591,54 @@
                           Waiting for access
                         </template>
                       </v-chip>
+                    </td>
+                    <td>
+                      <div class="flex flex-col gap-2">
+                        <div v-if="entry.invitation" class="space-y-1 text-xs">
+                          <div class="font-mono text-sm text-white">{{ entry.invitation.code }}</div>
+                          <div class="text-white/50">
+                            Created {{ formatRelative(entry.invitation.createdAt) }}
+                            <span class="text-white/40">· {{ formatDateTime(entry.invitation.createdAt) }}</span>
+                          </div>
+                          <div v-if="entry.invitation.sentAt" class="text-white/50">
+                            Sent {{ formatRelative(entry.invitation.sentAt) }}
+                            <span class="text-white/40">· {{ formatDateTime(entry.invitation.sentAt) }}</span>
+                          </div>
+                          <div
+                            v-if="entry.invitation.usedAt"
+                            class="text-[11px] font-medium uppercase tracking-[0.2em] text-green-300"
+                          >
+                            Code used · {{ formatRelative(entry.invitation.usedAt) }}
+                          </div>
+                        </div>
+                        <div v-else class="text-xs text-white/50">No invitation sent yet.</div>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                          <v-btn
+                            size="small"
+                            color="cyan"
+                            variant="tonal"
+                            :loading="isWaitlistSending(entry.id)"
+                            :disabled="Boolean(entry.invitation?.usedAt)"
+                            @click="sendWaitlistInvitation(entry)"
+                          >
+                            <template v-if="entry.invitation">
+                              <template v-if="entry.invitation.usedAt">Registered</template>
+                              <template v-else>Re-send invite</template>
+                            </template>
+                            <template v-else>Send invite</template>
+                          </v-btn>
+                          <v-chip
+                            v-if="entry.invitation?.usedAt"
+                            size="x-small"
+                            color="green"
+                            variant="tonal"
+                            class="text-[11px] uppercase tracking-[0.2em]"
+                          >
+                            Registered
+                          </v-chip>
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -1278,6 +1338,17 @@ interface LogsResponse {
   pagination: { total: number; page: number; pageSize: number; pages: number }
 }
 
+interface WaitlistInvitationInfo {
+  id: string
+  code: string
+  channel: string
+  label?: string
+  createdAt: string
+  expiresAt?: string
+  sentAt?: string
+  usedAt?: string
+}
+
 interface WaitlistEntryItem {
   id: string
   email: string
@@ -1288,6 +1359,8 @@ interface WaitlistEntryItem {
   activatedAt?: string
   wantsProductUpdates: boolean
   updatesOptedInAt?: string
+  invitationSentAt?: string
+  invitation?: WaitlistInvitationInfo
 }
 
 interface WaitlistStatsSummary {
@@ -1301,6 +1374,11 @@ interface WaitlistResponse {
   items: WaitlistEntryItem[]
   pagination: { total: number; page: number; pageSize: number; pages: number }
   stats: WaitlistStatsSummary
+}
+
+interface WaitlistInviteResponse {
+  success: boolean
+  invitation: WaitlistInvitationInfo
 }
 
 interface CreateInviteResponse {
@@ -1372,6 +1450,7 @@ const waitlistEntries = ref<WaitlistEntryItem[]>([])
 const waitlistPagination = reactive({ total: 0, page: 1, pages: 1, pageSize: 15 })
 const waitlistLoading = ref(false)
 const waitlistError = ref('')
+const waitlistSuccessMessage = ref('')
 const waitlistSearch = ref('')
 const waitlistSubscription = ref<'all' | 'waitlist' | 'updates'>('all')
 const waitlistStatus = ref<'all' | 'pending' | 'activated'>('all')
@@ -1386,6 +1465,7 @@ const waitlistStatusOptions = [
   { title: 'Activated', value: 'activated' },
 ]
 const waitlistStats = reactive<WaitlistStatsSummary>({ total: 0, updates: 0, activated: 0, pending: 0 })
+const waitlistSending = ref<string[]>([])
 
 const logs = ref<TransmissionEntry[]>([])
 const logPagination = reactive({ total: 0, page: 1, pages: 1, pageSize: 15 })
@@ -1704,6 +1784,7 @@ async function fetchWaitlist(resetPage = false) {
   }
   waitlistLoading.value = true
   waitlistError.value = ''
+  waitlistSuccessMessage.value = ''
   try {
     const response = await api.get<WaitlistResponse>('/api/admin/waitlist', {
       query: computeWaitlistQuery(),
@@ -1725,6 +1806,34 @@ function changeWaitlistPage(page: number) {
   if (page < 1 || page > waitlistPagination.pages) return
   waitlistPagination.page = page
   fetchWaitlist()
+}
+
+function isWaitlistSending(id: string) {
+  return waitlistSending.value.includes(id)
+}
+
+async function sendWaitlistInvitation(entry: WaitlistEntryItem) {
+  if (isWaitlistSending(entry.id)) return
+
+  waitlistError.value = ''
+  waitlistSuccessMessage.value = ''
+  waitlistSending.value = [...waitlistSending.value, entry.id]
+
+  try {
+    const response = await api.post<WaitlistInviteResponse>(
+      `/api/admin/waitlist/${entry.id}/invite`,
+      {},
+    )
+
+    entry.invitation = response.invitation
+    entry.invitationSentAt = response.invitation.sentAt
+    waitlistEntries.value = [...waitlistEntries.value]
+    waitlistSuccessMessage.value = `Invitation ${response.invitation.code} sent to ${entry.email}.`
+  } catch (error) {
+    waitlistError.value = extractErrorMessage(error, 'Could not send invitation.')
+  } finally {
+    waitlistSending.value = waitlistSending.value.filter((existing) => existing !== entry.id)
+  }
 }
 
 function computeLogQuery() {
