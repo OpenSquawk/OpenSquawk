@@ -186,6 +186,29 @@
                     character.</p>
                 </div>
                 <div>
+                  <label class="field-label">Confirm password</label>
+                  <input
+                      v-model="registerForm.passwordConfirm"
+                      type="password"
+                      required
+                      minlength="8"
+                      autocomplete="new-password"
+                      class="field-input"
+                  />
+                  <p
+                      v-if="passwordMismatch"
+                      class="mt-2 text-xs font-medium text-red-300"
+                  >
+                    Passwords do not match.
+                  </p>
+                  <p
+                      v-else-if="passwordsMatch"
+                      class="mt-2 text-xs font-medium text-green-300"
+                  >
+                    Passwords match.
+                  </p>
+                </div>
+                <div>
                   <div class="mobile-form-header">
                     <label class="field-label">Invitation code</label>
                     <button
@@ -333,6 +356,7 @@ const registerForm = reactive({
   name: '',
   email: '',
   password: '',
+  passwordConfirm: '',
   invitationCode: '',
   acceptTerms: false,
   acceptPrivacy: false,
@@ -340,6 +364,12 @@ const registerForm = reactive({
 const registerLoading = ref(false)
 const registerError = ref('')
 const invitationStatus = ref<'unknown' | 'checking' | 'valid' | 'invalid'>('unknown')
+const passwordsMatch = computed(() =>
+  registerForm.passwordConfirm !== '' && registerForm.password === registerForm.passwordConfirm,
+)
+const passwordMismatch = computed(() =>
+  registerForm.passwordConfirm !== '' && registerForm.password !== registerForm.passwordConfirm,
+)
 
 function getQueryParam(query: LocationQueryValue | LocationQueryValue[] | undefined) {
   if (Array.isArray(query)) return query[0] ?? ''
@@ -369,10 +399,18 @@ watch(
     {immediate: true}
 )
 
+watch(passwordMismatch, (mismatch) => {
+  if (!mismatch && registerError.value === 'Passwords do not match') {
+    registerError.value = ''
+  }
+})
+
 const canRegister = computed(() =>
     Boolean(
         registerForm.email &&
         registerForm.password &&
+        registerForm.passwordConfirm &&
+        passwordsMatch.value &&
         registerForm.invitationCode &&
         registerForm.acceptTerms &&
         registerForm.acceptPrivacy &&
@@ -449,7 +487,12 @@ watch(
 )
 
 async function submitRegister() {
-  if (registerLoading.value || !canRegister.value) return
+  if (registerLoading.value) return
+  if (passwordMismatch.value) {
+    registerError.value = 'Passwords do not match'
+    return
+  }
+  if (!canRegister.value) return
   registerLoading.value = true
   registerError.value = ''
   try {

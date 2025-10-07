@@ -171,7 +171,7 @@ export async function getUserFromEvent(event: H3Event) {
 }
 
 export function hasAdminRole(user: UserDocument | null | undefined) {
-  return user ? user.role === 'admin' || user.role === 'dev' : false
+  return user ? user.role === 'admin' : false
 }
 
 export async function requireAdmin(event: H3Event) {

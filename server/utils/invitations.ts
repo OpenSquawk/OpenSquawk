@@ -2,6 +2,8 @@ import { randomBytes } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
+const REGISTER_URL = 'https://opensquawk.de/login'
+
 let cachedHtmlTemplate: string | null = null
 
 export function generateInvitationCode() {
@@ -21,18 +23,38 @@ async function loadInvitationTemplate() {
     return file
   } catch (error) {
     console.warn('Could not load invitation email template, falling back to plain HTML.', error)
-    const fallback = `<!DOCTYPE html><html><body><p>Your OpenSquawk invite code: <strong>{{INVITE_CODE}}</strong></p></body></html>`
+    const fallback =
+      '<!DOCTYPE html><html><body>' +
+      '<p>Your OpenSquawk invite code: <strong>{{INVITE_CODE}}</strong></p>' +
+      '<p>Register here: <a href="{{INVITE_LINK}}">{{INVITE_LINK}}</a></p>' +
+      '</body></html>'
     cachedHtmlTemplate = fallback
     return fallback
   }
 }
 
-export async function renderInvitationEmail(code: string) {
-  const template = await loadInvitationTemplate()
-  return template.replace(/{{INVITE_CODE}}/g, code)
+export function createInvitationLink(code: string, email: string) {
+  const params = new URLSearchParams()
+  params.set('mode', 'register')
+  params.set('invite', code)
+  params.set('invitationCode', code)
+  params.set('code', code)
+  params.set('email', email)
+
+  return `${REGISTER_URL}?${params.toString()}`
 }
 
-export function renderInvitationText(code: string) {
+export async function renderInvitationEmail(code: string, email: string) {
+  const template = await loadInvitationTemplate()
+  const inviteLink = createInvitationLink(code, email)
+
+  return template
+    .replace(/{{INVITE_CODE}}/g, code)
+    .replace(/{{INVITE_LINK}}/g, inviteLink)
+}
+
+export function renderInvitationText(code: string, email: string) {
+  const inviteLink = createInvitationLink(code, email)
   const lines = [
     'Welcome to OpenSquawk!',
     '',
@@ -40,7 +62,7 @@ export function renderInvitationText(code: string) {
     code,
     '',
     'Use it to register your account:',
-    'https://opensquawk.de/login?mode=register',
+    inviteLink,
     '',
     'Blue skies,',
     'Your OpenSquawk crew',

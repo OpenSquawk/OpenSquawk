@@ -13,7 +13,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return navigateTo(`/login?redirect=${redirect}`)
   }
 
-  if (!['admin', 'dev'].includes(auth.user.role)) {
+  if (auth.user.role !== 'admin') {
     return navigateTo('/')
   }
 })
