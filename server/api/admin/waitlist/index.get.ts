@@ -2,6 +2,7 @@ import { defineEventHandler, getQuery } from 'h3'
 import type { FilterQuery } from 'mongoose'
 import { requireAdmin } from '../../../utils/auth'
 import { WaitlistEntry, type WaitlistEntryDocument } from '../../../models/WaitlistEntry'
+import type { InvitationCodeDocument } from '../../../models/InvitationCode'
 
 type WaitlistListItem = {
   id: string
@@ -13,23 +14,58 @@ type WaitlistListItem = {
   activatedAt?: string
   wantsProductUpdates: boolean
   updatesOptedInAt?: string
+  invitationSentAt?: string
+  invitation?: {
+    id: string
+    code: string
+    channel: string
+    label?: string
+    createdAt: string
+    expiresAt?: string
+    usedAt?: string
+    sentAt?: string
+  }
 }
 
 function escapeRegExp(input: string) {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+function normalizeDate(value?: Date | string | null) {
+  if (!value) return undefined
+  const date = new Date(value)
+  if (Number.isNaN(date.valueOf())) return undefined
+  return date.toISOString()
+}
+
 function mapWaitlistEntry(doc: any): WaitlistListItem {
+  const invitationDoc = doc.invitationCode as InvitationCodeDocument | undefined
+  const sentAt = normalizeDate(doc.invitationSentAt)
+
   return {
     id: String(doc._id),
     email: doc.email,
     name: doc.name || undefined,
     notes: doc.notes || undefined,
     source: doc.source || undefined,
-    joinedAt: doc.joinedAt ? new Date(doc.joinedAt).toISOString() : new Date().toISOString(),
-    activatedAt: doc.activatedAt ? new Date(doc.activatedAt).toISOString() : undefined,
+    joinedAt: normalizeDate(doc.joinedAt) || new Date().toISOString(),
+    activatedAt: normalizeDate(doc.activatedAt),
     wantsProductUpdates: Boolean(doc.wantsProductUpdates),
-    updatesOptedInAt: doc.updatesOptedInAt ? new Date(doc.updatesOptedInAt).toISOString() : undefined,
+    updatesOptedInAt: normalizeDate(doc.updatesOptedInAt),
+    invitationSentAt: sentAt,
+    invitation:
+      invitationDoc && invitationDoc.code
+        ? {
+            id: String(invitationDoc._id),
+            code: invitationDoc.code,
+            channel: invitationDoc.channel,
+            label: invitationDoc.label || undefined,
+            createdAt: normalizeDate(invitationDoc.createdAt) || new Date().toISOString(),
+            expiresAt: normalizeDate(invitationDoc.expiresAt),
+            usedAt: normalizeDate(invitationDoc.usedAt),
+            sentAt,
+          }
+        : undefined,
   }
 }
 
@@ -89,6 +125,7 @@ export default defineEventHandler(async (event) => {
       .sort({ joinedAt: -1 })
       .skip(skip)
       .limit(pageSize)
+      .populate('invitationCode')
       .lean(),
     WaitlistEntry.countDocuments(),
     WaitlistEntry.countDocuments({ wantsProductUpdates: true }),

@@ -70,7 +70,10 @@ export default defineEventHandler(async (event) => {
   invitation.usedAt = now
   await invitation.save()
 
-  await WaitlistEntry.findOneAndUpdate({ email }, { activatedAt: now }).catch(() => undefined)
+  await WaitlistEntry.findOneAndUpdate(
+    { email },
+    { activatedAt: now, invitationCode: invitation._id },
+  ).catch(() => undefined)
 
   const tokens = await issueAuthTokens(event, user)
 
