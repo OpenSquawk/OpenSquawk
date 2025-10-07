@@ -3,7 +3,8 @@ const ADMIN_EMAIL_FALLBACK = 'info@opensquawk.de'
 interface MailOptions {
   to: string
   subject: string
-  text: string
+  text?: string
+  html?: string
   from?: string
 }
 
@@ -81,6 +82,7 @@ async function sendViaSmtp(payload: MailPayload) {
       to: payload.to,
       subject: payload.subject,
       text: payload.text,
+      html: payload.html,
     })
     return true
   } catch (error) {
@@ -90,6 +92,10 @@ async function sendViaSmtp(payload: MailPayload) {
 }
 
 export async function sendMail(options: MailOptions) {
+  if (!options.text && !options.html) {
+    throw new Error('Email payload requires text or html content')
+  }
+
   const payload: MailPayload = {
     ...options,
     from: resolveFrom(options.from),
@@ -97,7 +103,8 @@ export async function sendMail(options: MailOptions) {
 
   const success = await sendViaSmtp(payload)
   if (!success) {
-    console.info(`[mail:fallback] ${options.subject}\nRecipient: ${options.to}\n${options.text}`)
+    const preview = options.text || options.html || ''
+    console.info(`[mail:fallback] ${options.subject}\nRecipient: ${options.to}\n${preview}`)
   }
   return success
 }
