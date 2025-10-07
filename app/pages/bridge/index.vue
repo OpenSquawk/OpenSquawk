@@ -150,7 +150,7 @@
                   class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#F59E0B] px-4 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#d98606] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FDE68A]/70"
               >
                 <v-icon icon="mdi-flask-outline" class="h-5 w-5"/>
-                Download developer preview
+                Developer preview
               </a>
               <button
                   v-else-if="item.state === 'in-development'"
@@ -165,10 +165,10 @@
                   v-else
                   type="button"
                   disabled
-                  class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white/65 opacity-80"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white/65 opacity-80 cursor-default"
               >
-                <v-icon icon="mdi-timer-sand" class="h-5 w-5"/>
-                Planned
+                <v-icon icon="mdi-clock-outline" class="h-5 w-5"/>
+                Coming soon
               </button>
             </div>
           </article>
