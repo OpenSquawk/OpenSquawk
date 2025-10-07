@@ -844,7 +844,7 @@
                 Get involved
               </NuxtLink>
               <NuxtLink
-                  to="https://github.com/OpenSquawk/OpenSquawk"
+                  to="https://github.com/FaktorxMensch/OpenSquawk"
                   external
                   target="_blank"
                   rel="noopener"
