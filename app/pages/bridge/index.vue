@@ -92,7 +92,7 @@
       >
         <div
             class="h-full w-full bg-cover bg-center"
-            style="background-image: url('http://localhost:3000/img/bridge/goldengate_angle.jpeg');"
+            style="background-image: url('/img/bridge/goldengate_angle.jpeg');"
         />
       </div>
 
@@ -122,7 +122,7 @@
                 <div>
                   <span
                       class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.32em]"
-                      :class="item.available ? 'bg-[#16BBD7]/15 text-[#16BBD7]' : 'bg-white/10 text-white/55'"
+                      :class="item.badgeClass"
                   >
                     {{ item.status }}
                   </span>
@@ -133,7 +133,7 @@
             </div>
             <div class="mt-6">
               <a
-                  v-if="item.available"
+                  v-if="item.state === 'ready'"
                   :href="item.href"
                   target="_blank"
                   rel="noopener"
@@ -142,14 +142,33 @@
                 <v-icon icon="mdi-download" class="h-5 w-5"/>
                 Download
               </a>
+              <a
+                  v-else-if="item.state === 'preview'"
+                  :href="item.href"
+                  target="_blank"
+                  rel="noopener"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#F59E0B] px-4 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#d98606] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FDE68A]/70"
+              >
+                <v-icon icon="mdi-flask-outline" class="h-5 w-5"/>
+                Download developer preview
+              </a>
+              <button
+                  v-else-if="item.state === 'in-development'"
+                  type="button"
+                  disabled
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white/70 opacity-80"
+              >
+                <v-icon icon="mdi-progress-clock" class="h-5 w-5"/>
+                In development
+              </button>
               <button
                   v-else
                   type="button"
                   disabled
                   class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white/65 opacity-80"
               >
-                <v-icon icon="mdi-clock-outline" class="h-5 w-5"/>
-                Coming soon
+                <v-icon icon="mdi-timer-sand" class="h-5 w-5"/>
+                Planned
               </button>
             </div>
           </article>
@@ -230,8 +249,9 @@ const downloads = [
     id: 'msfs2020',
     title: 'Microsoft Flight Simulator 2020',
     description: 'One-click installer for the current simulator with live status built in.',
-    status: 'Ready now',
-    available: true,
+    status: 'In development',
+    badgeClass: 'bg-[#F59E0B]/15 text-[#F59E0B]',
+    state: 'preview',
     href: 'https://github.com/itsrubberduck/OpenSquawk-MSFS-Bridge/',
     icon: 'mdi-microsoft',
   },
@@ -239,8 +259,9 @@ const downloads = [
     id: 'msfs2024',
     title: 'Microsoft Flight Simulator 2024',
     description: 'We’re updating the Bridge for the new sim launch. Watch this space.',
-    status: 'In development',
-    available: false,
+    status: 'Planned',
+    badgeClass: 'bg-white/10 text-white/55',
+    state: 'planned',
     href: '#',
     icon: 'mdi-microsoft',
   },
@@ -249,7 +270,8 @@ const downloads = [
     title: 'FlightGear',
     description: 'Our open-source bridge launches on Linux first, followed by macOS and Windows.',
     status: 'Planned',
-    available: false,
+    badgeClass: 'bg-white/10 text-white/55',
+    state: 'planned',
     href: '#',
     icon: 'mdi-git',
   },
@@ -258,7 +280,8 @@ const downloads = [
     title: 'X-Plane 12',
     description: 'The same guided setup is coming to X-Plane later this year.',
     status: 'Planned',
-    available: false,
+    badgeClass: 'bg-white/10 text-white/55',
+    state: 'planned',
     href: '#',
     icon: 'mdi-airplane',
   },
