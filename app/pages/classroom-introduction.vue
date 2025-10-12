@@ -64,16 +64,17 @@
             </div>
             <div class="flex flex-col gap-6">
               <div class="overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-xl shadow-cyan-500/10">
-                <img
+                <NuxtImg
                   src="/img/learn/modules/img14.jpeg"
                   alt="Pilots reviewing the Classroom mission board"
                   class="h-56 w-full object-cover"
                   loading="lazy"
+                  format="webp"
                 />
               </div>
               <div class="rounded-3xl border border-white/10 bg-[#0b1328]/90 p-6 shadow-xl shadow-cyan-500/10">
                 <div class="flex items-center gap-4">
-                  <img src="/img/learn/instructor.png" alt="Avery, the Classroom instructor" class="h-14 w-14 rounded-2xl border border-cyan-400/40 object-cover" />
+                  <NuxtImg src="/img/learn/instructor.png" alt="Avery, the Classroom instructor" class="h-14 w-14 rounded-2xl border border-cyan-400/40 object-cover" />
                   <div>
                     <p class="text-base font-semibold">Avery</p>
                     <p class="text-sm text-white/60">Your Classroom instructor</p>
@@ -273,7 +274,7 @@
                 class="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 via-white/[0.03] to-white/[0.02] shadow-xl shadow-black/30"
               >
                 <div class="relative h-48 w-full overflow-hidden border-b border-white/5 sm:h-56">
-                  <img :src="activeStage.image" :alt="activeStage.imageAlt" class="h-full w-full object-cover" loading="lazy" />
+                  <NuxtImg :src="activeStage.image" :alt="activeStage.imageAlt" class="h-full w-full object-cover" loading="lazy" />
                   <div class="absolute inset-0 bg-gradient-to-t from-[#080f1f] via-transparent to-transparent"></div>
                   <div class="absolute bottom-4 left-4 rounded-full bg-[#080f1f]/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
                     Stop {{ stageIndex + 1 }} of {{ stages.length }}
@@ -311,7 +312,7 @@
 
                   <div class="rounded-2xl border border-white/10 bg-[#0c162c]/80 p-4 sm:p-5">
                     <div class="flex items-start gap-4">
-                      <img
+                      <NuxtImg
                         src="/img/learn/instructor.png"
                         alt="Avery instructor avatar"
                         class="h-24 w-24 rounded-2xl border border-cyan-400/40 object-cover"
