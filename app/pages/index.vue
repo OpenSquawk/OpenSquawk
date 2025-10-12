@@ -634,7 +634,7 @@
               </a>
             </div>
           </div>
-          <img src="/img/landing/simulator.jpeg" alt="Runway" class="rounded-lg card w-full object-cover"/>
+          <NuxtImg src="/img/landing/simulator.jpeg" alt="Runway" class="rounded-lg card w-full object-cover" format="webp" />
         </div>
       </div>
     </section>

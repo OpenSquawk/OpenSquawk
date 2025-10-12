@@ -60,14 +60,14 @@
           </blockquote>
 
           <div v-if="currentSlide.image" class="media" @click.stop>
-            <img :src="currentSlide.image" :alt="currentSlide.imageAlt || ''" loading="lazy" />
+            <NuxtImg :src="currentSlide.image" :alt="currentSlide.imageAlt || ''" loading="lazy" />
             <p v-if="currentSlide.imageCredit" class="image-caption">{{ currentSlide.imageCredit }}</p>
           </div>
 
           <p v-if="currentSlide.note" class="note">{{ currentSlide.note }}</p>
 
           <div v-if="currentSlide.qr" class="qr-wrapper" @click.stop>
-            <img v-if="qrCode" :src="qrCode" alt="QR code linking to the project" />
+            <NuxtImg v-if="qrCode" :src="qrCode" alt="QR code linking to the project" provider="none" />
             <div v-else class="qr-placeholder">QR code is rendering…</div>
             <p>{{ currentSlide.qr }}</p>
           </div>

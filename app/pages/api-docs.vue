@@ -91,8 +91,8 @@
             class="space-y-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-8">
             <div class="overflow-hidden rounded-2xl border border-white/10 bg-black/40">
               <div class="relative aspect-[3/1]">
-                <img src="/img/learn/missions/full-flight/briefing-weather.png" alt="Weather briefing overview"
-                  class="absolute inset-0 h-full w-full object-cover" />
+                <NuxtImg src="/img/learn/missions/full-flight/briefing-weather.png" alt="Weather briefing overview"
+                  class="absolute inset-0 h-full w-full object-cover" format="webp" />
               </div>
             </div>
             <header class="space-y-3">

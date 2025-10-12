@@ -16,8 +16,8 @@
         class="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden sm:py-8 sm:px-8 lg:flex-row lg:items-stretch lg:py-12 lg:pl-0 min-h-0">
       <div
           class="relative hidden h-full min-h-0 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:flex lg:w-[48%]">
-        <img :src="img" alt="Guiding lights on a runway"
-             class="absolute inset-0 h-full w-full object-cover"/>
+        <NuxtImg :src="img" alt="Guiding lights on a runway"
+             class="absolute inset-0 h-full w-full object-cover" />
         <div class="absolute inset-0 bg-gradient-to-t from-[#050816]/95 via-[#050816]/40 to-transparent"/>
         <div class="relative z-10 flex h-full flex-col justify-between p-10">
           <div>
@@ -52,7 +52,7 @@
           <div class="flex-1 overflow-y-auto px-5 pt-6 pb-10 sm:px-6 md:px-8 lg:pr-4">
             <div
                 class="floating-card relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl lg:hidden">
-              <img src="/img/landing/runway.jpeg" alt="Guiding lights on a runway" class="h-56 w-full object-cover"/>
+              <NuxtImg src="/img/landing/runway.jpeg" alt="Guiding lights on a runway" class="h-56 w-full object-cover" format="webp" />
               <div
                   class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent p-6">
                 <p class="text-xs uppercase tracking-[0.3em] text-white/50">Alpha Access</p>
