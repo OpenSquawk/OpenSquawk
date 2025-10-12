@@ -714,443 +714,223 @@
           </section>
         </v-window-item>
 
+
         <v-window-item value="logs">
-          <section class="space-y-6">
-            <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-              <div class="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <v-text-field
-                  v-model="logSearch"
-                  label="Search radio transcripts"
-                  density="comfortable"
-                  variant="outlined"
-                  color="cyan"
-                  clearable
-                  prepend-inner-icon="mdi-magnify"
-                  hide-details
-                />
-                <v-select
-                  v-model="logChannel"
-                  :items="logChannelOptions"
-                  label="Channel"
-                  density="comfortable"
-                  variant="outlined"
-                  color="cyan"
-                  hide-details
-                />
-                <v-select
-                  v-model="logDirection"
-                  :items="logDirectionOptions"
-                  label="Direction"
-                  density="comfortable"
-                  variant="outlined"
-                  color="cyan"
-                  hide-details
-                />
-                <v-select
-                  v-model="logRole"
-                  :items="logRoleOptions"
-                  label="Role"
-                  density="comfortable"
-                  variant="outlined"
-                  color="cyan"
-                  hide-details
-                />
-                <v-select
-                  v-model="logTimeframe"
-                  :items="logTimeframeOptions"
-                  label="Timeframe"
-                  density="comfortable"
-                  variant="outlined"
-                  color="cyan"
-                  hide-details
-                />
-                <v-btn color="cyan" variant="tonal" :loading="logLoading" @click="fetchLogs(true)">
-                  Apply filters
-                </v-btn>
-              </div>
-              <div class="text-xs text-white/50">
-                {{ logPagination.total }} entries · Page {{ logPagination.page }} of {{ logPagination.pages }}
-              </div>
-            </div>
-
-            <v-alert
-              v-if="logError"
-              type="warning"
-              variant="tonal"
-              border="start"
-              density="comfortable"
-              class="bg-red-500/10 text-red-100"
-            >
-              {{ logError }}
-            </v-alert>
-
-            <div v-if="logLoading" class="py-12 text-center text-white/70">
-              <v-progress-circular indeterminate color="cyan" class="mb-4" />
-              <p>Loading radio logs…</p>
-            </div>
-
-            <div v-else class="space-y-4">
-              <div v-if="logs.length" class="space-y-3">
-                <v-card
-                  v-for="entry in logs"
-                  :key="entry.id"
-                  class="border border-white/10 bg-black/40"
-                >
-                  <v-card-text class="space-y-3">
-                    <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                      <div class="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/40">
-                        <v-chip size="x-small" color="cyan" variant="outlined">{{ entry.channel }}</v-chip>
-                        <v-chip size="x-small" color="cyan" variant="tonal">{{ entry.direction }}</v-chip>
-                        <v-chip size="x-small" color="cyan" variant="text">{{ entry.role }}</v-chip>
-                        <span v-if="entry.user">User: {{ entry.user.email }}</span>
-                      </div>
-                      <span class="text-xs text-white/50">{{ formatDateTime(entry.createdAt) }}</span>
-                    </div>
-                    <p class="font-mono text-sm text-white">{{ entry.text }}</p>
-                    <p v-if="entry.normalized" class="rounded-lg bg-white/5 p-2 text-xs text-white/60">
-                      <strong class="text-white/70">Normalized:</strong> {{ entry.normalized }}
-                    </p>
-                    <div class="flex flex-wrap gap-3 text-xs text-white/50">
-                      <span v-if="entry.metadata?.moduleId">Module {{ entry.metadata.moduleId }}</span>
-                      <span v-if="entry.metadata?.lessonId">Lesson {{ entry.metadata.lessonId }}</span>
-                      <span v-if="entry.metadata?.autoDecide !== undefined">
-                        Auto Decision: {{ entry.metadata.autoDecide ? 'Yes' : 'No' }}
-                      </span>
-                    </div>
-                    <div class="flex items-center justify-end">
-                      <v-btn
-                        variant="text"
-                        color="cyan"
-                        size="small"
-                        prepend-icon="mdi-timeline-text"
-                        @click="toggleLog(entry.id)"
-                      >
-                        {{ expandedLog === entry.id ? 'Close tracer' : 'Open tracer' }}
-                      </v-btn>
-                    </div>
-                    <v-expand-transition>
-                      <div
-                        v-if="expandedLog === entry.id"
-                        class="space-y-4 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-4 text-xs text-white/80"
-                      >
-                        <div v-if="entry.metadata?.decision" class="space-y-3">
-                          <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">LLM Decision Summary</p>
-                          <div class="grid gap-2 md:grid-cols-2">
-                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
-                              <p class="text-[11px] text-white/50">Next State</p>
-                              <p class="font-mono text-sm">{{ entry.metadata.decision.next_state || '—' }}</p>
-                            </div>
-                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
-                              <p class="text-[11px] text-white/50">Controller</p>
-                              <p class="font-mono text-sm">{{ entry.metadata.decision.controller_say_tpl || '—' }}</p>
-                            </div>
-                          </div>
-                          <div class="flex flex-wrap gap-2 text-[11px] text-white/70">
-                            <v-chip size="x-small" color="cyan" variant="outlined">
-                              Off-script: {{ entry.metadata.decision.off_schema ? 'Yes' : 'No' }}
-                            </v-chip>
-                            <v-chip size="x-small" color="cyan" variant="outlined">
-                              Radio check: {{ entry.metadata.decision.radio_check ? 'Yes' : 'No' }}
-                            </v-chip>
-                          </div>
-                        </div>
-                        <template v-for="usage in [buildLlmUsage(entry)]" :key="`${entry.id}-usage`">
-                          <div
-                            v-if="usage"
-                            class="space-y-2 rounded-xl border border-white/10 bg-black/30 p-3 text-[11px] text-white/70"
-                          >
-                            <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">LLM usage</p>
-                            <p class="text-sm font-semibold text-white">{{ usage.method }}</p>
-                            <div class="flex flex-wrap gap-2">
-                              <v-chip size="x-small" color="cyan" variant="outlined">
-                                Auto decision: {{ usage.autoDecide === false ? 'Disabled' : 'Enabled' }}
-                              </v-chip>
-                              <v-chip size="x-small" color="cyan" variant="outlined">
-                                OpenAI: {{ usage.openaiUsed ? 'Used' : 'Not used' }}
-                              </v-chip>
-                              <v-chip v-if="usage.openaiUsed" size="x-small" color="cyan" variant="outlined">
-                                Calls: {{ usage.callCount }}
-                              </v-chip>
-                              <v-chip v-if="usage.fallbackUsed" size="x-small" color="orange" variant="tonal">
-                                Fallback triggered
-                              </v-chip>
-                            </div>
-                            <p v-if="usage.reason" class="text-white/60">{{ usage.reason }}</p>
-                          </div>
-                        </template>
-                        <div v-if="entry.metadata?.context" class="space-y-3">
-                          <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">State context snapshot</p>
-                          <div class="space-y-3 rounded-xl border border-white/10 bg-black/30 p-3">
-                            <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                              <div>
-                                <p class="font-mono text-sm text-white">
-                                  {{ entry.metadata.context.stateId || 'Unknown state' }}
-                                </p>
-                                <p v-if="entry.metadata.context.state?.name" class="text-[11px] text-white/60">
-                                  {{ entry.metadata.context.state?.name }}
-                                </p>
-                              </div>
-                              <div class="flex flex-wrap gap-2 text-[11px] text-white/60">
-                                <v-chip v-if="entry.metadata.context.state?.role" size="x-small" color="cyan" variant="outlined">
-                                  Role: {{ entry.metadata.context.state?.role }}
-                                </v-chip>
-                                <v-chip v-if="entry.metadata.context.state?.phase" size="x-small" color="cyan" variant="text">
-                                  Phase: {{ entry.metadata.context.state?.phase }}
-                                </v-chip>
-                              </div>
-                            </div>
-                            <div
-                              v-if="entry.metadata.context.state?.say_tpl"
-                              class="rounded-lg border border-white/10 bg-black/40 p-3"
-                            >
-                              <p class="text-[11px] text-white/50">State Say Template</p>
-                              <p class="font-mono text-sm">{{ entry.metadata.context.state?.say_tpl }}</p>
-                            </div>
-                            <div class="grid gap-3 md:grid-cols-3">
-                              <div>
-                                <p class="text-[11px] text-white/50">Next transitions</p>
-                                <ul
-                                  v-if="transitionList(entry.metadata.context.state?.next).length"
-                                  class="list-inside list-disc space-y-1 text-[11px] text-white/70"
-                                >
-                                  <li
-                                    v-for="(transition, index) in transitionList(entry.metadata.context.state?.next)"
-                                    :key="`next-${index}`"
-                                  >
-                                    {{ describeTransition(transition) }}
-                                  </li>
-                                </ul>
-                                <p v-else class="text-[11px] text-white/50">—</p>
-                              </div>
-                              <div>
-                                <p class="text-[11px] text-white/50">OK transitions</p>
-                                <ul
-                                  v-if="transitionList(entry.metadata.context.state?.ok_next).length"
-                                  class="list-inside list-disc space-y-1 text-[11px] text-white/70"
-                                >
-                                  <li
-                                    v-for="(transition, index) in transitionList(entry.metadata.context.state?.ok_next)"
-                                    :key="`ok-${index}`"
-                                  >
-                                    {{ describeTransition(transition) }}
-                                  </li>
-                                </ul>
-                                <p v-else class="text-[11px] text-white/50">—</p>
-                              </div>
-                              <div>
-                                <p class="text-[11px] text-white/50">Bad transitions</p>
-                                <ul
-                                  v-if="transitionList(entry.metadata.context.state?.bad_next).length"
-                                  class="list-inside list-disc space-y-1 text-[11px] text-white/70"
-                                >
-                                  <li
-                                    v-for="(transition, index) in transitionList(entry.metadata.context.state?.bad_next)"
-                                    :key="`bad-${index}`"
-                                  >
-                                    {{ describeTransition(transition) }}
-                                  </li>
-                                </ul>
-                                <p v-else class="text-[11px] text-white/50">—</p>
-                              </div>
-                            </div>
-                            <div v-if="entry.metadata.context.candidates?.length" class="space-y-2">
-                              <p class="text-[11px] text-white/50 uppercase tracking-[0.3em]">Candidates</p>
-                              <div
-                                v-for="(candidate, index) in entry.metadata.context.candidates"
-                                :key="candidate.id || index"
-                                class="space-y-2 rounded-lg border border-white/10 bg-black/40 p-3"
-                              >
-                                <div class="flex items-center justify-between">
-                                  <span class="font-mono text-sm text-white">{{ candidate.id || 'unknown' }}</span>
-                                  <v-chip
-                                    v-if="candidate.id && candidate.id === entry.metadata?.decision?.next_state"
-                                    size="x-small"
-                                    color="cyan"
-                                    variant="flat"
-                                  >
-                                    Selected
-                                  </v-chip>
-                                </div>
-                                <p v-if="candidate.state?.name" class="text-[11px] text-white/60">
-                                  {{ candidate.state?.name }}
-                                </p>
-                                <div class="flex flex-wrap gap-2 text-[11px] text-white/60">
-                                  <v-chip v-if="candidate.state?.role" size="x-small" color="cyan" variant="outlined">
-                                    Role: {{ candidate.state?.role }}
-                                  </v-chip>
-                                  <v-chip
-                                    v-if="candidate.state?.requires_atc_reply"
-                                    size="x-small"
-                                    color="cyan"
-                                    variant="tonal"
-                                  >
-                                    Requires ATC reply
-                                  </v-chip>
-                                </div>
-                                <p
-                                  v-if="candidate.state?.say_tpl"
-                                  class="rounded-lg border border-white/10 bg-black/60 p-2 font-mono text-[11px] text-white"
-                                >
-                                  {{ candidate.state?.say_tpl }}
-                                </p>
-                              </div>
-                            </div>
-                            <div class="grid gap-3 md:grid-cols-2">
-                              <div v-if="entry.metadata.context.variables">
-                                <p class="text-[11px] text-white/50">Variables snapshot</p>
-                                <pre class="trace-json">{{ formatJson(entry.metadata.context.variables) }}</pre>
-                              </div>
-                              <div v-if="entry.metadata.context.flags">
-                                <p class="text-[11px] text-white/50">Flags snapshot</p>
-                                <pre class="trace-json">{{ formatJson(entry.metadata.context.flags) }}</pre>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div v-if="entry.metadata?.decisionTrace?.calls?.length" class="space-y-3">
-                          <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">OpenAI Decision Calls</p>
-                          <div
-                            v-for="(call, index) in entry.metadata.decisionTrace.calls"
-                            :key="index"
-                            class="space-y-2 rounded-xl border border-white/10 bg-black/30 p-3"
-                          >
-                            <div class="flex items-center justify-between text-[11px] text-white/60">
-                              <span>
-                                Step: {{ call.stage === 'decision' ? 'Decision' : 'Readback check' }}
-                              </span>
-                              <span v-if="call.error" class="text-red-300">Call failed</span>
-                            </div>
-                            <div>
-                              <p class="text-[11px] text-white/50">Request</p>
-                              <pre class="trace-json">{{ formatJson(call.request) }}</pre>
-                            </div>
-                            <div v-if="call.response">
-                              <p class="text-[11px] text-white/50">Response</p>
-                              <pre class="trace-json">{{ formatJson(call.response) }}</pre>
-                            </div>
-                            <div v-else class="rounded-lg border border-white/10 bg-black/40 p-2 text-[11px] text-white/60">
-                              No response received.
-                            </div>
-                            <div v-if="call.rawResponseText" class="space-y-1">
-                              <p class="text-[11px] text-white/50">Raw Response</p>
-                              <pre class="trace-json">{{ call.rawResponseText }}</pre>
-                            </div>
-                            <v-alert
-                              v-if="call.error"
-                              type="warning"
-                              variant="tonal"
-                              density="compact"
-                              class="bg-red-500/10 text-red-100"
-                            >
-                              {{ call.error }}
-                            </v-alert>
-                          </div>
-                          <div
-                            v-if="entry.metadata.decisionTrace.fallback?.used"
-                            class="space-y-1 rounded-xl border border-orange-400/40 bg-orange-500/10 p-3 text-[11px] text-orange-100"
-                          >
-                            <p class="text-xs uppercase tracking-[0.3em] text-orange-200/80">Fallback activated</p>
-                            <p>
-                              Reason: {{ entry.metadata.decisionTrace.fallback.reason || 'unknown' }}
-                              <span v-if="entry.metadata.decisionTrace.fallback.selected">
-                                · Path: {{ entry.metadata.decisionTrace.fallback.selected }}
-                              </span>
-                            </p>
-                          </div>
-                        </div>
-                        <template v-else>
-                          <template v-for="usage in [buildLlmUsage(entry)]" :key="`${entry.id}-usage-empty`">
-                            <div
-                              v-if="usage"
-                              class="space-y-2 rounded-xl border border-white/10 bg-black/30 p-3 text-[11px] text-white/70"
-                            >
-                              <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">OpenAI Decision Calls</p>
-                              <p>No OpenAI call was recorded for this transmission.</p>
-                              <p v-if="usage.reason" class="text-white/60">{{ usage.reason }}</p>
-                            </div>
-                          </template>
-                        </template>
-                        <div v-if="entry.channel === 'say'" class="space-y-2">
-                          <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Say endpoint invocation</p>
-                          <div class="grid gap-3 md:grid-cols-2">
-                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
-                              <p class="text-[11px] text-white/50">Voice</p>
-                              <p class="font-mono text-sm text-white">{{ entry.metadata?.voice || '—' }}</p>
-                            </div>
-                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
-                              <p class="text-[11px] text-white/50">Signal level</p>
-                              <p class="font-mono text-sm text-white">{{ entry.metadata?.level ?? '—' }}</p>
-                            </div>
-                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
-                              <p class="text-[11px] text-white/50">Speech speed</p>
-                              <p class="font-mono text-sm text-white">{{ entry.metadata?.speed ?? '—' }}</p>
-                            </div>
-                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
-                              <p class="text-[11px] text-white/50">Radio quality</p>
-                              <p class="font-mono text-sm text-white">{{ entry.metadata?.radioQuality || '—' }}</p>
-                            </div>
-                          </div>
-                          <div class="grid gap-3 md:grid-cols-3">
-                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
-                              <p class="text-[11px] text-white/50">TTS provider</p>
-                              <p class="font-mono text-sm text-white">{{ entry.metadata?.tts?.provider || '—' }}</p>
-                            </div>
-                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
-                              <p class="text-[11px] text-white/50">Model</p>
-                              <p class="font-mono text-sm text-white">{{ entry.metadata?.tts?.model || '—' }}</p>
-                            </div>
-                            <div class="rounded-lg border border-white/10 bg-black/30 p-3">
-                              <p class="text-[11px] text-white/50">Format</p>
-                              <p class="font-mono text-sm text-white">
-                                {{ entry.metadata?.tts?.format || '—' }}
-                                <span v-if="entry.metadata?.tts?.extension">
-                                  ({{ entry.metadata?.tts?.extension }})
-                                </span>
-                              </p>
-                            </div>
-                          </div>
-                          <div v-if="entry.metadata?.tag" class="rounded-lg border border-white/10 bg-black/30 p-3">
-                            <p class="text-[11px] text-white/50">Tag</p>
-                            <p class="font-mono text-sm text-white">{{ entry.metadata?.tag }}</p>
-                          </div>
-                        </div>
-                        <div>
-                          <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Metadata</p>
-                          <pre class="trace-json">{{ formatJson(entry.metadata) }}</pre>
-                        </div>
-                      </div>
-                    </v-expand-transition>
-                  </v-card-text>
-                </v-card>
-              </div>
-              <p v-else class="py-12 text-center text-sm text-white/60">No transmissions found.</p>
-
-              <div class="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                <div class="text-xs text-white/50">
-                  Page {{ logPagination.page }} of {{ logPagination.pages }} · {{ logPagination.total }} logs
+          <section class="grid gap-6 xl:grid-cols-[320px,1fr]">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h2 class="text-xl font-semibold">Sessions</h2>
+                  <p class="text-xs text-white/50">{{ sessionPagination.total }} conversations</p>
                 </div>
                 <div class="flex items-center gap-2">
                   <v-btn
                     variant="text"
                     color="cyan"
-                    :disabled="logPagination.page <= 1"
-                    @click="changeLogPage(logPagination.page - 1)"
+                    size="small"
+                    :disabled="sessionPagination.page <= 1 || sessionsLoading"
+                    @click="changeSessionPage(sessionPagination.page - 1)"
                   >
-                    Back
+                    Prev
                   </v-btn>
                   <v-btn
                     variant="text"
                     color="cyan"
-                    :disabled="logPagination.page >= logPagination.pages"
-                    @click="changeLogPage(logPagination.page + 1)"
+                    size="small"
+                    :disabled="sessionPagination.page >= sessionPagination.pages || sessionsLoading"
+                    @click="changeSessionPage(sessionPagination.page + 1)"
                   >
                     Next
                   </v-btn>
                 </div>
               </div>
+
+              <v-alert
+                v-if="sessionsError"
+                type="warning"
+                variant="tonal"
+                class="bg-red-500/10 text-red-100"
+              >
+                {{ sessionsError }}
+              </v-alert>
+
+              <div v-if="sessionsLoading" class="py-10 text-center text-white/60">
+                <v-progress-circular indeterminate color="cyan" class="mb-3" />
+                Loading sessions…
+              </div>
+
+              <div v-else class="space-y-3">
+                <v-card
+                  v-for="session in sessions"
+                  :key="session.sessionId"
+                  :class="[
+                    'border border-white/10 bg-black/40 cursor-pointer transition',
+                    session.sessionId === selectedSessionId
+                      ? 'border-cyan-400/60 shadow-lg shadow-cyan-500/20'
+                      : 'hover:border-cyan-400/40'
+                  ]"
+                  @click="selectSession(session.sessionId)"
+                >
+                  <v-card-text class="space-y-2">
+                    <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/40">
+                      <span>{{ session.callsign || 'Unknown' }}</span>
+                      <span>{{ formatRelative(session.updatedAt || undefined) }}</span>
+                    </div>
+                    <p class="text-sm font-semibold text-white">Session {{ session.sessionId }}</p>
+                    <div class="flex items-center gap-2 text-xs text-white/60">
+                      <v-chip size="x-small" color="cyan" variant="outlined">{{ session.entryCount }} entries</v-chip>
+                      <span>{{ formatDateTime(session.startedAt || undefined) }}</span>
+                    </div>
+                    <p v-if="session.lastMessage" class="text-xs text-white/50 line-clamp-2">
+                      {{ session.lastMessage.role.toUpperCase() }} · {{ session.lastMessage.text }}
+                    </p>
+                  </v-card-text>
+                </v-card>
+
+                <p v-if="!sessions.length" class="text-xs text-white/50 text-center py-6">
+                  No sessions recorded yet.
+                </p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div v-if="sessionDetailLoading" class="py-10 text-center text-white/60">
+                <v-progress-circular indeterminate color="cyan" class="mb-3" />
+                Loading session details…
+              </div>
+
+              <v-alert
+                v-else-if="sessionDetailError"
+                type="warning"
+                variant="tonal"
+                class="bg-red-500/10 text-red-100"
+              >
+                {{ sessionDetailError }}
+              </v-alert>
+
+              <div v-else-if="sessionDetails" class="space-y-4">
+                <div class="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <p class="text-xs uppercase tracking-[0.3em] text-white/40">Session</p>
+                      <p class="font-mono text-sm text-white">{{ sessionDetails.sessionId }}</p>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-white/50">
+                      <v-chip size="x-small" color="cyan" variant="outlined">{{ sessionDetails.entryCount }} entries</v-chip>
+                      <span>{{ formatDateTime(sessionDetails.startedAt || undefined) }}</span>
+                      <span>→</span>
+                      <span>{{ formatDateTime(sessionDetails.updatedAt || undefined) }}</span>
+                    </div>
+                  </div>
+                  <p class="text-xs text-white/60">Callsign: {{ sessionDetails.callsign || 'Unknown' }}</p>
+                </div>
+
+                <div class="space-y-3">
+                  <div
+                    v-for="entry in sessionDetails.entries"
+                    :key="entry.id"
+                    class="space-y-3 rounded-2xl border border-white/10 bg-black/40 p-4"
+                  >
+                    <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/40">
+                      <span class="flex items-center gap-2">
+                        <v-chip size="x-small" color="cyan" variant="outlined">{{ entry.channel }}</v-chip>
+                        <v-chip size="x-small" color="cyan" variant="text">{{ entry.role }}</v-chip>
+                        <span>{{ entry.direction }}</span>
+                      </span>
+                      <span>{{ formatDateTime(entry.createdAt) }}</span>
+                    </div>
+                    <p class="text-sm font-mono text-white">{{ entry.text }}</p>
+                    <p v-if="entry.normalized" class="text-[11px] text-white/50">{{ entry.normalized }}</p>
+                    <div class="flex items-center justify-between text-xs text-white/60">
+                      <span v-if="entry.user">User: {{ entry.user.email }}</span>
+                      <v-btn
+                        v-if="entry.metadata?.decisionTrace"
+                        size="small"
+                        variant="text"
+                        color="cyan"
+                        prepend-icon="mdi-timeline-text"
+                        @click="expandedEntryId = expandedEntryId === entry.id ? null : entry.id"
+                      >
+                        {{ expandedEntryId === entry.id ? 'Hide decision' : 'Show decision' }}
+                      </v-btn>
+                    </div>
+                    <v-expand-transition>
+                      <div
+                        v-if="expandedEntryId === entry.id && entry.metadata?.decisionTrace"
+                        class="space-y-3 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-4"
+                      >
+                        <div class="flex items-center justify-between">
+                          <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Decision trace</p>
+                          <div class="flex items-center gap-2 text-[11px] text-cyan-100/80">
+                            <span v-if="entry.metadata.decision?.next_state">Next: {{ entry.metadata.decision.next_state }}</span>
+                            <span v-if="entry.metadata.decision?.activate_flow">
+                              Flow:
+                              {{ typeof entry.metadata.decision.activate_flow === 'string'
+                                ? entry.metadata.decision.activate_flow
+                                : entry.metadata.decision.activate_flow.slug }}
+                            </span>
+                          </div>
+                        </div>
+                        <div v-if="entry.metadata.decisionTrace.candidateTimeline?.steps?.length" class="space-y-3">
+                          <div
+                            v-for="(step, index) in entry.metadata.decisionTrace.candidateTimeline.steps"
+                            :key="`${entry.id}-${step.stage}-${index}`"
+                            class="space-y-2 rounded-xl border border-white/10 bg-black/30 p-3"
+                          >
+                            <div class="flex items-start justify-between gap-3">
+                              <div>
+                                <p class="font-semibold text-sm text-white">{{ step.label }}</p>
+                                <p class="text-[11px] text-white/50 uppercase tracking-[0.2em]">{{ step.stage }}</p>
+                              </div>
+                              <v-chip size="x-small" color="cyan" variant="outlined">{{ step.candidates.length }} candidates</v-chip>
+                            </div>
+                            <p v-if="step.note" class="text-[11px] text-white/50">{{ step.note }}</p>
+                            <div v-if="step.candidates.length" class="space-y-2">
+                              <div
+                                v-for="candidate in step.candidates"
+                                :key="candidate.id"
+                                class="rounded-lg border border-white/10 bg-black/40 p-2"
+                              >
+                                <div class="flex items-center justify-between gap-2">
+                                  <span class="font-mono text-sm text-white">{{ candidate.id }}</span>
+                                  <span class="text-[11px] text-white/50">{{ candidate.flow || 'current' }}</span>
+                                </div>
+                                <p v-if="candidate.summary" class="text-[11px] text-white/60 mt-1">{{ candidate.summary }}</p>
+                              </div>
+                            </div>
+                            <div v-if="step.eliminated?.length" class="space-y-2">
+                              <p class="text-[11px] text-red-200/80 uppercase tracking-[0.25em]">Eliminated</p>
+                              <div
+                                v-for="elim in step.eliminated"
+                                :key="`${entry.id}-${step.stage}-${elim.candidate.id}`"
+                                class="space-y-1 rounded-lg border border-red-400/30 bg-red-500/10 p-2 text-xs text-red-100"
+                              >
+                                <div class="flex items-center justify-between gap-2">
+                                  <span class="font-mono text-sm">{{ elim.candidate.id }}</span>
+                                  <span class="text-[11px] text-red-200/80">{{ elim.kind }}</span>
+                                </div>
+                                <p class="text-[11px] text-red-100/80">{{ elim.reason }}</p>
+                                <p v-if="describeElimination(elim)" class="text-[10px] text-red-100/70">{{ describeElimination(elim) }}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <p v-else class="text-[11px] text-white/60">No candidate timeline recorded.</p>
+                      </div>
+                    </v-expand-transition>
+                  </div>
+                </div>
+
+                <p v-if="!sessionDetails.entries.length" class="text-xs text-white/50 text-center py-6">
+                  No messages recorded for this session.
+                </p>
+              </div>
+
+              <p v-else class="text-xs text-white/50">Select a session to view its transcript.</p>
             </div>
           </section>
         </v-window-item>
+
       </v-window>
     </div>
 
@@ -1360,15 +1140,6 @@ interface TransmissionMetadata {
   [key: string]: any
 }
 
-interface LlmUsageSummary {
-  method: string
-  openaiUsed: boolean
-  callCount: number
-  fallbackUsed: boolean
-  autoDecide?: boolean
-  reason?: string
-}
-
 interface TransmissionEntry {
   id: string
   role: string
@@ -1379,10 +1150,25 @@ interface TransmissionEntry {
   createdAt: string
   metadata?: TransmissionMetadata
   user?: TransmissionUser
+  sessionId?: string
 }
 
-interface LogsResponse {
-  items: TransmissionEntry[]
+interface SessionSummary {
+  sessionId: string
+  startedAt: string | null
+  updatedAt: string | null
+  entryCount: number
+  callsign?: string
+  lastMessage?: {
+    text: string
+    role: string
+    channel: string
+    createdAt: string
+  }
+}
+
+interface SessionsResponse {
+  items: SessionSummary[]
   pagination: { total: number; page: number; pageSize: number; pages: number }
 }
 
@@ -1395,6 +1181,15 @@ interface WaitlistInvitationInfo {
   expiresAt?: string
   sentAt?: string
   usedAt?: string
+}
+
+interface SessionDetail {
+  sessionId: string
+  startedAt: string | null
+  updatedAt: string | null
+  entryCount: number
+  callsign?: string
+  entries: TransmissionEntry[]
 }
 
 interface WaitlistEntryItem {
@@ -1518,38 +1313,16 @@ const waitlistStatusOptions = [
 const waitlistStats = reactive<WaitlistStatsSummary>({ total: 0, updates: 0, activated: 0, pending: 0 })
 const waitlistSending = ref<string[]>([])
 
-const logs = ref<TransmissionEntry[]>([])
-const logPagination = reactive({ total: 0, page: 1, pages: 1, pageSize: 15 })
-const logLoading = ref(false)
-const logError = ref('')
-const logSearch = ref('')
-const logChannel = ref<'all' | 'ptt' | 'say' | 'text'>('all')
-const logDirection = ref<'all' | 'incoming' | 'outgoing'>('all')
-const logRole = ref<'all' | 'pilot' | 'atc'>('all')
-const logTimeframe = ref<'24h' | '7d' | '30d' | 'all'>('24h')
-const logChannelOptions = [
-  { title: 'All channels', value: 'all' },
-  { title: 'PTT', value: 'ptt' },
-  { title: 'Say', value: 'say' },
-  { title: 'Text', value: 'text' },
-]
-const logDirectionOptions = [
-  { title: 'All directions', value: 'all' },
-  { title: 'Incoming', value: 'incoming' },
-  { title: 'Outgoing', value: 'outgoing' },
-]
-const logRoleOptions = [
-  { title: 'All roles', value: 'all' },
-  { title: 'Pilot', value: 'pilot' },
-  { title: 'ATC', value: 'atc' },
-]
-const logTimeframeOptions = [
-  { title: 'Last 24 hours', value: '24h' },
-  { title: '7 days', value: '7d' },
-  { title: '30 days', value: '30d' },
-  { title: 'All time', value: 'all' },
-]
-const expandedLog = ref<string | null>(null)
+const sessions = ref<SessionSummary[]>([])
+const sessionsLoading = ref(false)
+const sessionsError = ref('')
+const sessionsLoaded = ref(false)
+const sessionPagination = reactive({ total: 0, page: 1, pages: 1, pageSize: 10 })
+const selectedSessionId = ref<string | null>(null)
+const sessionDetails = ref<SessionDetail | null>(null)
+const sessionDetailLoading = ref(false)
+const sessionDetailError = ref('')
+const expandedEntryId = ref<string | null>(null)
 
 const showCreateInvite = ref(false)
 const newInviteLabel = ref('')
@@ -1561,12 +1334,11 @@ const createInviteResult = ref<{ code: string; expiresAt?: string } | null>(null
 const usersLoaded = ref(false)
 const invitationsLoaded = ref(false)
 const waitlistLoaded = ref(false)
-const logsLoaded = ref(false)
 
 let userSearchTimeout: ReturnType<typeof setTimeout> | undefined
 let invitationSearchTimeout: ReturnType<typeof setTimeout> | undefined
-let logSearchTimeout: ReturnType<typeof setTimeout> | undefined
 let waitlistSearchTimeout: ReturnType<typeof setTimeout> | undefined
+let activeSessionDetailRequest: string | null = null
 
 function extractErrorMessage(error: any, fallback: string) {
   return (
@@ -1638,69 +1410,6 @@ function describeTransition(transition: any) {
   return details.length ? `${destination} (${details.join(', ')})` : destination
 }
 
-function buildLlmUsage(entry: TransmissionEntry): LlmUsageSummary | null {
-  const metadata = entry.metadata
-  if (!metadata) return null
-
-  const hasDecisionData =
-    metadata.autoDecide !== undefined ||
-    Boolean(metadata.llm) ||
-    Boolean(metadata.decisionTrace?.calls?.length) ||
-    Boolean(metadata.decisionTrace?.fallback?.used)
-
-  if (!hasDecisionData) return null
-
-  const autoDecide = metadata.llm?.autoDecide ?? metadata.autoDecide
-  const callCount = metadata.llm?.callCount ?? metadata.decisionTrace?.calls?.length ?? 0
-  const fallbackUsed = metadata.llm?.fallbackUsed ?? Boolean(metadata.decisionTrace?.fallback?.used)
-  const openaiUsed = metadata.llm?.openaiUsed ?? callCount > 0
-
-  const strategy =
-    metadata.llm?.strategy ||
-    (!autoDecide
-      ? 'manual'
-      : openaiUsed
-        ? 'openai'
-        : fallbackUsed
-          ? 'fallback'
-          : 'heuristic')
-
-  let method: string
-  switch (strategy) {
-    case 'openai':
-      method = `OpenAI decision (${callCount} ${callCount === 1 ? 'call' : 'calls'})`
-      break
-    case 'fallback':
-      method = 'Fallback decision after OpenAI error'
-      break
-    case 'manual':
-      method = 'Manual routing (auto decision disabled)'
-      break
-    default:
-      method = 'Heuristic decision (no OpenAI call)'
-      break
-  }
-
-  const reason =
-    metadata.llm?.reason ||
-    (strategy === 'openai'
-      ? `Decision derived from OpenAI with ${callCount} ${callCount === 1 ? 'call' : 'calls'}.`
-      : strategy === 'fallback'
-        ? metadata.decisionTrace?.fallback?.reason || 'Fallback executed because OpenAI response could not be used.'
-        : strategy === 'manual'
-          ? 'Automatic decision was disabled for this transmission.'
-          : 'Rules and heuristics resolved the decision without contacting OpenAI.')
-
-  return {
-    method,
-    openaiUsed,
-    callCount,
-    fallbackUsed,
-    autoDecide,
-    reason,
-  }
-}
-
 function isExpired(expiresAt?: string) {
   if (!expiresAt) return false
   const date = new Date(expiresAt)
@@ -1712,14 +1421,6 @@ function invitationStatusLabel(inv: InvitationItem) {
   if (inv.usedAt) return `used ${formatRelative(inv.usedAt)}`
   if (inv.expiresAt && isExpired(inv.expiresAt)) return 'expired'
   return 'active'
-}
-
-function computeSince(timeframe: '24h' | '7d' | '30d' | 'all') {
-  const now = Date.now()
-  if (timeframe === '24h') return new Date(now - 24 * 60 * 60 * 1000)
-  if (timeframe === '7d') return new Date(now - 7 * 24 * 60 * 60 * 1000)
-  if (timeframe === '30d') return new Date(now - 30 * 24 * 60 * 60 * 1000)
-  return null
 }
 
 async function loadOverview(force = false) {
@@ -1939,44 +1640,107 @@ function computeLogQuery() {
   const query: Record<string, any> = {
     page: logPagination.page,
     pageSize: logPagination.pageSize,
-  }
-  if (logSearch.value.trim()) query.search = logSearch.value.trim()
-  if (logChannel.value !== 'all') query.channel = logChannel.value
-  if (logDirection.value !== 'all') query.direction = logDirection.value
-  if (logRole.value !== 'all') query.role = logRole.value
-  const since = computeSince(logTimeframe.value)
-  if (since) query.since = since.toISOString()
-  return query
-}
-
-async function fetchLogs(resetPage = false) {
+async function fetchSessions(resetPage = false, options: { forceDetail?: boolean } = {}) {
   if (resetPage) {
-    logPagination.page = 1
+    sessionPagination.page = 1
   }
-  logLoading.value = true
-  logError.value = ''
+
+  sessionsLoading.value = true
+  sessionsError.value = ''
   try {
-    const response = await api.get<LogsResponse>('/api/admin/logs/transmissions', {
-      query: computeLogQuery(),
-    })
-    logs.value = response.items
-    Object.assign(logPagination, response.pagination)
-    logsLoaded.value = true
+    const query: Record<string, any> = {
+      page: sessionPagination.page,
+      pageSize: sessionPagination.pageSize,
+    }
+    const response = await api.get<SessionsResponse>('/api/admin/logs/sessions', { query })
+    sessions.value = response.items
+    Object.assign(sessionPagination, response.pagination)
+    sessionsLoaded.value = true
+
+    if (!response.items.length) {
+      sessionDetails.value = null
+      selectedSessionId.value = null
+      expandedEntryId.value = null
+      sessionDetailError.value = ''
+      sessionDetailLoading.value = false
+      activeSessionDetailRequest = null
+      return
+    }
+
+    const hasSelected = selectedSessionId.value
+      ? response.items.some((item) => item.sessionId === selectedSessionId.value)
+      : false
+
+    if (!hasSelected) {
+      await selectSession(response.items[0].sessionId, { force: true })
+    } else if (options.forceDetail && selectedSessionId.value) {
+      await selectSession(selectedSessionId.value, { force: true })
+    }
   } catch (error) {
-    logError.value = extractErrorMessage(error, 'Could not load radio logs.')
+    sessionsError.value = extractErrorMessage(error, 'Could not load sessions.')
   } finally {
-    logLoading.value = false
+    sessionsLoading.value = false
   }
 }
 
-function changeLogPage(page: number) {
-  if (page < 1 || page > logPagination.pages) return
-  logPagination.page = page
-  fetchLogs()
+function changeSessionPage(page: number) {
+  if (page < 1 || page > sessionPagination.pages || page === sessionPagination.page) return
+  sessionPagination.page = page
+  fetchSessions()
 }
 
-function toggleLog(id: string) {
-  expandedLog.value = expandedLog.value === id ? null : id
+async function fetchSessionDetail(sessionId: string) {
+  if (!sessionId) {
+    sessionDetails.value = null
+    return
+  }
+
+  const requestId = sessionId
+  activeSessionDetailRequest = requestId
+  sessionDetailLoading.value = true
+  sessionDetailError.value = ''
+
+  try {
+    const detail = await api.get<SessionDetail>(`/api/admin/logs/sessions/${sessionId}`)
+    if (activeSessionDetailRequest !== requestId) {
+      return
+    }
+    sessionDetails.value = detail
+  } catch (error) {
+    if (activeSessionDetailRequest !== requestId) {
+      return
+    }
+    sessionDetailError.value = extractErrorMessage(error, 'Could not load session details.')
+    sessionDetails.value = null
+  } finally {
+    if (activeSessionDetailRequest === requestId) {
+      sessionDetailLoading.value = false
+      activeSessionDetailRequest = null
+    }
+  }
+}
+
+async function selectSession(sessionId: string | null, options: { force?: boolean } = {}) {
+  if (!sessionId) {
+    selectedSessionId.value = null
+    sessionDetails.value = null
+    sessionDetailError.value = ''
+    expandedEntryId.value = null
+    sessionDetailLoading.value = false
+    activeSessionDetailRequest = null
+    return
+  }
+
+  if (!options.force && selectedSessionId.value === sessionId && sessionDetails.value) {
+    expandedEntryId.value = null
+    return
+  }
+
+  selectedSessionId.value = sessionId
+  sessionDetails.value = null
+  sessionDetailError.value = ''
+  expandedEntryId.value = null
+  await fetchSessionDetail(sessionId)
 }
 
 async function submitCreateInvite() {
@@ -2020,7 +1784,7 @@ async function refreshActiveTab() {
     } else if (activeTab.value === 'waitlist') {
       await fetchWaitlist(true)
     } else {
-      await fetchLogs(true)
+      await fetchSessions(true, { forceDetail: true })
     }
   } finally {
     refreshing.value = false
@@ -2032,11 +1796,6 @@ watch(invitationStatus, () => fetchInvitations(true))
 watch(invitationChannel, () => fetchInvitations(true))
 watch(waitlistSubscription, () => fetchWaitlist(true))
 watch(waitlistStatus, () => fetchWaitlist(true))
-watch(logChannel, () => fetchLogs(true))
-watch(logDirection, () => fetchLogs(true))
-watch(logRole, () => fetchLogs(true))
-watch(logTimeframe, () => fetchLogs(true))
-
 watch(userSearch, () => {
   if (userSearchTimeout) clearTimeout(userSearchTimeout)
   userSearchTimeout = setTimeout(() => fetchUsers(true), 400)
@@ -2052,11 +1811,6 @@ watch(waitlistSearch, () => {
   waitlistSearchTimeout = setTimeout(() => fetchWaitlist(true), 400)
 })
 
-watch(logSearch, () => {
-  if (logSearchTimeout) clearTimeout(logSearchTimeout)
-  logSearchTimeout = setTimeout(() => fetchLogs(true), 400)
-})
-
 watch(activeTab, (tab) => {
   if (tab === 'overview') {
     loadOverview()
@@ -2066,8 +1820,8 @@ watch(activeTab, (tab) => {
     fetchInvitations(true)
   } else if (tab === 'waitlist' && !waitlistLoaded.value) {
     fetchWaitlist(true)
-  } else if (tab === 'logs' && !logsLoaded.value) {
-    fetchLogs(true)
+  } else if (tab === 'logs' && !sessionsLoaded.value) {
+    fetchSessions(true)
   }
 })
 

@@ -43,6 +43,9 @@ export default defineEventHandler(async (event) => {
         .filter((phase: string) => phase.length)
     : []
 
+  const entryMode = body.entryMode === 'linear' ? 'linear' : 'parallel'
+  const isMain = body.isMain === true
+
   const endStates = Array.isArray(body.endStates)
     ? body.endStates
         .map((state: any) => (typeof state === 'string' ? state.trim() : ''))
@@ -62,9 +65,18 @@ export default defineEventHandler(async (event) => {
     hooks: body.hooks && typeof body.hooks === 'object' ? body.hooks : {},
     roles,
     phases,
+    entryMode,
+    isMain,
   })
 
   await flow.save()
+
+  if (isMain) {
+    await DecisionFlow.updateMany(
+      { _id: { $ne: flow._id } },
+      { $set: { isMain: false } }
+    )
+  }
 
   const { flow: serialized } = await getFlowWithNodes(slug)
   return serialized

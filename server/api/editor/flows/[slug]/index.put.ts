@@ -59,6 +59,14 @@ export default defineEventHandler(async (event) => {
     flow.phases = phases
   }
 
+  if (typeof body.entryMode === 'string') {
+    flow.entryMode = body.entryMode === 'linear' ? 'linear' : 'parallel'
+  }
+
+  if (typeof body.isMain === 'boolean') {
+    flow.isMain = body.isMain
+  }
+
   if (body.variables && typeof body.variables === 'object') {
     flow.variables = body.variables
     flow.markModified('variables')
@@ -144,6 +152,13 @@ export default defineEventHandler(async (event) => {
   }
 
   await flow.save()
+
+  if (flow.isMain) {
+    await DecisionFlow.updateMany(
+      { _id: { $ne: flow._id } },
+      { $set: { isMain: false } }
+    )
+  }
 
   const data = await getFlowWithNodes(slug)
   return data

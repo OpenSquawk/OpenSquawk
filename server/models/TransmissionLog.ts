@@ -10,6 +10,7 @@ export interface TransmissionLogDocument extends mongoose.Document {
   text: string
   normalized?: string
   metadata?: Record<string, any>
+  sessionId?: string
   createdAt: Date
 }
 
@@ -21,6 +22,7 @@ const transmissionSchema = new mongoose.Schema<TransmissionLogDocument>({
   text: { type: String, required: true },
   normalized: { type: String },
   metadata: { type: Schema.Types.Mixed },
+  sessionId: { type: String, index: true },
   createdAt: { type: Date, default: () => new Date() },
 })
 

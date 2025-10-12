@@ -325,7 +325,7 @@
         <div class="flex flex-1 overflow-hidden">
           <section class="relative flex-1 overflow-hidden bg-[#070d1a]">
             <DecisionNodeCanvas
-              v-if="flowDetail"
+              v-if="flowDetail && flowDetail.nodes.length"
               ref="canvasComponent"
               :nodes="canvasNodes"
               :zoom="canvasState.zoom"
@@ -341,6 +341,17 @@
               @update:pan="onUpdatePan"
               @update:zoom="onUpdateZoom"
             />
+            <div
+              v-else-if="flowDetail"
+              class="flex h-full items-center justify-center px-6 text-center text-white/60"
+            >
+              <div class="space-y-4">
+                <p class="text-sm">Dieser Flow enthält noch keine Nodes.</p>
+                <v-btn color="cyan" variant="tonal" prepend-icon="mdi-plus-circle" @click="createInitialNode">
+                  Ersten Node anlegen
+                </v-btn>
+              </div>
+            </div>
             <div v-else class="flex h-full items-center justify-center text-white/60">
               <div class="space-y-3 text-center">
                 <v-progress-circular v-if="flowLoading" indeterminate color="cyan" class="mx-auto" />
@@ -354,7 +365,29 @@
               v-if="inspectorOpen && flowDetail"
               class="w-[380px] shrink-0 overflow-y-auto border-l border-white/10 bg-[#0b1224]/85 backdrop-blur fixed right-0 bottom-0 top-12"
             >
-              <div v-if="nodeForm" class="space-y-5 px-5 py-6">
+              <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-[#0e152b]/80 px-5 py-4">
+                <v-btn-toggle
+                  v-model="inspectorMode"
+                  color="cyan"
+                  density="comfortable"
+                  class="rounded-xl bg-white/5"
+                >
+                  <v-btn value="node" variant="text" prepend-icon="mdi-source-branch">Nodes</v-btn>
+                  <v-btn value="flow" variant="text" prepend-icon="mdi-cog-outline">Flow</v-btn>
+                </v-btn-toggle>
+                <v-btn
+                  v-if="inspectorMode === 'flow'"
+                  color="cyan"
+                  variant="flat"
+                  prepend-icon="mdi-content-save"
+                  :loading="flowSaveLoading"
+                  @click="persistFlowNow"
+                >
+                  Flow speichern
+                </v-btn>
+              </div>
+              <template v-if="inspectorMode === 'node'">
+                <div v-if="nodeForm" class="space-y-5 px-5 py-6">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <div class="flex items-center gap-2">
@@ -489,99 +522,354 @@
                   </div>
                 </v-window-item>
                 <v-window-item value="transitions">
-                  <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                      <h3 class="text-sm font-semibold uppercase tracking-widest text-white/70">Transitions</h3>
-                      <div class="flex gap-2">
-                        <v-btn size="small" color="cyan" variant="tonal" prepend-icon="mdi-plus" @click="addTransition()">
-                          Transition
-                        </v-btn>
-                        <v-menu>
-                          <template #activator="{ props: menuProps }">
-                            <v-btn v-bind="menuProps" size="small" color="purple" variant="tonal" prepend-icon="mdi-flash">
-                              Auto Presets
-                            </v-btn>
-                          </template>
-                          <v-list density="compact">
-                            <v-list-item v-for="preset in autoTriggerPresets" :key="preset.id" @click="applyAutoPreset(preset)">
-                              <v-list-item-title>{{ preset.label }}</v-list-item-title>
-                              <v-list-item-subtitle>{{ preset.description }}</v-list-item-subtitle>
-                            </v-list-item>
-                          </v-list>
-                        </v-menu>
-                      </div>
+                  <div class="space-y-6">
+                    <div
+                      v-if="nodeFormError"
+                      class="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+                    >
+                      {{ nodeFormError }}
                     </div>
-                    <v-expansion-panels variant="accordion" multiple>
-                      <v-expansion-panel v-for="(transition, index) in nodeForm.transitions" :key="transition.key || index">
-                        <v-expansion-panel-title>
-                          <div class="flex w-full items-center justify-between text-sm">
-                            <div class="flex items-center gap-2">
-                              <span class="font-mono text-xs text-white/60">{{ transition.type.toUpperCase() }}</span>
-                              <span class="font-semibold">→ {{ transition.target || 'Ziel wählen' }}</span>
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-white/40">
-                              <span v-if="transition.autoTrigger">Auto</span>
-                              <span v-if="transition.timer">Timer {{ transition.timer.afterSeconds }}s</span>
-                              <v-btn size="x-small" icon variant="text" @click.stop="removeTransition(index)">
-                                <v-icon icon="mdi-delete" size="16" />
-                              </v-btn>
-                            </div>
-                          </div>
-                        </v-expansion-panel-title>
-                        <v-expansion-panel-text>
-                          <div class="space-y-3">
-                            <div class="grid grid-cols-2 gap-3">
-                              <v-select v-model="transition.type" :items="transitionTypes" label="Typ" hide-details density="comfortable" color="cyan" />
-                              <v-text-field v-model="transition.target" label="Zielstate" hide-details density="comfortable" color="cyan" />
-                            </div>
-                            <v-text-field v-model="transition.label" label="Label" hide-details density="comfortable" color="cyan" />
-                            <v-textarea v-model="transition.description" label="Beschreibung" rows="2" hide-details color="cyan" />
-                            <v-text-field v-model="transition.condition" label="Bedingung" hide-details density="comfortable" color="cyan" />
-                            <v-text-field v-model="transition.guard" label="Guard" hide-details density="comfortable" color="cyan" />
-                            <v-text-field v-model.number="transition.order" label="Reihenfolge" type="number" hide-details density="comfortable" color="cyan" />
-                            <div v-if="transition.type === 'timer'" class="grid grid-cols-2 gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
-                              <v-text-field v-model.number="transition.timer.afterSeconds" label="Timer Sekunden" type="number" hide-details density="comfortable" color="amber" />
-                              <v-switch v-model="transition.timer.allowManualProceed" label="Manueller Proceed" hide-details inset density="compact" color="amber" />
-                            </div>
-                            <div class="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3">
-                              <div class="flex items-center justify-between">
-                                <h4 class="text-sm font-semibold text-white/80">Auto Trigger</h4>
-                                <v-btn size="x-small" variant="text" color="cyan" @click="toggleAutoTrigger(index)">
-                                  {{ transition.autoTrigger ? 'Entfernen' : 'Hinzufügen' }}
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold uppercase tracking-widest text-white/70">Node Trigger</h3>
+                        <v-btn size="small" color="cyan" variant="tonal" prepend-icon="mdi-plus" @click="addNodeTrigger">
+                          Trigger
+                        </v-btn>
+                      </div>
+                      <p v-if="!nodeForm.triggers?.length" class="text-xs text-white/50">
+                        Keine Trigger definiert.
+                      </p>
+                      <v-expansion-panels
+                        v-else
+                        variant="accordion"
+                        multiple
+                        class="rounded-xl border border-white/10"
+                      >
+                        <v-expansion-panel
+                          v-for="(trigger, index) in nodeForm.triggers"
+                          :key="trigger.id || index"
+                        >
+                          <v-expansion-panel-title>
+                            <div class="flex w-full items-center justify-between text-sm">
+                              <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs text-white/60">
+                                  {{ nodeTriggerTypeLabel(trigger.type) }}
+                                </span>
+                                <span class="font-semibold">{{ nodeTriggerSummary(trigger) }}</span>
+                              </div>
+                              <div class="flex items-center gap-2 text-xs text-white/40">
+                                <v-btn size="x-small" icon variant="text" @click.stop="removeNodeTrigger(index)">
+                                  <v-icon icon="mdi-delete" size="16" />
                                 </v-btn>
                               </div>
-                              <div v-if="transition.autoTrigger" class="space-y-3 pt-2">
-                                <v-select v-model="transition.autoTrigger.type" :items="autoTriggerTypes" label="Trigger Typ" hide-details density="comfortable" color="cyan" />
-                                <div v-if="transition.autoTrigger.type === 'telemetry'" class="grid grid-cols-2 gap-3">
-                                  <v-select v-model="transition.autoTrigger.parameter" :items="telemetryParameters" label="Parameter" hide-details density="comfortable" color="cyan" />
-                                  <v-select v-model="transition.autoTrigger.operator" :items="comparisonOperators" label="Operator" hide-details density="comfortable" color="cyan" />
-                                  <v-text-field v-model.number="transition.autoTrigger.value" label="Wert" type="number" hide-details density="comfortable" color="cyan" />
-                                  <v-text-field v-model="transition.autoTrigger.unit" label="Einheit" hide-details density="comfortable" color="cyan" />
-                                </div>
-                                <div v-else-if="transition.autoTrigger.type === 'variable'" class="grid grid-cols-2 gap-3">
-                                  <v-text-field v-model="transition.autoTrigger.variable" label="Variablenpfad" hide-details density="comfortable" color="cyan" />
-                                  <v-select v-model="transition.autoTrigger.operator" :items="comparisonOperators" label="Operator" hide-details density="comfortable" color="cyan" />
-                                  <v-text-field v-model="transition.autoTrigger.value" label="Vergleichswert" hide-details density="comfortable" color="cyan" />
-                                </div>
-                                <v-textarea
-                                  v-else
-                                  v-model="transition.autoTrigger.expression"
-                                  label="Bedingungsausdruck"
-                                  rows="2"
+                            </div>
+                          </v-expansion-panel-title>
+                          <v-expansion-panel-text>
+                            <div class="space-y-3">
+                              <div class="grid grid-cols-2 gap-3">
+                                <v-select
+                                  v-model="trigger.type"
+                                  :items="nodeTriggerTypeOptions"
+                                  item-title="title"
+                                  item-value="value"
+                                  label="Typ"
                                   hide-details
+                                  density="comfortable"
                                   color="cyan"
                                 />
-                                <v-textarea v-model="transition.autoTrigger.description" label="Beschreibung" rows="2" hide-details color="cyan" />
-                                <div class="grid grid-cols-2 gap-3">
-                                  <v-text-field v-model.number="transition.autoTrigger.delayMs" label="Verzögerung (ms)" type="number" hide-details density="comfortable" color="cyan" />
-                                  <v-switch v-model="transition.autoTrigger.once" label="Nur einmal" hide-details inset density="compact" color="cyan" />
+                                <v-text-field
+                                  v-model.number="trigger.order"
+                                  label="Reihenfolge"
+                                  type="number"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <div v-if="trigger.type === 'auto_time'" class="grid grid-cols-2 gap-3">
+                                <v-text-field
+                                  v-model.number="trigger.delaySeconds"
+                                  label="Verzögerung (Sekunden)"
+                                  type="number"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <div v-else-if="trigger.type === 'auto_variable'" class="grid grid-cols-3 gap-3">
+                                <v-text-field
+                                  v-model="trigger.variable"
+                                  label="Variable"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-select
+                                  v-model="trigger.operator"
+                                  :items="comparisonOperators"
+                                  label="Operator"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-text-field
+                                  v-model="trigger.value"
+                                  label="Vergleichswert"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <div v-else-if="trigger.type === 'regex'" class="grid grid-cols-2 gap-3">
+                                <v-text-field
+                                  v-model="trigger.pattern"
+                                  label="Regex"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-text-field
+                                  v-model="trigger.patternFlags"
+                                  label="Flags"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <p v-else class="text-xs text-white/50">
+                                Dieser Trigger wird genutzt, wenn kein anderer vorher greift.
+                              </p>
+                              <v-textarea
+                                v-model="trigger.description"
+                                label="Beschreibung"
+                                rows="2"
+                                hide-details
+                                color="cyan"
+                              />
+                            </div>
+                          </v-expansion-panel-text>
+                        </v-expansion-panel>
+                      </v-expansion-panels>
+                    </div>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold uppercase tracking-widest text-white/70">Node Bedingungen</h3>
+                        <v-btn size="small" color="cyan" variant="tonal" prepend-icon="mdi-plus" @click="addNodeCondition">
+                          Bedingung
+                        </v-btn>
+                      </div>
+                      <p v-if="!nodeForm.conditions?.length" class="text-xs text-white/50">
+                        Keine Bedingungen definiert.
+                      </p>
+                      <v-expansion-panels
+                        v-else
+                        variant="accordion"
+                        multiple
+                        class="rounded-xl border border-white/10"
+                      >
+                        <v-expansion-panel
+                          v-for="(condition, index) in nodeForm.conditions"
+                          :key="condition.id || index"
+                        >
+                          <v-expansion-panel-title>
+                            <div class="flex w-full items-center justify-between text-sm">
+                              <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs text-white/60">
+                                  {{ nodeConditionTypeLabel(condition.type) }}
+                                </span>
+                                <span class="font-semibold">{{ nodeConditionSummary(condition) }}</span>
+                              </div>
+                              <div class="flex items-center gap-2 text-xs text-white/40">
+                                <v-btn size="x-small" icon variant="text" @click.stop="removeNodeCondition(index)">
+                                  <v-icon icon="mdi-delete" size="16" />
+                                </v-btn>
+                              </div>
+                            </div>
+                          </v-expansion-panel-title>
+                          <v-expansion-panel-text>
+                            <div class="space-y-3">
+                              <div class="grid grid-cols-2 gap-3">
+                                <v-select
+                                  v-model="condition.type"
+                                  :items="nodeConditionTypeOptions"
+                                  item-title="title"
+                                  item-value="value"
+                                  label="Typ"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-text-field
+                                  v-model.number="condition.order"
+                                  label="Reihenfolge"
+                                  type="number"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <div v-if="condition.type === 'variable_value'" class="grid grid-cols-3 gap-3">
+                                <v-text-field
+                                  v-model="condition.variable"
+                                  label="Variable"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-select
+                                  v-model="condition.operator"
+                                  :items="comparisonOperators"
+                                  label="Operator"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-text-field
+                                  v-model="condition.value"
+                                  label="Vergleichswert"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <div v-else class="grid grid-cols-2 gap-3">
+                                <v-text-field
+                                  v-model="condition.pattern"
+                                  label="Regex"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-text-field
+                                  v-model="condition.patternFlags"
+                                  label="Flags"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <v-textarea
+                                v-model="condition.description"
+                                label="Beschreibung"
+                                rows="2"
+                                hide-details
+                                color="cyan"
+                              />
+                            </div>
+                          </v-expansion-panel-text>
+                        </v-expansion-panel>
+                      </v-expansion-panels>
+                    </div>
+                    <div class="space-y-4">
+                      <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold uppercase tracking-widest text-white/70">Transitions</h3>
+                        <div class="flex gap-2">
+                          <v-btn size="small" color="cyan" variant="tonal" prepend-icon="mdi-plus" @click="addTransition()">
+                            Transition
+                          </v-btn>
+                          <v-menu>
+                            <template #activator="{ props: menuProps }">
+                              <v-btn v-bind="menuProps" size="small" color="purple" variant="tonal" prepend-icon="mdi-flash">
+                                Auto Presets
+                              </v-btn>
+                            </template>
+                            <v-list density="compact">
+                              <v-list-item v-for="preset in autoTriggerPresets" :key="preset.id" @click="applyAutoPreset(preset)">
+                                <v-list-item-title>{{ preset.label }}</v-list-item-title>
+                                <v-list-item-subtitle>{{ preset.description }}</v-list-item-subtitle>
+                              </v-list-item>
+                            </v-list>
+                          </v-menu>
+                        </div>
+                      </div>
+                      <v-expansion-panels variant="accordion" multiple>
+                        <v-expansion-panel
+                          v-for="(transition, index) in nodeForm.transitions"
+                          :key="transition.key || index"
+                        >
+                          <v-expansion-panel-title>
+                            <div class="flex w-full items-center justify-between text-sm">
+                              <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs text-white/60">{{ transition.type.toUpperCase() }}</span>
+                                <span class="font-semibold">→ {{ transition.target || 'Ziel wählen' }}</span>
+                              </div>
+                              <div class="flex items-center gap-2 text-xs text-white/40">
+                                <span v-if="transition.autoTrigger">Auto</span>
+                                <span v-if="transition.timer">Timer {{ transition.timer.afterSeconds }}s</span>
+                                <v-btn size="x-small" icon variant="text" @click.stop="removeTransition(index)">
+                                  <v-icon icon="mdi-delete" size="16" />
+                                </v-btn>
+                              </div>
+                            </div>
+                          </v-expansion-panel-title>
+                          <v-expansion-panel-text>
+                            <div class="space-y-3">
+                              <div class="grid grid-cols-2 gap-3">
+                                <v-select
+                                  v-model="transition.type"
+                                  :items="transitionTypes"
+                                  label="Typ"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                                <v-text-field
+                                  v-model="transition.target"
+                                  label="Zielstate"
+                                  hide-details
+                                  density="comfortable"
+                                  color="cyan"
+                                />
+                              </div>
+                              <v-text-field v-model="transition.label" label="Label" hide-details density="comfortable" color="cyan" />
+                              <v-textarea v-model="transition.description" label="Beschreibung" rows="2" hide-details color="cyan" />
+                              <v-text-field v-model="transition.condition" label="Bedingung" hide-details density="comfortable" color="cyan" />
+                              <v-text-field v-model="transition.guard" label="Guard" hide-details density="comfortable" color="cyan" />
+                              <v-text-field v-model.number="transition.order" label="Reihenfolge" type="number" hide-details density="comfortable" color="cyan" />
+                              <div v-if="transition.type === 'timer'" class="grid grid-cols-2 gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+                                <v-text-field v-model.number="transition.timer.afterSeconds" label="Timer Sekunden" type="number" hide-details density="comfortable" color="amber" />
+                                <v-switch v-model="transition.timer.allowManualProceed" label="Manueller Proceed" hide-details inset density="compact" color="amber" />
+                              </div>
+                              <div class="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3">
+                                <div class="flex items-center justify-between">
+                                  <h4 class="text-sm font-semibold text-white/80">Auto Trigger</h4>
+                                  <v-btn size="x-small" variant="text" color="cyan" @click="toggleAutoTrigger(index)">
+                                    {{ transition.autoTrigger ? 'Entfernen' : 'Hinzufügen' }}
+                                  </v-btn>
+                                </div>
+                                <div v-if="transition.autoTrigger" class="space-y-3 pt-2">
+                                  <v-select v-model="transition.autoTrigger.type" :items="autoTriggerTypes" label="Trigger Typ" hide-details density="comfortable" color="cyan" />
+                                  <div v-if="transition.autoTrigger.type === 'telemetry'" class="grid grid-cols-2 gap-3">
+                                    <v-select v-model="transition.autoTrigger.parameter" :items="telemetryParameters" label="Parameter" hide-details density="comfortable" color="cyan" />
+                                    <v-select v-model="transition.autoTrigger.operator" :items="comparisonOperators" label="Operator" hide-details density="comfortable" color="cyan" />
+                                    <v-text-field v-model.number="transition.autoTrigger.value" label="Wert" type="number" hide-details density="comfortable" color="cyan" />
+                                    <v-text-field v-model="transition.autoTrigger.unit" label="Einheit" hide-details density="comfortable" color="cyan" />
+                                  </div>
+                                  <div v-else-if="transition.autoTrigger.type === 'variable'" class="grid grid-cols-2 gap-3">
+                                    <v-text-field v-model="transition.autoTrigger.variable" label="Variablenpfad" hide-details density="comfortable" color="cyan" />
+                                    <v-select v-model="transition.autoTrigger.operator" :items="comparisonOperators" label="Operator" hide-details density="comfortable" color="cyan" />
+                                    <v-text-field v-model="transition.autoTrigger.value" label="Vergleichswert" hide-details density="comfortable" color="cyan" />
+                                  </div>
+                                  <v-textarea
+                                    v-else
+                                    v-model="transition.autoTrigger.expression"
+                                    label="Bedingungsausdruck"
+                                    rows="2"
+                                    hide-details
+                                    color="cyan"
+                                  />
+                                  <v-textarea v-model="transition.autoTrigger.description" label="Beschreibung" rows="2" hide-details color="cyan" />
+                                  <div class="grid grid-cols-2 gap-3">
+                                    <v-text-field v-model.number="transition.autoTrigger.delayMs" label="Verzögerung (ms)" type="number" hide-details density="comfortable" color="cyan" />
+                                    <v-switch v-model="transition.autoTrigger.once" label="Nur einmal" hide-details inset density="compact" color="cyan" />
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </v-expansion-panel-text>
-                      </v-expansion-panel>
-                    </v-expansion-panels>
+                          </v-expansion-panel-text>
+                        </v-expansion-panel>
+                      </v-expansion-panels>
+                    </div>
                   </div>
                 </v-window-item>
                 <v-window-item value="llm">
@@ -649,10 +937,178 @@
                   </div>
                 </v-window-item>
                 </v-window>
-            </div>
-            <div v-else class="px-5 py-6 text-sm text-white/50">
-              Wähle einen Node auf der Canvas aus.
-            </div>
+                </div>
+                <div v-else class="px-5 py-6 text-sm text-white/60">
+                  Wähle einen Node auf der Canvas aus.
+                </div>
+              </template>
+              <template v-else>
+                <div class="space-y-5 px-5 py-6">
+                  <div class="space-y-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0 space-y-1">
+                        <p class="font-mono text-xs text-white/50">{{ flowDetail.flow.slug }}</p>
+                        <h3 class="truncate text-xl font-semibold">
+                          {{ flowForm.name || 'Unbenannter Flow' }}
+                        </h3>
+                        <div class="flex flex-wrap items-center gap-2 text-xs text-white/50">
+                          <span>Start: {{ flowForm.startState || '–' }}</span>
+                          <span>Nodes: {{ flowDetail.nodes.length }}</span>
+                        </div>
+                      </div>
+                      <div class="flex flex-col items-end gap-2">
+                        <v-chip size="x-small" color="cyan" variant="tonal">
+                          {{ flowForm.entryMode === 'linear' ? 'Einzeln' : 'Parallel' }}
+                        </v-chip>
+                        <v-chip v-if="flowForm.isMain" size="x-small" color="purple" variant="tonal">
+                          Hauptflow
+                        </v-chip>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="space-y-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                    <v-text-field
+                      v-model="flowForm.name"
+                      label="Name"
+                      hide-details
+                      density="comfortable"
+                      color="cyan"
+                    />
+                    <v-textarea
+                      v-model="flowForm.description"
+                      label="Beschreibung"
+                      rows="3"
+                      hide-details
+                      color="cyan"
+                    />
+                    <div class="grid grid-cols-2 gap-3">
+                      <v-text-field
+                        v-model="flowForm.schemaVersion"
+                        label="Schema Version"
+                        hide-details
+                        density="comfortable"
+                        color="cyan"
+                      />
+                      <v-select
+                        v-model="flowForm.entryMode"
+                        :items="flowModeOptions"
+                        item-title="title"
+                        item-value="value"
+                        label="Ausführungsmodus"
+                        hide-details
+                        density="comfortable"
+                        color="cyan"
+                      />
+                    </div>
+                    <p class="text-xs text-white/50">{{ currentFlowModeDescription }}</p>
+                    <v-switch
+                      v-model="flowForm.isMain"
+                      label="Als Hauptflow markieren"
+                      hide-details
+                      inset
+                      density="comfortable"
+                      color="purple"
+                    />
+                    <v-combobox
+                      v-model="flowForm.startState"
+                      :items="flowNodeOptions"
+                      item-title="title"
+                      item-value="value"
+                      label="Start Node"
+                      hide-details
+                      density="comfortable"
+                      clearable
+                      color="cyan"
+                    />
+                    <v-combobox
+                      v-model="flowForm.endStates"
+                      :items="flowNodeOptions"
+                      item-title="title"
+                      item-value="value"
+                      label="End Nodes"
+                      multiple
+                      chips
+                      hide-details
+                      density="comfortable"
+                      clearable
+                      color="cyan"
+                    />
+                  </div>
+                  <div class="space-y-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                    <v-combobox
+                      v-model="flowForm.roles"
+                      :items="flowRoleOptions"
+                      label="Rollen"
+                      multiple
+                      chips
+                      hide-details
+                      density="comfortable"
+                      color="cyan"
+                    />
+                    <v-combobox
+                      v-model="flowForm.phases"
+                      :items="flowPhaseOptions"
+                      label="Phasen"
+                      multiple
+                      chips
+                      hide-details
+                      density="comfortable"
+                      color="purple"
+                    />
+                  </div>
+                  <v-expansion-panels variant="accordion" class="rounded-xl border border-white/10 bg-white/5">
+                    <v-expansion-panel>
+                      <v-expansion-panel-title>
+                        <span class="text-sm font-semibold text-white/80">Erweiterte Einstellungen</span>
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
+                        <div class="space-y-4">
+                          <div>
+                            <label class="text-xs uppercase tracking-wider text-white/50">Variablen (JSON)</label>
+                            <v-textarea
+                              v-model="flowForm.variables"
+                              rows="4"
+                              variant="outlined"
+                              color="cyan"
+                              hide-details
+                            />
+                          </div>
+                          <div>
+                            <label class="text-xs uppercase tracking-wider text-white/50">Flags (JSON)</label>
+                            <v-textarea
+                              v-model="flowForm.flags"
+                              rows="4"
+                              variant="outlined"
+                              color="cyan"
+                              hide-details
+                            />
+                          </div>
+                          <div>
+                            <label class="text-xs uppercase tracking-wider text-white/50">Policies (JSON)</label>
+                            <v-textarea
+                              v-model="flowForm.policies"
+                              rows="4"
+                              variant="outlined"
+                              color="cyan"
+                              hide-details
+                            />
+                          </div>
+                          <div>
+                            <label class="text-xs uppercase tracking-wider text-white/50">Hooks (JSON)</label>
+                            <v-textarea
+                              v-model="flowForm.hooks"
+                              rows="4"
+                              variant="outlined"
+                              color="cyan"
+                              hide-details
+                            />
+                          </div>
+                        </div>
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
+                  </v-expansion-panels>
+                </div>
+              </template>
           </aside>
           </transition>
         </div>
@@ -695,9 +1151,12 @@ import { useApi } from '~/composables/useApi'
 import { useAuthStore } from '~/stores/auth'
 import DecisionNodeCanvas from '~/components/editor/DecisionNodeCanvas.vue'
 import type {
+  DecisionFlowEntryMode,
   DecisionFlowModel,
   DecisionFlowSummary,
+  DecisionNodeCondition,
   DecisionNodeModel,
+  DecisionNodeTrigger,
   DecisionNodeTransition,
   DecisionNodeLayout,
 } from '~/shared/types/decision'
@@ -735,6 +1194,8 @@ interface FlowFormState {
   name: string
   description: string
   schemaVersion: string
+  entryMode: DecisionFlowEntryMode
+  isMain: boolean
   startState: string
   endStates: string[]
   roles: string[]
@@ -771,6 +1232,32 @@ const transitionTypes: DecisionNodeTransition['type'][] = ['next', 'ok', 'bad', 
 const autoTriggerTypes = ['telemetry', 'variable', 'expression']
 const roleOptions = ['pilot', 'atc', 'system']
 
+const nodeTriggerTypeOptions = [
+  { value: 'auto_time', title: 'Auto (Zeit)', subtitle: 'Nach einer Verzögerung automatisch aktivieren' },
+  { value: 'auto_variable', title: 'Auto (Variable)', subtitle: 'Aktivieren, sobald eine Variable einen Wert erreicht' },
+  { value: 'regex', title: 'Regex Match', subtitle: 'Kandidat wenn vorheriger Output passt' },
+  { value: 'none', title: 'Fallback', subtitle: 'Kandidat wenn nichts anderes greift' },
+] as const
+
+const nodeConditionTypeOptions = [
+  { value: 'variable_value', title: 'Variable Vergleich', subtitle: 'Prüft Variablenwerte' },
+  { value: 'regex', title: 'Regex Match', subtitle: 'Nur wenn der Output passt' },
+  { value: 'regex_not', title: 'Regex kein Match', subtitle: 'Nur wenn der Output nicht passt' },
+] as const
+
+const nodeTriggerTypeLabels: Record<DecisionNodeTrigger['type'], string> = {
+  auto_time: 'Auto (Zeit)',
+  auto_variable: 'Auto (Variable)',
+  regex: 'Regex Match',
+  none: 'Fallback',
+}
+
+const nodeConditionTypeLabels: Record<DecisionNodeCondition['type'], string> = {
+  variable_value: 'Variable Vergleich',
+  regex: 'Regex Match',
+  regex_not: 'Regex kein Match',
+}
+
 const flows = ref<DecisionFlowSummary[]>([])
 const flowsLoading = ref(false)
 const flowsError = ref('')
@@ -781,6 +1268,7 @@ const autosaveIndicator = ref(false)
 const canvasComponent = ref<InstanceType<typeof DecisionNodeCanvas> | null>(null)
 
 const inspectorOpen = ref(false)
+const inspectorMode = ref<'node' | 'flow'>('node')
 
 const selectedFlowSlug = ref<string | null>(null)
 const flowDetail = ref<{ flow: DecisionFlowModel; nodes: DecisionNodeModel[] } | null>(null)
@@ -793,6 +1281,8 @@ const flowForm = reactive<FlowFormState>({
   name: '',
   description: '',
   schemaVersion: '1.0',
+  entryMode: 'parallel',
+  isMain: false,
   startState: '',
   endStates: [],
   roles: ['pilot', 'atc', 'system'],
@@ -867,6 +1357,7 @@ const nodeSnapshot = ref<DecisionNodeModel | null>(null)
 const nodeSaving = ref(false)
 const nodeActionsText = ref('[]')
 const nodeActionsError = ref('')
+const nodeFormError = ref('')
 const nodeIdDraft = ref('')
 
 let lastTitleSuggestion = ''
@@ -954,6 +1445,61 @@ const nodeSelectorItems = computed(() => {
     .map(({ matchesSearch, matchesRole, matchesPhase, matchesAuto, ...rest }) => rest)
 })
 
+const flowModeOptions: Array<{ value: DecisionFlowEntryMode; title: string; subtitle: string }> = [
+  { value: 'parallel', title: 'Parallel', subtitle: 'Mehrere Branches können gleichzeitig laufen' },
+  { value: 'linear', title: 'Einzeln', subtitle: 'Es läuft immer nur ein Branch' },
+]
+
+const flowNodeOptions = computed(() => {
+  if (!flowDetail.value) return []
+  const items = flowDetail.value.nodes
+    .slice()
+    .sort((a, b) => a.stateId.localeCompare(b.stateId))
+    .map((node) => ({
+      value: node.stateId,
+      title: node.title ? `${node.stateId} — ${node.title}` : node.stateId,
+    }))
+
+  const known = new Set(items.map((item) => item.value))
+  const extras = [flowForm.startState, ...flowForm.endStates]
+    .map((state) => (typeof state === 'string' ? state.trim() : ''))
+    .filter((state): state is string => Boolean(state && !known.has(state)))
+
+  extras.forEach((state) => {
+    items.push({ value: state, title: `${state} (nicht im Flow)` })
+    known.add(state)
+  })
+
+  return items
+})
+
+const flowRoleOptions = computed(() => {
+  const roles = new Set<string>(roleOptions)
+  flowForm.roles.forEach((role) => {
+    const trimmed = typeof role === 'string' ? role.trim() : ''
+    if (trimmed) roles.add(trimmed)
+  })
+  return Array.from(roles)
+})
+
+const flowPhaseOptions = computed(() => {
+  const phases = new Set<string>()
+  flowForm.phases.forEach((phase) => {
+    const trimmed = typeof phase === 'string' ? phase.trim() : ''
+    if (trimmed) phases.add(trimmed)
+  })
+  flowDetail.value?.nodes.forEach((node) => {
+    const trimmed = typeof node.phase === 'string' ? node.phase.trim() : ''
+    if (trimmed) phases.add(trimmed)
+  })
+  return Array.from(phases)
+})
+
+const currentFlowModeDescription = computed(() => {
+  const option = flowModeOptions.find((entry) => entry.value === flowForm.entryMode)
+  return option?.subtitle ?? ''
+})
+
 const canvasNodes = computed<CanvasNodeView[]>(() => {
   if (!flowDetail.value) return []
   const flow = flowDetail.value.flow
@@ -1016,6 +1562,7 @@ watch(selectedNodeId, (stateId) => {
     nodeSnapshot.value = null
     nodeActionsText.value = '[]'
     nodeActionsError.value = ''
+    nodeFormError.value = ''
     nodeIdDraft.value = ''
     return
   }
@@ -1025,6 +1572,7 @@ watch(selectedNodeId, (stateId) => {
     nodeSnapshot.value = null
     nodeActionsText.value = '[]'
     nodeActionsError.value = ''
+    nodeFormError.value = ''
     nodeIdDraft.value = ''
     return
   }
@@ -1034,6 +1582,8 @@ watch(selectedNodeId, (stateId) => {
   if (!clone.layout) clone.layout = { x: 0, y: 0 }
   if (!clone.readbackRequired) clone.readbackRequired = []
   if (!clone.transitions) clone.transitions = []
+  if (!clone.triggers) clone.triggers = []
+  if (!clone.conditions) clone.conditions = []
   if (!clone.metadata) clone.metadata = {}
   if (!clone.llmTemplate) clone.llmTemplate = { placeholders: [] }
   if (!clone.llmTemplate.placeholders) clone.llmTemplate.placeholders = []
@@ -1041,6 +1591,7 @@ watch(selectedNodeId, (stateId) => {
   nodeSnapshot.value = cloneNode(clone)
   nodeActionsText.value = JSON.stringify(clone.actions ?? [], null, 2)
   nodeActionsError.value = ''
+  nodeFormError.value = ''
   nodeIdDraft.value = clone.stateId
   lastTitleSuggestion = buildNodeKeyFromText(clone.title || clone.stateId)
   pendingNodeHistory = null
@@ -1053,6 +1604,7 @@ watch(
   inspectorOpen,
   (open) => {
     if (!open || !flowDetail.value) return
+    if (inspectorMode.value !== 'node') return
     if (selectedNodeId.value) return
     const preferred =
       flowDetail.value.flow.startState &&
@@ -1097,10 +1649,74 @@ watch(
   () => flowForm.endStates,
   (states) => {
     if (!flowDetail.value) return
-    flowDetail.value.flow.endStates = [...states]
+    flowDetail.value.flow.endStates = Array.from(new Set(states))
     if (!flowInitializing) {
       scheduleFlowSave()
     }
+  },
+  { deep: true }
+)
+
+watch(
+  () => flowForm.name,
+  (name) => {
+    if (!flowDetail.value || flowInitializing) return
+    flowDetail.value.flow.name = name
+  }
+)
+
+watch(
+  () => flowForm.description,
+  (description) => {
+    if (!flowDetail.value || flowInitializing) return
+    flowDetail.value.flow.description = description || ''
+  }
+)
+
+watch(
+  () => flowForm.schemaVersion,
+  (version) => {
+    if (!flowDetail.value || flowInitializing) return
+    flowDetail.value.flow.schemaVersion = version
+  }
+)
+
+watch(
+  () => flowForm.entryMode,
+  (mode) => {
+    if (!flowDetail.value || flowInitializing) return
+    flowDetail.value.flow.entryMode = mode
+  }
+)
+
+watch(
+  () => flowForm.isMain,
+  (isMain) => {
+    if (!flowDetail.value || flowInitializing) return
+    flowDetail.value.flow.isMain = isMain
+  }
+)
+
+watch(
+  () => flowForm.roles,
+  (roles) => {
+    if (!flowDetail.value || flowInitializing) return
+    const sanitized = roles
+      .map((role) => (typeof role === 'string' ? role.trim() : ''))
+      .filter((role): role is string => Boolean(role))
+    flowDetail.value.flow.roles = Array.from(new Set(sanitized))
+  },
+  { deep: true }
+)
+
+watch(
+  () => flowForm.phases,
+  (phases) => {
+    if (!flowDetail.value || flowInitializing) return
+    const sanitized = phases
+      .map((phase) => (typeof phase === 'string' ? phase.trim() : ''))
+      .filter((phase): phase is string => Boolean(phase))
+    flowDetail.value.flow.phases = Array.from(new Set(sanitized))
   },
   { deep: true }
 )
@@ -1291,7 +1907,8 @@ async function loadFlows() {
     const response = await api.get<DecisionFlowSummary[]>('/api/editor/flows')
     flows.value = response
     if (!selectedFlowSlug.value && response.length) {
-      selectedFlowSlug.value = response[0].slug
+      const preferred = response.find((flow) => flow.slug === 'icao_atc_decision_tree')?.slug
+      selectedFlowSlug.value = preferred || response[0].slug
     }
   } catch (error) {
     console.error('Failed to load flows', error)
@@ -1340,6 +1957,8 @@ function populateFlowForm(flow: DecisionFlowModel) {
   flowForm.name = flow.name
   flowForm.description = flow.description ?? ''
   flowForm.schemaVersion = flow.schemaVersion ?? '1.0'
+  flowForm.entryMode = flow.entryMode || 'parallel'
+  flowForm.isMain = Boolean(flow.isMain)
   flowForm.startState = flow.startState
   flowForm.endStates = Array.isArray(flow.endStates) ? [...new Set(flow.endStates)] : []
   flowForm.roles = flow.roles?.length ? [...new Set(flow.roles)] : ['pilot', 'atc', 'system']
@@ -1360,6 +1979,52 @@ function openCreateFlow() {
 
 function closeCreateFlow() {
   showCreateFlowDialog.value = false
+}
+
+async function createInitialNode() {
+  if (!flowDetail.value) return
+  const slug = flowDetail.value.flow.slug
+  const baseStart = flowDetail.value.flow.startState || 'START'
+  const stateId = baseStart.trim().length ? baseStart.trim().toUpperCase() : 'START'
+  const role = flowDetail.value.flow.roles?.[0] || 'pilot'
+  const phase = flowDetail.value.flow.phases?.[0] || 'General'
+
+  const payload = {
+    stateId,
+    title: flowDetail.value.flow.name ? `${flowDetail.value.flow.name} Start` : 'Erster Node',
+    summary: '',
+    role,
+    phase,
+    transitions: [],
+    triggers: [],
+    conditions: [],
+    layout: { x: 320, y: 180 },
+  }
+
+  try {
+    const created = await api.post<DecisionNodeModel>(`/api/editor/flows/${slug}/nodes`, payload)
+    flowDetail.value.nodes.push(created)
+    flowDetail.value.flow.startState = created.stateId
+    if (!Array.isArray(flowDetail.value.flow.endStates) || !flowDetail.value.flow.endStates.length) {
+      flowDetail.value.flow.endStates = [created.stateId]
+      flowForm.endStates = [created.stateId]
+    }
+    flowForm.startState = created.stateId
+    selectedNodeId.value = created.stateId
+    showSnack('Erster Node erstellt.')
+    const summaryIndex = flows.value.findIndex((flow) => flow.slug === slug)
+    if (summaryIndex !== -1) {
+      const previous = flows.value[summaryIndex]
+      flows.value.splice(summaryIndex, 1, {
+        ...previous,
+        startState: created.stateId,
+        nodeCount: (previous.nodeCount || 0) + 1,
+      })
+    }
+  } catch (error) {
+    console.error('Failed to create initial node', error)
+    showSnack('Erster Node konnte nicht erstellt werden.', 'red')
+  }
 }
 
 async function createFlow() {
@@ -1415,6 +2080,7 @@ function selectNode(stateId: string | null, options: { focus?: boolean } = {}) {
     selectedNodeId.value = null
     return
   }
+  inspectorMode.value = 'node'
   inspectorOpen.value = true
   if (selectedNodeId.value !== stateId) {
     selectedNodeId.value = stateId
@@ -1459,10 +2125,14 @@ async function persistFlow(options: { silent?: boolean } = {}) {
   flowSaveLoading.value = true
   let payload: Record<string, any>
   try {
+    const entryMode = flowForm.entryMode === 'linear' ? 'linear' : 'parallel'
+    const isMain = Boolean(flowForm.isMain)
     payload = {
       name: flowForm.name.trim(),
       description: flowForm.description,
       schemaVersion: flowForm.schemaVersion.trim(),
+      entryMode,
+      isMain,
       startState: flowForm.startState.trim(),
       endStates: flowForm.endStates,
       roles: flowForm.roles,
@@ -1479,6 +2149,8 @@ async function persistFlow(options: { silent?: boolean } = {}) {
     }
     flowForm.name = payload.name
     flowForm.schemaVersion = payload.schemaVersion
+    flowForm.entryMode = payload.entryMode
+    flowForm.isMain = payload.isMain
     flowForm.startState = payload.startState
   } catch (error: any) {
     flowSaveLoading.value = false
@@ -1501,8 +2173,25 @@ async function persistFlow(options: { silent?: boolean } = {}) {
         flowDetail.value.nodes = updated.nodes
       }
     }
+    flowInitializing = true
+    flowForm.name = updated.flow.name
+    flowForm.description = updated.flow.description ?? ''
+    flowForm.schemaVersion = updated.flow.schemaVersion ?? '1.0'
+    flowForm.entryMode = updated.flow.entryMode || 'parallel'
+    flowForm.isMain = Boolean(updated.flow.isMain)
+    flowForm.startState = updated.flow.startState
+    flowForm.endStates = Array.isArray(updated.flow.endStates)
+      ? [...new Set(updated.flow.endStates)]
+      : []
+    flowForm.roles = updated.flow.roles?.length
+      ? [...new Set(updated.flow.roles)]
+      : ['pilot', 'atc', 'system']
+    flowForm.phases = updated.flow.phases?.length ? [...new Set(updated.flow.phases)] : []
     flowSnapshot.value = cloneNode(flowForm)
     lastFlowAutosaveError = ''
+    nextTick(() => {
+      flowInitializing = false
+    })
 
     if (silent) {
       const summaryIndex = flows.value.findIndex((flow) => flow.slug === updated.flow.slug)
@@ -1514,6 +2203,8 @@ async function persistFlow(options: { silent?: boolean } = {}) {
           description: updated.flow.description,
           startState: updated.flow.startState,
           nodeCount: updated.nodes?.length ?? previous.nodeCount,
+          entryMode: updated.flow.entryMode,
+          isMain: updated.flow.isMain,
         })
       }
       flashAutosaveIndicator()
@@ -1531,6 +2222,10 @@ async function persistFlow(options: { silent?: boolean } = {}) {
   } finally {
     flowSaveLoading.value = false
   }
+}
+
+function persistFlowNow() {
+  void persistFlow({ silent: false })
 }
 
 async function persistNode(options: { silent?: boolean } = {}) {
@@ -1582,6 +2277,7 @@ async function persistNode(options: { silent?: boolean } = {}) {
       nodeInitializing = false
     })
     lastNodeAutosaveError = ''
+    nodeFormError.value = ''
     if (silent) {
       flashAutosaveIndicator()
     } else {
@@ -1589,10 +2285,11 @@ async function persistNode(options: { silent?: boolean } = {}) {
     }
   } catch (error: any) {
     console.error('Failed to save node', error)
-    const message = error?.statusMessage || 'Node konnte nicht gespeichert werden.'
+    const message = error?.data?.formError || error?.statusMessage || 'Node konnte nicht gespeichert werden.'
     if (!silent || message !== lastNodeAutosaveError) {
       showSnack(message, 'red')
     }
+    nodeFormError.value = message
     lastNodeAutosaveError = message
   } finally {
     nodeSaving.value = false
@@ -1814,6 +2511,7 @@ function resetNode() {
   nodeForm.value = cloneNode(nodeSnapshot.value)
   nodeActionsText.value = JSON.stringify(nodeSnapshot.value.actions ?? [], null, 2)
   nodeActionsError.value = ''
+  nodeFormError.value = ''
   syncNodeLayout()
   pendingNodeHistory = null
 }
@@ -2110,6 +2808,90 @@ function generateKey(prefix: string) {
     return `${prefix}_${crypto.randomUUID().slice(0, 8)}`
   }
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`
+}
+
+function nodeTriggerTypeLabel(type: DecisionNodeTrigger['type']) {
+  return nodeTriggerTypeLabels[type] || type
+}
+
+function nodeTriggerSummary(trigger: DecisionNodeTrigger) {
+  switch (trigger.type) {
+    case 'auto_time':
+      return `${trigger.delaySeconds ?? 0}s Verzögerung`
+    case 'auto_variable':
+      return trigger.variable
+        ? `${trigger.variable} ${trigger.operator ?? '=='} ${
+            trigger.value !== undefined && trigger.value !== '' ? trigger.value : '?'
+          }`
+        : 'Variable prüfen'
+    case 'regex':
+      return trigger.pattern ? `/${trigger.pattern}/${trigger.patternFlags || ''}` : 'Regex prüfen'
+    case 'none':
+      return 'Fallback'
+    default:
+      return ''
+  }
+}
+
+function nodeConditionTypeLabel(type: DecisionNodeCondition['type']) {
+  return nodeConditionTypeLabels[type] || type
+}
+
+function nodeConditionSummary(condition: DecisionNodeCondition) {
+  switch (condition.type) {
+    case 'variable_value':
+      return condition.variable
+        ? `${condition.variable} ${condition.operator ?? '=='} ${
+            condition.value !== undefined && condition.value !== '' ? condition.value : '?'
+          }`
+        : 'Variable prüfen'
+    case 'regex':
+      return condition.pattern ? `/${condition.pattern}/${condition.patternFlags || ''}` : 'Regex prüfen'
+    case 'regex_not':
+      return condition.pattern ? `!= /${condition.pattern}/${condition.patternFlags || ''}` : 'Regex darf nicht matchen'
+    default:
+      return ''
+  }
+}
+
+function addNodeTrigger() {
+  if (!nodeForm.value) return
+  if (!nodeForm.value.triggers) nodeForm.value.triggers = []
+  nodeForm.value.triggers.push({
+    id: generateKey('trigger'),
+    type: 'auto_time',
+    delaySeconds: 5,
+    order: nodeForm.value.triggers.length,
+  })
+}
+
+function removeNodeTrigger(index: number) {
+  if (!nodeForm.value?.triggers) return
+  nodeForm.value.triggers.splice(index, 1)
+  nodeForm.value.triggers.forEach((trigger, idx) => {
+    trigger.order = idx
+  })
+}
+
+function addNodeCondition() {
+  if (!nodeForm.value) return
+  if (!nodeForm.value.conditions) nodeForm.value.conditions = []
+  nodeForm.value.conditions.push({
+    id: generateKey('condition'),
+    type: 'variable_value',
+    variable: '',
+    operator: '==',
+    value: '',
+    order: nodeForm.value.conditions.length,
+  })
+}
+
+function removeNodeCondition(index: number) {
+  if (!nodeForm.value?.conditions) return
+  nodeForm.value.conditions.splice(index, 1)
+  nodeForm.value.conditions.forEach((condition, idx) => {
+    condition.order = idx
+  })
 }
 
 function addTransition(type: DecisionNodeTransition['type'] = 'next') {

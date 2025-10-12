@@ -9,6 +9,7 @@ import type {
   RuntimeDecisionAutoTransition,
   RuntimeDecisionState,
   RuntimeDecisionTree,
+  RuntimeDecisionSystem,
 } from '~~/shared/types/decision'
 
 export function serializeFlowDocument(doc: DecisionFlowDocument, nodeCount = 0): DecisionFlowModel {
@@ -31,6 +32,8 @@ export function serializeFlowDocument(doc: DecisionFlowDocument, nodeCount = 0):
     createdAt: doc.createdAt?.toISOString?.() || new Date().toISOString(),
     updatedAt: doc.updatedAt?.toISOString?.() || new Date().toISOString(),
     nodeCount,
+    entryMode: doc.entryMode || 'parallel',
+    isMain: doc.isMain || false,
   }
 }
 
@@ -53,6 +56,8 @@ export function serializeNodeDocument(doc: DecisionNodeDocument): DecisionNodeMo
     trigger: obj.trigger || undefined,
     frequency: obj.frequency || undefined,
     frequencyName: obj.frequencyName || undefined,
+    triggers: Array.isArray(obj.triggers) ? obj.triggers : [],
+    conditions: Array.isArray(obj.conditions) ? obj.conditions : [],
     transitions: Array.isArray(obj.transitions) ? obj.transitions : [],
     layout: obj.layout || undefined,
     metadata: obj.metadata || undefined,
@@ -88,6 +93,8 @@ export async function listDecisionFlows(): Promise<DecisionFlowSummary[]> {
     nodeCount: countMap[String(flow._id)] || 0,
     updatedAt: flow.updatedAt?.toISOString?.() || new Date().toISOString(),
     createdAt: flow.createdAt?.toISOString?.() || new Date().toISOString(),
+    entryMode: flow.entryMode || 'parallel',
+    isMain: Boolean(flow.isMain),
   }))
 }
 
@@ -154,6 +161,8 @@ function serializeRuntimeState(node: DecisionNodeDocument): RuntimeDecisionState
   return {
     role: obj.role as any,
     phase: obj.phase,
+    name: obj.title || undefined,
+    summary: obj.summary || undefined,
     say_tpl: obj.sayTemplate || undefined,
     utterance_tpl: obj.utteranceTemplate || undefined,
     else_say_tpl: obj.elseSayTemplate || undefined,
@@ -170,25 +179,26 @@ function serializeRuntimeState(node: DecisionNodeDocument): RuntimeDecisionState
     frequency: obj.frequency || undefined,
     frequencyName: obj.frequencyName || undefined,
     auto_transitions: toRuntimeAutoTransitions(transitions),
+    triggers: Array.isArray(obj.triggers) ? obj.triggers : undefined,
+    conditions: Array.isArray(obj.conditions) ? obj.conditions : undefined,
     metadata: obj.metadata || undefined,
   }
 }
 
-export async function buildRuntimeDecisionTree(slug: string): Promise<RuntimeDecisionTree> {
-  const flowDoc = await DecisionFlow.findOne({ slug })
-  if (!flowDoc) {
-    throw createError({ statusCode: 404, statusMessage: 'Decision flow not found' })
-  }
-
-  const nodes = await DecisionNode.find({ flow: flowDoc._id })
+async function buildRuntimeTreeForDoc(
+  flowDoc: DecisionFlowDocument,
+  nodeDocs?: DecisionNodeDocument[]
+): Promise<RuntimeDecisionTree> {
+  const nodes = nodeDocs ?? (await DecisionNode.find({ flow: flowDoc._id }))
   const states = nodes.reduce<Record<string, RuntimeDecisionState>>((acc, node) => {
     acc[node.stateId] = serializeRuntimeState(node)
     return acc
   }, {})
 
   return {
+    slug: flowDoc.slug,
     schema_version: flowDoc.schemaVersion || '1.0',
-    name: flowDoc.slug,
+    name: flowDoc.name || flowDoc.slug,
     description: flowDoc.description || undefined,
     start_state: flowDoc.startState,
     end_states: Array.isArray(flowDoc.endStates) ? flowDoc.endStates : [],
@@ -199,5 +209,56 @@ export async function buildRuntimeDecisionTree(slug: string): Promise<RuntimeDec
     roles: Array.isArray(flowDoc.roles) ? flowDoc.roles : [],
     phases: Array.isArray(flowDoc.phases) ? flowDoc.phases : [],
     states,
+    entry_mode: flowDoc.isMain ? 'main' : flowDoc.entryMode || 'parallel',
+  }
+}
+
+export async function buildRuntimeDecisionTree(slug: string): Promise<RuntimeDecisionTree> {
+  const flowDoc = await DecisionFlow.findOne({ slug })
+  if (!flowDoc) {
+    throw createError({ statusCode: 404, statusMessage: 'Decision flow not found' })
+  }
+
+  return buildRuntimeTreeForDoc(flowDoc)
+}
+
+export async function buildRuntimeDecisionSystem(): Promise<RuntimeDecisionSystem> {
+  const flowDocs = await DecisionFlow.find().sort({ updatedAt: -1 })
+  if (!flowDocs.length) {
+    throw createError({ statusCode: 404, statusMessage: 'No decision flows available' })
+  }
+
+  const flowIds = flowDocs.map((doc) => doc._id)
+
+  const nodeDocs = await DecisionNode.find({ flow: { $in: flowIds } })
+  const groupedNodes = nodeDocs.reduce<Record<string, DecisionNodeDocument[]>>((acc, node) => {
+    const key = String(node.flow)
+    if (!acc[key]) {
+      acc[key] = []
+    }
+    acc[key].push(node)
+    return acc
+  }, {})
+
+  const runtimeTrees: RuntimeDecisionTree[] = []
+  for (const doc of flowDocs) {
+    const nodes = groupedNodes[String(doc._id)] || []
+    runtimeTrees.push(await buildRuntimeTreeForDoc(doc, nodes))
+  }
+
+  const flows = runtimeTrees.reduce<Record<string, RuntimeDecisionTree>>((acc, tree) => {
+    acc[tree.slug] = tree
+    return acc
+  }, {})
+
+  const order = runtimeTrees.map((tree) => tree.slug)
+  const preferredMain = flowDocs.find((doc) => doc.isMain)?.slug
+  const fallbackMain = flowDocs.find((doc) => doc.slug === 'icao_atc_decision_tree')?.slug
+  const main = preferredMain || fallbackMain || order[0]
+
+  return {
+    main,
+    order,
+    flows,
   }
 }

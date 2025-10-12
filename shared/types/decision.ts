@@ -33,6 +33,35 @@ export interface DecisionNodeAutoTrigger {
   delayMs?: number
 }
 
+export type DecisionNodeTriggerType = 'auto_time' | 'auto_variable' | 'regex' | 'none'
+
+export interface DecisionNodeTrigger {
+  id: string
+  type: DecisionNodeTriggerType
+  order?: number
+  delaySeconds?: number
+  variable?: string
+  operator?: DecisionComparisonOperator
+  value?: number | string | boolean
+  pattern?: string
+  patternFlags?: string
+  description?: string
+}
+
+export type DecisionNodeConditionType = 'variable_value' | 'regex' | 'regex_not'
+
+export interface DecisionNodeCondition {
+  id: string
+  type: DecisionNodeConditionType
+  order?: number
+  variable?: string
+  operator?: DecisionComparisonOperator
+  value?: number | string | boolean
+  pattern?: string
+  patternFlags?: string
+  description?: string
+}
+
 export interface DecisionTransitionMetadata {
   color?: string
   icon?: string
@@ -97,6 +126,8 @@ export interface DecisionNodeMetadata {
   complexity?: 'low' | 'medium' | 'high'
 }
 
+export type DecisionFlowEntryMode = 'parallel' | 'linear'
+
 export interface DecisionNodeModel {
   stateId: string
   title?: string
@@ -114,6 +145,8 @@ export interface DecisionNodeModel {
   trigger?: string
   frequency?: string
   frequencyName?: string
+  triggers?: DecisionNodeTrigger[]
+  conditions?: DecisionNodeCondition[]
   transitions: DecisionNodeTransition[]
   layout?: DecisionNodeLayout
   metadata?: DecisionNodeMetadata
@@ -166,6 +199,8 @@ export interface DecisionFlowModel {
   createdAt: string
   updatedAt: string
   nodeCount?: number
+  entryMode?: DecisionFlowEntryMode
+  isMain?: boolean
 }
 
 export interface RuntimeDecisionAutoTransition {
@@ -182,6 +217,8 @@ export interface RuntimeDecisionAutoTransition {
 export interface RuntimeDecisionState {
   role: DecisionNodeRole
   phase: string
+  name?: string
+  summary?: string
   say_tpl?: string
   utterance_tpl?: string
   else_say_tpl?: string
@@ -198,10 +235,13 @@ export interface RuntimeDecisionState {
   frequency?: string
   frequencyName?: string
   auto_transitions?: RuntimeDecisionAutoTransition[]
+  triggers?: DecisionNodeTrigger[]
+  conditions?: DecisionNodeCondition[]
   metadata?: DecisionNodeMetadata
 }
 
 export interface RuntimeDecisionTree {
+  slug: string
   schema_version: string
   name: string
   description?: string
@@ -214,6 +254,13 @@ export interface RuntimeDecisionTree {
   roles: DecisionNodeRole[]
   phases: string[]
   states: Record<string, RuntimeDecisionState>
+  entry_mode?: 'main' | DecisionFlowEntryMode
+}
+
+export interface RuntimeDecisionSystem {
+  main: string
+  order: string[]
+  flows: Record<string, RuntimeDecisionTree>
 }
 
 export interface DecisionFlowSummary {
@@ -225,4 +272,6 @@ export interface DecisionFlowSummary {
   nodeCount: number
   updatedAt: string
   createdAt: string
+  entryMode?: DecisionFlowEntryMode
+  isMain?: boolean
 }

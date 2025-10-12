@@ -1,11 +1,13 @@
 import mongoose from 'mongoose'
 import type {
   DecisionNodeAutoTrigger,
+  DecisionNodeCondition,
   DecisionNodeLayout,
   DecisionNodeLLMPlaceholder,
   DecisionNodeLLMTemplate,
   DecisionNodeMetadata,
   DecisionNodeModel,
+  DecisionNodeTrigger,
   DecisionNodeTransition,
 } from '~~/shared/types/decision'
 
@@ -88,6 +90,37 @@ const autoTriggerSchema = new mongoose.Schema<DecisionNodeAutoTrigger>(
   { _id: false }
 )
 
+const triggerSchema = new mongoose.Schema<DecisionNodeTrigger>(
+  {
+    id: { type: String, required: true },
+    type: { type: String, enum: ['auto_time', 'auto_variable', 'regex', 'none'], required: true },
+    order: { type: Number, default: 0 },
+    delaySeconds: { type: Number },
+    variable: { type: String },
+    operator: { type: String },
+    value: { type: mongoose.Schema.Types.Mixed },
+    pattern: { type: String },
+    patternFlags: { type: String },
+    description: { type: String },
+  },
+  { _id: false }
+)
+
+const conditionSchema = new mongoose.Schema<DecisionNodeCondition>(
+  {
+    id: { type: String, required: true },
+    type: { type: String, enum: ['variable_value', 'regex', 'regex_not'], required: true },
+    order: { type: Number, default: 0 },
+    variable: { type: String },
+    operator: { type: String },
+    value: { type: mongoose.Schema.Types.Mixed },
+    pattern: { type: String },
+    patternFlags: { type: String },
+    description: { type: String },
+  },
+  { _id: false }
+)
+
 const transitionSchema = new mongoose.Schema<DecisionNodeTransition>(
   {
     key: { type: String, required: true },
@@ -158,6 +191,8 @@ const decisionNodeSchema = new mongoose.Schema<DecisionNodeDocument>(
     trigger: { type: String },
     frequency: { type: String },
     frequencyName: { type: String },
+    triggers: { type: [triggerSchema], default: undefined },
+    conditions: { type: [conditionSchema], default: undefined },
     transitions: { type: [transitionSchema], default: () => [] },
     layout: { type: layoutSchema, default: undefined },
     metadata: { type: metadataSchema, default: undefined },

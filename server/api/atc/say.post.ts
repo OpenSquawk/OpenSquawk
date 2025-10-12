@@ -123,9 +123,15 @@ export default defineEventHandler(async (event) => {
         lessonId?: string;
         tag?: string;
         format?: AudioFmt | "smallest";
+        sessionId?: string;
     }>(event);
 
     const user = await requireUserSession(event);
+
+    const rawSessionId = typeof body?.sessionId === "string"
+        ? body.sessionId.trim()
+        : "";
+    const sessionId = rawSessionId.length ? rawSessionId : undefined;
 
     const raw = (body?.text || "").trim();
     if (!raw) throw createError({ statusCode: 400, statusMessage: "text required" });
@@ -226,6 +232,7 @@ export default defineEventHandler(async (event) => {
                 direction: "outgoing",
                 text: raw,
                 normalized,
+                sessionId,
                 metadata: {
                     level,
                     voice,
