@@ -998,6 +998,14 @@ import { useApi } from '~/composables/useApi'
 import { loadPizzicatoLite } from '../../shared/utils/pizzicatoLite'
 import type { PizzicatoLite } from '../../shared/utils/pizzicatoLite'
 import { createNoiseGenerators, getReadabilityProfile } from '../../shared/utils/radioEffects'
+import type {
+  CandidateTraceElimination,
+  CandidateTraceEntry,
+  CandidateTraceStage,
+  CandidateTraceStep,
+  DecisionCandidateTimeline,
+  LLMDecisionTrace,
+} from '../../shared/types/llm'
 
 // Core State
 const engine = useCommunicationsEngine()
@@ -1128,6 +1136,228 @@ const timelineUsedFallback = computed(() => Boolean(decisionTrace.value?.candida
 const traceAutoSelection = computed(() => decisionTrace.value?.autoSelection ?? null)
 const traceFallback = computed(() => decisionTrace.value?.fallback ?? null)
 const sessionLabel = computed(() => engineSessionId.value || flags.session_id || '-')
+
+const VALID_TRACE_STAGES: ReadonlySet<CandidateTraceStage> = new Set(
+  [
+    'regex_candidates',
+    'regex_filtered',
+    'condition_filtered',
+    'fallback_candidates',
+    'fallback_filtered',
+    'final'
+  ] as CandidateTraceStage[]
+)
+
+const cloneForTrace = <T>(value: T): T => {
+  if (value === undefined || value === null) {
+    return value
+  }
+  try {
+    return JSON.parse(JSON.stringify(value))
+  } catch (err) {
+    console.warn('Failed to clone trace payload, returning original value.', err)
+    return value
+  }
+}
+
+const isPlainObject = (value: unknown): value is Record<string, any> => {
+  return typeof value === 'object' && value !== null
+}
+
+const ensureTraceCalls = (calls: unknown): LLMDecisionTrace['calls'] => {
+  if (!Array.isArray(calls)) {
+    return []
+  }
+  return calls
+    .filter((entry): entry is Record<string, any> => isPlainObject(entry))
+    .map((entry) => cloneForTrace(entry))
+}
+
+const normalizeTraceFallback = (raw: unknown): LLMDecisionTrace['fallback'] | undefined => {
+  if (!isPlainObject(raw)) {
+    return undefined
+  }
+  const fallback: LLMDecisionTrace['fallback'] = {
+    used: Boolean(raw.used),
+  }
+  if (typeof raw.reason === 'string' && raw.reason.trim().length) {
+    fallback.reason = raw.reason
+  }
+  if (typeof raw.selected === 'string' && raw.selected.trim().length) {
+    fallback.selected = raw.selected
+  }
+  return fallback
+}
+
+const normalizeTraceAutoSelection = (
+  raw: unknown
+): NonNullable<LLMDecisionTrace['autoSelection']> | undefined => {
+  if (!isPlainObject(raw)) {
+    return undefined
+  }
+  const id = typeof raw.id === 'string' && raw.id.trim().length ? raw.id : undefined
+  if (!id) {
+    return undefined
+  }
+  const flow = typeof raw.flow === 'string' && raw.flow.trim().length ? raw.flow : 'current'
+  const autoSelection: NonNullable<LLMDecisionTrace['autoSelection']> = { id, flow }
+  if (typeof raw.reason === 'string' && raw.reason.trim().length) {
+    autoSelection.reason = raw.reason
+  }
+  return autoSelection
+}
+
+const normalizeTimelineCandidate = (raw: unknown): CandidateTraceEntry | null => {
+  if (!isPlainObject(raw)) {
+    return null
+  }
+  const id = typeof raw.id === 'string' && raw.id.trim().length ? raw.id : undefined
+  if (!id) {
+    return null
+  }
+  const flow = typeof raw.flow === 'string' && raw.flow.trim().length
+    ? raw.flow
+    : typeof raw.flow?.slug === 'string'
+      ? raw.flow.slug
+      : 'current'
+  const candidate: CandidateTraceEntry = {
+    id,
+    flow,
+  }
+  if (typeof raw.name === 'string') {
+    candidate.name = raw.name
+  }
+  if (typeof raw.summary === 'string') {
+    candidate.summary = raw.summary
+  }
+  if (typeof raw.role === 'string') {
+    candidate.role = raw.role
+  }
+  if (Array.isArray(raw.triggers)) {
+    candidate.triggers = cloneForTrace(raw.triggers)
+  }
+  if (Array.isArray(raw.conditions)) {
+    candidate.conditions = cloneForTrace(raw.conditions)
+  }
+  return candidate
+}
+
+const normalizeTimelineElimination = (raw: unknown): CandidateTraceElimination | null => {
+  if (!isPlainObject(raw)) {
+    return null
+  }
+  const candidate = normalizeTimelineCandidate(raw.candidate)
+  if (!candidate) {
+    return null
+  }
+  const kind: CandidateTraceElimination['kind'] = raw.kind === 'regex' ? 'regex' : 'condition'
+  const reason = typeof raw.reason === 'string' && raw.reason.trim().length ? raw.reason : ''
+  const elimination: CandidateTraceElimination = {
+    candidate,
+    kind,
+    reason,
+  }
+  if (isPlainObject(raw.context)) {
+    elimination.context = cloneForTrace(raw.context)
+  }
+  return elimination
+}
+
+const normalizeTimelineStep = (raw: unknown): CandidateTraceStep | null => {
+  if (!isPlainObject(raw)) {
+    return null
+  }
+  const stageCandidate = typeof raw.stage === 'string' && VALID_TRACE_STAGES.has(raw.stage as CandidateTraceStage)
+    ? (raw.stage as CandidateTraceStage)
+    : 'final'
+  const label = typeof raw.label === 'string' && raw.label.trim().length ? raw.label : stageCandidate
+  const candidates = Array.isArray(raw.candidates)
+    ? raw.candidates
+        .map((candidate) => normalizeTimelineCandidate(candidate))
+        .filter((candidate): candidate is CandidateTraceEntry => Boolean(candidate))
+    : []
+  const eliminated = Array.isArray(raw.eliminated)
+    ? raw.eliminated
+        .map((entry) => normalizeTimelineElimination(entry))
+        .filter((entry): entry is CandidateTraceElimination => Boolean(entry))
+    : []
+  const note = typeof raw.note === 'string' && raw.note.trim().length ? raw.note : undefined
+  const step: CandidateTraceStep = {
+    stage: stageCandidate,
+    label,
+    candidates,
+  }
+  if (eliminated.length) {
+    step.eliminated = eliminated
+  }
+  if (note) {
+    step.note = note
+  }
+  return step
+}
+
+const normalizeCandidateTimeline = (raw: unknown): DecisionCandidateTimeline | undefined => {
+  if (!isPlainObject(raw)) {
+    return undefined
+  }
+  const steps = Array.isArray(raw.steps)
+    ? raw.steps
+        .map((step) => normalizeTimelineStep(step))
+        .filter((step): step is CandidateTraceStep => Boolean(step))
+    : []
+  const timeline: DecisionCandidateTimeline = { steps }
+  if ('fallbackUsed' in raw) {
+    timeline.fallbackUsed = Boolean((raw as any).fallbackUsed)
+  } else if ('fallback_used' in raw) {
+    timeline.fallbackUsed = Boolean((raw as any).fallback_used)
+  }
+  const autoSelected = normalizeTimelineCandidate((raw as any).autoSelected ?? (raw as any).auto_selected)
+  if (autoSelected !== null && autoSelected !== undefined) {
+    timeline.autoSelected = autoSelected
+  }
+  return timeline
+}
+
+const normalizeDecisionTraceResult = (result: any): LLMDecisionTrace | null => {
+  const traceSource = isPlainObject(result?.trace) ? result.trace : undefined
+  const fallbackFromTrace = normalizeTraceFallback(traceSource?.fallback)
+  const timelineFromTrace = normalizeCandidateTimeline(traceSource?.candidateTimeline ?? traceSource?.timeline)
+  const autoSelectionFromTrace = normalizeTraceAutoSelection(traceSource?.autoSelection ?? traceSource?.auto_selection)
+
+  const baseTrace: LLMDecisionTrace | null = traceSource
+    ? {
+        calls: ensureTraceCalls(traceSource.calls),
+        ...(fallbackFromTrace ? { fallback: fallbackFromTrace } : {}),
+        ...(timelineFromTrace ? { candidateTimeline: timelineFromTrace } : {}),
+        ...(autoSelectionFromTrace ? { autoSelection: autoSelectionFromTrace } : {}),
+      }
+    : null
+
+  const candidateTimeline = timelineFromTrace
+    ?? normalizeCandidateTimeline(result?.candidateTimeline ?? result?.candidate_timeline ?? result?.timeline)
+  const autoSelection = autoSelectionFromTrace
+    ?? normalizeTraceAutoSelection(result?.autoSelection ?? result?.auto_selection)
+  const fallback = fallbackFromTrace
+    ?? normalizeTraceFallback(result?.fallback ?? result?.fallbackInfo ?? result?.fallback_info)
+
+  if (!baseTrace && !candidateTimeline && !autoSelection && !fallback) {
+    return null
+  }
+
+  const trace: LLMDecisionTrace = baseTrace ?? { calls: [] }
+
+  if (candidateTimeline && !trace.candidateTimeline) {
+    trace.candidateTimeline = candidateTimeline
+  }
+  if (autoSelection && !trace.autoSelection) {
+    trace.autoSelection = autoSelection
+  }
+  if (fallback && !trace.fallback) {
+    trace.fallback = fallback
+  }
+
+  return trace
+}
 
 function describeElimination(entry: any): string {
   if (!entry || typeof entry !== 'object') {
@@ -1705,9 +1935,23 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   const ctx = buildLLMContext(transcript)
 
   try {
-    const { decision, trace } = await api.post('/api/llm/decide', ctx)
+    const result = await api.post('/api/llm/decide', ctx)
+    const decision =
+      result?.decision && typeof result.decision === 'object'
+        ? result.decision
+        : (result && typeof result === 'object' && 'next_state' in result)
+          ? result
+          : null
 
-    applyLLMDecision(decision, trace)
+    if (!decision) {
+      console.error('LLM decision response had unexpected shape:', result)
+      setLastTransmission(`${prefix}: ${transcript} (invalid decision response)`)
+      return
+    }
+
+    const normalizedTrace = normalizeDecisionTraceResult(result)
+
+    applyLLMDecision(decision, normalizedTrace ?? null)
 
     if (decision.controller_say_tpl && !decision.radio_check) {
       scheduleControllerSpeech(decision.controller_say_tpl)
@@ -2188,14 +2432,6 @@ const playPTTBeep = (start: boolean) => {
     oscillator.stop(audioContext.currentTime + 0.1)
   } catch (err) {
     // Audio context may not be available
-  }
-}
-
-const cloneForTrace = <T>(value: T): T => {
-  try {
-    return JSON.parse(JSON.stringify(value))
-  } catch (_err) {
-    return value
   }
 }
 
