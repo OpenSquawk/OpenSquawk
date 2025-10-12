@@ -1,7 +1,17 @@
 // server/utils/openai.ts
 import OpenAI from 'openai'
 import {spellIcaoDigits, toIcaoPhonetic} from '../../shared/utils/radioSpeech'
-import type {LLMDecision, LLMDecisionInput} from '../../shared/types/llm'
+import type {
+    CandidateTraceEntry,
+    CandidateTraceStep,
+    DecisionCandidateTimeline,
+    FlowActivationMode,
+    LLMDecisionInput,
+    LLMDecisionResult,
+    LLMDecisionTrace,
+} from '../../shared/types/llm'
+import type { DecisionNodeCondition, DecisionNodeTrigger, RuntimeDecisionState, RuntimeDecisionSystem } from '../../shared/types/decision'
+import { buildRuntimeDecisionSystem } from '../services/decisionFlowService'
 import {getServerRuntimeConfig} from './runtimeConfig'
 
 let openaiClient: OpenAI | null = null
@@ -62,27 +72,6 @@ export async function decide(system: string, user: string): Promise<string> {
     return r.choices?.[0]?.message?.content?.trim() || ''
 }
 
-export interface LLMDecisionTraceCall {
-    stage: 'readback-check' | 'decision'
-    request: Record<string, any>
-    response?: any
-    rawResponseText?: string
-    error?: string
-}
-
-export interface LLMDecisionTrace {
-    calls: LLMDecisionTraceCall[]
-    fallback?: {
-        used: boolean
-        reason?: string
-        selected?: string
-    }
-}
-
-export interface LLMDecisionResult {
-    decision: LLMDecision
-    trace?: LLMDecisionTrace
-}
 
 type ReadbackStatus = 'ok' | 'missing' | 'incorrect' | 'uncertain'
 
@@ -198,6 +187,562 @@ function pickTransition(
 
 function fallbackNextState(input: LLMDecisionInput): string {
     return input.candidates[0]?.id || input.state_id || 'GEN_NO_REPLY'
+}
+
+interface IndexedStateEntry {
+    flow: string
+    state: RuntimeDecisionState
+}
+
+interface DecisionCandidate {
+    id: string
+    flow: string
+    state: RuntimeDecisionState
+    triggers: DecisionNodeTrigger[]
+    regexTriggers: DecisionNodeTrigger[]
+    noneTriggers: DecisionNodeTrigger[]
+}
+
+interface PreparedCandidateResult {
+    finalCandidates: DecisionCandidate[]
+    candidateFlowMap: Map<string, string>
+    candidateIndex: Map<string, DecisionCandidate>
+    finalCandidateIndex: Map<string, DecisionCandidate>
+    activeFlowSlug: string
+    flowEntryModes: Map<string, FlowActivationMode>
+    timeline: DecisionCandidateTimeline
+    autoSelected?: DecisionCandidate | null
+}
+
+const RUNTIME_CACHE_TTL_MS = 5_000
+let runtimeSystemCache: { system: RuntimeDecisionSystem; index: Map<string, IndexedStateEntry>; timestamp: number } | null = null
+
+function buildRuntimeIndex(system: RuntimeDecisionSystem): Map<string, IndexedStateEntry> {
+    const index = new Map<string, IndexedStateEntry>()
+    for (const [flowSlug, tree] of Object.entries(system.flows || {})) {
+        const states = tree?.states || {}
+        for (const [stateId, state] of Object.entries(states)) {
+            index.set(stateId, { flow: flowSlug, state })
+        }
+    }
+    return index
+}
+
+async function getRuntimeSystemIndex(): Promise<{ system: RuntimeDecisionSystem; index: Map<string, IndexedStateEntry> }> {
+    const now = Date.now()
+    if (!runtimeSystemCache || now - runtimeSystemCache.timestamp > RUNTIME_CACHE_TTL_MS) {
+        const system = await buildRuntimeDecisionSystem()
+        runtimeSystemCache = {
+            system,
+            index: buildRuntimeIndex(system),
+            timestamp: now,
+        }
+    }
+    return { system: runtimeSystemCache.system, index: runtimeSystemCache.index }
+}
+
+function evaluateRegexPattern(pattern: string | undefined, flags: string | undefined, value: string): boolean {
+    const source = pattern?.trim()
+    if (!source) {
+        return false
+    }
+    const normalizedFlags = flags && flags.trim().length ? flags : 'i'
+    try {
+        const regex = new RegExp(source, normalizedFlags)
+        return regex.test(value)
+    } catch {
+        return false
+    }
+}
+
+function analyzeTriggers(triggers: DecisionNodeTrigger[] | undefined, utterance: string) {
+    if (!Array.isArray(triggers) || triggers.length === 0) {
+        return { matchesRegex: false, matchesNone: true }
+    }
+
+    let matchesRegex = false
+    let hasNone = false
+    for (const trigger of triggers) {
+        if (!trigger) continue
+        if (trigger.type === 'regex') {
+            if (evaluateRegexPattern(trigger.pattern, trigger.patternFlags, utterance)) {
+                matchesRegex = true
+            }
+        } else if (trigger.type === 'none') {
+            hasNone = true
+        }
+    }
+
+    if (!matchesRegex && !hasNone) {
+        hasNone = true
+    }
+
+    return { matchesRegex, matchesNone: hasNone }
+}
+
+function normalizeComparable(value: any): any {
+    if (typeof value === 'number') return value
+    if (typeof value === 'boolean') return value
+    if (typeof value === 'string') {
+        const trimmed = value.trim()
+        if (!trimmed.length) return ''
+        const numeric = Number(trimmed)
+        if (!Number.isNaN(numeric)) return numeric
+        if (trimmed.toLowerCase() === 'true') return true
+        if (trimmed.toLowerCase() === 'false') return false
+        return trimmed
+    }
+    return value
+}
+
+function parseComparable(raw: any): any {
+    if (typeof raw === 'number' || typeof raw === 'boolean') {
+        return raw
+    }
+    if (typeof raw === 'string') {
+        const trimmed = raw.trim()
+        if (!trimmed.length) return ''
+        const numeric = Number(trimmed)
+        if (!Number.isNaN(numeric)) return numeric
+        if (trimmed.toLowerCase() === 'true') return true
+        if (trimmed.toLowerCase() === 'false') return false
+        if (
+            (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+            (trimmed.startsWith('\'') && trimmed.endsWith('\''))
+        ) {
+            return trimmed.slice(1, -1)
+        }
+        return trimmed
+    }
+    return raw
+}
+
+function compareValuesSafe(left: any, operator: string | undefined, right: any): {
+    result: boolean
+    left: any
+    right: any
+    operator: string
+} {
+    const normalizedLeft = normalizeComparable(left)
+    const normalizedRight = normalizeComparable(parseComparable(right))
+    const op = operator || '=='
+    let result = false
+    switch (op) {
+        case '>':
+            result = typeof normalizedLeft === 'number' && typeof normalizedRight === 'number'
+                ? normalizedLeft > normalizedRight
+                : false
+            break
+        case '>=':
+            result = typeof normalizedLeft === 'number' && typeof normalizedRight === 'number'
+                ? normalizedLeft >= normalizedRight
+                : false
+            break
+        case '<':
+            result = typeof normalizedLeft === 'number' && typeof normalizedRight === 'number'
+                ? normalizedLeft < normalizedRight
+                : false
+            break
+        case '<=':
+            result = typeof normalizedLeft === 'number' && typeof normalizedRight === 'number'
+                ? normalizedLeft <= normalizedRight
+                : false
+            break
+        case '!==':
+        case '!=':
+            result = normalizedLeft !== normalizedRight
+            break
+        case '===':
+        case '==':
+        default:
+            result = normalizedLeft === normalizedRight
+            break
+    }
+    return { result, left: normalizedLeft, right: normalizedRight, operator: op }
+}
+
+function resolveContextPath(
+    path: string | undefined,
+    context: { variables: Record<string, any>; flags: Record<string, any> }
+) {
+    if (!path || typeof path !== 'string') return undefined
+    const segments = path.split('.').map(segment => segment.trim()).filter(Boolean)
+    if (!segments.length) return undefined
+
+    let current: any
+    const [first, ...rest] = segments
+    if (first === 'variables' || first === 'flags') {
+        current = (context as any)[first]
+    } else {
+        current = context.variables
+        rest.unshift(first)
+    }
+
+    for (const segment of rest) {
+        if (current == null) return undefined
+        current = current[segment]
+    }
+    return current
+}
+
+function evaluateConditionEntry(
+    condition: DecisionNodeCondition | undefined,
+    context: { variables: Record<string, any>; flags: Record<string, any> },
+    utterance: string
+): { passed: boolean; detail?: { condition: DecisionNodeCondition; actualValue?: any; expectedValue?: any; operator?: string } } {
+    if (!condition) return { passed: true }
+    switch (condition.type) {
+        case 'regex': {
+            const passed = evaluateRegexPattern(condition.pattern, condition.patternFlags, utterance)
+            return {
+                passed,
+                detail: passed ? undefined : { condition },
+            }
+        }
+        case 'regex_not': {
+            const matched = evaluateRegexPattern(condition.pattern, condition.patternFlags, utterance)
+            const passed = !matched
+            return {
+                passed,
+                detail: passed ? undefined : { condition },
+            }
+        }
+        case 'variable_value':
+        default: {
+            const left = resolveContextPath(condition.variable, context)
+            const comparison = compareValuesSafe(left, condition.operator, condition.value)
+            return {
+                passed: comparison.result,
+                detail: comparison.result
+                    ? undefined
+                    : {
+                          condition,
+                          actualValue: comparison.left,
+                          expectedValue: comparison.right,
+                          operator: comparison.operator,
+                      },
+            }
+        }
+    }
+}
+
+function evaluateConditionList(
+    conditions: DecisionNodeCondition[] | undefined,
+    context: { variables: Record<string, any>; flags: Record<string, any> },
+    utterance: string
+): { passed: boolean; failure?: { condition: DecisionNodeCondition; actualValue?: any; expectedValue?: any; operator?: string } } {
+    if (!Array.isArray(conditions) || conditions.length === 0) {
+        return { passed: true }
+    }
+    const ordered = [...conditions].sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0))
+    for (const condition of ordered) {
+        const result = evaluateConditionEntry(condition, context, utterance)
+        if (!result.passed) {
+            return {
+                passed: false,
+                failure: {
+                    condition,
+                    actualValue: result.detail?.actualValue,
+                    expectedValue: result.detail?.expectedValue,
+                    operator: result.detail?.operator,
+                },
+            }
+        }
+    }
+    return { passed: true }
+}
+
+async function prepareDecisionCandidates(
+    input: LLMDecisionInput,
+    utterance: string
+): Promise<PreparedCandidateResult> {
+    const { system, index } = await getRuntimeSystemIndex()
+
+    let activeFlowSlug = input.flow_slug && system.flows[input.flow_slug]
+        ? input.flow_slug
+        : undefined
+
+    if (!activeFlowSlug) {
+        const entry = index.get(input.state_id)
+        if (entry) {
+            activeFlowSlug = entry.flow
+        }
+    }
+
+    if (!activeFlowSlug) {
+        activeFlowSlug = system.main || Object.keys(system.flows)[0] || ''
+    }
+
+    const flowEntryModes = new Map<string, FlowActivationMode>()
+    for (const [slug, tree] of Object.entries(system.flows || {})) {
+        const mode = tree.entry_mode === 'main'
+            ? 'main'
+            : tree.entry_mode === 'linear'
+                ? 'linear'
+                : slug === system.main
+                    ? 'main'
+                    : 'parallel'
+        flowEntryModes.set(slug, mode)
+    }
+
+    const candidateMap = new Map<string, DecisionCandidate>()
+
+    const createCandidate = (id: string, flow: string | undefined, state: RuntimeDecisionState | undefined): DecisionCandidate | null => {
+        if (!id || !state) return null
+        const triggers = Array.isArray(state.triggers) ? state.triggers.filter(Boolean) : []
+        const regexTriggers = triggers.filter(trigger => trigger?.type === 'regex')
+        const noneTriggers = triggers.filter(trigger => trigger?.type === 'none')
+        return {
+            id,
+            flow: flow || activeFlowSlug,
+            state,
+            triggers,
+            regexTriggers,
+            noneTriggers,
+        }
+    }
+
+    const addCandidate = (id: string | undefined, flow: string | undefined, state: RuntimeDecisionState | undefined) => {
+        if (!id) return
+        if (candidateMap.has(id)) return
+        const candidate = createCandidate(id, flow, state)
+        if (candidate) {
+            candidateMap.set(id, candidate)
+        }
+    }
+
+    for (const raw of input.candidates || []) {
+        if (!raw?.id) continue
+        const indexed = index.get(raw.id)
+        const flow = raw.flow || indexed?.flow || activeFlowSlug
+        const state = indexed?.state ? { ...indexed.state } : raw.state
+        addCandidate(raw.id, flow, state)
+    }
+
+    for (const raw of input.candidates || []) {
+        if (!raw?.id || !raw.state) continue
+        if (!candidateMap.has(raw.id)) {
+            addCandidate(raw.id, raw.flow || activeFlowSlug, raw.state)
+        }
+    }
+
+    for (const [flowSlug, tree] of Object.entries(system.flows || {})) {
+        const startStateId = tree.start_state
+        if (!startStateId) continue
+        const indexed = index.get(startStateId)
+        const state = indexed?.state ? { ...indexed.state } : tree.states?.[startStateId]
+        addCandidate(startStateId, flowSlug, state)
+    }
+
+    const candidates = Array.from(candidateMap.values())
+    const context = { variables: input.variables || {}, flags: input.flags || {} }
+    const timelineSteps: CandidateTraceStep[] = []
+    let fallbackUsed = false
+
+    const toTraceEntry = (candidate: DecisionCandidate): CandidateTraceEntry => ({
+        id: candidate.id,
+        flow: candidate.flow,
+        name: candidate.state?.name,
+        summary: candidate.state?.summary,
+        role: candidate.state?.role,
+        triggers: candidate.triggers,
+        conditions: candidate.state?.conditions || [],
+    })
+
+    const recordStep = (
+        stage: CandidateTraceStage,
+        label: string,
+        stepCandidates: DecisionCandidate[],
+        eliminated: CandidateTraceElimination[] = [],
+        note?: string
+    ) => {
+        timelineSteps.push({
+            stage,
+            label,
+            candidates: stepCandidates.map(toTraceEntry),
+            eliminated: eliminated.length ? eliminated : undefined,
+            note,
+        })
+    }
+
+    const regexCandidates = candidates.filter(candidate => candidate.regexTriggers.length > 0)
+    let workingSet: DecisionCandidate[] = []
+
+    if (regexCandidates.length > 0) {
+        recordStep('regex_candidates', 'Regex candidates', regexCandidates)
+
+        const survivors: DecisionCandidate[] = []
+        const eliminated: CandidateTraceElimination[] = []
+
+        for (const candidate of regexCandidates) {
+            const matched = candidate.regexTriggers.some(trigger =>
+                evaluateRegexPattern(trigger.pattern, trigger.patternFlags, utterance)
+            )
+            if (matched) {
+                survivors.push(candidate)
+            } else {
+                eliminated.push({
+                    candidate: toTraceEntry(candidate),
+                    kind: 'regex',
+                    reason: 'No regex trigger matched the pilot utterance.',
+                    context: {
+                        patterns: candidate.regexTriggers.map(trigger => ({
+                            id: trigger.id,
+                            pattern: trigger.pattern,
+                            flags: trigger.patternFlags,
+                        })),
+                        transcript: utterance,
+                    },
+                })
+            }
+        }
+
+        recordStep(
+            'regex_filtered',
+            'Regex evaluation',
+            survivors,
+            eliminated,
+            survivors.length ? undefined : 'No regex triggers matched the pilot transmission.'
+        )
+
+        workingSet = survivors
+    } else {
+        recordStep('regex_candidates', 'Regex candidates', [], [], 'No regex-triggered transitions available.')
+        workingSet = []
+    }
+
+    let finalCandidates: DecisionCandidate[] = []
+
+    if (workingSet.length > 0) {
+        const survivors: DecisionCandidate[] = []
+        const eliminated: CandidateTraceElimination[] = []
+
+        for (const candidate of workingSet) {
+            const evaluation = evaluateConditionList(candidate.state?.conditions, context, utterance)
+            if (evaluation.passed) {
+                survivors.push(candidate)
+            } else if (evaluation.failure) {
+                eliminated.push({
+                    candidate: toTraceEntry(candidate),
+                    kind: 'condition',
+                    reason: 'Node conditions were not satisfied.',
+                    context: {
+                        condition: evaluation.failure.condition,
+                        actualValue: evaluation.failure.actualValue,
+                        expectedValue: evaluation.failure.expectedValue,
+                        operator: evaluation.failure.operator,
+                    },
+                })
+            } else {
+                eliminated.push({
+                    candidate: toTraceEntry(candidate),
+                    kind: 'condition',
+                    reason: 'Node conditions were not satisfied.',
+                })
+            }
+        }
+
+        recordStep(
+            'condition_filtered',
+            'Condition evaluation',
+            survivors,
+            eliminated,
+            survivors.length ? undefined : 'All regex candidates failed their conditions.'
+        )
+
+        finalCandidates = survivors
+    }
+
+    if (finalCandidates.length === 0) {
+        fallbackUsed = true
+        const fallbackCandidates = candidates.filter(candidate =>
+            candidate.noneTriggers.length > 0 || (candidate.triggers.length === 0 && candidate.regexTriggers.length === 0)
+        )
+
+        if (fallbackCandidates.length > 0) {
+            recordStep('fallback_candidates', 'Fallback candidates', fallbackCandidates)
+
+            const survivors: DecisionCandidate[] = []
+            const eliminated: CandidateTraceElimination[] = []
+
+            for (const candidate of fallbackCandidates) {
+                const evaluation = evaluateConditionList(candidate.state?.conditions, context, utterance)
+                if (evaluation.passed) {
+                    survivors.push(candidate)
+                } else if (evaluation.failure) {
+                    eliminated.push({
+                        candidate: toTraceEntry(candidate),
+                        kind: 'condition',
+                        reason: 'Node conditions were not satisfied.',
+                        context: {
+                            condition: evaluation.failure.condition,
+                            actualValue: evaluation.failure.actualValue,
+                            expectedValue: evaluation.failure.expectedValue,
+                            operator: evaluation.failure.operator,
+                        },
+                    })
+                } else {
+                    eliminated.push({
+                        candidate: toTraceEntry(candidate),
+                        kind: 'condition',
+                        reason: 'Node conditions were not satisfied.',
+                    })
+                }
+            }
+
+            recordStep(
+                'fallback_filtered',
+                'Fallback evaluation',
+                survivors,
+                eliminated,
+                survivors.length ? undefined : 'No fallback candidates satisfied their conditions.'
+            )
+
+            finalCandidates = survivors
+        } else {
+            recordStep('fallback_candidates', 'Fallback candidates', [], [], 'No fallback triggers defined.')
+            recordStep('fallback_filtered', 'Fallback evaluation', [], [], 'No fallback candidates available.')
+        }
+    }
+
+    recordStep(
+        'final',
+        'Final candidates',
+        finalCandidates,
+        [],
+        finalCandidates.length ? undefined : 'No transitions remain after evaluation.'
+    )
+
+    const autoSelected = finalCandidates.length === 1 ? finalCandidates[0] : null
+
+    const candidateFlowMap = new Map<string, string>()
+    for (const candidate of finalCandidates) {
+        if (candidate.flow) {
+            candidateFlowMap.set(candidate.id, candidate.flow)
+        }
+    }
+
+    const finalCandidateIndex = new Map<string, DecisionCandidate>()
+    for (const candidate of finalCandidates) {
+        finalCandidateIndex.set(candidate.id, candidate)
+    }
+
+    const timeline: DecisionCandidateTimeline = {
+        steps: timelineSteps,
+        fallbackUsed,
+        autoSelected: autoSelected ? toTraceEntry(autoSelected) : null,
+    }
+
+    return {
+        finalCandidates,
+        candidateFlowMap,
+        candidateIndex: candidateMap,
+        finalCandidateIndex,
+        activeFlowSlug,
+        flowEntryModes,
+        timeline,
+        autoSelected,
+    }
 }
 
 function resolveReadbackValue(key: string, input: LLMDecisionInput): string | null {
@@ -325,294 +870,145 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
     }
 }
 
+
 export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisionResult> {
-    const pilotUtterance = (input.pilot_utterance || '').trim()
-    const pilotText = pilotUtterance.toLowerCase()
-    const trace: LLMDecisionTrace = {calls: []}
+    const utterance = (input.pilot_utterance || '').trim()
+    const { system, index } = await getRuntimeSystemIndex()
 
-    const finalize = (decision: LLMDecision): LLMDecisionResult => {
-        if (!trace.calls.length && !trace.fallback) {
-            return {decision}
-        }
-        return {decision, trace}
-    }
+    const currentEntry = index.get(input.state_id)
+    const activeFlowSlug =
+        input.flow_slug
+        || currentEntry?.flow
+        || system.main
+        || Object.keys(system.flows || {})[0]
+        || ''
 
-    async function handleReadbackCheck(): Promise<LLMDecisionResult> {
-        const requiredKeys = READBACK_REQUIREMENTS[input.state_id] || input.state.readback_required || []
-        const expectedItems = requiredKeys.reduce<Array<{
-            key: string;
-            value: string;
-            spoken_variants: string[]
-        }>>((acc, key) => {
-            const value = resolveReadbackValue(key, input)
-            if (!value) {
-                return acc
-            }
-
-            const normalizedValue = String(value)
-            if (!normalizedValue.trim().length) {
-                return acc
-            }
-
-            acc.push({
-                key,
-                value: normalizedValue,
-                spoken_variants: buildSpokenVariants(key, normalizedValue)
-            })
-            return acc
-        }, [])
-
-        const okNext = pickTransition(input.state.ok_next, input.candidates)
-        const badNext = pickTransition(input.state.bad_next, input.candidates)
-        const defaultNext = fallbackNextState(input)
-
-        if (!expectedItems.length) {
-            return finalize({next_state: okNext ?? defaultNext})
+    const candidateMap = new Map<string, DecisionCandidate>()
+    const addCandidate = (
+        id?: string,
+        flow?: string,
+        providedState?: RuntimeDecisionState
+    ) => {
+        if (!id || candidateMap.has(id)) {
+            return
         }
 
-        const sanitizedPilot = sanitizeForQuickMatch(pilotUtterance)
-        const heuristicsOk = expectedItems.every(item => {
-            const sanitizedValue = sanitizeForQuickMatch(item.value)
-            return sanitizedValue ? sanitizedPilot.includes(sanitizedValue) : true
-        })
-
-        if (heuristicsOk && okNext) {
-            return finalize({next_state: okNext})
+        const indexed = index.get(id)
+        const state = providedState || indexed?.state
+        if (!state) {
+            return
         }
 
-        const payload = {
-            state_id: input.state_id,
-            callsign: input.variables?.callsign,
-            pilot_utterance: pilotUtterance,
-            expected_items: expectedItems,
-            controller_instruction: input.state.say_tpl ?? null
-        }
+        const triggers = Array.isArray(state.triggers) ? state.triggers.filter(Boolean) : []
+        const regexTriggers = triggers.filter(trigger => trigger?.type === 'regex')
+        const noneTriggers = triggers.filter(trigger => trigger?.type === 'none')
+        const flowSlug = flow || indexed?.flow || activeFlowSlug
 
-        const requestBody = {
-            model: getModel(),
-            response_format: {type: 'json_schema', json_schema: READBACK_JSON_SCHEMA},
-            reasoning_effort: 'low',
-            n: 1,
-            verbosity: 'low',
-            messages: [
-                {
-                    role: 'system',
-                    content: [
-                        'You are an aviation clearance readback checker.',
-                        'Evaluate if the pilot_utterance correctly repeats every item in expected_items.',
-                        'Return JSON with keys: status (ok, missing, incorrect, uncertain), missing (array), incorrect (array), notes (optional).',
-                        'Treat reasonable phonetic variations as correct.'
-                    ].join(' ')
-                },
-                {role: 'user', content: JSON.stringify(payload)}
-            ]
-        }
-
-        const callTrace: LLMDecisionTraceCall = {
-            stage: 'readback-check',
-            request: JSON.parse(JSON.stringify(requestBody))
-        }
-
-        try {
-            const client = ensureOpenAI()
-            const response = await client.chat.completions.create(requestBody)
-
-            const raw = response.choices?.[0]?.message?.content || '{}'
-            callTrace.response = JSON.parse(JSON.stringify(response))
-            callTrace.rawResponseText = raw
-            trace.calls.push(callTrace)
-
-            const parsed = JSON.parse(raw) as { status?: ReadbackStatus }
-            const status: ReadbackStatus = parsed.status || 'uncertain'
-
-            if (status === 'ok') {
-                return finalize({next_state: okNext ?? defaultNext})
-            }
-
-            if ((status === 'missing' || status === 'incorrect') && badNext) {
-                return finalize({next_state: badNext})
-            }
-
-            if (status === 'uncertain' && okNext) {
-                return finalize({next_state: okNext})
-            }
-
-            return finalize({next_state: badNext ?? defaultNext})
-        } catch (err) {
-            callTrace.error = err instanceof Error ? err.message : String(err)
-            trace.calls.push(callTrace)
-            if (!trace.fallback) {
-                trace.fallback = {used: true, reason: callTrace.error, selected: 'readback-check-fallback'}
-            }
-            console.warn('[ATC] Readback check failed, using fallback:', err)
-            return finalize({next_state: okNext ?? defaultNext})
-        }
-    }
-
-    if (input.state?.auto === 'check_readback') {
-        return await handleReadbackCheck()
-    }
-
-    if (!pilotUtterance) {
-        const interruptCandidate = input.candidates.find(c => c.id.startsWith('INT_'))
-            || input.candidates.find(c => c.state?.auto === 'monitor')
-            || input.candidates.find(c => c.state?.role === 'system')
-
-        if (interruptCandidate) {
-            return finalize({next_state: interruptCandidate.id})
-        }
-    }
-
-    // Instant detection without the LLM for common cases
-    if (pilotText.includes('radio check') || pilotText.includes('signal test') ||
-        (pilotText.includes('read') && (pilotText.includes('check') || pilotText.includes('you')))) {
-        return finalize({
-            next_state: input.state_id,
-            radio_check: true,
-            controller_say_tpl: `${input.variables.callsign}, read you five by five.`
+        candidateMap.set(id, {
+            id,
+            flow: flowSlug,
+            state,
+            triggers,
+            regexTriggers,
+            noneTriggers,
         })
     }
 
-    // Emergency ohne LLM
-    if (pilotText.startsWith('mayday') && input.flags.in_air) {
-        return finalize({next_state: 'INT_MAYDAY'})
-    }
-    if (pilotText.startsWith('pan pan') && input.flags.in_air) {
-        return finalize({next_state: 'INT_PANPAN'})
+    if (currentEntry?.state) {
+        const transitions = [
+            ...(currentEntry.state.next || []),
+            ...(currentEntry.state.ok_next || []),
+            ...(currentEntry.state.bad_next || []),
+            ...(currentEntry.state.timer_next || []),
+        ]
+        for (const transition of transitions) {
+            if (!transition?.to) continue
+            addCandidate(transition.to, currentEntry.flow)
+        }
     }
 
-    const optimizedInput = optimizeInputForLLM(input)
+    for (const raw of input.candidates || []) {
+        if (!raw?.id) continue
+        addCandidate(raw.id, raw.flow, raw.state)
+    }
 
-    // Check whether the next states require ATC responses
-    const atcCandidates = input.candidates.filter(c =>
-        c.state.role === 'atc' || c.state.say_tpl || c.id.startsWith('INT_')
+    for (const [flowSlug, tree] of Object.entries(system.flows || {})) {
+        if (flowSlug === activeFlowSlug) continue
+        const start = tree?.start_state
+        if (!start) continue
+        const startState = tree?.states?.[start]
+        addCandidate(start, flowSlug, startState)
+    }
+
+    let candidates = Array.from(candidateMap.values())
+    if (candidates.length === 0) {
+        return { decision: { next_state: input.state_id } }
+    }
+
+    candidates = candidates.filter(candidate =>
+        !candidate.triggers.some(trigger => trigger?.type === 'auto_time' || trigger?.type === 'auto_variable')
     )
 
-    // If no ATC states are available, perform a simple transition without a response
-    if (atcCandidates.length === 0 && input.candidates.length > 0) {
-        return finalize({next_state: input.candidates[0].id})
+    const regexCandidates = candidates.filter(candidate => candidate.regexTriggers.length > 0)
+    const regexMatches = regexCandidates.filter(candidate =>
+        candidate.regexTriggers.some(trigger => evaluateRegexPattern(trigger.pattern, trigger.patternFlags, utterance))
+    )
+
+    let trace: LLMDecisionTrace | undefined
+    if (regexMatches.length > 0) {
+        trace = { calls: [] }
     }
 
-    // Compact yet informative prompt — includes variable info for intelligent responses
-    const system = [
-        'You are an ATC state router. Return strict JSON.',
-        'Keys: next_state, controller_say_tpl (optional), off_schema (optional), intent (optional).',
-        '',
-        'CLASSIFY INTENT: Determine if pilot_utterance is PILOT_REQUEST (pilot initiates a call or request), PILOT_READBACK (acknowledging prior ATC instruction), SYS_INTERRUPT (system-driven transition, no pilot input), or OTHER.',
-        'Use decision_hints.expecting_pilot_call, state_summary.role and candidates[].requires_atc_reply to guide the choice.',
-        '',
-        'ROUTING: Choose next_state from candidates[].id that best fits the intent and keeps the flow consistent with state_summary.next/ok_next/bad_next.',
-        'If unsure, prefer GEN_NO_REPLY (set off_schema=true) or the first logical candidate.',
-        '',
-        'ATC RESPONSES: Only include controller_say_tpl when the chosen candidate requires an ATC reply (requires_atc_reply=true), has template variables, or the pilot is off schema.',
-        'Never speak for pilot states. Always include {callsign} in ATC responses and prefer provided variables such as {runway}, {squawk}, {dest}.',
-        '',
-        `Available variables: {${optimizedInput.available_variables.join('}, {')}}`,
-        `Common candidate variables: {${optimizedInput.candidate_variables.join('}, {')}}`,
-        '',
-        'INTERRUPTS: If an interrupt state (id starts with INT_) best matches the intent, select it and answer accordingly.',
-        'Do not invent state ids. If nothing fits, respond with next_state "GEN_NO_REPLY" and off_schema=true.'
-    ].join(' ')
-
-    // Update optimized input to indicate which candidates need ATC responses
-    optimizedInput.atc_candidates = atcCandidates.map(c => c.id)
-
-    const user = JSON.stringify(optimizedInput)
-
-    const body = {
-        model: getModel(),
-        response_format: {type: 'json_object'},
-        messages: [
-            {role: 'system', content: system},
-            {role: 'user', content: user}
-        ]
+    let workingSet = regexMatches
+    if (workingSet.length === 0) {
+        workingSet = candidates.filter(candidate => candidate.regexTriggers.length === 0)
     }
 
-    const callTrace: LLMDecisionTraceCall = {
-        stage: 'decision',
-        request: JSON.parse(JSON.stringify(body))
+    if (workingSet.length === 0) {
+        return { decision: { next_state: input.state_id } }
     }
 
-    try {
-        const client = ensureOpenAI()
+    const context = { variables: input.variables || {}, flags: input.flags || {} }
+    const survivors = workingSet.filter(candidate =>
+        evaluateConditionList(candidate.state?.conditions, context, utterance).passed
+    )
 
-        console.log("calling LLM with body:", body)
+    if (survivors.length === 1) {
+        const [winner] = survivors
 
-        const r = await client.chat.completions.create(body)
-
-        const raw = r.choices?.[0]?.message?.content || '{}'
-        callTrace.response = JSON.parse(JSON.stringify(r))
-        callTrace.rawResponseText = raw
-        trace.calls.push(callTrace)
-
-        const parsed = JSON.parse(raw)
-
-        // Minimal validation
-        if (!parsed.next_state || typeof parsed.next_state !== 'string') {
-            throw new Error('Invalid next_state')
+        if (regexMatches.length > 0 && winner.regexTriggers.length > 0) {
+            if (!trace) {
+                trace = { calls: [] }
+            }
+            const patterns = winner.regexTriggers
+                .map(trigger => trigger?.pattern ? `/${trigger.pattern}/${trigger.patternFlags || 'i'}` : '')
+                .filter(pattern => Boolean(pattern))
+            trace.autoSelection = {
+                id: winner.id,
+                flow: winner.flow,
+                reason: patterns.length
+                    ? `Regex trigger matched ${patterns.join(', ')}`
+                    : 'Regex trigger matched pilot utterance'
+            }
+            return { decision: { next_state: winner.id }, trace }
         }
 
-        console.log("LLM decision:", parsed)
-
-        return finalize(parsed as LLMDecision)
-
-    } catch (e) {
-        const errorMessage = e instanceof Error ? e.message : String(e)
-        callTrace.error = errorMessage
-        trace.calls.push(callTrace)
-        const fallbackInfo = {used: true, reason: errorMessage} as NonNullable<LLMDecisionTrace['fallback']>
-        trace.fallback = fallbackInfo
-        console.error('LLM JSON parse error, using smart fallback:', e)
-
-        // Smart keyword-based fallback - mit Template-Variablen
-        const callsign = input.variables.callsign || ''
-
-        // Pilot braucht Clearance → ATC muss antworten
-        if (pilotText.includes('clearance') || pilotText.includes('request clearance')) {
-            fallbackInfo.selected = 'clearance'
-            return finalize({
-                next_state: 'CD_ISSUE_CLR',
-                off_schema: true,
-                controller_say_tpl: `{callsign}, cleared to {dest} via {sid} departure, runway {runway}, climb {initial_altitude_ft} feet, squawk {squawk}.`
-            })
-        }
-
-        // Pilot fragt nach Taxi → ATC muss antworten
-        if (pilotText.includes('taxi') || pilotText.includes('pushback')) {
-            fallbackInfo.selected = 'taxi'
-            return finalize({
-                next_state: 'GRD_TAXI_INSTR',
-                off_schema: true,
-                controller_say_tpl: `{callsign}, taxi to runway {runway} via {taxi_route}, hold short runway {runway}.`
-            })
-        }
-
-        // Pilot ready for takeoff → ATC muss antworten
-        if (pilotText.includes('takeoff') || pilotText.includes('ready')) {
-            fallbackInfo.selected = 'takeoff'
-            return finalize({
-                next_state: 'TWR_TAKEOFF_CLR',
-                off_schema: true,
-                controller_say_tpl: `{callsign}, wind {remarks}, runway {runway} cleared for take-off.`
-            })
-        }
-
-        // Pilot readback or acknowledgment → no ATC response required
-        if (pilotText.includes('wilco') || pilotText.includes('roger') ||
-            pilotText.includes('cleared') || pilotText.includes('copied')) {
-            fallbackInfo.selected = 'acknowledge'
-            return finalize({
-                next_state: input.candidates[0]?.id || 'GEN_NO_REPLY'
-                // Keine controller_say_tpl - Pilot hat nur acknowledged
-            })
-        }
-
-        // Generic fallback - mit Template
-        fallbackInfo.selected = 'generic'
-        return finalize({
-            next_state: 'GEN_NO_REPLY',
-            off_schema: true,
-            controller_say_tpl: `{callsign}, say again your last transmission.`
-        })
+        return { decision: { next_state: winner.id } }
     }
+
+    if (survivors.length === 0) {
+        return { decision: { next_state: input.state_id } }
+    }
+
+    const [first] = survivors
+    if (trace) {
+        trace.fallback = {
+            used: true,
+            reason: 'Multiple candidates matched after filtering; defaulting to first match.',
+            selected: first.id,
+        }
+        return { decision: { next_state: first.id }, trace }
+    }
+
+    return { decision: { next_state: first.id } }
 }
