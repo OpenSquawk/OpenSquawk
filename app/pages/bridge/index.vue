@@ -32,7 +32,7 @@
               <h2 id="bridge-notice-title" class="text-3xl font-semibold leading-tight sm:text-4xl">
                 Live ATC is still in the works
               </h2>
-              <nuxt-img src="/img/bridge/hangar_sleeping.jpeg" alt="Bridge app screenshot" style="aspect-ratio: 2.7/1;object-fit: cover" class="rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(4,8,24,0.45)]"/>
+              <NuxtImg src="/img/bridge/hangar_sleeping.jpeg" alt="Bridge app screenshot" style="aspect-ratio: 2.7/1;object-fit: cover" class="rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(4,8,24,0.45)]" format="webp" />
               <p class="text-sm text-white/75 sm:text-base">
                 We&rsquo;re actively building this part of the Bridge experience. There isn&rsquo;t a hosted version
                 yet, but we&rsquo;re lining everything up for launch in the coming weeks and months.

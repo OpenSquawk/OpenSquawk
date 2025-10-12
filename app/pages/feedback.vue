@@ -1,9 +1,10 @@
 <template>
   <div class="relative min-h-screen bg-[#050914] text-white">
-    <img
+    <NuxtImg
         src="/img/landing/feedback.jpeg"
         alt="Path through a forest"
         class="fixed inset-0 h-screen w-full object-cover object-center brightness-[0.55]"
+        format="webp"
     />
     <div class="absolute inset-0 backdrop-blur-sm"/>
     <div
