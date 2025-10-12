@@ -1175,11 +1175,7 @@ POST /api/route/taxi
             <div>
               <h4 class="mb-3 font-semibold">Resources</h4>
               <ul class="space-y-2 text-sm text-white/70">
-                <li>
-                  <NuxtLink to="#opensource" class="hover:text-cyan-300">
-                    Open-source
-                  </NuxtLink>
-                </li>
+
                 <li>
                   <NuxtLink to="#news" class="hover:text-cyan-300">News</NuxtLink>
                 </li>
