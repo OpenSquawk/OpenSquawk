@@ -1636,10 +1636,6 @@ async function sendWaitlistInvitation(entry: WaitlistEntryItem) {
   }
 }
 
-function computeLogQuery() {
-  const query: Record<string, any> = {
-    page: logPagination.page,
-    pageSize: logPagination.pageSize,
 async function fetchSessions(resetPage = false, options: { forceDetail?: boolean } = {}) {
   if (resetPage) {
     sessionPagination.page = 1
