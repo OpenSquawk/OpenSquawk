@@ -289,7 +289,7 @@
 
         <div v-if="flightPlanMode==='random'" class="plan-panel">
           <div class="plan-summary">
-            <img :src="currentBriefingArt" alt="Mission hero" class="plan-hero" />
+            <NuxtImg :src="currentBriefingArt" alt="Mission hero" class="plan-hero" />
             <div class="plan-summary-body">
               <span class="plan-tag">Auto flight</span>
               <div class="plan-callout">{{ displayCallsign(draftPlanScenario?.radioCall, draftPlanScenario) }}</div>
@@ -571,7 +571,7 @@
 
         <div v-else class="plan-panel simbrief-panel">
           <div class="simbrief-hero-card">
-            <img src="/img/learn/missions/full-flight/briefing-hero.png" alt="SimBrief import preview" class="simbrief-hero-art" />
+            <NuxtImg src="/img/learn/missions/full-flight/briefing-hero.png" alt="SimBrief import preview" class="simbrief-hero-art" format="webp" />
             <div class="simbrief-hero-overlay">
               <span class="simbrief-tag">SimBrief import</span>
               <h3 class="simbrief-hero-title">Load your airline dispatch</h3>
@@ -667,7 +667,7 @@
 
       <div v-else-if="moduleStage==='briefing' && briefingSnapshot" class="module-stage-panel mission-briefing">
         <section class="briefing-hero-banner">
-          <img :src="currentBriefingArt" alt="Mission hero" class="briefing-hero-bg" />
+          <NuxtImg :src="currentBriefingArt" alt="Mission hero" class="briefing-hero-bg" />
           <div class="briefing-hero-content">
             <div class="briefing-tag-row">
               <span class="plan-tag">Mission briefing</span>
@@ -714,7 +714,7 @@
         <div class="briefing-layout">
           <div class="briefing-main-grid">
             <div class="briefing-card">
-              <img src="/img/learn/missions/full-flight/briefing-route.png" alt="Route preview" class="briefing-card-art" />
+              <NuxtImg src="/img/learn/missions/full-flight/briefing-route.png" alt="Route preview" class="briefing-card-art" format="webp" />
               <div class="card-title">
                 <v-icon size="16">mdi-map-marker-path</v-icon>
                 Flight deck setup
@@ -726,7 +726,7 @@
               </ul>
             </div>
             <div class="briefing-card">
-              <img src="/img/learn/missions/full-flight/briefing-departure.png" alt="Departure" class="briefing-card-art" />
+              <NuxtImg src="/img/learn/missions/full-flight/briefing-departure.png" alt="Departure" class="briefing-card-art" format="webp" />
               <div class="card-title">
                 <v-icon size="16">mdi-airplane-takeoff</v-icon>
                 Departure flow
@@ -739,7 +739,7 @@
               </ul>
             </div>
             <div class="briefing-card">
-              <img src="/img/learn/missions/full-flight/briefing-arrival.png" alt="Arrival" class="briefing-card-art" />
+              <NuxtImg src="/img/learn/missions/full-flight/briefing-arrival.png" alt="Arrival" class="briefing-card-art" format="webp" />
               <div class="card-title">
                 <v-icon size="16">mdi-airplane-landing</v-icon>
                 Arrival setup
@@ -752,7 +752,7 @@
               </ul>
             </div>
             <div class="briefing-card">
-              <img src="/img/learn/missions/full-flight/briefing-weather.png" alt="Weather" class="briefing-card-art" />
+              <NuxtImg src="/img/learn/missions/full-flight/briefing-weather.png" alt="Weather" class="briefing-card-art" format="webp" />
               <div class="card-title">
                 <v-icon size="16">mdi-weather-cloudy</v-icon>
                 Weather snapshot
