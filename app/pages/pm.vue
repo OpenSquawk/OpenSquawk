@@ -2,28 +2,7 @@
   <div class="min-h-screen bg-[#050910] text-white">
     <div class="mx-auto w-full max-w-[420px] px-4 pb-24 pt-6 sm:px-6">
       <!-- Header -->
-      <header class="flex flex-col gap-4 pb-6 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p class="text-xs uppercase tracking-[0.35em] text-cyan-400/80">OpenSquawk</p>
-          <h1 class="text-2xl font-semibold">Pilot Monitoring</h1>
-          <p class="mt-1 text-sm text-white/70">Alpha Build • Decision Tree • VATSIM</p>
-        </div>
-        <div class="flex flex-col items-stretch gap-2 sm:items-end">
-          <div class="text-right space-y-1">
-            <v-chip size="small" :color="currentState?.phase === 'Interrupt' ? 'red' : 'cyan'" variant="flat">
-              {{ currentState?.id || 'INIT' }}
-            </v-chip>
-            <div class="text-xs text-white/50">{{ currentState?.phase || 'Setup' }}</div>
-            <div class="flex items-center justify-end gap-2 text-[11px] text-white/60">
-              <v-chip size="x-small" color="cyan" variant="outlined">{{ activeFlowInfo.name }}</v-chip>
-              <v-chip size="x-small" color="purple" variant="text">{{ activeFlowInfo.modeLabel }}</v-chip>
-            </div>
-            <p v-if="activeFlowInfo.description" class="text-[10px] text-white/40">
-              {{ activeFlowInfo.description }}
-            </p>
-          </div>
-        </div>
-      </header>
+
 
       <!-- Login/Flight Selection Screen -->
       <section v-if="currentScreen === 'login'" class="space-y-6">
@@ -360,46 +339,6 @@
             </ClientOnly>
           </v-sheet>
         </div>
-
-        <!-- Quick Actions -->
-        <v-card class="bg-white/5 border border-white/10">
-          <v-card-text class="space-y-3">
-            <h3 class="text-lg font-semibold">Quick Actions</h3>
-            <div class="flex flex-col gap-2">
-              <v-btn
-                  color="orange"
-                  variant="flat"
-                  @click="performRadioCheck"
-                  :loading="radioCheckLoading"
-                  prepend-icon="mdi-radio"
-                  density="comfortable"
-              >
-                Radio Check
-              </v-btn>
-              <v-btn
-                  color="cyan"
-                  variant="tonal"
-                  @click="playAtisBroadcast"
-                  :loading="atisPlaybackLoading"
-                  :disabled="airportFrequencyLoading || !atisFrequencyEntry"
-                  prepend-icon="mdi-information-variant"
-                  density="comfortable"
-              >
-                Listen to ATIS
-              </v-btn>
-              <v-btn
-                  color="cyan"
-                  variant="outlined"
-                  @click="runFullSimulation"
-                  :loading="simulationRunning"
-                  prepend-icon="mdi-progress-check"
-                  density="comfortable"
-              >
-                Full flight (simulation)
-              </v-btn>
-            </div>
-          </v-card-text>
-        </v-card>
 
         <!-- Frequency Directory -->
         <v-card class="bg-white/5 border border-white/10">
