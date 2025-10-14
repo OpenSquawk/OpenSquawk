@@ -943,12 +943,71 @@ export default function useCommunicationsEngine() {
         return false
     }
 
+    let pendingSimpleAutoTransition: { from: string; to: string } | null = null
+
+    function evaluateSimpleAutoFlow(loopGuard = 0) {
+        if (!ready.value || loopGuard > 20) return
+        if (pendingSimpleAutoTransition?.from === currentStateId.value) {
+            return
+        }
+
+        const state = currentState.value
+        if (!state) return
+        if (state.role === 'atc' && state.say_tpl) return
+
+        const transitions = [
+            ...(state.next ?? []),
+            ...(state.ok_next ?? []),
+            ...(state.bad_next ?? []),
+        ] as Array<{ to?: string, guard?: string, when?: string, type?: string | null }>
+
+        const eligible = transitions.filter(candidate => {
+            if (!candidate || typeof candidate.to !== 'string' || !candidate.to.length) {
+                return false
+            }
+            if (candidate.type === 'auto') {
+                return false
+            }
+            if (candidate.when && !evaluateConditionExpression(candidate.when)) {
+                return false
+            }
+            if (candidate.guard && !evaluateConditionExpression(candidate.guard)) {
+                return false
+            }
+            return true
+        })
+
+        if (eligible.length !== 1) return
+
+        const targetId = eligible[0].to!
+        const targetState = states.value[targetId]
+        if (!targetState) return
+
+        const silentSystemHop = targetState.role === 'system' && !targetState.say_tpl
+        const delay = silentSystemHop
+            ? 50
+            : Math.floor(Math.random() * 1000) + 1000
+
+        const fromStateId = currentStateId.value
+        pendingSimpleAutoTransition = { from: fromStateId, to: targetId }
+        setTimeout(() => {
+            pendingSimpleAutoTransition = null
+            if (currentStateId.value !== fromStateId) {
+                return
+            }
+            moveTo(targetId)
+            evaluateSimpleAutoFlow(loopGuard + 1)
+        }, delay)
+    }
+
     function evaluateAutoTransitions(loopGuard = 0) {
         if (!ready.value || loopGuard > 8) return
         const state = currentState.value
-        if (!state || !state.auto_transitions?.length) return
+        if (!state) return
 
-        for (const transition of state.auto_transitions) {
+        const autoTransitions = state.auto_transitions ?? []
+
+        for (const transition of autoTransitions) {
             if (!transition || !transition.trigger) continue
             if (transition.trigger.once !== false && hasAutoExecuted(state.id, transition.id)) {
                 continue
@@ -975,6 +1034,8 @@ export default function useCommunicationsEngine() {
             }
             return
         }
+
+        evaluateSimpleAutoFlow(loopGuard + 1)
     }
 
     function moveTo(stateId: string) {
