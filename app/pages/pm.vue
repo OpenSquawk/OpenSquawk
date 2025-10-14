@@ -931,7 +931,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
+import useCommunicationsEngine, { type EngineLog } from "../../shared/utils/communicationsEngine";
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { loadPizzicatoLite } from '../../shared/utils/pizzicatoLite'
@@ -1412,6 +1412,24 @@ watch(
   }
 )
 
+watch(
+  () => log.value.length,
+  (newLength, oldLength) => {
+    const previousLength = typeof oldLength === 'number' && oldLength >= 0
+      ? oldLength
+      : Math.max(0, newLength - 1)
+    if (newLength <= previousLength) {
+      return
+    }
+
+    const newEntries = log.value.slice(previousLength, newLength)
+    for (const entry of newEntries) {
+      speakLogEntry(entry as EngineLog)
+    }
+  },
+  { flush: 'post', immediate: true }
+)
+
 // VATSIM Integration
 const vatsimId = ref('1857215')
 const flightPlans = ref<any[]>([])
@@ -1811,9 +1829,13 @@ const speakPlainText = (text: string, options: SpeechOptions = {}) => {
 
   const speed = options.speed ?? speechSpeed.value
   const lessonId = options.lessonId || currentState.value?.id || 'general'
+  const delay = options.delayMs ?? 0
 
   return enqueueSpeech(async () => {
     try {
+      if (delay > 0) {
+        await wait(delay)
+      }
       const response = await api.post('/api/atc/say', {
         text: trimmed,
         level: signalStrength.value,
@@ -1837,7 +1859,50 @@ const speakPlainText = (text: string, options: SpeechOptions = {}) => {
   })
 }
 
+const spokenLogEntries = new WeakSet<EngineLog>()
+
+const markLogEntryAsSpoken = (entry: EngineLog | undefined) => {
+  if (entry && typeof entry === 'object') {
+    spokenLogEntries.add(entry)
+  }
+}
+
+const speakLogEntry = (entry: EngineLog) => {
+  if (!entry || typeof entry !== 'object') return
+  if (entry.speaker !== 'atc') return
+  if (spokenLogEntries.has(entry)) return
+
+  const plain = typeof entry.message === 'string' ? entry.message.trim() : ''
+  const normalized = typeof entry.normalized === 'string' ? entry.normalized.trim() : ''
+
+  if (!plain && !normalized) {
+    spokenLogEntries.add(entry)
+    return
+  }
+
+  spokenLogEntries.add(entry)
+
+  const lastTransmissionLabel = plain
+    ? `ATC: ${plain}`
+    : normalized
+      ? `ATC: ${normalized}`
+      : undefined
+
+  speakPlainText(normalized || plain, {
+    tag: entry.radioCheck ? 'radio-check' : 'controller-reply',
+    updateLastTransmission: true,
+    lastTransmissionLabel,
+    lessonId: entry.state || currentState.value?.id || 'general',
+    delayMs: entry.radioCheck ? 400 : 800 + Math.random() * 2000
+  })
+}
+
 const scheduleControllerSpeech = (tpl: string) => {
+  const latestEntry = log.value[log.value.length - 1] as EngineLog | undefined
+  if (latestEntry?.speaker === 'atc') {
+    markLogEntryAsSpoken(latestEntry)
+  }
+
   const plain = renderATCMessage(tpl)
   speakWithRadioEffects(tpl, {
     delayMs: 800 + Math.random() * 2000,
