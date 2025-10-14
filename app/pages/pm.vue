@@ -1890,10 +1890,22 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
 
     const normalizedTrace = normalizeDecisionTraceResult(result)
 
+    const controllerSayTpl = typeof decision.controller_say_tpl === 'string'
+      ? decision.controller_say_tpl
+      : typeof (decision as any).controllerSayTpl === 'string'
+        ? (decision as any).controllerSayTpl
+        : typeof (decision as any).controllerSay === 'string'
+          ? (decision as any).controllerSay
+          : null
+
+    if (!decision.controller_say_tpl && controllerSayTpl) {
+      decision.controller_say_tpl = controllerSayTpl
+    }
+
     applyLLMDecision(decision, normalizedTrace ?? null)
 
-    if (decision.controller_say_tpl && !decision.radio_check) {
-      scheduleControllerSpeech(decision.controller_say_tpl)
+    if (controllerSayTpl && !decision.radio_check) {
+      scheduleControllerSpeech(controllerSayTpl)
     }
   } catch (e) {
     console.error('LLM decision failed', e)
