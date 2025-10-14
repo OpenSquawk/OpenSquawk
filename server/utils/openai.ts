@@ -1,11 +1,12 @@
 // server/utils/openai.ts
 import OpenAI from 'openai'
-import {spellIcaoDigits, toIcaoPhonetic} from '../../shared/utils/radioSpeech'
+import {normalizeRadioPhrase, spellIcaoDigits, toIcaoPhonetic} from '../../shared/utils/radioSpeech'
 import type {
     CandidateTraceEntry,
     CandidateTraceStep,
     DecisionCandidateTimeline,
     FlowActivationMode,
+    LLMDecision,
     LLMDecisionInput,
     LLMDecisionResult,
     LLMDecisionTrace,
@@ -170,6 +171,58 @@ function buildSpokenVariants(key: string, value: string): string[] {
     }
 
     return Array.from(variants)
+}
+
+function renderTemplateString(tpl: string, context: Record<string, any>): string {
+    if (!tpl) {
+        return ''
+    }
+
+    return tpl.replace(/\{([\w.]+)\}/g, (_match, rawKey) => {
+        const segments = String(rawKey).split('.')
+        let current: any = context
+        for (const segment of segments) {
+            if (current == null) {
+                return ''
+            }
+            current = current[segment]
+        }
+        return current === undefined || current === null ? '' : String(current)
+    })
+}
+
+function buildSpeechRenderContext(input: LLMDecisionInput): Record<string, any> {
+    const variables = input.variables || {}
+    const flags = input.flags || {}
+    return {
+        ...variables,
+        ...flags,
+        variables,
+        flags,
+    }
+}
+
+function prepareControllerSpeech(
+    template: string | null | undefined,
+    context: Record<string, any>
+): { template: string; plain: string; normalized: string } | null {
+    if (!template) {
+        return null
+    }
+
+    const cleanedTemplate = template.trim()
+    if (!cleanedTemplate) {
+        return null
+    }
+
+    const plain = renderTemplateString(cleanedTemplate, context).trim()
+    const normalized = normalizeRadioPhrase(plain).trim()
+
+    return {
+        template: cleanedTemplate,
+        plain,
+        normalized: normalized || plain,
+    }
 }
 
 function pickTransition(
@@ -940,9 +993,38 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         addCandidate(start, flowSlug, startState)
     }
 
+    const speechContext = buildSpeechRenderContext(input)
+
+    let trace: LLMDecisionTrace | undefined
+
+    const finalizeDecision = (
+        nextStateId: string,
+        candidate?: DecisionCandidate,
+        includeTrace?: boolean
+    ): LLMDecisionResult => {
+        const decision: LLMDecision = { next_state: nextStateId }
+        const resolvedCandidate = candidate ?? candidateMap.get(nextStateId)
+        const speech = prepareControllerSpeech(
+            decision.controller_say_tpl || resolvedCandidate?.state?.say_tpl,
+            speechContext
+        )
+
+        if (speech) {
+            decision.controller_say_tpl = speech.template
+            decision.controller_say_plain = speech.plain
+            decision.controller_say_normalized = speech.normalized
+        }
+
+        if (includeTrace && trace) {
+            return { decision, trace }
+        }
+
+        return { decision }
+    }
+
     let candidates = Array.from(candidateMap.values())
     if (candidates.length === 0) {
-        return { decision: { next_state: input.state_id } }
+        return finalizeDecision(input.state_id)
     }
 
     candidates = candidates.filter(candidate =>
@@ -954,7 +1036,6 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         candidate.regexTriggers.some(trigger => evaluateRegexPattern(trigger.pattern, trigger.patternFlags, utterance))
     )
 
-    let trace: LLMDecisionTrace | undefined
     if (regexMatches.length > 0) {
         trace = { calls: [] }
     }
@@ -965,7 +1046,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
     }
 
     if (workingSet.length === 0) {
-        return { decision: { next_state: input.state_id } }
+        return finalizeDecision(input.state_id)
     }
 
     const context = { variables: input.variables || {}, flags: input.flags || {} }
@@ -990,14 +1071,14 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
                     ? `Regex trigger matched ${patterns.join(', ')}`
                     : 'Regex trigger matched pilot utterance'
             }
-            return { decision: { next_state: winner.id }, trace }
+            return finalizeDecision(winner.id, winner, true)
         }
 
-        return { decision: { next_state: winner.id } }
+        return finalizeDecision(winner.id, winner)
     }
 
     if (survivors.length === 0) {
-        return { decision: { next_state: input.state_id } }
+        return finalizeDecision(input.state_id)
     }
 
     const [first] = survivors
@@ -1007,8 +1088,8 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             reason: 'Multiple candidates matched after filtering; defaulting to first match.',
             selected: first.id,
         }
-        return { decision: { next_state: first.id }, trace }
+        return finalizeDecision(first.id, first, true)
     }
 
-    return { decision: { next_state: first.id } }
+    return finalizeDecision(first.id, first)
 }
