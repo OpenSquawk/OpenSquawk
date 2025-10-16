@@ -219,6 +219,7 @@ export interface RuntimeDecisionState {
   phase: string
   name?: string
   summary?: string
+  entry_summary?: string
   say_tpl?: string
   utterance_tpl?: string
   else_say_tpl?: string
