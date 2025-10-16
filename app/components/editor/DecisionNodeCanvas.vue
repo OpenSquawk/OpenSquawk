@@ -138,6 +138,12 @@
                 <p class="font-mono text-xs tracking-wider text-cyan-200/80">{{ node.id }}</p>
                 <p class="text-base font-semibold text-white/90">{{ node.title || 'Untitled node' }}</p>
                 <p class="line-clamp-2 text-sm text-white/60">{{ node.summary }}</p>
+                <p
+                  v-if="node.routerDescription"
+                  class="line-clamp-2 text-xs italic text-cyan-200/80"
+                >
+                  {{ node.routerDescription }}
+                </p>
               </div>
               <div class="flex flex-wrap gap-1 pt-1">
                 <span
@@ -240,6 +246,7 @@ interface CanvasNodeInput {
   phase: string
   title?: string
   summary?: string
+  routerDescription?: string
   selected: boolean
   highlight: boolean
   dimmed: boolean

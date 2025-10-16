@@ -86,6 +86,10 @@ RULES:
 }
 ```
 
+Zusätzlich können wir intern ein Feld `context_snapshot` mitsenden, das den verdichteten Entscheidungs-Kontext (z.B. erwartete
+Readbacks, verfügbare Variablen) enthält. Das Feld ist optional und dient nur dem LLM als Zusatzwissen; externe Integratoren
+dürfen es ignorieren.
+
 **Response**
 
 ```json
