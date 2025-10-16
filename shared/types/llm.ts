@@ -120,4 +120,5 @@ export interface LLMDecisionResult {
     decision: LLMDecision
     trace?: LLMDecisionTrace
     active_nodes?: ActiveNodeSummary[]
+    pilot_intent?: string | null
 }

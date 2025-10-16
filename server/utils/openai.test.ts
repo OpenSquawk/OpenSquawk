@@ -113,6 +113,7 @@ describe('routeDecision', () => {
         assert.equal(result.decision.next_state, 'ACK')
         assert.equal(result.trace?.calls.length ?? 0, 0)
         assert.equal(result.trace?.autoSelection?.id, 'ACK')
+        assert.equal(result.pilot_intent ?? null, null)
     })
 
     it('falls back to heuristic selection when OpenAI call fails', async () => {
@@ -131,6 +132,7 @@ describe('routeDecision', () => {
         assert.ok(result.trace?.calls[0]?.error)
         assert.equal(result.trace?.fallback?.used, true)
         assert.equal(result.decision.next_state, 'TAXI')
+        assert.equal(result.pilot_intent ?? null, null)
     })
 })
 

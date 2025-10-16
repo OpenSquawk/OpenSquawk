@@ -914,6 +914,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         calls: [],
         candidateTimeline: prepared.timeline,
     }
+    let pilotIntent: string | null = null
 
     if (prepared.autoSelected) {
         trace.autoSelection = {
@@ -924,6 +925,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         return {
             decision: { next_state: prepared.autoSelected.id },
             trace,
+            pilot_intent: pilotIntent,
         }
     }
 
@@ -938,7 +940,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             reason: 'No viable candidates after heuristic evaluation; falling back to default transition.',
             selected: fallbackState,
         }
-        return { decision: { next_state: fallbackState }, trace }
+        return { decision: { next_state: fallbackState }, trace, pilot_intent: pilotIntent }
     }
 
     const optimizedInput = optimizeInputForLLM({
@@ -965,7 +967,10 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
     const systemPrompt = [
         'You are an assistant that selects the correct next state in an aviation decision tree.',
         'Evaluate the pilot transmission and choose the most appropriate candidate state id from the provided list.',
-        'Respond strictly with a JSON object: {"next_state": "STATE_ID", "reason": "short rationale"}.',
+        [
+            'Respond strictly with a JSON object whose first property is "pilot_intent"',
+            'followed by "next_state" and "reason": {"pilot_intent": "intent", "next_state": "STATE_ID", "reason": "short rationale"}.',
+        ].join(' '),
         'Only use state ids that were provided. If you cannot decide, choose the best heuristic option.',
     ].join(' ')
 
@@ -991,23 +996,40 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         const rawResponse = await decide(systemPrompt, userPrompt)
         callEntry.rawResponseText = rawResponse
         const parsed = extractJsonObject(rawResponse)
-        if (parsed && typeof parsed.next_state === 'string' && parsed.next_state.trim().length > 0) {
+
+        if (parsed && typeof parsed === 'object') {
             callEntry.response = parsed
 
+            if (typeof (parsed as any).pilot_intent === 'string') {
+                const intentValue = ((parsed as any).pilot_intent as string).trim()
+                if (intentValue) {
+                    pilotIntent = intentValue
+                }
+            }
+        }
+
+        const nextState =
+            parsed && typeof parsed === 'object' && typeof (parsed as any).next_state === 'string'
+                ? ((parsed as any).next_state as string).trim()
+                : ''
+
+        if (nextState.length > 0) {
             const resolved =
-                prepared.finalCandidateIndex.get(parsed.next_state)
-                || prepared.candidateIndex.get(parsed.next_state)
+                prepared.finalCandidateIndex.get(nextState)
+                || prepared.candidateIndex.get(nextState)
 
             if (resolved) {
                 return {
                     decision: { next_state: resolved.id },
                     trace,
+                    pilot_intent: pilotIntent,
                 }
             }
 
             return {
-                decision: { next_state: parsed.next_state },
+                decision: { next_state: nextState },
                 trace,
+                pilot_intent: pilotIntent,
             }
         }
 
@@ -1027,6 +1049,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         return {
             decision: { next_state: fallbackState },
             trace,
+            pilot_intent: pilotIntent,
         }
     }
 }
