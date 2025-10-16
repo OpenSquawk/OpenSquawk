@@ -1463,6 +1463,8 @@ type PreparedSpeech = {
   normalized: string
 }
 
+type SpeechInput = string | Partial<PreparedSpeech>
+
 type SpeechOptions = {
   voice?: string
   tag?: string
@@ -1617,6 +1619,42 @@ const prepareSpeech = (tpl: string): PreparedSpeech => {
   const plain = renderATCMessage(tpl)
   const normalized = normalizeATCText(tpl, { ...vars.value, ...flags.value })
   return { template: tpl, plain, normalized }
+}
+
+const resolvePreparedSpeech = (input: SpeechInput): PreparedSpeech => {
+  if (typeof input === 'string') {
+    return prepareSpeech(input)
+  }
+
+  const template = typeof input.template === 'string' ? input.template : ''
+  const hasPlain = typeof input.plain === 'string'
+  const hasNormalized = typeof input.normalized === 'string'
+
+  if (hasPlain && hasNormalized) {
+    const plain = (input.plain as string).trim()
+    const normalized = (input.normalized as string).trim() || plain
+    return {
+      template,
+      plain,
+      normalized
+    }
+  }
+
+  const plain = (hasPlain ? (input.plain as string) : template ? renderATCMessage(template) : '').trim()
+  const normalizationSource = template || plain
+  let normalized = hasNormalized ? (input.normalized as string) : ''
+
+  if (!normalized && normalizationSource) {
+    normalized = normalizeATCText(normalizationSource, { ...vars.value, ...flags.value })
+  }
+
+  const normalizedClean = normalized.trim() || plain
+
+  return {
+    template,
+    plain,
+    normalized: normalizedClean
+  }
 }
 
 const debugState = computed(() => {
@@ -1792,8 +1830,11 @@ const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = 
   }
 }
 
-const speakWithRadioEffects = (tpl: string, options: SpeechOptions = {}) => {
-  const prepared = prepareSpeech(tpl)
+const speakWithRadioEffects = (input: SpeechInput, options: SpeechOptions = {}) => {
+  const prepared = resolvePreparedSpeech(input)
+  if (!prepared.plain && !prepared.normalized) {
+    return
+  }
   const delay = options.delayMs ?? 0
   enqueueSpeech(async () => {
     if (delay > 0) {
@@ -1837,14 +1878,18 @@ const speakPlainText = (text: string, options: SpeechOptions = {}) => {
   })
 }
 
-const scheduleControllerSpeech = (tpl: string) => {
-  const plain = renderATCMessage(tpl)
-  speakWithRadioEffects(tpl, {
+const scheduleControllerSpeech = (speech: SpeechInput) => {
+  const prepared = resolvePreparedSpeech(speech)
+  const label = prepared.plain || prepared.normalized
+  if (!label) {
+    return
+  }
+  speakWithRadioEffects(prepared, {
     delayMs: 800 + Math.random() * 2000,
     tag: 'controller-reply',
     updateLastTransmission: true,
     useNormalizedForTTS: true,
-    lastTransmissionLabel: `ATC: ${plain}`
+    lastTransmissionLabel: `ATC: ${label}`
   })
 }
 
@@ -1892,8 +1937,12 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
 
     applyLLMDecision(decision, normalizedTrace ?? null)
 
-    if (decision.controller_say_tpl && !decision.radio_check) {
-      scheduleControllerSpeech(decision.controller_say_tpl)
+    if (!decision.radio_check && (decision.controller_say_tpl || decision.controller_say_plain || decision.controller_say_normalized)) {
+      scheduleControllerSpeech({
+        template: decision.controller_say_tpl || undefined,
+        plain: decision.controller_say_plain || undefined,
+        normalized: decision.controller_say_normalized || undefined
+      })
     }
   } catch (e) {
     console.error('LLM decision failed', e)

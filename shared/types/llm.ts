@@ -85,6 +85,8 @@ export interface LLMDecision {
     updates?: Record<string, any>
     flags?: Record<string, any>
     controller_say_tpl?: string
+    controller_say_plain?: string
+    controller_say_normalized?: string
     off_schema?: boolean
     radio_check?: boolean
     activate_flow?: string | FlowActivationInstruction
