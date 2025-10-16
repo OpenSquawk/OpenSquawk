@@ -4,10 +4,13 @@ import fs from "node:fs";
 import { normalizeRadioPhrase } from "../../shared/utils/radioSpeech";
 import { getServerRuntimeConfig } from "./runtimeConfig";
 
-const { openaiKey, openaiProject, llmModel, ttsModel } = getServerRuntimeConfig();
+const { openaiKey, openaiProject, openaiBaseUrl, llmModel, ttsModel } = getServerRuntimeConfig();
 const normalizeClientOptions: ConstructorParameters<typeof OpenAI>[0] = { apiKey: openaiKey };
 if (openaiProject) {
     normalizeClientOptions.project = openaiProject;
+}
+if (openaiBaseUrl) {
+    normalizeClientOptions.baseURL = openaiBaseUrl;
 }
 
 export const normalize = new OpenAI(normalizeClientOptions);

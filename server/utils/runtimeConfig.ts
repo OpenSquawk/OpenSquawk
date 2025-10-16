@@ -3,6 +3,7 @@ import { useRuntimeConfig } from '#imports'
 export interface ServerRuntimeConfig {
   openaiKey: string
   openaiProject?: string
+  openaiBaseUrl?: string
   llmModel: string
   ttsModel: string
   voiceId: string
@@ -62,9 +63,13 @@ export function getServerRuntimeConfig(): ServerRuntimeConfig {
     warnedMissingOpenAIKey = true
   }
 
+  const openaiProject = String(runtimeConfig.openaiProject || '').trim() || undefined
+  const openaiBaseUrl = String(runtimeConfig.openaiBaseUrl || '').trim() || undefined
+
   const config: ServerRuntimeConfig = {
     openaiKey,
-    openaiProject: String(runtimeConfig.openaiProject || '').trim() || undefined,
+    openaiProject,
+    openaiBaseUrl,
     llmModel: String(runtimeConfig.llmModel || '').trim() || 'gpt-5-nano',
     ttsModel: String(runtimeConfig.ttsModel || '').trim() || 'tts-1',
     voiceId: String(runtimeConfig.defaultVoiceId || '').trim() || 'alloy',

@@ -28,7 +28,7 @@ const httpsAgent = new https.Agent({
 
 function ensureOpenAI(): OpenAI {
     if (!openaiClient) {
-        const {openaiKey, openaiProject, llmModel} = getServerRuntimeConfig()
+        const {openaiKey, openaiProject, openaiBaseUrl, llmModel} = getServerRuntimeConfig()
         if (!openaiKey) {
             throw new Error('OPENAI_API_KEY is missing. Please set the key before using AI features.')
         }
@@ -38,6 +38,9 @@ function ensureOpenAI(): OpenAI {
         }
         if (openaiProject) {
             clientOptions.project = openaiProject
+        }
+        if (openaiBaseUrl) {
+            clientOptions.baseURL = openaiBaseUrl
         }
         console.log("using connection opened client")
         openaiClient = new OpenAI(clientOptions)
