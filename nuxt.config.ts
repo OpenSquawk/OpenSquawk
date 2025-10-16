@@ -16,6 +16,7 @@ export default defineNuxtConfig({
     runtimeConfig: {
         openaiKey: process.env.OPENAI_API_KEY,
         openaiProject: process.env.OPENAI_PROJECT,
+        openaiBaseUrl: process.env.OPENAI_BASE_URL,
         llmModel: process.env.LLM_MODEL || 'gpt-5-nano',
         ttsModel: process.env.TTS_MODEL || 'tts-1',
         defaultVoiceId: process.env.VOICE_ID || 'alloy',
