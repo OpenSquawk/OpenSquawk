@@ -896,6 +896,12 @@
                                   <span class="text-[11px] text-white/50">{{ candidate.flow || 'current' }}</span>
                                 </div>
                                 <p v-if="candidate.summary" class="text-[11px] text-white/60 mt-1">{{ candidate.summary }}</p>
+                                <p
+                                  v-if="candidate.router_description"
+                                  class="text-[11px] text-cyan-200/80 mt-1 italic"
+                                >
+                                  {{ candidate.router_description }}
+                                </p>
                               </div>
                             </div>
                             <div v-if="step.eliminated?.length" class="space-y-2">
@@ -910,6 +916,12 @@
                                   <span class="text-[11px] text-red-200/80">{{ elim.kind }}</span>
                                 </div>
                                 <p class="text-[11px] text-red-100/80">{{ elim.reason }}</p>
+                                <p
+                                  v-if="elim.candidate.router_description"
+                                  class="text-[10px] text-cyan-100/70 italic"
+                                >
+                                  {{ elim.candidate.router_description }}
+                                </p>
                                 <p v-if="describeElimination(elim)" class="text-[10px] text-red-100/70">{{ describeElimination(elim) }}</p>
                               </div>
                             </div>

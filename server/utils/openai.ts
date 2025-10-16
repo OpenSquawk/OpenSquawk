@@ -85,6 +85,23 @@ const READBACK_REQUIREMENTS: Record<string, string[]> = {
     GRD_TAXI_IN_READBACK_CHECK: ['gate', 'taxi_route']
 }
 
+const ROUTER_SYSTEM_PROMPT = [
+    'ROLE: ATC State Router',
+    'TASK: From current_state_text, candidate_next_states, and pilot_utterance, return EXACTLY the JSON schema below. Pick exactly ONE next_state_key from the candidates.',
+    '',
+    'RESPONSE JSON SHAPE:',
+    '{',
+    '  "pilot_intent": "<short clause>",',
+    '  "rationale": "<1-3 concise sentences>",',
+    '  "next_state_key": "<one candidate key>"',
+    '}',
+    '',
+    'RULES:',
+    '- Output ONLY valid JSON. No prose, no markdown.',
+    '- Do not invent keys. Choose from candidate_next_states only.',
+    "- If ambiguous, pick the best fit and say why in 'rationale'.",
+].join('\n')
+
 const READBACK_JSON_SCHEMA = {
     name: 'readback_check',
     schema: {
@@ -190,6 +207,50 @@ function pickTransition(
 
 function fallbackNextState(input: LLMDecisionInput): string {
     return input.candidates[0]?.id || input.state_id || 'GEN_NO_REPLY'
+}
+
+function buildCurrentStateText(input: LLMDecisionInput, optimized?: ReturnType<typeof optimizeInputForLLM>): string {
+    const callsign = typeof input.variables?.callsign === 'string' ? input.variables.callsign.trim() : ''
+    const summaryCandidates = [
+        typeof input.state.summary === 'string' ? input.state.summary.trim() : '',
+        typeof input.state.say_tpl === 'string' ? input.state.say_tpl.trim() : '',
+        typeof input.state.utterance_tpl === 'string' ? input.state.utterance_tpl.trim() : '',
+    ].filter(Boolean)
+    const baseSummary = summaryCandidates[0] || `State ${input.state_id}`
+    const contextParts: string[] = []
+    const phase = typeof input.state.phase === 'string' ? input.state.phase.trim() : ''
+    if (phase) contextParts.push(`phase ${phase}`)
+    const unit = typeof input.flags?.current_unit === 'string' ? input.flags.current_unit.trim() : ''
+    if (unit) contextParts.push(`${unit} sector`)
+    if (input.state.role === 'atc') {
+        contextParts.push('controller transmission expected')
+    } else if (input.state.role === 'pilot') {
+        contextParts.push('waiting for pilot request')
+    }
+    if (optimized?.state_summary?.readback_keys?.length) {
+        contextParts.push(`readback keys: ${optimized.state_summary.readback_keys.join(', ')}`)
+    }
+    const prefix = callsign ? `${callsign} — ${baseSummary}` : baseSummary
+    const suffix = contextParts.length ? `Context: ${contextParts.join(', ')}` : ''
+    return [prefix, suffix].filter(Boolean).join('. ').trim()
+}
+
+function getCandidateDescription(candidate: DecisionCandidate): string {
+    const candidates = [
+        candidate.state?.router_description,
+        candidate.state?.summary,
+        candidate.state?.say_tpl,
+        candidate.state?.utterance_tpl,
+        candidate.state?.name ? `Transition to ${candidate.state.name}` : '',
+    ]
+        .map(value => (typeof value === 'string' ? value.trim() : ''))
+        .filter(Boolean)
+
+    if (candidates.length) {
+        return candidates[0]!
+    }
+
+    return `Transition ${candidate.id}`
 }
 
 interface IndexedStateEntry {
@@ -547,6 +608,7 @@ async function prepareDecisionCandidates(
         flow: candidate.flow,
         name: candidate.state?.name,
         summary: candidate.state?.summary,
+        router_description: candidate.state?.router_description,
         role: candidate.state?.role,
         triggers: candidate.triggers,
         conditions: candidate.state?.conditions || [],
@@ -836,6 +898,7 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
             readback_keys: candidateReadback,
             has_say_tpl: Boolean(c.state.say_tpl),
             has_utterance_tpl: Boolean(c.state.utterance_tpl),
+            router_description: c.state.router_description || null,
             handoff: c.state.handoff ? {
                 to: c.state.handoff.to,
                 freq: c.state.handoff.freq ?? null
@@ -882,6 +945,7 @@ function summarizeCandidateForPrompt(candidate: DecisionCandidate) {
         role: state?.role,
         phase: state?.phase,
         summary: state?.summary,
+        router_description: state?.router_description,
         say_tpl: state?.say_tpl,
         utterance_tpl: state?.utterance_tpl,
         handoff: state?.handoff,
@@ -952,41 +1016,25 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         })),
     })
 
-    const candidateSummaries = candidatePool
-        .map(candidate => {
-            const summary = [
-                `${candidate.id}`,
-                candidate.state?.summary || candidate.state?.say_tpl || candidate.state?.utterance_tpl || '',
-            ]
-                .filter(Boolean)
-                .join(' — ')
-            return `- ${summary}`
-        })
-        .join('\n')
+    const systemPrompt = ROUTER_SYSTEM_PROMPT
 
-    const systemPrompt = [
-        'You are an assistant that selects the correct next state in an aviation decision tree.',
-        'Evaluate the pilot transmission and choose the most appropriate candidate state id from the provided list.',
-        [
-            'Respond strictly with a JSON object whose first property is "pilot_intent"',
-            'followed by "next_state" and "reason": {"pilot_intent": "intent", "next_state": "STATE_ID", "reason": "short rationale"}.',
-        ].join(' '),
-        'Only use state ids that were provided. If you cannot decide, choose the best heuristic option.',
-    ].join(' ')
+    const routerPayload = {
+        system_prompt: systemPrompt,
+        current_state_text: buildCurrentStateText(input, optimizedInput),
+        candidate_next_states: candidatePool.map(candidate => ({
+            key: candidate.id,
+            description: getCandidateDescription(candidate),
+        })),
+        pilot_utterance: utterance || '(silence)',
+        context_snapshot: optimizedInput,
+    }
 
-    const userPrompt = [
-        `Pilot transmission: "${utterance || '(silence)'}"`,
-        'Candidate options:',
-        candidateSummaries,
-        'Context (JSON):',
-        JSON.stringify(optimizedInput, null, 2),
-    ].join('\n')
+    const userPrompt = JSON.stringify(routerPayload, null, 2)
 
     const callEntry = {
         stage: 'decision' as const,
         request: {
-            systemPrompt,
-            userPrompt,
+            ...routerPayload,
             candidates: candidatePool.map(summarizeCandidateForPrompt),
         },
     }
@@ -1009,8 +1057,12 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         }
 
         const nextState =
-            parsed && typeof parsed === 'object' && typeof (parsed as any).next_state === 'string'
-                ? ((parsed as any).next_state as string).trim()
+            parsed && typeof parsed === 'object'
+                ? (typeof (parsed as any).next_state_key === 'string'
+                      ? ((parsed as any).next_state_key as string).trim()
+                      : typeof (parsed as any).next_state === 'string'
+                          ? ((parsed as any).next_state as string).trim()
+                          : '')
                 : ''
 
         if (nextState.length > 0) {
@@ -1033,7 +1085,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             }
         }
 
-        throw new Error('LLM response missing next_state field')
+        throw new Error('LLM response missing next_state_key field')
     } catch (err: any) {
         callEntry.error = err?.message || String(err)
 

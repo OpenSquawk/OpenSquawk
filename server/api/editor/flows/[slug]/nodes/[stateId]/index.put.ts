@@ -53,6 +53,14 @@ export default defineEventHandler(async (event) => {
     node.summary = body.summary.trim() || undefined
   }
 
+  if ('routerDescription' in body) {
+    if (typeof body.routerDescription === 'string') {
+      node.routerDescription = body.routerDescription.trim() || undefined
+    } else if (body.routerDescription === null) {
+      node.routerDescription = undefined
+    }
+  }
+
   if (typeof body.role === 'string') {
     const role = body.role.trim().toLowerCase()
     if (!ROLE_SET.has(role)) {
