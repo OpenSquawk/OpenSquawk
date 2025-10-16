@@ -644,7 +644,12 @@
                         <span class="font-mono text-sm text-white">{{ candidate.id }}</span>
                         <span class="text-[11px] text-white/50">{{ candidate.flow || 'current' }}</span>
                       </div>
-                      <p v-if="candidate.summary" class="text-[11px] text-white/60 mt-1">{{ candidate.summary }}</p>
+                      <p
+                        v-if="candidate.description || candidate.summary"
+                        class="text-[11px] text-white/60 mt-1"
+                      >
+                        {{ candidate.description || candidate.summary }}
+                      </p>
                     </div>
                   </div>
                   <div v-if="step.eliminated?.length" class="space-y-2">
@@ -1168,6 +1173,12 @@ const normalizeTimelineCandidate = (raw: unknown): CandidateTraceEntry | null =>
   }
   if (typeof raw.summary === 'string') {
     candidate.summary = raw.summary
+  }
+  if (typeof raw.description === 'string') {
+    candidate.description = raw.description
+  }
+  if (typeof raw.applicability_note === 'string') {
+    candidate.applicability_note = raw.applicability_note
   }
   if (typeof raw.role === 'string') {
     candidate.role = raw.role

@@ -895,7 +895,12 @@
                                   <span class="font-mono text-sm text-white">{{ candidate.id }}</span>
                                   <span class="text-[11px] text-white/50">{{ candidate.flow || 'current' }}</span>
                                 </div>
-                                <p v-if="candidate.summary" class="text-[11px] text-white/60 mt-1">{{ candidate.summary }}</p>
+                                <p
+                                  v-if="candidate.description || candidate.summary"
+                                  class="text-[11px] text-white/60 mt-1"
+                                >
+                                  {{ candidate.description || candidate.summary }}
+                                </p>
                               </div>
                             </div>
                             <div v-if="step.eliminated?.length" class="space-y-2">

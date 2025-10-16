@@ -455,6 +455,15 @@
                 <v-window-item value="general">
                   <div class="space-y-4">
                     <v-textarea v-model="nodeForm.summary" label="Kurzbeschreibung" rows="2" hide-details color="cyan" />
+                    <v-textarea
+                      v-model="nodeForm.applicabilityNote"
+                      label="Applicability Note"
+                      rows="2"
+                      hide-details
+                      color="cyan"
+                      hint="Kurzer Hinweis, wann dieser State ausgewählt werden sollte (LLM-Router)."
+                      persistent-hint
+                    />
                     <div class="grid grid-cols-2 gap-3">
                       <v-select
                         v-model="nodeForm.role"
@@ -1993,6 +2002,7 @@ async function createInitialNode() {
     stateId,
     title: flowDetail.value.flow.name ? `${flowDetail.value.flow.name} Start` : 'Erster Node',
     summary: '',
+    applicabilityNote: '',
     role,
     phase,
     transitions: [],
