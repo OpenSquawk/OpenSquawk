@@ -874,144 +874,167 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
 }
 
 
+function summarizeCandidateForPrompt(candidate: DecisionCandidate) {
+    const { state } = candidate
+    return {
+        id: candidate.id,
+        flow: candidate.flow,
+        role: state?.role,
+        phase: state?.phase,
+        summary: state?.summary,
+        say_tpl: state?.say_tpl,
+        utterance_tpl: state?.utterance_tpl,
+        handoff: state?.handoff,
+    }
+}
+
+function extractJsonObject(text: string): any | null {
+    if (!text) return null
+    const trimmed = text.trim()
+    try {
+        return JSON.parse(trimmed)
+    } catch {}
+
+    const match = trimmed.match(/\{[\s\S]*\}/)
+    if (!match) {
+        return null
+    }
+    try {
+        return JSON.parse(match[0])
+    } catch {
+        return null
+    }
+}
+
 export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisionResult> {
     const utterance = (input.pilot_utterance || '').trim()
-    const { system, index } = await getRuntimeSystemIndex()
+    const prepared = await prepareDecisionCandidates(input, utterance)
 
-    const currentEntry = index.get(input.state_id)
-    const activeFlowSlug =
-        input.flow_slug
-        || currentEntry?.flow
-        || system.main
-        || Object.keys(system.flows || {})[0]
-        || ''
-
-    const candidateMap = new Map<string, DecisionCandidate>()
-    const addCandidate = (
-        id?: string,
-        flow?: string,
-        providedState?: RuntimeDecisionState
-    ) => {
-        if (!id || candidateMap.has(id)) {
-            return
-        }
-
-        const indexed = index.get(id)
-        const state = providedState || indexed?.state
-        if (!state) {
-            return
-        }
-
-        const triggers = Array.isArray(state.triggers) ? state.triggers.filter(Boolean) : []
-        const regexTriggers = triggers.filter(trigger => trigger?.type === 'regex')
-        const noneTriggers = triggers.filter(trigger => trigger?.type === 'none')
-        const flowSlug = flow || indexed?.flow || activeFlowSlug
-
-        candidateMap.set(id, {
-            id,
-            flow: flowSlug,
-            state,
-            triggers,
-            regexTriggers,
-            noneTriggers,
-        })
+    const trace: LLMDecisionTrace = {
+        calls: [],
+        candidateTimeline: prepared.timeline,
     }
 
-    if (currentEntry?.state) {
-        const transitions = [
-            ...(currentEntry.state.next || []),
-            ...(currentEntry.state.ok_next || []),
-            ...(currentEntry.state.bad_next || []),
-            ...(currentEntry.state.timer_next || []),
-        ]
-        for (const transition of transitions) {
-            if (!transition?.to) continue
-            addCandidate(transition.to, currentEntry.flow)
+    if (prepared.autoSelected) {
+        trace.autoSelection = {
+            id: prepared.autoSelected.id,
+            flow: prepared.autoSelected.flow,
+            reason: 'Heuristic routing resolved a single remaining candidate.',
+        }
+        return {
+            decision: { next_state: prepared.autoSelected.id },
+            trace,
         }
     }
 
-    for (const raw of input.candidates || []) {
-        if (!raw?.id) continue
-        addCandidate(raw.id, raw.flow, raw.state)
-    }
+    const candidatePool = prepared.finalCandidates.length > 0
+        ? prepared.finalCandidates
+        : Array.from(prepared.candidateIndex.values())
 
-    for (const [flowSlug, tree] of Object.entries(system.flows || {})) {
-        if (flowSlug === activeFlowSlug) continue
-        const start = tree?.start_state
-        if (!start) continue
-        const startState = tree?.states?.[start]
-        addCandidate(start, flowSlug, startState)
-    }
-
-    let candidates = Array.from(candidateMap.values())
-    if (candidates.length === 0) {
-        return { decision: { next_state: input.state_id } }
-    }
-
-    candidates = candidates.filter(candidate =>
-        !candidate.triggers.some(trigger => trigger?.type === 'auto_time' || trigger?.type === 'auto_variable')
-    )
-
-    const regexCandidates = candidates.filter(candidate => candidate.regexTriggers.length > 0)
-    const regexMatches = regexCandidates.filter(candidate =>
-        candidate.regexTriggers.some(trigger => evaluateRegexPattern(trigger.pattern, trigger.patternFlags, utterance))
-    )
-
-    let trace: LLMDecisionTrace | undefined
-    if (regexMatches.length > 0) {
-        trace = { calls: [] }
-    }
-
-    let workingSet = regexMatches
-    if (workingSet.length === 0) {
-        workingSet = candidates.filter(candidate => candidate.regexTriggers.length === 0)
-    }
-
-    if (workingSet.length === 0) {
-        return { decision: { next_state: input.state_id } }
-    }
-
-    const context = { variables: input.variables || {}, flags: input.flags || {} }
-    const survivors = workingSet.filter(candidate =>
-        evaluateConditionList(candidate.state?.conditions, context, utterance).passed
-    )
-
-    if (survivors.length === 1) {
-        const [winner] = survivors
-
-        if (regexMatches.length > 0 && winner.regexTriggers.length > 0) {
-            if (!trace) {
-                trace = { calls: [] }
-            }
-            const patterns = winner.regexTriggers
-                .map(trigger => trigger?.pattern ? `/${trigger.pattern}/${trigger.patternFlags || 'i'}` : '')
-                .filter(pattern => Boolean(pattern))
-            trace.autoSelection = {
-                id: winner.id,
-                flow: winner.flow,
-                reason: patterns.length
-                    ? `Regex trigger matched ${patterns.join(', ')}`
-                    : 'Regex trigger matched pilot utterance'
-            }
-            return { decision: { next_state: winner.id }, trace }
-        }
-
-        return { decision: { next_state: winner.id } }
-    }
-
-    if (survivors.length === 0) {
-        return { decision: { next_state: input.state_id } }
-    }
-
-    const [first] = survivors
-    if (trace) {
+    if (candidatePool.length === 0) {
+        const fallbackState = fallbackNextState(input)
         trace.fallback = {
             used: true,
-            reason: 'Multiple candidates matched after filtering; defaulting to first match.',
-            selected: first.id,
+            reason: 'No viable candidates after heuristic evaluation; falling back to default transition.',
+            selected: fallbackState,
         }
-        return { decision: { next_state: first.id }, trace }
+        return { decision: { next_state: fallbackState }, trace }
     }
 
-    return { decision: { next_state: first.id } }
+    const optimizedInput = optimizeInputForLLM({
+        ...input,
+        candidates: candidatePool.map(candidate => ({
+            id: candidate.id,
+            flow: candidate.flow,
+            state: candidate.state,
+        })),
+    })
+
+    const candidateSummaries = candidatePool
+        .map(candidate => {
+            const summary = [
+                `${candidate.id}`,
+                candidate.state?.summary || candidate.state?.say_tpl || candidate.state?.utterance_tpl || '',
+            ]
+                .filter(Boolean)
+                .join(' — ')
+            return `- ${summary}`
+        })
+        .join('\n')
+
+    const systemPrompt = [
+        'You are an assistant that selects the correct next state in an aviation decision tree.',
+        'Evaluate the pilot transmission and choose the most appropriate candidate state id from the provided list.',
+        'Respond strictly with a JSON object: {"next_state": "STATE_ID", "reason": "short rationale"}.',
+        'Only use state ids that were provided. If you cannot decide, choose the best heuristic option.',
+    ].join(' ')
+
+    const userPrompt = [
+        `Pilot transmission: "${utterance || '(silence)'}"`,
+        'Candidate options:',
+        candidateSummaries,
+        'Context (JSON):',
+        JSON.stringify(optimizedInput, null, 2),
+    ].join('\n')
+
+    const callEntry = {
+        stage: 'decision' as const,
+        request: {
+            systemPrompt,
+            userPrompt,
+            candidates: candidatePool.map(summarizeCandidateForPrompt),
+        },
+    }
+    trace.calls.push(callEntry)
+
+    try {
+        const rawResponse = await decide(systemPrompt, userPrompt)
+        callEntry.rawResponseText = rawResponse
+        const parsed = extractJsonObject(rawResponse)
+        if (parsed && typeof parsed.next_state === 'string' && parsed.next_state.trim().length > 0) {
+            callEntry.response = parsed
+
+            const resolved =
+                prepared.finalCandidateIndex.get(parsed.next_state)
+                || prepared.candidateIndex.get(parsed.next_state)
+
+            if (resolved) {
+                return {
+                    decision: { next_state: resolved.id },
+                    trace,
+                }
+            }
+
+            return {
+                decision: { next_state: parsed.next_state },
+                trace,
+            }
+        }
+
+        throw new Error('LLM response missing next_state field')
+    } catch (err: any) {
+        callEntry.error = err?.message || String(err)
+
+        const fallbackCandidate = prepared.finalCandidates[0] || candidatePool[0]
+        const fallbackState = fallbackCandidate?.id || fallbackNextState(input)
+
+        trace.fallback = {
+            used: true,
+            reason: 'OpenAI decision failed or was inconclusive; falling back to heuristic selection.',
+            selected: fallbackState,
+        }
+
+        return {
+            decision: { next_state: fallbackState },
+            trace,
+        }
+    }
+}
+
+export function __setRuntimeDecisionSystemForTests(system: RuntimeDecisionSystem) {
+    runtimeSystemCache = {
+        system,
+        index: buildRuntimeIndex(system),
+        timestamp: Date.now(),
+    }
 }

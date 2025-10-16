@@ -10,7 +10,8 @@
     "preview": "nuxt preview",
     "start": "node .output/server/index.mjs",
     "postinstall": "nuxt prepare",
-    "import:decision": "tsx --tsconfig tsconfig.scripts.json scripts/import-decision-tree.ts"
+    "import:decision": "tsx --tsconfig tsconfig.scripts.json scripts/import-decision-tree.ts",
+    "test": "tsx --tsconfig tsconfig.tests.json --test server/utils/openai.test.ts"
   },
   "dependencies": {
     "@nuxt/image": "1.11.0",
