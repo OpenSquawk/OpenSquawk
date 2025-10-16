@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.scripts.json",
+  "compilerOptions": {
+    "paths": {
+      "#imports": ["./tests/stubs/nuxt-imports.ts"],
+      "~~/*": ["./*"],
+      "@@/*": ["./*"],
+      "~/\*": ["./app/*"],
+      "@/*": ["./app/*"]
+    }
+  },
+  "include": ["server/**/*.ts", "shared/**/*.ts", "tests/**/*.ts"]
+}
