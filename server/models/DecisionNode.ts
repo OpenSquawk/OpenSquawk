@@ -168,6 +168,7 @@ const decisionNodeSchema = new mongoose.Schema<DecisionNodeDocument>(
     stateId: { type: String, required: true },
     title: { type: String },
     summary: { type: String },
+    applicabilityNote: { type: String },
     role: { type: String, enum: ['pilot', 'atc', 'system'], required: true },
     phase: { type: String, required: true },
     sayTemplate: { type: String },

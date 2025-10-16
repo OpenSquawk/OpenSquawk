@@ -132,6 +132,7 @@ export interface DecisionNodeModel {
   stateId: string
   title?: string
   summary?: string
+  applicabilityNote?: string
   role: DecisionNodeRole
   phase: string
   sayTemplate?: string
@@ -219,6 +220,7 @@ export interface RuntimeDecisionState {
   phase: string
   name?: string
   summary?: string
+  applicability_note?: string
   say_tpl?: string
   utterance_tpl?: string
   else_say_tpl?: string

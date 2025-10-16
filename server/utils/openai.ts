@@ -547,6 +547,8 @@ async function prepareDecisionCandidates(
         flow: candidate.flow,
         name: candidate.state?.name,
         summary: candidate.state?.summary,
+        description: candidate.state?.applicability_note ?? candidate.state?.summary,
+        applicability_note: candidate.state?.applicability_note,
         role: candidate.state?.role,
         triggers: candidate.triggers,
         conditions: candidate.state?.conditions || [],
@@ -811,6 +813,8 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
         auto: input.state.auto ?? null,
         say_tpl: input.state.say_tpl ?? null,
         utterance_tpl: input.state.utterance_tpl ?? null,
+        applicability_note: input.state.applicability_note ?? input.state.summary ?? null,
+        description: input.state.applicability_note ?? input.state.summary ?? null,
         readback_keys: readbackKeys,
         next: (input.state.next ?? []).map((n: any) => n.to),
         ok_next: (input.state.ok_next ?? []).map((n: any) => n.to),
@@ -830,6 +834,8 @@ function optimizeInputForLLM(input: LLMDecisionInput) {
             id: c.id,
             role: c.state.role,
             phase: c.state.phase,
+            applicability_note: c.state.applicability_note ?? c.state.summary ?? null,
+            description: c.state.applicability_note ?? c.state.summary ?? null,
             template_vars: templateVars, // Welche Variablen dieser State verwendet
             auto: c.state.auto ?? null,
             requires_atc_reply: requiresResponse,
@@ -882,6 +888,8 @@ function summarizeCandidateForPrompt(candidate: DecisionCandidate) {
         role: state?.role,
         phase: state?.phase,
         summary: state?.summary,
+        description: state?.applicability_note ?? state?.summary,
+        applicability_note: state?.applicability_note,
         say_tpl: state?.say_tpl,
         utterance_tpl: state?.utterance_tpl,
         handoff: state?.handoff,
@@ -956,7 +964,11 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         .map(candidate => {
             const summary = [
                 `${candidate.id}`,
-                candidate.state?.summary || candidate.state?.say_tpl || candidate.state?.utterance_tpl || '',
+                candidate.state?.applicability_note
+                    || candidate.state?.summary
+                    || candidate.state?.say_tpl
+                    || candidate.state?.utterance_tpl
+                    || '',
             ]
                 .filter(Boolean)
                 .join(' — ')

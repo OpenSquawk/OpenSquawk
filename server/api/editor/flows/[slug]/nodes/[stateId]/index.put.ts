@@ -53,6 +53,10 @@ export default defineEventHandler(async (event) => {
     node.summary = body.summary.trim() || undefined
   }
 
+  if (typeof body.applicabilityNote === 'string') {
+    node.applicabilityNote = body.applicabilityNote.trim() || undefined
+  }
+
   if (typeof body.role === 'string') {
     const role = body.role.trim().toLowerCase()
     if (!ROLE_SET.has(role)) {
