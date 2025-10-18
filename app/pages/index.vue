@@ -184,6 +184,24 @@
                   </span>
                 </button>
               </div>
+              <div class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60">
+                <p class="text-sm font-medium text-white">Aviation captcha</p>
+                <p>
+                  Answer with real ATC knowledge:
+                  <span class="text-cyan-300">{{ updatesCaptcha.challenge.prompt }}</span>
+                </p>
+                <input
+                    v-model.trim="updatesCaptcha.answer"
+                    type="text"
+                    required
+                    aria-label="Aviation captcha answer for product updates"
+                    placeholder="Type the answer"
+                    class="w-full rounded-2xl border border-white/10 bg-[#0b1020]/40 px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-cyan-400"
+                />
+                <p v-if="updatesCaptcha.answer && !updatesCaptchaValid" class="text-xs text-red-300">
+                  Check the aviation answer and try again.
+                </p>
+              </div>
               <div class="space-y-2 text-xs text-white/60">
                 <label class="flex items-start gap-3">
                   <input type="checkbox" v-model="updatesForm.consentMarketing" class="mt-1" required/>
@@ -1025,6 +1043,24 @@ POST /api/route/taxi
                   class="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
               />
             </div>
+            <div class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60">
+              <p class="text-sm font-medium text-white">Aviation captcha</p>
+              <p>
+                Answer to join the pattern:
+                <span class="text-cyan-300">{{ waitlistCaptcha.challenge.prompt }}</span>
+              </p>
+              <input
+                  v-model.trim="waitlistCaptcha.answer"
+                  type="text"
+                  required
+                  aria-label="Aviation captcha answer for waitlist"
+                  placeholder="Type the answer"
+                  class="w-full rounded-2xl border border-white/10 bg-[#0b1020]/40 px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-cyan-400"
+              />
+              <p v-if="waitlistCaptcha.answer && !waitlistCaptchaValid" class="text-xs text-red-300">
+                Check the ATC question and try again.
+              </p>
+            </div>
             <div class="space-y-2 text-xs text-white/60">
               <label class="flex items-start gap-3">
                 <input type="checkbox" v-model="waitlistForm.subscribeUpdates" class="mt-1"/>
@@ -1432,6 +1468,9 @@ watch(
 onMounted(() => {
   if (!import.meta.client) return
 
+  rotateCaptchaChallenge(updatesCaptcha)
+  rotateCaptchaChallenge(waitlistCaptcha)
+
   nextTick(() => {
     updateHeaderHeight()
     updateSectionElements()
@@ -1507,6 +1546,105 @@ interface RoadmapResponse {
   recentVotes7Days: number
 }
 
+interface CaptchaChallenge {
+  id: string
+  prompt: string
+  answers: string[]
+}
+
+interface CaptchaState {
+  challenge: CaptchaChallenge
+  answer: string
+}
+
+const CAPTCHA_CHALLENGES: CaptchaChallenge[] = [
+  {
+    id: 'vfr-visual',
+    prompt: 'What does the “V” in VFR stand for?',
+    answers: ['visual', 'visual flight rules'],
+  },
+  {
+    id: 'ifr-instrument',
+    prompt: 'What does the “I” in IFR stand for?',
+    answers: ['instrument', 'instrument flight rules'],
+  },
+  {
+    id: 'atis-meaning',
+    prompt: 'What does ATIS stand for?',
+    answers: ['automatic terminal information service'],
+  },
+  {
+    id: 'atc-meaning',
+    prompt: 'What does ATC stand for?',
+    answers: ['air traffic control'],
+  },
+  {
+    id: 'phonetic-alpha',
+    prompt: 'What is the NATO phonetic word for the letter “A”?',
+    answers: ['alpha'],
+  },
+  {
+    id: 'phonetic-foxtrot',
+    prompt: 'What is the NATO phonetic word for the letter “F”?',
+    answers: ['foxtrot'],
+  },
+  {
+    id: 'roger-copy',
+    prompt: 'Which word means “I received your transmission” on the radio?',
+    answers: ['roger'],
+  },
+  {
+    id: 'qnh',
+    prompt: 'Which Q-code sets your altimeter to local pressure?',
+    answers: ['qnh'],
+  },
+  {
+    id: 'squawk-7700',
+    prompt: 'What transponder code signals a general emergency?',
+    answers: ['7700'],
+  },
+  {
+    id: 'squawk-7000',
+    prompt: 'In Europe, which code do you set when ATC says “squawk VFR”?',
+    answers: ['7000'],
+  },
+]
+
+const DEFAULT_CAPTCHA = CAPTCHA_CHALLENGES[0]
+
+const createCaptchaState = () => reactive({
+  challenge: DEFAULT_CAPTCHA,
+  answer: '',
+}) as CaptchaState
+
+const normaliseCaptchaValue = (value: string) =>
+  value
+      .normalize('NFKD')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+
+const isCaptchaAnswerValid = (state: CaptchaState) => {
+  const response = normaliseCaptchaValue(state.answer)
+  if (!response) return false
+  return state.challenge.answers.some((answer) => normaliseCaptchaValue(answer) === response)
+}
+
+const pickRandomChallenge = (excludeId?: string) => {
+  const pool = excludeId
+      ? CAPTCHA_CHALLENGES.filter((challenge) => challenge.id !== excludeId)
+      : CAPTCHA_CHALLENGES
+  const available = pool.length ? pool : CAPTCHA_CHALLENGES
+  const index = Math.floor(Math.random() * available.length)
+  return available[index]
+}
+
+const rotateCaptchaChallenge = (state: CaptchaState) => {
+  const nextChallenge = pickRandomChallenge(state.challenge?.id)
+  state.challenge = nextChallenge
+  state.answer = ''
+}
+
 const year = new Date().getFullYear()
 
 const waitlistForm = reactive({
@@ -1517,6 +1655,8 @@ const waitlistForm = reactive({
   consentTerms: false,
   subscribeUpdates: false,
 })
+
+const waitlistCaptcha = createCaptchaState()
 
 const waitlistSubmitting = ref(false)
 const waitlistSuccess = ref(false)
@@ -1530,6 +1670,8 @@ const updatesForm = reactive({
   consentPrivacy: false,
   consentMarketing: false,
 })
+
+const updatesCaptcha = createCaptchaState()
 const updatesSubmitting = ref(false)
 const updatesSuccess = ref(false)
 const updatesError = ref('')
@@ -1554,11 +1696,24 @@ const waitlistLastJoinedFormatted = computed(() => {
   if (!iso) return '–'
   return formatWaitlistDate(iso)
 })
+const waitlistCaptchaValid = computed(() => isCaptchaAnswerValid(waitlistCaptcha))
+const updatesCaptchaValid = computed(() => isCaptchaAnswerValid(updatesCaptcha))
+
 const waitlistFormValid = computed(() =>
-    Boolean(waitlistForm.email && waitlistForm.consentPrivacy && waitlistForm.consentTerms)
+    Boolean(
+        waitlistForm.email &&
+        waitlistForm.consentPrivacy &&
+        waitlistForm.consentTerms &&
+        waitlistCaptchaValid.value,
+    )
 )
 const updatesFormValid = computed(() =>
-    Boolean(updatesForm.email && updatesForm.consentPrivacy && updatesForm.consentMarketing)
+    Boolean(
+        updatesForm.email &&
+        updatesForm.consentPrivacy &&
+        updatesForm.consentMarketing &&
+        updatesCaptchaValid.value,
+    )
 )
 const roadmapSuggestionFormValid = computed(() => {
   const title = roadmapSuggestionForm.title.trim()
@@ -1626,6 +1781,7 @@ async function submitWaitlist() {
     waitlistForm.consentPrivacy = false
     waitlistForm.consentTerms = false
     waitlistForm.subscribeUpdates = false
+    rotateCaptchaChallenge(waitlistCaptcha)
   } catch (err: any) {
     const fallback = 'Registration failed'
     const message = err?.data?.statusMessage || err?.message || fallback
@@ -1657,6 +1813,7 @@ async function submitUpdates() {
     updatesForm.email = ''
     updatesForm.consentPrivacy = false
     updatesForm.consentMarketing = false
+    rotateCaptchaChallenge(updatesCaptcha)
   } catch (err: any) {
     const fallback = 'Could not save sign-up'
     const message = err?.data?.statusMessage || err?.message || fallback
