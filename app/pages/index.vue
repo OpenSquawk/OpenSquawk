@@ -844,7 +844,7 @@
                 Get involved
               </NuxtLink>
               <NuxtLink
-                  to="https://github.com/FaktorxMensch/OpenSquawk"
+                  to="https://github.com/OpenSquawk/OpenSquawk"
                   external
                   target="_blank"
                   rel="noopener"
@@ -1237,7 +1237,7 @@ import type {NewsPost} from '~~/shared/utils/news'
 
 const api = useApi()
 
-const GITHUB_URL = 'https://github.com/FaktorxMensch/OpenSquawk'
+const GITHUB_URL = 'https://github.com/OpenSquawk/OpenSquawk'
 
 interface NavLink {
   label: string

@@ -35,7 +35,7 @@ Goal: a community-driven alternative to other costly AI-ATC solutions while bein
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/FaktorxMensch/OpenSquawk.git
+   git clone https://github.com/OpenSquawk/OpenSquawk.git
    cd OpenSquawk
    ```
 2. Enable corepack and install dependencies:
