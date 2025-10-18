@@ -3,6 +3,7 @@
   "ssr": false,
   "type": "module",
   "private": true,
+  "license": "AGPL-3.0-only",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
