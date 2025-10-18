@@ -1,6 +1,3 @@
-import type { Ref } from 'vue';
-import { watch } from 'vue';
-
 declare global {
   interface Window {
     hj?: ((...args: unknown[]) => void) & { q?: unknown[][] };
@@ -45,49 +42,18 @@ const appendHotjarScript = () => {
   return true;
 };
 
-const enableHotjar = (hasLoaded: Ref<boolean>) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window._hjOptOut = false;
-
-  if (hasLoaded.value) {
-    return;
-  }
-
-  ensureHotjarStub();
-
-  if (appendHotjarScript()) {
-    hasLoaded.value = true;
-  }
-};
-
-const disableHotjar = () => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window._hjOptOut = true;
-};
-
 export default defineNuxtPlugin(() => {
   if (!import.meta.client) {
     return;
   }
 
-  const { analyticsEnabled } = useCookieConsent();
   const hasLoaded = useState('hotjar-loaded', () => false);
 
-  watch(
-    () => analyticsEnabled.value,
-    (allowed) => {
-      if (allowed) {
-        enableHotjar(hasLoaded);
-      } else {
-        disableHotjar();
-      }
-    },
-    { immediate: true }
-  );
+  if (!hasLoaded.value) {
+    ensureHotjarStub();
+
+    if (appendHotjarScript()) {
+      hasLoaded.value = true;
+    }
+  }
 });
