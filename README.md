@@ -30,6 +30,8 @@ Goal: a community-driven alternative to other costly AI-ATC solutions while bein
 | OpenAI API Key      | For TTS and LLM calls (`OPENAI_API_KEY`).                                  |
 | Optional: Piper TTS | For local speech (`pip install "piper-tts[http]"`).                        |
 
+You can connect to any OpenAI-compatible (self-hosted or third-party) API by setting `OPENAI_BASE_URL` to the service's base URL.
+
 ## Setup
 
 1. Clone the repository:
@@ -54,6 +56,7 @@ Goal: a community-driven alternative to other costly AI-ATC solutions while bein
 
    * `MONGODB_URI`: MongoDB connection string (default `mongodb://127.0.0.1:27017/opensquawk`).
    * `JWT_SECRET` & `JWT_REFRESH_SECRET`: Random strings for tokens.
+   * `OPENAI_BASE_URL`: Optional override for any OpenAI API–compatible service; defaults to the OpenAI platform when unset.
    * `OPENAI_API_KEY`, optional `OPENAI_PROJECT`, `LLM_MODEL`, `TTS_MODEL`, `VOICE_ID`.
    * `ATC_OUT_DIR`: Directory for generated audio files.
    * `USE_PIPER`, `PIPER_PORT`: Enable local Piper TTS instance.
