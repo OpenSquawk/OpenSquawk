@@ -928,13 +928,6 @@
                 </div>
               </div>
             </div>
-            <div v-else-if="scenario" class="scenario-quick">
-              <div class="scenario-quick-main">
-                <span class="scenario-quick-label">Callsign</span>
-                <span class="scenario-quick-value">{{ displayCallsign(scenario.radioCall, scenario) }}</span>
-              </div>
-              <span class="scenario-quick-sub">Pronunciation: {{ scenario.radioCall }}</span>
-            </div>
             <div class="console-grid">
               <div class="col">
                 <div class="label">Briefing</div>
