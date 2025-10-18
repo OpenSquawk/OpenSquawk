@@ -19,7 +19,7 @@ const learnProfileSchema = new mongoose.Schema<LearnProfileDocument>(
     unlockedModules: { type: [String], default: () => [] },
     config: {
       tts: { type: Boolean, default: false },
-      radioLevel: { type: Number, default: 4, min: 1, max: 5 },
+      radioLevel: { type: Number, default: 5, min: 1, max: 5 },
       voice: { type: String, default: '', trim: true },
       audioChallenge: { type: Boolean, default: false },
       audioSpeed: { type: Number, default: 1, min: 0.5, max: 2 },
