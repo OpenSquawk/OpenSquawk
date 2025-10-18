@@ -511,7 +511,7 @@ function handleClassroomEntry() {
 }
 
 const voiceMode = ref<VoiceMode>('text')
-const radioLevel = ref(3)
+const radioLevel = ref(4)
 const hasCompletedRadioCheck = ref(false)
 const tourStarted = ref(false)
 const stageIndex = ref(0)

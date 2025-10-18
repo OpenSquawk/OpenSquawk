@@ -1282,6 +1282,7 @@ import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, Scenario} fr
 import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
+import {DEFAULT_AIRLINE_TELEPHONY, normalizeRadioPhrase} from '~~/shared/utils/radioSpeech'
 
 definePageMeta({middleware: ['require-auth', 'require-classroom-intro']})
 
@@ -4273,12 +4274,18 @@ async function say(text: string) {
   const playbackToken = ++activePlaybackToken
 
   const normalizedRate = computeSpeechRate()
+  const spokenPhrase = normalizeRadioPhrase(trimmed, {
+    airlineMap: DEFAULT_AIRLINE_TELEPHONY,
+    expandAirports: true,
+    expandCallsigns: true
+  })
+  const speakText = spokenPhrase || trimmed
 
   const hasBrowserTts = cfg.value.tts && typeof window !== 'undefined' && 'speechSynthesis' in window
 
   if (hasBrowserTts) {
     const synth = window.speechSynthesis
-    const utterance = new SpeechSynthesisUtterance(trimmed)
+    const utterance = new SpeechSynthesisUtterance(speakText)
     utterance.rate = normalizedRate
     if (cfg.value.voice) {
       const voiceName = cfg.value.voice.toLowerCase()
@@ -4312,7 +4319,7 @@ async function say(text: string) {
     payload.voice = cfg.value.voice
   }
 
-  const cacheKey = buildSayCacheKey(trimmed, normalizedRate)
+  const cacheKey = buildSayCacheKey(speakText, normalizedRate)
 
   isSpeaking.value = true
   ttsLoading.value = true

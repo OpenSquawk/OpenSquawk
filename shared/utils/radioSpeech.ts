@@ -42,6 +42,23 @@ export const ICAO_LETTERS: Record<string, string> = {
 
 export type AirlineTelephonyMap = Record<string, string>;
 
+export const DEFAULT_AIRLINE_TELEPHONY: AirlineTelephonyMap = {
+    DLH: "Lufthansa",
+    EWG: "Eurowings",
+    THY: "Turkish",
+    JBU: "JetBlue",
+    NAX: "Norwegian",
+    SWR: "Swiss",
+    BAW: "Speedbird",
+    AFR: "Air France",
+    KLM: "KLM",
+    AAL: "American",
+    UAL: "United",
+    DAL: "Delta",
+    RYR: "Ryanair",
+    EZY: "Easy",
+};
+
 export interface NormalizeRadioOptions {
     airlineMap?: AirlineTelephonyMap;
     expandCallsigns?: boolean;
@@ -111,6 +128,71 @@ function freqSpeak(raw: string): string {
     if (!right) return leftSpoken;
     const rightSpoken = spellIcaoDigits(right);
     return `${leftSpoken} decimal ${rightSpoken}`;
+}
+
+const VIA_TAXI_ROUTE_PATTERN = /\b((?:expect\s+taxi\s+)?via\s+)([A-Z0-9\s/\-]+?)(?=(?:,|\s+(?:hold short|cross|then|contact|monitor|with|for|to|left|right)\b|\.)|$)/gi;
+
+const TAXI_ROUTE_LABEL_PATTERN = /\b(taxi(?:-?in)?\s+route[:\s]+)([A-Z0-9\s/\-]+?)(?=(?:,|\s+(?:hold short|cross|then|contact|monitor|with|for|to|left|right)\b|\.)|$)/gi;
+
+const STAND_ROUTE_PATTERN = /\b(taxi\s+to\s+stand\s+[A-Z0-9]+\s+via\s+)([A-Z0-9\s/\-]+?)(?=(?:,|\s+(?:hold short|cross|then|contact|monitor|with|for|to|left|right)\b|\.)|$)/gi;
+
+const TAXI_SEGMENT_SINGLE = /^[A-Z]{1,2}$/;
+const TAXI_SEGMENT_WITH_DIGITS = /^[A-Z]{1,3}\d{1,3}$/;
+
+const TAXI_ROUTE_SEPARATOR = /[-/]/g;
+
+function shouldConvertTaxiSegment(value: string): boolean {
+    if (!value) return false;
+    const upper = value.toUpperCase();
+    if (!/[A-Z]/.test(upper)) return false;
+    if (TAXI_SEGMENT_SINGLE.test(upper)) return true;
+    if (TAXI_SEGMENT_WITH_DIGITS.test(upper)) return true;
+    return false;
+}
+
+function speakTaxiSegment(segment: string): string {
+    const trimmed = segment.trim();
+    if (!trimmed) return '';
+    const cleaned = trimmed.replace(/[^A-Za-z0-9\-/]/g, '');
+    if (!cleaned) return trimmed;
+    const expanded = cleaned.replace(TAXI_ROUTE_SEPARATOR, (match) => (match === '-' ? ' dash ' : ' slash '));
+    const tokens = expanded.split(/\s+/).filter(Boolean);
+    const spoken = tokens.map((token) => {
+        if (token === 'dash' || token === 'slash') return token;
+        const upper = token.toUpperCase();
+        if (!shouldConvertTaxiSegment(upper)) {
+            return token;
+        }
+        return toIcaoPhonetic(upper);
+    });
+    return spoken.join(' ');
+}
+
+function speakTaxiRoute(route: string): string {
+    const parts = route.trim().split(/(\s+)/);
+    if (!parts.length) return route.trim();
+    const spokenParts = parts.map((part) => {
+        if (!part.trim()) return part;
+        const spoken = speakTaxiSegment(part);
+        return spoken || part;
+    });
+    return spokenParts.join('').replace(/\s+/g, ' ').trim();
+}
+
+function applyTaxiRoutePhonetics(text: string): string {
+    const replacer = (_match: string, prefix: string, rawRoute: string) => {
+        const route = rawRoute.trim();
+        if (!route) return `${prefix}${rawRoute}`;
+        const spoken = speakTaxiRoute(route);
+        if (!spoken) return `${prefix}${rawRoute}`;
+        const needsSpace = /\s$/.test(prefix) ? '' : ' ';
+        return `${prefix}${needsSpace}${spoken}`.replace(/\s+/g, ' ');
+    };
+
+    let out = text.replace(VIA_TAXI_ROUTE_PATTERN, replacer);
+    out = out.replace(TAXI_ROUTE_LABEL_PATTERN, replacer);
+    out = out.replace(STAND_ROUTE_PATTERN, replacer);
+    return out;
 }
 
 const HUNDRED_WORDS: Record<number, string> = {
@@ -196,6 +278,8 @@ export function normalizeRadioPhrase(text: string, options: NormalizeRadioOption
         const airlineMap = opts.airlineMap ?? {};
         out = out.replace(/\b([A-Z]{2,3}\d{1,4}[A-Z]?)\b/g, (match: string) => callsignSpeak(match, airlineMap));
     }
+
+    out = applyTaxiRoutePhonetics(out);
 
     return out.replace(/\s+/g, ' ').trim();
 }

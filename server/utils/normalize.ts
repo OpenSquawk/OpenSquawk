@@ -1,7 +1,7 @@
 // yarn add openai
 import OpenAI from "openai";
 import fs from "node:fs";
-import { normalizeRadioPhrase } from "../../shared/utils/radioSpeech";
+import { DEFAULT_AIRLINE_TELEPHONY, normalizeRadioPhrase } from "../../shared/utils/radioSpeech";
 import { getServerRuntimeConfig } from "./runtimeConfig";
 
 const { openaiKey, openaiProject, openaiBaseUrl, llmModel, ttsModel } = getServerRuntimeConfig();
@@ -144,22 +144,7 @@ export function atcReplyPrompt(userText: string, state?: {
    ========================= */
 
 // Airline telephony (extensible)
-export const CALLSIGN_MAP: Record<string,string> = {
-    DLH: "Lufthansa",
-    EWG: "Eurowings",
-    THY: "Turkish",
-    JBU: "JetBlue",
-    NAX: "Norwegian",
-    SWR: "Swiss",
-    BAW: "Speedbird",
-    AFR: "Air France",
-    KLM: "KLM",
-    AAL: "American",
-    UAL: "United",
-    DAL: "Delta",
-    RYR: "Ryanair",
-    EZY: "Easy",
-};
+export const CALLSIGN_MAP: Record<string,string> = { ...DEFAULT_AIRLINE_TELEPHONY };
 
 // Public Normalizer
 export function normalizeATC(
