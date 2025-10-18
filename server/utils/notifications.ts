@@ -6,6 +6,7 @@ interface MailOptions {
   text?: string
   html?: string
   from?: string
+  replyTo?: string
 }
 
 interface MailPayload extends MailOptions {
@@ -20,6 +21,7 @@ interface AdminNotificationInput {
   message?: string
   data?: NotificationDataEntry[]
   from?: string
+  replyTo?: string
 }
 
 interface SmtpConfig {
@@ -83,6 +85,7 @@ async function sendViaSmtp(payload: MailPayload) {
       subject: payload.subject,
       text: payload.text,
       html: payload.html,
+      replyTo: payload.replyTo,
     })
     return true
   } catch (error) {
@@ -159,7 +162,7 @@ function formatAdminNotification(notification: AdminNotificationInput) {
     }
   }
 
-  return { subject, text: lines.join('\n'), from: notification.from }
+  return { subject, text: lines.join('\n'), from: notification.from, replyTo: notification.replyTo }
 }
 
 export async function sendAdminNotification(notification: string | AdminNotificationInput, text?: string) {
@@ -171,7 +174,13 @@ export async function sendAdminNotification(notification: string | AdminNotifica
     mailOptions = { to, subject: notification, text: text || '' }
   } else {
     const formatted = formatAdminNotification(notification)
-    mailOptions = { to, subject: formatted.subject, text: formatted.text, from: formatted.from }
+    mailOptions = {
+      to,
+      subject: formatted.subject,
+      text: formatted.text,
+      from: formatted.from,
+      replyTo: formatted.replyTo,
+    }
   }
 
   const success = await sendMail(mailOptions)
