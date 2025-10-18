@@ -1582,8 +1582,8 @@ const CAPTCHA_CHALLENGES: CaptchaChallenge[] = [
   },
   {
     id: 'atc-meaning',
-    prompt: 'What does ATC stand for?',
-    answers: ['air traffic control'],
+    prompt: 'What does the A in ATC stand for?',
+    answers: ['air', 'air traffic control'],
   },
   {
     id: 'affirm',
@@ -1593,7 +1593,7 @@ const CAPTCHA_CHALLENGES: CaptchaChallenge[] = [
   {
     id: 'roger-copy',
     prompt: 'Which word means “I received your transmission” on the radio?',
-    answers: ['roger'],
+    answers: ['roger', 'roger that', 'roger copy','copy' ],
   },
   {
     id: 'wilco',
@@ -1603,7 +1603,7 @@ const CAPTCHA_CHALLENGES: CaptchaChallenge[] = [
   {
     id: 'niner',
     prompt: 'How do pilots say the number 9 on the radio?',
-    answers: ['niner'],
+    answers: ['niner','nine'],
   },
   {
     id: 'phonetic-alpha',
@@ -1614,11 +1614,6 @@ const CAPTCHA_CHALLENGES: CaptchaChallenge[] = [
     id: 'phonetic-bravo',
     prompt: 'What is the NATO phonetic word for the letter “B”?',
     answers: ['bravo'],
-  },
-  {
-    id: 'phonetic-foxtrot',
-    prompt: 'What is the NATO phonetic word for the letter “F”?',
-    answers: ['foxtrot'],
   },
 ]
 
