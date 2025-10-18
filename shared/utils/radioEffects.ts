@@ -50,22 +50,22 @@ const readabilityProfiles: Record<number, ReadabilityProfile> = {
     noise: { amplitude: 0.055, bandFrequency: 1950, bandQ: 1.2 }
   },
   4: {
-    eq: { highpass: 310, highpassQ: 0.7, lowpass: 3150, lowpassQ: 0.82, bandpass: { frequency: 2050, q: 1.2 } },
-    presence: { frequency: 2350, q: 1.35, gain: 1.5 },
-    distortions: [130],
-    tremolos: [{ depth: 0.08, speed: 3.1, type: 'sine' }],
-    gain: 0.94,
-    compressor: { threshold: -27, ratio: 11, attack: 0.0028, release: 0.22 },
-    noise: { amplitude: 0.035, bandFrequency: 2050, bandQ: 1.08 }
+    eq: { highpass: 280, highpassQ: 0.65, lowpass: 3600, lowpassQ: 0.8, bandpass: { frequency: 2200, q: 1.15 } },
+    presence: { frequency: 2500, q: 1.25, gain: 2.2 },
+    distortions: [90],
+    tremolos: [{ depth: 0.06, speed: 2.9, type: 'sine' }],
+    gain: 0.97,
+    compressor: { threshold: -26, ratio: 9.5, attack: 0.0025, release: 0.2 },
+    noise: { amplitude: 0.024, bandFrequency: 2100, bandQ: 1.05 }
   },
   5: {
-    eq: { highpass: 260, highpassQ: 0.6, lowpass: 3600, lowpassQ: 0.78, bandpass: { frequency: 2250, q: 1.05 } },
-    presence: { frequency: 2550, q: 1.5, gain: 1.1 },
-    distortions: [60],
-    tremolos: [{ depth: 0.04, speed: 2.4, type: 'sine' }],
-    gain: 0.98,
-    compressor: { threshold: -25, ratio: 9.5, attack: 0.0025, release: 0.18 },
-    noise: { amplitude: 0.016, bandFrequency: 2150, bandQ: 1 }
+    eq: { highpass: 240, highpassQ: 0.6, lowpass: 4100, lowpassQ: 0.76, bandpass: { frequency: 2350, q: 1 } },
+    presence: { frequency: 2750, q: 1.1, gain: 2 },
+    distortions: [45],
+    tremolos: [{ depth: 0.03, speed: 2.1, type: 'sine' }],
+    gain: 1.02,
+    compressor: { threshold: -24, ratio: 8.5, attack: 0.0023, release: 0.17 },
+    noise: { amplitude: 0.012, bandFrequency: 2200, bandQ: 0.95 }
   }
 }
 
