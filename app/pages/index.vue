@@ -172,7 +172,7 @@
                 <button
                     type="submit"
                     class="btn btn-primary w-full sm:w-auto lg:w-48"
-                    :disabled="!updatesFormValid || updatesSubmitting"
+                    :disabled="updatesSubmitting"
                 >
                   <span v-if="updatesSubmitting" class="flex items-center gap-2">
                     <v-progress-circular indeterminate size="16" width="2" color="white"/>
@@ -184,7 +184,10 @@
                   </span>
                 </button>
               </div>
-              <div class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60">
+              <div
+                  v-if="updatesCaptchaVisible"
+                  class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60"
+              >
                 <p class="text-sm font-medium text-white">Aviation captcha</p>
                 <p>
                   Answer with real ATC knowledge:
@@ -198,7 +201,10 @@
                     placeholder="Type the answer"
                     class="w-full rounded-2xl border border-white/10 bg-[#0b1020]/40 px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-cyan-400"
                 />
-                <p v-if="updatesCaptcha.answer && !updatesCaptchaValid" class="text-xs text-red-300">
+                <p v-if="updatesCaptchaReminder" class="text-xs text-amber-200">
+                  {{ updatesCaptchaReminder }}
+                </p>
+                <p v-else-if="updatesCaptcha.answer && !updatesCaptchaValid" class="text-xs text-red-300">
                   Check the aviation answer and try again.
                 </p>
               </div>
@@ -1043,7 +1049,10 @@ POST /api/route/taxi
                   class="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
               />
             </div>
-            <div class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60">
+            <div
+                v-if="waitlistCaptchaVisible"
+                class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60"
+            >
               <p class="text-sm font-medium text-white">Aviation captcha</p>
               <p>
                 Answer to join the pattern:
@@ -1057,7 +1066,10 @@ POST /api/route/taxi
                   placeholder="Type the answer"
                   class="w-full rounded-2xl border border-white/10 bg-[#0b1020]/40 px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-cyan-400"
               />
-              <p v-if="waitlistCaptcha.answer && !waitlistCaptchaValid" class="text-xs text-red-300">
+              <p v-if="waitlistCaptchaReminder" class="text-xs text-amber-200">
+                {{ waitlistCaptchaReminder }}
+              </p>
+              <p v-else-if="waitlistCaptcha.answer && !waitlistCaptchaValid" class="text-xs text-red-300">
                 Check the ATC question and try again.
               </p>
             </div>
@@ -1085,7 +1097,7 @@ POST /api/route/taxi
             <button
                 type="submit"
                 class="btn btn-primary w-full"
-                :disabled="!waitlistFormValid || waitlistSubmitting"
+                :disabled="waitlistSubmitting"
             >
               <span v-if="waitlistSubmitting" class="flex items-center gap-2">
                 <v-progress-circular indeterminate size="16" width="2" color="white"/>
@@ -1569,24 +1581,14 @@ const CAPTCHA_CHALLENGES: CaptchaChallenge[] = [
     answers: ['instrument', 'instrument flight rules'],
   },
   {
-    id: 'atis-meaning',
-    prompt: 'What does ATIS stand for?',
-    answers: ['automatic terminal information service'],
-  },
-  {
     id: 'atc-meaning',
     prompt: 'What does ATC stand for?',
     answers: ['air traffic control'],
   },
   {
-    id: 'phonetic-alpha',
-    prompt: 'What is the NATO phonetic word for the letter “A”?',
-    answers: ['alpha'],
-  },
-  {
-    id: 'phonetic-foxtrot',
-    prompt: 'What is the NATO phonetic word for the letter “F”?',
-    answers: ['foxtrot'],
+    id: 'affirm',
+    prompt: 'How do pilots say “yes” on the radio?',
+    answers: ['affirm', 'affirmative'],
   },
   {
     id: 'roger-copy',
@@ -1594,19 +1596,29 @@ const CAPTCHA_CHALLENGES: CaptchaChallenge[] = [
     answers: ['roger'],
   },
   {
-    id: 'qnh',
-    prompt: 'Which Q-code sets your altimeter to local pressure?',
-    answers: ['qnh'],
+    id: 'wilco',
+    prompt: 'Which word means “I will comply with your instruction”?',
+    answers: ['wilco'],
   },
   {
-    id: 'squawk-7700',
-    prompt: 'What transponder code signals a general emergency?',
-    answers: ['7700'],
+    id: 'niner',
+    prompt: 'How do pilots say the number 9 on the radio?',
+    answers: ['niner'],
   },
   {
-    id: 'squawk-7000',
-    prompt: 'In Europe, which code do you set when ATC says “squawk VFR”?',
-    answers: ['7000'],
+    id: 'phonetic-alpha',
+    prompt: 'What is the NATO phonetic word for the letter “A”?',
+    answers: ['alpha'],
+  },
+  {
+    id: 'phonetic-bravo',
+    prompt: 'What is the NATO phonetic word for the letter “B”?',
+    answers: ['bravo'],
+  },
+  {
+    id: 'phonetic-foxtrot',
+    prompt: 'What is the NATO phonetic word for the letter “F”?',
+    answers: ['foxtrot'],
   },
 ]
 
@@ -1657,6 +1669,8 @@ const waitlistForm = reactive({
 })
 
 const waitlistCaptcha = createCaptchaState()
+const waitlistCaptchaVisible = ref(false)
+const waitlistCaptchaReminder = ref('')
 
 const waitlistSubmitting = ref(false)
 const waitlistSuccess = ref(false)
@@ -1672,6 +1686,8 @@ const updatesForm = reactive({
 })
 
 const updatesCaptcha = createCaptchaState()
+const updatesCaptchaVisible = ref(false)
+const updatesCaptchaReminder = ref('')
 const updatesSubmitting = ref(false)
 const updatesSuccess = ref(false)
 const updatesError = ref('')
@@ -1699,21 +1715,50 @@ const waitlistLastJoinedFormatted = computed(() => {
 const waitlistCaptchaValid = computed(() => isCaptchaAnswerValid(waitlistCaptcha))
 const updatesCaptchaValid = computed(() => isCaptchaAnswerValid(updatesCaptcha))
 
-const waitlistFormValid = computed(() =>
-    Boolean(
-        waitlistForm.email &&
-        waitlistForm.consentPrivacy &&
-        waitlistForm.consentTerms &&
-        waitlistCaptchaValid.value,
-    )
+watch(
+    () => updatesForm.email,
+    (value) => {
+      const hasValue = value?.trim().length > 0
+      if (hasValue) {
+        updatesCaptchaVisible.value = true
+      } else {
+        updatesCaptchaVisible.value = false
+        updatesCaptcha.answer = ''
+        updatesCaptchaReminder.value = ''
+      }
+    },
 )
-const updatesFormValid = computed(() =>
-    Boolean(
-        updatesForm.email &&
-        updatesForm.consentPrivacy &&
-        updatesForm.consentMarketing &&
-        updatesCaptchaValid.value,
-    )
+
+watch(
+    () => updatesCaptcha.answer,
+    (value) => {
+      if (updatesCaptchaReminder.value && value?.trim().length) {
+        updatesCaptchaReminder.value = ''
+      }
+    },
+)
+
+watch(
+    () => waitlistForm.email,
+    (value) => {
+      const hasValue = value?.trim().length > 0
+      if (hasValue) {
+        waitlistCaptchaVisible.value = true
+      } else {
+        waitlistCaptchaVisible.value = false
+        waitlistCaptcha.answer = ''
+        waitlistCaptchaReminder.value = ''
+      }
+    },
+)
+
+watch(
+    () => waitlistCaptcha.answer,
+    (value) => {
+      if (waitlistCaptchaReminder.value && value?.trim().length) {
+        waitlistCaptchaReminder.value = ''
+      }
+    },
 )
 const roadmapSuggestionFormValid = computed(() => {
   const title = roadmapSuggestionForm.title.trim()
@@ -1751,12 +1796,37 @@ async function loadWaitlistStats() {
 }
 
 async function submitWaitlist() {
-  if (!waitlistFormValid.value || waitlistSubmitting.value) return
+  if (waitlistSubmitting.value) return
 
-  waitlistSubmitting.value = true
   waitlistError.value = ''
   waitlistSuccess.value = false
+  waitlistCaptchaReminder.value = ''
   waitlistLastOptInUpdates.value = false
+
+  const email = waitlistForm.email.trim()
+  if (!email) {
+    waitlistError.value = 'Please add your email so we can reach you.'
+    return
+  }
+
+  if (!waitlistForm.consentPrivacy || !waitlistForm.consentTerms) {
+    waitlistError.value = 'Please confirm the required checkboxes.'
+    return
+  }
+
+  if (!waitlistCaptchaVisible.value) {
+    waitlistCaptchaVisible.value = true
+  }
+
+  const hasCaptchaAnswer = waitlistCaptcha.answer.trim().length > 0
+  if (!waitlistCaptchaValid.value) {
+    if (!hasCaptchaAnswer) {
+      waitlistCaptchaReminder.value = 'Wir erhalten gerade viel Spam – bitte beantworte kurz die kleine ATC-Frage.'
+    }
+    return
+  }
+
+  waitlistSubmitting.value = true
 
   try {
     const wantsProductUpdates = waitlistForm.subscribeUpdates
@@ -1764,7 +1834,7 @@ async function submitWaitlist() {
         '/api/service/waitlist',
         {
           name: waitlistForm.name,
-          email: waitlistForm.email,
+          email,
           notes: waitlistForm.notes,
           consentPrivacy: waitlistForm.consentPrivacy,
           consentTerms: waitlistForm.consentTerms,
@@ -1781,6 +1851,7 @@ async function submitWaitlist() {
     waitlistForm.consentPrivacy = false
     waitlistForm.consentTerms = false
     waitlistForm.subscribeUpdates = false
+    waitlistCaptchaReminder.value = ''
     rotateCaptchaChallenge(waitlistCaptcha)
   } catch (err: any) {
     const fallback = 'Registration failed'
@@ -1792,17 +1863,42 @@ async function submitWaitlist() {
 }
 
 async function submitUpdates() {
-  if (!updatesFormValid.value || updatesSubmitting.value) return
+  if (updatesSubmitting.value) return
 
-  updatesSubmitting.value = true
   updatesError.value = ''
   updatesSuccess.value = false
+  updatesCaptchaReminder.value = ''
+
+  const email = updatesForm.email.trim()
+  if (!email) {
+    updatesError.value = 'Please add your email so we can reach you.'
+    return
+  }
+
+  if (!updatesForm.consentPrivacy || !updatesForm.consentMarketing) {
+    updatesError.value = 'Please confirm the required checkboxes.'
+    return
+  }
+
+  if (!updatesCaptchaVisible.value) {
+    updatesCaptchaVisible.value = true
+  }
+
+  const hasCaptchaAnswer = updatesCaptcha.answer.trim().length > 0
+  if (!updatesCaptchaValid.value) {
+    if (!hasCaptchaAnswer) {
+      updatesCaptchaReminder.value = 'Wir erhalten gerade viel Spam – bitte beantworte kurz die kleine ATC-Frage.'
+    }
+    return
+  }
+
+  updatesSubmitting.value = true
 
   try {
     await api.post(
         '/api/service/updates',
         {
-          email: updatesForm.email,
+          email,
           consentPrivacy: updatesForm.consentPrivacy,
           consentMarketing: updatesForm.consentMarketing,
           source: 'landing-hero',
@@ -1813,6 +1909,7 @@ async function submitUpdates() {
     updatesForm.email = ''
     updatesForm.consentPrivacy = false
     updatesForm.consentMarketing = false
+    updatesCaptchaReminder.value = ''
     rotateCaptchaChallenge(updatesCaptcha)
   } catch (err: any) {
     const fallback = 'Could not save sign-up'
