@@ -53,12 +53,31 @@ const removeHotjarScript = () => {
   }
 };
 
+const HOTJAR_OPTOUT_COOKIE = 'hjOptOut';
+
+const setHotjarOptOutCookie = () => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  document.cookie = `${HOTJAR_OPTOUT_COOKIE}=1; path=/; expires=Fri, 31 Dec 9999 23:59:59 GMT`;
+};
+
+const clearHotjarOptOutCookie = () => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  document.cookie = `${HOTJAR_OPTOUT_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+};
+
 const disableHotjar = () => {
   if (typeof window === 'undefined') {
     return;
   }
 
   window._hjOptOut = true;
+  setHotjarOptOutCookie();
   removeHotjarScript();
   window.hj = undefined;
   window._hjSettings = undefined;
@@ -69,6 +88,7 @@ const enableHotjar = () => {
     return false;
   }
 
+  clearHotjarOptOutCookie();
   window._hjOptOut = false;
   ensureHotjarStub();
   return appendHotjarScript();
