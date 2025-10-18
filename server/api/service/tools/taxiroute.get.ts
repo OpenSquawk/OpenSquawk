@@ -153,17 +153,54 @@ out body;
             start_attach: startAttach,
             end_attach:   endAttach,
             route: null,
-            names: []
+            names: [],
+            names_collapsed: []
         }
     }
 
-    // names along path (consecutive compressed, drop null/unnamed)
-    const namesSeq: string[] = []
+    // names along path (drop null/unnamed); keep both raw sequence and collapsed variant
+    const normalizeName = (value: string) => {
+        const trimmed = value.trim()
+        if (!trimmed) return null
+        const match = trimmed.match(/^([A-Za-z]+)/)
+        return (match ? match[1] : trimmed).toUpperCase()
+    }
+    const isPlainLetter = (value: string) => /^[A-Za-z]+$/.test(value.trim())
+
+    const namesRaw: string[] = []
+    const namesCollapsed: string[] = []
+    const hasDigits = (value: string) => /\d/.test(value)
     for (let i=0;i<sp.path.length-1;i++){
         const u = sp.path[i], v = sp.path[i+1]
         const meta = edgeName.get(`${u}->${v}`) || edgeName.get(`${v}->${u}`)
         const nm = meta?.name?.trim()
-        if (nm && (namesSeq.length===0 || namesSeq[namesSeq.length-1]!==nm)) namesSeq.push(nm)
+        if (!nm) continue
+
+        if (namesRaw.length === 0 || namesRaw[namesRaw.length-1] !== nm) namesRaw.push(nm)
+
+        const normalized = normalizeName(nm)
+        if (!normalized) continue
+
+        const last = namesCollapsed[namesCollapsed.length-1]
+        if (!last){
+            namesCollapsed.push(nm)
+            continue
+        }
+
+        const lastNormalized = normalizeName(last)
+        if (lastNormalized === normalized){
+            const lastHasDigits = hasDigits(last)
+            const currentHasDigits = hasDigits(nm)
+
+            if (currentHasDigits && lastHasDigits) {
+                continue
+            }
+
+            if (isPlainLetter(nm) && !isPlainLetter(last)) namesCollapsed[namesCollapsed.length-1] = nm
+            continue
+        }
+
+        namesCollapsed.push(nm)
     }
 
     return {
@@ -175,6 +212,7 @@ out body;
             node_ids: sp.path,
             total_distance_m: sp.total_m
         },
-        names: namesSeq
+        names: namesRaw,
+        names_collapsed: namesCollapsed
     }
 })
