@@ -159,14 +159,6 @@ out body;
     }
 
     // names along path (drop null/unnamed); keep both raw sequence and collapsed variant
-    const normalizeName = (value: string) => {
-        const trimmed = value.trim()
-        if (!trimmed) return null
-        const match = trimmed.match(/^([A-Za-z]+)/)
-        return (match ? match[1] : trimmed).toUpperCase()
-    }
-    const isPlainLetter = (value: string) => /^[A-Za-z]+$/.test(value.trim())
-
     const namesRaw: string[] = []
     const namesCollapsed: string[] = []
     const hasDigits = (value: string) => /\d/.test(value)
@@ -178,26 +170,16 @@ out body;
 
         if (namesRaw.length === 0 || namesRaw[namesRaw.length-1] !== nm) namesRaw.push(nm)
 
-        const normalized = normalizeName(nm)
-        if (!normalized) continue
-
         const last = namesCollapsed[namesCollapsed.length-1]
-        if (!last){
-            namesCollapsed.push(nm)
-            continue
-        }
+        if (last) {
+            const lastNormalized = last.replace(/\s+/g, '').match(/^([A-Za-z]+)/)?.[1]?.toUpperCase()
+            const currentNormalized = nm.replace(/\s+/g, '').match(/^([A-Za-z]+)/)?.[1]?.toUpperCase()
 
-        const lastNormalized = normalizeName(last)
-        if (lastNormalized === normalized){
-            const lastHasDigits = hasDigits(last)
-            const currentHasDigits = hasDigits(nm)
-
-            if (currentHasDigits && lastHasDigits) {
-                continue
+            if (lastNormalized && currentNormalized && lastNormalized === currentNormalized) {
+                if (hasDigits(last) && hasDigits(nm)) {
+                    continue
+                }
             }
-
-            if (isPlainLetter(nm) && !isPlainLetter(last)) namesCollapsed[namesCollapsed.length-1] = nm
-            continue
         }
 
         namesCollapsed.push(nm)
