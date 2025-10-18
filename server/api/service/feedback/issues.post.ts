@@ -30,6 +30,7 @@ export default defineEventHandler(async (event) => {
   const description = sanitize(body.description)
   const categories = sanitizeCategories(body.categories)
   const contactEmail = sanitize(body.contactEmail)
+  const fromAddress = contactEmail || undefined
 
   if (title.length < 4) {
     throw createError({ statusCode: 400, statusMessage: 'Title must be at least 4 characters long.' })
@@ -60,7 +61,7 @@ export default defineEventHandler(async (event) => {
       ['Categories', categories.join(', ')],
       ['Contact email', contactEmail || '—'],
     ],
-    from: contactEmail || undefined,
+    replyTo: fromAddress,
   })
 
   return {

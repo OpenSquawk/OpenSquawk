@@ -15,6 +15,7 @@ export default defineEventHandler(async (event) => {
   const email = body.email?.trim().toLowerCase()
   const name = body.name?.trim()
   const source = body.source?.trim() || 'landing-updates'
+  const fromAddress = email ? (name ? `${name} <${email}>` : email) : undefined
 
   if (!email) {
     throw createError({ statusCode: 400, statusMessage: 'Email is required' })
@@ -46,6 +47,7 @@ export default defineEventHandler(async (event) => {
       event: 'New updates signup',
       summary: `New updates signup: ${email}`,
       data: dataEntries,
+      replyTo: fromAddress,
     })
   }
 

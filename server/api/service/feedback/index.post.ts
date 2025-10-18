@@ -62,6 +62,7 @@ export default defineEventHandler(async (event) => {
   const highlightSelections = normaliseArray(body.highlightSelections)
   const frictionSelections = normaliseArray(body.frictionSelections)
   const allowContact = Boolean(body.contactConsent)
+  const fromAddress = email ? (name ? `${name} <${email}>` : email) : undefined
 
   const details: string[] = []
   details.push(`Overall excitement: ${excitement}/5`)
@@ -107,7 +108,7 @@ export default defineEventHandler(async (event) => {
       ['Discord', discordHandle || '—'],
       ['Okay to contact', allowContact ? 'Yes' : 'No'],
     ],
-    from: email || undefined,
+    replyTo: fromAddress,
   })
 
   return { success: true }

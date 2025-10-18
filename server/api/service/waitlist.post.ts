@@ -20,6 +20,7 @@ export default defineEventHandler(async (event) => {
   const notes = body.notes?.trim()
   const source = body.source?.trim() || 'landing'
   const wantsProductUpdates = Boolean(body.wantsProductUpdates)
+  const fromAddress = email ? (name ? `${name} <${email}>` : email) : undefined
 
   if (!email) {
     throw createError({ statusCode: 400, statusMessage: 'Email is required' })
@@ -72,6 +73,7 @@ export default defineEventHandler(async (event) => {
           event: 'New updates signup (waitlist)',
           summary: `Product updates opt-in (waitlist): ${email}`,
           data: dataEntries,
+          replyTo: fromAddress,
         })
       }
     }
@@ -121,6 +123,7 @@ export default defineEventHandler(async (event) => {
     event: 'New waitlist signup',
     summary: `New waitlist signup: ${email}`,
     data: dataEntries,
+    replyTo: fromAddress,
   })
 
   return {
