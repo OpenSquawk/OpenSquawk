@@ -53,6 +53,23 @@ const removeHotjarScript = () => {
   }
 };
 
+const removeHotjarOptOutCookie = () => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  const expires = 'Thu, 01 Jan 1970 00:00:00 GMT';
+  const baseCookie = `hjOptOut=; expires=${expires}; path=/`;
+  document.cookie = baseCookie;
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname) {
+      document.cookie = `${baseCookie}; domain=.${hostname}`;
+    }
+  }
+};
+
 const disableHotjar = () => {
   if (typeof window === 'undefined') {
     return;
@@ -69,6 +86,7 @@ const enableHotjar = () => {
     return false;
   }
 
+  removeHotjarOptOutCookie();
   window._hjOptOut = false;
   ensureHotjarStub();
   return appendHotjarScript();
