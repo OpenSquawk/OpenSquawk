@@ -1,0 +1,160 @@
+OpenSquawk Community Source License 1.0
+
+Copyright (c) 2026 OpenSquawk contributors
+All rights reserved.
+
+These terms are conditions of every license granted below.
+
+1. Definitions
+
+"Software" means the OpenSquawk software and accompanying materials made
+available with these terms, including any portion, copy, modification, or
+derivative work.
+
+"Licensor" means each copyright holder who makes a contribution to the
+Software available under these terms.
+
+"You" means the individual natural person accepting these terms. An
+organization may not be "You" and receives no rights under these terms unless
+the applicable Licensor gives it separate written permission.
+
+"Personal Use" means use solely by You, for Your own private recreation,
+personal study, experimentation, or hobby, without use by or for the benefit
+of any other person or organization and without any anticipated commercial,
+professional, organizational, or public application.
+
+"Organization" includes any company, partnership, sole proprietorship,
+employer, client, nonprofit, charity, association, club, community group,
+educational institution, public body, and government entity, whether or not
+it charges money or operates for profit.
+
+"Distribute" means to provide a copy of the Software or a modification of it
+to another person, including through a public repository or fork. Merely
+allowing another person to interact with functionality of a running instance
+is not Distribution and remains prohibited by Section 4.
+
+2. Personal use license
+
+Subject to these terms, each Licensor grants You a non-exclusive,
+non-transferable, non-sublicensable, worldwide, royalty-free copyright
+license to download, make copies of, modify, and run the Software solely for
+Personal Use.
+
+You may self-host the Software only on systems controlled by You and only
+for access and use by You. You may not give any other person access to the
+Software or its functionality.
+
+3. Distribution license
+
+Subject to these terms, each Licensor grants You an additional
+non-exclusive, worldwide, royalty-free copyright license to Distribute
+unmodified or modified copies of the Software, including through public
+repositories and public forks, provided that You:
+
+- do so entirely free of charge and receive no payment or other commercial
+  benefit from the Distribution;
+- include the complete corresponding source code;
+- include these terms and all copyright, attribution, and license notices;
+- license the entire copy or modification under these same terms and impose
+  no additional or conflicting terms; and
+- clearly identify material modifications and state that they are not an
+  official OpenSquawk release.
+
+Every recipient must independently comply with these terms. Distribution
+does not grant permission to run or host the Software for anyone other than
+the individual recipient themself.
+
+4. No provision of functionality to others
+
+You may not make a running instance of the Software or any of its
+functionality available to any other person or Organization, directly or
+indirectly, whether for payment or free of charge. This prohibition includes,
+without limitation:
+
+- software as a service (SaaS), hosted, managed, cloud, or application
+  service offerings;
+- public, shared, organizational, club, association, community, classroom,
+  demonstration, or multi-user instances;
+- access over the internet, a private network, or a local network by anyone
+  other than You; and
+- operating or administering an instance on behalf of anyone else.
+
+This restriction applies even if access is limited, private, invitation-only,
+nonprofit, charitable, educational, at cost, or entirely free of charge.
+
+5. No organizational or commercial use
+
+Except for non-commercial Distribution expressly permitted by Section 3,
+You may not use the Software:
+
+- for or on behalf of an Organization;
+- in connection with employment, self-employment, a trade, business,
+  profession, product, or service;
+- to generate revenue or other commercial advantage;
+- for internal business or organizational purposes;
+- in a commercial product or service; or
+- to provide paid or unpaid hosting, support, training, consulting, or any
+  other service to another person or Organization.
+
+6. Contributions
+
+If You intentionally submit code, documentation, or other material to the
+Licensor for inclusion in the Software (a "Contribution"), You retain
+ownership of Your Contribution but grant every current and future copyright
+holder of the Software a perpetual, irrevocable, worldwide, non-exclusive,
+transferable, sublicensable, royalty-free license to use, reproduce, modify,
+prepare derivative works from, distribute, publicly perform, publicly
+display, sublicense, and relicense Your Contribution under any terms,
+including as part of a commercial license or offering.
+
+You also grant a perpetual, irrevocable, worldwide, royalty-free patent
+license under patent claims You can license that are necessarily infringed
+by Your Contribution alone or in combination with the Software. You represent
+that You are legally entitled to make these grants. If You do not agree to
+these contribution terms, do not submit a Contribution.
+
+7. No trademark license
+
+These terms do not grant permission to use the OpenSquawk name, logos, or
+other trademarks except as necessary to truthfully identify the Software,
+preserve existing notices, and identify a fork or modification as unofficial.
+
+8. Exceptions and separate permissions
+
+No rights are granted except those expressly stated in these terms. However,
+the applicable Licensor may grant You a written exception or a separate
+written license for any use otherwise prohibited by these terms, including
+commercial, organizational, hosted, SaaS, third-party access, or distribution
+use. An exception or separate license applies only to the persons, Software,
+uses, duration, and conditions expressly stated in it. A request for
+permission, or the Licensor's failure to respond or enforce a restriction,
+does not grant permission.
+
+Any rights You may have under applicable law independently of this license,
+such as statutory exceptions to copyright, are not restricted by these
+terms.
+
+9. Termination
+
+Your rights under these terms terminate automatically and immediately if You
+violate any of them. Upon termination, You must stop using and Distributing
+the Software and delete all copies in Your possession or control, except
+where applicable law requires otherwise.
+
+10. Disclaimer of warranty and limitation of liability
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. TO THE MAXIMUM
+EXTENT PERMITTED BY LAW, THE LICENSORS AND CONTRIBUTORS SHALL NOT BE LIABLE
+FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF, OR IN
+CONNECTION WITH THE SOFTWARE, THESE TERMS, OR THE USE OF THE SOFTWARE.
+
+11. Third-party material
+
+These terms apply only to material for which they are included. Third-party
+components remain subject to their respective licenses.
+
+This is a source-available license. It is not an open-source license as
+defined by the Open Source Initiative and not a free-software license as
+defined by the Free Software Foundation.
