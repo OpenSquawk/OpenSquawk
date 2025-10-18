@@ -855,10 +855,6 @@
                 Docker‑based microservices
               </li>
               <li class="glass rounded-xl p-3 flex items-center gap-2">
-                <v-icon icon="mdi-puzzle"/>
-                Plugin SDK for sims
-              </li>
-              <li class="glass rounded-xl p-3 flex items-center gap-2">
                 <v-icon icon="mdi-console"/>
                 REST API for extensions
               </li>
