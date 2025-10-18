@@ -35,6 +35,13 @@
 
       <section class="max-w-5xl mx-auto">
         <div class="">
+          <p class="mb-6 text-sm text-white/70 sm:text-base">
+            For sending images or advanced feedback, please email us at
+            <a href="mailto:info@opensquawk.de" class="font-semibold text-cyan-200 hover:text-cyan-100">
+              info@opensquawk.de
+            </a>
+            — it takes only a minute and helps us so much!
+          </p>
           <form
               class="space-y-8 rounded-3xl border border-white/10 bg-white/10 p-6 shadow-[0_30px_80px_rgba(5,10,35,0.45)] backdrop-blur-3xl"
               @submit.prevent="handleSubmit" novalidate>
