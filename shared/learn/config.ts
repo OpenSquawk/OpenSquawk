@@ -22,7 +22,7 @@ export interface LearnState {
 
 export const LEARN_CONFIG_DEFAULTS: LearnConfig = {
   tts: false,
-  radioLevel: 4,
+  radioLevel: 5,
   voice: '',
   audioChallenge: true,
   audioSpeed: 1,

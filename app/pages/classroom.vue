@@ -4035,7 +4035,7 @@ async function playAudioSource(source: CachedAudio, targetRate: number, token: n
 
   audioElement.value = null
 
-  const readability = Math.max(1, Math.min(5, cfg.value.radioLevel || 3))
+  const readability = Math.max(1, Math.min(5, cfg.value.radioLevel || 5))
   const mime = source.mime || 'audio/wav'
   const dataUrl = `data:${mime};base64,${source.base64}`
 
