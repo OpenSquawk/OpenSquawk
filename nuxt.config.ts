@@ -10,7 +10,13 @@ export default defineNuxtConfig({
       '@pinia/nuxt',
       'nuxt-mongoose',
       '@nuxt/image',
+      'nuxt-module-hotjar',
     ],
+    hotjar: {
+        hotjarId: 6522897,
+        scriptVersion: 6,
+        debug: process.env.NODE_ENV !== 'production',
+    },
     aos: {once: true, duration: 600, easing: 'ease-out'},
     app: {head: {link: [{rel: 'icon', type: 'image/jpeg', href: '/img/icon-sm.jpeg'}]}},
     runtimeConfig: {

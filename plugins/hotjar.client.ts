@@ -1,77 +1,29 @@
 import { defineNuxtPlugin } from '#app';
 import { watch } from 'vue';
 import { useCookieConsent } from '~/composables/useCookieConsent';
+import { useHotjar } from '#imports';
 
 declare global {
   interface Window {
     hj?: ((...args: unknown[]) => void) & { q?: unknown[][] };
-    _hjSettings?: { hjid: number; hjsv: number };
     _hjOptOut?: boolean;
   }
 }
 
-const HOTJAR_ID = 6522897;
-const HOTJAR_VERSION = 6;
-const HOTJAR_SCRIPT_ID = 'hotjar-tracking-script';
-
-const ensureHotjarStub = () => {
+const setHotjarOptOut = (optOut: boolean) => {
   if (typeof window === 'undefined') {
     return;
   }
 
-  window.hj =
-    window.hj ||
-    function (...args: unknown[]) {
-      (window.hj!.q = window.hj!.q || []).push(args);
-    };
+  window._hjOptOut = optOut;
 
-  window._hjSettings = { hjid: HOTJAR_ID, hjsv: HOTJAR_VERSION };
-};
-
-const appendHotjarScript = () => {
-  if (document.getElementById(HOTJAR_SCRIPT_ID)) {
-    return true;
+  if (optOut && typeof window.hj === 'function') {
+    try {
+      window.hj('event', 'cookie_consent_opt_out');
+    } catch {
+      // ignore errors from Hotjar when shutting down
+    }
   }
-
-  const head = document.head || document.getElementsByTagName('head')[0];
-  if (!head) {
-    return false;
-  }
-
-  const script = document.createElement('script');
-  script.id = HOTJAR_SCRIPT_ID;
-  script.async = true;
-  script.src = `https://static.hotjar.com/c/hotjar-${HOTJAR_ID}.js?sv=${HOTJAR_VERSION}`;
-  head.appendChild(script);
-  return true;
-};
-
-const removeHotjarScript = () => {
-  const script = document.getElementById(HOTJAR_SCRIPT_ID);
-  if (script && script.parentNode) {
-    script.parentNode.removeChild(script);
-  }
-};
-
-const disableHotjar = () => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window._hjOptOut = true;
-  removeHotjarScript();
-  window.hj = undefined;
-  window._hjSettings = undefined;
-};
-
-const enableHotjar = () => {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  window._hjOptOut = false;
-  ensureHotjarStub();
-  return appendHotjarScript();
 };
 
 export default defineNuxtPlugin(() => {
@@ -79,19 +31,23 @@ export default defineNuxtPlugin(() => {
     return;
   }
 
-  const hasLoaded = useState('hotjar-loaded', () => false);
+  const { initialize } = useHotjar();
+  const hasInitialized = useState('hotjar-initialized', () => false);
   const { analyticsEnabled } = useCookieConsent();
 
   watch(
     () => analyticsEnabled.value,
     (enabled) => {
       if (enabled) {
-        if (enableHotjar()) {
-          hasLoaded.value = true;
+        setHotjarOptOut(false);
+
+        if (!hasInitialized.value) {
+          initialize();
+          hasInitialized.value = true;
         }
       } else {
-        disableHotjar();
-        hasLoaded.value = false;
+        setHotjarOptOut(true);
+        hasInitialized.value = false;
       }
     },
     { immediate: true }
