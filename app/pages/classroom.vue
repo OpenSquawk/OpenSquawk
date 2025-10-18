@@ -928,6 +928,13 @@
                 </div>
               </div>
             </div>
+            <div v-else-if="scenario" class="scenario-quick">
+              <div class="scenario-quick-main">
+                <span class="scenario-quick-label">Callsign</span>
+                <span class="scenario-quick-value">{{ displayCallsign(scenario.radioCall, scenario) }}</span>
+              </div>
+              <span class="scenario-quick-sub">Pronunciation: {{ scenario.radioCall }}</span>
+            </div>
             <div class="console-grid">
               <div class="col">
                 <div class="label">Briefing</div>
@@ -6097,6 +6104,41 @@ onMounted(() => {
 .scenario-value {
   font-size: 18px;
   font-weight: 600;
+}
+
+.scenario-quick {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border-radius: 12px;
+}
+
+.scenario-quick-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scenario-quick-label {
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--t3);
+  text-transform: uppercase;
+}
+
+.scenario-quick-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.scenario-quick-sub {
+  font-size: 13px;
+  color: var(--t3);
 }
 
 .scenario-sub {
