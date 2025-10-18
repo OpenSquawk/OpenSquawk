@@ -14,6 +14,7 @@ type CookieConsentValue = {
 const CONSENT_COOKIE_NAME = 'osq-cookie-consent';
 const CONSENT_VERSION = 1;
 const SIX_MONTHS_IN_SECONDS = 60 * 60 * 24 * 180;
+export const HOTJAR_LOCAL_STORAGE_KEY = 'osq-hotjar-consent';
 
 export const useCookieConsent = () => {
   const consentCookie = useCookie<CookieConsentValue | null>(CONSENT_COOKIE_NAME, {
@@ -36,6 +37,24 @@ export const useCookieConsent = () => {
     },
     { deep: true }
   );
+
+  if (process.client) {
+    watch(
+      consentState,
+      (value) => {
+        if (!value) {
+          window.localStorage.removeItem(HOTJAR_LOCAL_STORAGE_KEY);
+          return;
+        }
+
+        window.localStorage.setItem(
+          HOTJAR_LOCAL_STORAGE_KEY,
+          value.preferences.analytics ? 'granted' : 'denied'
+        );
+      },
+      { deep: true }
+    );
+  }
 
   const hasConsent = computed(() => consentState.value !== null);
 
