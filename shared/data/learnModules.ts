@@ -2323,7 +2323,7 @@ const decisionTreeLessons = [
       { type: 'field', key: 'mayday-intent', width: 'lg' }
     ],
     defaultFrequency: 'CTR',
-    phrase: scenario => `Emergency scenario: ${scenario.emergencyProblem}. Declare MAYDAY with intentions ${scenario.emergencyIntent}.`,
+    phrase: scenario => `${scenario.radioCall}, Emergency scenario: ${scenario.emergencyProblem}. Declare MAYDAY with intentions ${scenario.emergencyIntent}.`,
     info: scenario => [
       `Problem: ${scenario.emergencyProblem}`,
       `Intentions: ${scenario.emergencyIntent}`
@@ -2366,7 +2366,7 @@ const decisionTreeLessons = [
       { type: 'text', text: ', request priority.' }
     ],
     defaultFrequency: 'CTR',
-    phrase: scenario => `Urgent situation: ${scenario.emergencyProblem}. Declare PAN to obtain priority.`,
+    phrase: scenario => `${scenario.radioCall}, Urgent situation: ${scenario.emergencyProblem}. Declare PAN to obtain priority.`,
     info: scenario => [
       `Problem: ${scenario.emergencyProblem}`,
       'Ensure ATC knows you require priority handling.'
