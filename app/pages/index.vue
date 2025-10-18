@@ -848,7 +848,7 @@
             <ul class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <li class="glass rounded-xl p-3 flex items-center gap-2">
                 <v-icon icon="mdi-license"/>
-                MIT/Apache licence
+                AGPL v3 license
               </li>
               <li class="glass rounded-xl p-3 flex items-center gap-2">
                 <v-icon icon="mdi-docker"/>
