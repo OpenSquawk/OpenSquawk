@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
     const q = getQuery(event)
     const oLat = Number(q.origin_lat), oLon = Number(q.origin_lng)
     const dLat = Number(q.dest_lat),  dLon = Number(q.dest_lng)
-    const radius = Number(q.radius ?? 2000)
+    const radius = Number(q.radius ?? 5000)
 
     const endpoint = 'https://overpass-api.de/api/interpreter'
     const overpassQ = `
@@ -160,7 +160,6 @@ out body;
 
     // names along path (drop null/unnamed); keep both raw sequence and collapsed variant
     const namesRaw: string[] = []
-    const namesCollapsed: string[] = []
     const hasDigits = (value: string) => /\d/.test(value)
     for (let i=0;i<sp.path.length-1;i++){
         const u = sp.path[i], v = sp.path[i+1]
@@ -169,17 +168,25 @@ out body;
         if (!nm) continue
 
         if (namesRaw.length === 0 || namesRaw[namesRaw.length-1] !== nm) namesRaw.push(nm)
+    }
 
-        const last = namesCollapsed[namesCollapsed.length-1]
-        if (last) {
-            const lastNormalized = last.replace(/\s+/g, '').match(/^([A-Za-z]+)/)?.[1]?.toUpperCase()
-            const currentNormalized = nm.replace(/\s+/g, '').match(/^([A-Za-z]+)/)?.[1]?.toUpperCase()
+    const namesCollapsed: string[] = []
+    for (const nm of namesRaw) {
+        const last = namesCollapsed[namesCollapsed.length - 1]
+        if (last === nm) continue
 
-            if (lastNormalized && currentNormalized && lastNormalized === currentNormalized) {
-                if (hasDigits(last) && hasDigits(nm)) {
-                    continue
-                }
-            }
+        const lastNormalized = last?.replace(/\s+/g, '').match(/^([A-Za-z]+)/)?.[1]?.toUpperCase()
+        const currentNormalized = nm.replace(/\s+/g, '').match(/^([A-Za-z]+)/)?.[1]?.toUpperCase()
+        const lastHasDigits = last ? hasDigits(last) : false
+
+        if (
+            lastNormalized &&
+            currentNormalized &&
+            lastNormalized === currentNormalized &&
+            lastHasDigits &&
+            hasDigits(nm)
+        ) {
+            continue
         }
 
         namesCollapsed.push(nm)
