@@ -2608,6 +2608,7 @@ const evaluating = ref(false)
 const ttsLoading = ref(false)
 const isSpeaking = ref(false)
 const audioElement = ref<HTMLAudioElement | null>(null)
+let activePlaybackToken = 0
 let speechContext: AudioContext | null = null
 let pizzicatoLiteInstance: PizzicatoLite | null = null
 type RadioSoundInstance = Awaited<ReturnType<PizzicatoLite['createSoundFromBase64']>>
@@ -2992,6 +2993,7 @@ if (isClient) {
 }
 
 onBeforeUnmount(() => {
+  activePlaybackToken++
   if (hoverCapabilityCleanup) {
     hoverCapabilityCleanup()
     hoverCapabilityCleanup = null
@@ -4026,8 +4028,9 @@ const setMediaElementPreservesPitch = (media: HTMLMediaElement | null, preserve:
   }
 }
 
-async function playAudioSource(source: CachedAudio, targetRate: number) {
+async function playAudioSource(source: CachedAudio, targetRate: number, token: number) {
   if (!source?.base64) return
+  if (token !== activePlaybackToken) return
 
   audioElement.value = null
 
@@ -4048,6 +4051,7 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
   const htmlPlaybackRate = needsRateFallback ? basePlaybackRate : playbackRate
 
   const playWithoutEffects = async () => {
+    if (token !== activePlaybackToken) return
     const audio = new Audio(dataUrl)
     audio.preload = 'auto'
     audio.playbackRate = htmlPlaybackRate
@@ -4071,6 +4075,7 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
   }
 
   try {
+    if (token !== activePlaybackToken) return
     const ctx = await ensureSpeechAudioContext()
     const pizzicato = await ensurePizzicato(ctx)
     if (!ctx || !pizzicato) {
@@ -4078,6 +4083,10 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
     }
 
     const sound = await pizzicato.createSoundFromBase64(ctx, source.base64)
+    if (token !== activePlaybackToken) {
+      sound.clearEffects()
+      return
+    }
     sound.setPlaybackRate(playbackRate)
     const profile = getReadabilityProfile(readability)
     const {Effects} = pizzicato
@@ -4128,6 +4137,9 @@ async function playAudioSource(source: CachedAudio, targetRate: number) {
     activeRadioCleanup = noiseStops
 
     try {
+      if (token !== activePlaybackToken) {
+        return
+      }
       await sound.play()
     } finally {
       if (activeRadioSound === sound) {
@@ -4257,11 +4269,12 @@ async function say(text: string) {
   const trimmed = text?.trim()
   if (!trimmed) return
 
+  stopAudio()
+  const playbackToken = ++activePlaybackToken
+
   const normalizedRate = computeSpeechRate()
 
   const hasBrowserTts = cfg.value.tts && typeof window !== 'undefined' && 'speechSynthesis' in window
-
-  stopAudio()
 
   if (hasBrowserTts) {
     const synth = window.speechSynthesis
@@ -4309,7 +4322,10 @@ async function say(text: string) {
     if (!audioData) {
       audioData = await requestSayAudio(cacheKey, payload)
     }
-    await playAudioSource(audioData, normalizedRate)
+    if (playbackToken !== activePlaybackToken) {
+      return
+    }
+    await playAudioSource(audioData, normalizedRate, playbackToken)
   } catch (err) {
     console.error('TTS request failed', err)
   } finally {
@@ -4319,6 +4335,7 @@ async function say(text: string) {
 }
 
 function stopAudio() {
+  activePlaybackToken++
   isSpeaking.value = false
   ttsLoading.value = false
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
