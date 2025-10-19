@@ -216,6 +216,14 @@
                   </span>
                 </label>
                 <label class="flex items-start gap-3">
+                  <input type="checkbox" v-model="updatesForm.consentTerms" class="mt-1" required/>
+                  <span>
+                    I accept the
+                    <NuxtLink to="/agb" class="text-cyan-300 underline">terms of service</NuxtLink>
+                    of OpenSquawk.
+                  </span>
+                </label>
+                <label class="flex items-start gap-3">
                   <input type="checkbox" v-model="updatesForm.consentPrivacy" class="mt-1" required/>
                   <span>
                     I have read the
@@ -224,7 +232,7 @@
                 </label>
               </div>
               <p v-if="updatesSuccess" class="text-sm text-green-300">
-                Thanks! We will let you know when new features go live.
+                Thanks! You're now on the waitlist and we will let you know when new features go live.
               </p>
               <p v-else-if="updatesError" class="text-sm text-red-300">{{ updatesError }}</p>
               <p v-else class="text-xs text-white/50">
@@ -1673,6 +1681,7 @@ const waitlistLoading = ref(false)
 const updatesForm = reactive({
   email: '',
   consentPrivacy: false,
+  consentTerms: false,
   consentMarketing: false,
 })
 
@@ -1830,6 +1839,7 @@ async function submitWaitlist() {
           consentPrivacy: waitlistForm.consentPrivacy,
           consentTerms: waitlistForm.consentTerms,
           wantsProductUpdates,
+          source: 'landing-cta',
         },
         {auth: false},
     )
@@ -1866,7 +1876,7 @@ async function submitUpdates() {
     return
   }
 
-  if (!updatesForm.consentPrivacy || !updatesForm.consentMarketing) {
+  if (!updatesForm.consentPrivacy || !updatesForm.consentMarketing || !updatesForm.consentTerms) {
     updatesError.value = 'Please confirm the required checkboxes.'
     return
   }
@@ -1887,11 +1897,12 @@ async function submitUpdates() {
 
   try {
     await api.post(
-        '/api/service/updates',
+        '/api/service/waitlist',
         {
           email,
           consentPrivacy: updatesForm.consentPrivacy,
-          consentMarketing: updatesForm.consentMarketing,
+          consentTerms: updatesForm.consentTerms,
+          wantsProductUpdates: updatesForm.consentMarketing,
           source: 'landing-hero',
         },
         {auth: false},
@@ -1900,6 +1911,7 @@ async function submitUpdates() {
     updatesForm.email = ''
     updatesForm.consentPrivacy = false
     updatesForm.consentMarketing = false
+    updatesForm.consentTerms = false
     updatesCaptchaReminder.value = ''
     rotateCaptchaChallenge(updatesCaptcha)
   } catch (err: any) {
