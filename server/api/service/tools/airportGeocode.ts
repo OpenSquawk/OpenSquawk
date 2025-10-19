@@ -22,6 +22,7 @@ export type OsmElement =
       id: number
       nodes: number[]
       center?: { lat: number; lon: number }
+      geometry?: Array<{ lat: number; lon: number; id?: number }>
       tags?: Record<string, string>
     })
 
@@ -35,6 +36,10 @@ export type AirportFeature = {
   aliases: string[]
   primaryAlias: string
   normalizedAliases: Map<string, string>
+  runwayEndpoints?: {
+    start: { lat: number; lon: number; nodeId?: number }
+    end: { lat: number; lon: number; nodeId?: number }
+  }
 }
 
 export type GeocodeQuery = {
@@ -229,7 +234,7 @@ function createFeature(element: OsmElement): AirportFeature | null {
 
   if (normalizedAliases.size === 0) return null
 
-  return {
+  const feature: AirportFeature = {
     osmType: element.type,
     osmId: element.id,
     type: featureType === 'parking_position' ? 'stand' : featureType,
@@ -240,6 +245,17 @@ function createFeature(element: OsmElement): AirportFeature | null {
     primaryAlias,
     normalizedAliases
   }
+
+  if (feature.type === 'runway' && element.type === 'way' && element.geometry && element.geometry.length > 1) {
+    const startPoint = element.geometry[0]
+    const endPoint = element.geometry[element.geometry.length - 1]
+    feature.runwayEndpoints = {
+      start: { lat: startPoint.lat, lon: startPoint.lon, nodeId: startPoint.id },
+      end: { lat: endPoint.lat, lon: endPoint.lon, nodeId: endPoint.id }
+    }
+  }
+
+  return feature
 }
 
 function analyzeQuery(query: string) {
@@ -307,7 +323,7 @@ export async function fetchAirportFeatures(airport: string) {
   way(area.airport)["aeroway"="taxiway"];
   way(area.airport)["aeroway"="holding_position"];
 );
-out center tags;
+out tags center geom;
   `
 
   const osm = await fetchOverpass(overpassQuery)
@@ -460,6 +476,7 @@ export function toGeocodePayload(match: GeocodeMatch) {
       tags: feature.tags
     },
     source: match.source,
-    distance_m: match.distanceMeters ?? null
+    distance_m: match.distanceMeters ?? null,
+    runway_endpoints: feature.runwayEndpoints
   }
 }
