@@ -186,17 +186,17 @@
               </div>
               <textarea
                   v-model.trim="updatesForm.notes"
+                  v-if="updatesCaptchaVisible"
                   rows="3"
-                  placeholder="What do you want to learn with OpenSquawk? (optional)"
+                  placeholder="How did you hear about OpenSquawk and what excites you most?"
                   class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-cyan-400"
               />
               <div
                   v-if="updatesCaptchaVisible"
                   class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60"
               >
-                <p class="text-sm font-medium text-white">Aviation captcha</p>
+                <p class="text-sm font-medium text-white">I am not a robot – aviation captcha</p>
                 <p>
-                  Answer with real ATC knowledge:
                   <span class="text-cyan-300">{{ updatesCaptcha.challenge.prompt }}</span>
                 </p>
                 <input
