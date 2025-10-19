@@ -856,67 +856,118 @@ const endpointSections: EndpointSection[] = [
       {
         method: 'GET',
         path: '/api/service/tools/taxiroute',
-        summary: 'Compute a taxi route between two coordinates using OpenStreetMap data.',
+        summary: 'Compute a taxi route between coordinates or named aerodrome features using OpenStreetMap data.',
         category: 'Tools & diagnostics',
         auth: 'public',
         query: [
-          { name: 'origin_lat', type: 'number', required: true, description: 'Origin latitude in decimal degrees.' },
-          { name: 'origin_lng', type: 'number', required: true, description: 'Origin longitude in decimal degrees.' },
-          { name: 'dest_lat', type: 'number', required: true, description: 'Destination latitude in decimal degrees.' },
-          { name: 'dest_lng', type: 'number', required: true, description: 'Destination longitude in decimal degrees.' },
-          { name: 'radius', type: 'number', description: 'Search radius in metres (default 2000).' },
+          { name: 'airport', type: 'string', description: 'ICAO designator of the airport. Required when using feature names.' },
+          { name: 'origin_lat', type: 'number', description: 'Origin latitude in decimal degrees.' },
+          { name: 'origin_lng', type: 'number', description: 'Origin longitude in decimal degrees.' },
+          { name: 'origin_name', type: 'string', description: 'Name or designator of the origin feature (e.g. gate, stand, runway).' },
+          { name: 'dest_lat', type: 'number', description: 'Destination latitude in decimal degrees.' },
+          { name: 'dest_lng', type: 'number', description: 'Destination longitude in decimal degrees.' },
+          { name: 'dest_name', type: 'string', description: 'Name or designator of the destination feature.' },
+          { name: 'radius', type: 'number', description: 'Search radius in metres (default 5000).' },
         ],
-        sampleRequest: `curl "https://opensquawk.de/api/service/tools/taxiroute?origin_lat=50.0506&origin_lng=8.5708&dest_lat=50.0473&dest_lng=8.5610&radius=2500"`,
+        sampleRequest: `curl "https://opensquawk.de/api/service/tools/taxiroute?airport=EDDF&origin_name=Gate%20A5&dest_name=RWY%2025C&radius=2500"`,
         sampleResponse: `{
-  "origin": { "lat": 50.0506, "lon": 8.5708 },
-  "dest": { "lat": 50.0473, "lon": 8.561 },
+  "airport": "EDDF",
+  "origin": {
+    "lat": 50.0506,
+    "lon": 8.5708,
+    "query": { "name": "Gate A5", "lat": null, "lon": null },
+    "feature": {
+      "type": "gate",
+      "name": "A5",
+      "lat": 50.05061,
+      "lon": 8.57079,
+      "matched_alias": "A5",
+      "primary_alias": "A5",
+      "map_url": "https://www.openstreetmap.org/node/1234567890?mlat=50.050610&mlon=8.570790#map=19/50.050610/8.570790",
+      "osm": { "type": "node", "id": 1234567890 },
+      "source": "name",
+      "distance_m": null
+    }
+  },
+  "dest": {
+    "lat": 50.0473,
+    "lon": 8.561,
+    "query": { "name": "RWY 25C", "lat": null, "lon": null },
+    "feature": {
+      "type": "runway",
+      "name": "25C",
+      "lat": 50.04726,
+      "lon": 8.561,
+      "matched_alias": "25C",
+      "primary_alias": "25C",
+      "map_url": "https://www.openstreetmap.org/way/987654321?mlat=50.047260&mlon=8.561000#map=17/50.047260/8.561000",
+      "osm": { "type": "way", "id": 987654321 },
+      "source": "name",
+      "distance_m": null
+    }
+  },
+  "start_attach": { "node_id": 111, "lat": 50.0507, "lon": 8.5709, "distance_m": 8.3 },
+  "end_attach": { "node_id": 222, "lat": 50.0472, "lon": 8.5611, "distance_m": 5.7 },
   "route": {
     "node_ids": [1234567890, 1234567990, 1234568021],
     "total_distance_m": 1580.3
   },
-  "names": ["L7", "L", "N"]
+  "names": ["L7", "L", "N"],
+  "names_collapsed": ["L7", "N"]
 }`,
-        notes: 'Returns null route when no taxiway network is available in the search area.',
+        notes: 'Provide coordinates, feature names, or a mix of both. The service will resolve missing coordinates via the airport geocode lookup before computing the taxi route.',
       },
       {
         method: 'GET',
         path: '/api/service/tools/airport-geocode',
-        summary: 'Resolve named aerodrome features to coordinates for a specific airport.',
+        summary: 'Resolve aerodrome features between names and coordinates for a specific airport.',
         category: 'Tools & diagnostics',
         auth: 'public',
         query: [
           { name: 'airport', type: 'string', required: true, description: 'ICAO designator of the airport.' },
           { name: 'origin_name', type: 'string', description: 'Name or designator of the origin feature (e.g. stand, gate, runway).' },
-          { name: 'dest_name', type: 'string', description: 'Name or designator of the destination feature.' }
+          { name: 'origin_lat', type: 'number', description: 'Origin latitude in decimal degrees.' },
+          { name: 'origin_lng', type: 'number', description: 'Origin longitude in decimal degrees.' },
+          { name: 'dest_name', type: 'string', description: 'Name or designator of the destination feature.' },
+          { name: 'dest_lat', type: 'number', description: 'Destination latitude in decimal degrees.' },
+          { name: 'dest_lng', type: 'number', description: 'Destination longitude in decimal degrees.' }
         ],
-        sampleRequest: `curl "https://opensquawk.de/api/service/tools/airport-geocode?airport=EDDF&origin_name=Stand%20V155&dest_name=RWY%2025C"`,
+        sampleRequest: `curl "https://opensquawk.de/api/service/tools/airport-geocode?airport=EDDF&origin_name=Stand%20V155&dest_lat=50.0474&dest_lng=8.5612"`,
         sampleResponse: `{
   "airport": "EDDF",
   "feature_count": 284,
   "origin": {
-    "query": "Stand V155",
+    "query": { "name": "Stand V155", "lat": null, "lon": null },
     "result": {
       "type": "stand",
+      "name": "V155",
       "lat": 50.046321,
       "lon": 8.576842,
       "matched_alias": "V155",
+      "primary_alias": "V155",
       "map_url": "https://www.openstreetmap.org/node/1234567890?mlat=50.046321&mlon=8.576842#map=19/50.046321/8.576842",
-      "osm": { "type": "node", "id": 1234567890 }
+      "osm": { "type": "node", "id": 1234567890 },
+      "source": "name",
+      "distance_m": null
     }
   },
   "dest": {
-    "query": "RWY 25C",
+    "query": { "name": null, "lat": 50.0474, "lon": 8.5612 },
     "result": {
       "type": "runway",
-      "lat": 50.043812,
-      "lon": 8.569231,
+      "name": "25C",
+      "lat": 50.04726,
+      "lon": 8.5611,
       "matched_alias": "25C",
-      "map_url": "https://www.openstreetmap.org/way/987654321?mlat=50.043812&mlon=8.569231#map=17/50.043812/8.569231",
-      "osm": { "type": "way", "id": 987654321 }
+      "primary_alias": "25C",
+      "map_url": "https://www.openstreetmap.org/way/987654321?mlat=50.047260&mlon=8.561100#map=17/50.047260/8.561100",
+      "osm": { "type": "way", "id": 987654321 },
+      "source": "coordinate",
+      "distance_m": 9.2
     }
   }
  }`,
-        notes: 'Returns null results when the feature cannot be matched within the selected aerodrome.',
+        notes: 'You can provide names, coordinates, or both for origin and destination. The response always returns the matched feature metadata, coordinates, and OpenStreetMap links.',
       },
     ],
   },
