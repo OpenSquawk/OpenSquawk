@@ -3,6 +3,9 @@ import https from 'node:https'
 
 import { fetchAirportFeatures, resolveFeature, toGeocodePayload } from './airportGeocode'
 
+// TODO @najajan-de: für die taxiroute soll gelten:
+// wenn es um wegbeschreibungen mit dem name eines runways (also er muss erst über ein query rausfinden dass der source oder dest name vom typ eines runways ist) soll man angeben können ob man den node vom anfang oder ende des runways nutzen möchte weil aktuell nutz osm die kurve des runway das ja aus viele nodes besteht und nimmt davon die mitte was ja quatsch ist. also wenn man ein runway name angibt dann soll man sagen können ob man von diesen nodes aus denen der runway path besteht start (default) oder ende nutzen will). das gitl nur wenn er erkannt hat dass das was man da per name referenziert hat ein runway ist
+
 function parseCoordinate(value: unknown) {
   if (value === undefined || value === null) return null
   if (typeof value === 'string' && value.trim() === '') return null
