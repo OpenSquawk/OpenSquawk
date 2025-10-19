@@ -856,27 +856,140 @@ const endpointSections: EndpointSection[] = [
       {
         method: 'GET',
         path: '/api/service/tools/taxiroute',
-        summary: 'Compute a taxi route between two coordinates using OpenStreetMap data.',
+        summary: 'Compute a taxi route between coordinates or named aerodrome features using OpenStreetMap data.',
         category: 'Tools & diagnostics',
         auth: 'public',
         query: [
-          { name: 'origin_lat', type: 'number', required: true, description: 'Origin latitude in decimal degrees.' },
-          { name: 'origin_lng', type: 'number', required: true, description: 'Origin longitude in decimal degrees.' },
-          { name: 'dest_lat', type: 'number', required: true, description: 'Destination latitude in decimal degrees.' },
-          { name: 'dest_lng', type: 'number', required: true, description: 'Destination longitude in decimal degrees.' },
-          { name: 'radius', type: 'number', description: 'Search radius in metres (default 2000).' },
+          { name: 'airport', type: 'string', description: 'ICAO designator of the airport. Required when using feature names.' },
+          { name: 'origin_lat', type: 'number', description: 'Origin latitude in decimal degrees.' },
+          { name: 'origin_lng', type: 'number', description: 'Origin longitude in decimal degrees.' },
+          { name: 'origin_name', type: 'string', description: 'Name or designator of the origin feature (e.g. gate, stand, runway).' },
+          { name: 'origin_runway_end', type: 'string', description: 'When origin_name matches a runway way, choose which threshold to use (start, end, or center). Defaults to start.' },
+          { name: 'dest_lat', type: 'number', description: 'Destination latitude in decimal degrees.' },
+          { name: 'dest_lng', type: 'number', description: 'Destination longitude in decimal degrees.' },
+          { name: 'dest_name', type: 'string', description: 'Name or designator of the destination feature.' },
+          { name: 'dest_runway_end', type: 'string', description: 'When dest_name matches a runway way, choose which threshold to use (start, end, or center). Defaults to start.' },
+          { name: 'radius', type: 'number', description: 'Search radius in metres (default 5000).' },
         ],
-        sampleRequest: `curl "https://opensquawk.de/api/service/tools/taxiroute?origin_lat=50.0506&origin_lng=8.5708&dest_lat=50.0473&dest_lng=8.5610&radius=2500"`,
+        sampleRequest: `curl "https://opensquawk.de/api/service/tools/taxiroute?airport=EDDF&origin_name=Gate%20A5&dest_name=RWY%2025C&dest_runway_end=end&radius=2500"`,
         sampleResponse: `{
-  "origin": { "lat": 50.0506, "lon": 8.5708 },
-  "dest": { "lat": 50.0473, "lon": 8.561 },
+  "airport": "EDDF",
+  "origin": {
+    "lat": 50.0506,
+    "lon": 8.5708,
+    "query": { "name": "Gate A5", "lat": null, "lon": null, "runway_end": null },
+    "feature": {
+      "type": "gate",
+      "name": "A5",
+      "lat": 50.05061,
+      "lon": 8.57079,
+      "matched_alias": "A5",
+      "primary_alias": "A5",
+      "runway_end": null,
+      "center": { "lat": 50.05061, "lon": 8.57079 },
+      "runway_thresholds": null,
+      "map_url": "https://www.openstreetmap.org/node/1234567890?mlat=50.050610&mlon=8.570790#map=19/50.050610/8.570790",
+      "osm": { "type": "node", "id": 1234567890, "tags": { "aeroway": "gate", "ref": "A5" } },
+      "source": "name",
+      "distance_m": null
+    }
+  },
+  "dest": {
+    "lat": 50.0494,
+    "lon": 8.5721,
+    "query": { "name": "RWY 25C", "lat": null, "lon": null, "runway_end": "end" },
+    "feature": {
+      "type": "runway",
+      "name": "25C",
+      "lat": 50.0494,
+      "lon": 8.5721,
+      "matched_alias": "25C",
+      "primary_alias": "25C",
+      "runway_end": "end",
+      "center": { "lat": 50.04726, "lon": 8.561 },
+      "runway_thresholds": {
+        "start": { "lat": 50.0451, "lon": 8.5502 },
+        "end": { "lat": 50.0494, "lon": 8.5721 }
+      },
+      "map_url": "https://www.openstreetmap.org/way/987654321?mlat=50.049400&mlon=8.572100#map=17/50.049400/8.572100",
+      "osm": { "type": "way", "id": 987654321, "tags": { "aeroway": "runway", "ref": "25C/07C" } },
+      "source": "name",
+      "distance_m": null
+    }
+  },
+  "start_attach": { "node_id": 111, "lat": 50.0507, "lon": 8.5709, "distance_m": 8.3 },
+  "end_attach": { "node_id": 222, "lat": 50.0495, "lon": 8.5722, "distance_m": 4.1 },
   "route": {
     "node_ids": [1234567890, 1234567990, 1234568021],
     "total_distance_m": 1580.3
   },
-  "names": ["L7", "L", "N"]
+  "names": ["L7", "L", "N"],
+  "names_collapsed": ["L7", "N"]
 }`,
-        notes: 'Returns null route when no taxiway network is available in the search area.',
+        notes: 'Provide coordinates, feature names, or a mix of both. The service resolves runway thresholds via the airport geocode lookup (defaulting to the threshold at the start of the runway) and honours optional runway_end hints before computing the taxi route.',
+      },
+      {
+        method: 'GET',
+        path: '/api/service/tools/airport-geocode',
+        summary: 'Resolve aerodrome features between names and coordinates for a specific airport.',
+        category: 'Tools & diagnostics',
+        auth: 'public',
+        query: [
+          { name: 'airport', type: 'string', required: true, description: 'ICAO designator of the airport.' },
+          { name: 'origin_name', type: 'string', description: 'Name or designator of the origin feature (e.g. stand, gate, runway).' },
+          { name: 'origin_runway_end', type: 'string', description: 'When origin_name matches a runway way, choose which threshold to use (start, end, or center). Defaults to start.' },
+          { name: 'origin_lat', type: 'number', description: 'Origin latitude in decimal degrees.' },
+          { name: 'origin_lng', type: 'number', description: 'Origin longitude in decimal degrees.' },
+          { name: 'dest_name', type: 'string', description: 'Name or designator of the destination feature.' },
+          { name: 'dest_runway_end', type: 'string', description: 'When dest_name matches a runway way, choose which threshold to use (start, end, or center). Defaults to start.' },
+          { name: 'dest_lat', type: 'number', description: 'Destination latitude in decimal degrees.' },
+          { name: 'dest_lng', type: 'number', description: 'Destination longitude in decimal degrees.' }
+        ],
+        sampleRequest: `curl "https://opensquawk.de/api/service/tools/airport-geocode?airport=EDDF&origin_name=Stand%20V155&dest_name=RWY%2025C&dest_runway_end=end"`,
+        sampleResponse: `{
+  "airport": "EDDF",
+  "feature_count": 284,
+  "origin": {
+    "query": { "name": "Stand V155", "lat": null, "lon": null, "runway_end": null },
+    "result": {
+      "type": "stand",
+      "name": "V155",
+      "lat": 50.046321,
+      "lon": 8.576842,
+      "matched_alias": "V155",
+      "primary_alias": "V155",
+      "runway_end": null,
+      "center": { "lat": 50.046321, "lon": 8.576842 },
+      "runway_thresholds": null,
+      "map_url": "https://www.openstreetmap.org/node/1234567890?mlat=50.046321&mlon=8.576842#map=19/50.046321/8.576842",
+      "osm": { "type": "node", "id": 1234567890, "tags": { "aeroway": "parking_position", "ref": "V155" } },
+      "source": "name",
+      "distance_m": null
+    }
+  },
+  "dest": {
+    "query": { "name": "RWY 25C", "lat": null, "lon": null, "runway_end": "end" },
+    "result": {
+      "type": "runway",
+      "name": "25C",
+      "lat": 50.0494,
+      "lon": 8.5721,
+      "matched_alias": "25C",
+      "primary_alias": "25C",
+      "runway_end": "end",
+      "center": { "lat": 50.04726, "lon": 8.561 },
+      "runway_thresholds": {
+        "start": { "lat": 50.0451, "lon": 8.5502 },
+        "end": { "lat": 50.0494, "lon": 8.5721 }
+      },
+      "map_url": "https://www.openstreetmap.org/way/987654321?mlat=50.049400&mlon=8.572100#map=17/50.049400/8.572100",
+      "osm": { "type": "way", "id": 987654321, "tags": { "aeroway": "runway", "ref": "25C/07C" } },
+      "source": "name",
+      "distance_m": null
+    }
+  }
+ }`,
+        notes: 'You can provide names, coordinates, or both for origin and destination. When matching runway ways the service defaults to the start threshold but honours optional runway_end hints, and always returns the matched feature metadata, coordinates, and OpenStreetMap links.',
       },
     ],
   },

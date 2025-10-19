@@ -1,18 +1,157 @@
 import { defineEventHandler, getQuery } from 'h3'
 import https from 'node:https'
 
+import { fetchAirportFeatures, resolveFeature, toGeocodePayload } from './airportGeocode'
+
+function parseCoordinate(value: unknown) {
+  if (value === undefined || value === null) return null
+  if (typeof value === 'string' && value.trim() === '') return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+function parseRunwayEnd(value: unknown): 'start' | 'end' | 'center' | null {
+  if (typeof value !== 'string') return null
+  const normalized = value.trim().toLowerCase()
+  if (normalized === 'start' || normalized === 'thr' || normalized === 'threshold') return 'start'
+  if (normalized === 'end') return 'end'
+  if (normalized === 'center' || normalized === 'mid') return 'center'
+  return null
+}
+
 export default defineEventHandler(async (event) => {
     const q = getQuery(event)
-    const oLat = Number(q.origin_lat), oLon = Number(q.origin_lng)
-    const dLat = Number(q.dest_lat),  dLon = Number(q.dest_lng)
-    const radius = Number(q.radius ?? 5000)
+
+    const airport = typeof q.airport === 'string' ? q.airport.trim().toUpperCase() : ''
+
+    const originName = typeof q.origin_name === 'string' ? q.origin_name.trim() : ''
+    const destName = typeof q.dest_name === 'string' ? q.dest_name.trim() : ''
+
+    const originRunwayEnd = parseRunwayEnd(q.origin_runway_end) ?? null
+    const destRunwayEnd = parseRunwayEnd(q.dest_runway_end) ?? null
+
+    let oLat: number | null = parseCoordinate(q.origin_lat)
+    let oLon: number | null = parseCoordinate(q.origin_lng ?? q.origin_lon)
+    let dLat: number | null = parseCoordinate(q.dest_lat)
+    let dLon: number | null = parseCoordinate(q.dest_lng ?? q.dest_lon)
+
+    const radius = parseCoordinate(q.radius) ?? 5000
+
+    const originCoordsProvided = oLat !== null && oLon !== null
+    const destCoordsProvided = dLat !== null && dLon !== null
+
+    if (!originCoordsProvided && !originName) {
+        return { error: 'missing_origin', details: 'provide origin coordinates or name', airport: airport || null }
+    }
+
+    if (!destCoordsProvided && !destName) {
+        return { error: 'missing_destination', details: 'provide destination coordinates or name', airport: airport || null }
+    }
+
+    const requiresGeocode = (!originCoordsProvided && !!originName) || (!destCoordsProvided && !!destName)
+
+    let features: Awaited<ReturnType<typeof fetchAirportFeatures>> | null = null
+
+    const ensureFeatures = async () => {
+        if (!features) {
+            if (!airport) {
+                throw Object.assign(new Error('missing airport for geocode'), { code: 'missing_airport' })
+            }
+            features = await fetchAirportFeatures(airport)
+        }
+        return features
+    }
+
+    let originMatch: ReturnType<typeof resolveFeature> = null
+    let destMatch: ReturnType<typeof resolveFeature> = null
+
+    try {
+        if (requiresGeocode) {
+            await ensureFeatures()
+        }
+    } catch (error) {
+        const err = error as Error & { code?: string }
+        if (err.code === 'missing_airport') {
+            return { error: 'missing_airport', details: 'airport is required when using feature names' }
+        }
+        return { error: 'overpass_error', airport, details: err.message }
+    }
+
+    if (!originCoordsProvided && originName) {
+        const match = resolveFeature(features!, { name: originName, runwayEnd: originRunwayEnd ?? undefined })
+        if (!match) {
+            return { error: 'origin_not_found', airport, origin: { name: originName } }
+        }
+        originMatch = match
+        oLat = match.resolvedLocation.lat
+        oLon = match.resolvedLocation.lon
+    }
+
+    if (!destCoordsProvided && destName) {
+        const match = resolveFeature(features!, { name: destName, runwayEnd: destRunwayEnd ?? undefined })
+        if (!match) {
+            return { error: 'dest_not_found', airport, dest: { name: destName } }
+        }
+        destMatch = match
+        dLat = match.resolvedLocation.lat
+        dLon = match.resolvedLocation.lon
+    }
+
+    if (originCoordsProvided && originName && airport) {
+        try {
+            const match = resolveFeature(features ?? (await ensureFeatures()), { name: originName, runwayEnd: originRunwayEnd ?? undefined })
+            if (match) originMatch = match
+        } catch {
+            // ignore lookup failures when coordinates are already provided
+        }
+    }
+
+    if (destCoordsProvided && destName && airport) {
+        try {
+            const match = resolveFeature(features ?? (await ensureFeatures()), { name: destName, runwayEnd: destRunwayEnd ?? undefined })
+            if (match) destMatch = match
+        } catch {
+            // ignore lookup failures when coordinates are already provided
+        }
+    }
+
+    if (oLat === null || oLon === null || dLat === null || dLon === null) {
+        return {
+            error: 'missing_coordinates',
+            airport: airport || null,
+            origin: { lat: oLat, lon: oLon, name: originName || null },
+            dest: { lat: dLat, lon: dLon, name: destName || null }
+        }
+    }
+
+    const oLatNum = oLat as number
+    const oLonNum = oLon as number
+    const dLatNum = dLat as number
+    const dLonNum = dLon as number
+
+    const originQuerySummary = {
+        name: originName || null,
+        lat: originCoordsProvided ? oLatNum : null,
+        lon: originCoordsProvided ? oLonNum : null,
+        runway_end: originRunwayEnd ?? (originMatch?.runwayEnd ?? null)
+    }
+
+    const destQuerySummary = {
+        name: destName || null,
+        lat: destCoordsProvided ? dLatNum : null,
+        lon: destCoordsProvided ? dLonNum : null,
+        runway_end: destRunwayEnd ?? (destMatch?.runwayEnd ?? null)
+    }
+
+    const originFeaturePayload = originMatch ? toGeocodePayload(originMatch) : null
+    const destFeaturePayload = destMatch ? toGeocodePayload(destMatch) : null
 
     const endpoint = 'https://overpass-api.de/api/interpreter'
     const overpassQ = `
 [out:json][timeout:90];
 (
-  way["aeroway"="taxiway"](around:${radius},${oLat},${oLon});
-  way["aeroway"="taxiway"](around:${radius},${dLat},${dLon});
+  way["aeroway"="taxiway"](around:${radius},${oLatNum},${oLonNum});
+  way["aeroway"="taxiway"](around:${radius},${dLatNum},${dLonNum});
 );
 (._;>;);
 out body;
@@ -91,11 +230,16 @@ out body;
         return { node_id: bestId, lat: nn.lat, lon: nn.lon, distance_m: bestD }
     }
 
-    const startAttach = nearestNode(oLat,oLon)
-    const endAttach   = nearestNode(dLat,dLon)
+    const startAttach = nearestNode(oLatNum,oLonNum)
+    const endAttach   = nearestNode(dLatNum,dLonNum)
 
     if (!startAttach || !endAttach) {
-        return { error: 'no_nodes_in_area', origin:{lat:oLat,lon:oLon}, dest:{lat:dLat,lon:dLon} }
+        return {
+            error: 'no_nodes_in_area',
+            airport: airport || null,
+            origin: { lat:oLatNum, lon:oLonNum, query: originQuerySummary, feature: originFeaturePayload },
+            dest:   { lat:dLatNum, lon:dLonNum, query: destQuerySummary, feature: destFeaturePayload }
+        }
     }
 
     // --- dijkstra shortest path (meters) ---
@@ -148,8 +292,9 @@ out body;
     const sp = dijkstra(startAttach.node_id, endAttach.node_id)
     if (!sp) {
         return {
-            origin: { lat:oLat, lon:oLon },
-            dest:   { lat:dLat, lon:dLon },
+            airport: airport || null,
+            origin: { lat:oLatNum, lon:oLonNum, query: originQuerySummary, feature: originFeaturePayload },
+            dest:   { lat:dLatNum, lon:dLonNum, query: destQuerySummary, feature: destFeaturePayload },
             start_attach: startAttach,
             end_attach:   endAttach,
             route: null,
@@ -193,8 +338,9 @@ out body;
     }
 
     return {
-        origin: { lat:oLat, lon:oLon },
-        dest:   { lat:dLat, lon:dLon },
+        airport: airport || null,
+        origin: { lat:oLatNum, lon:oLonNum, query: originQuerySummary, feature: originFeaturePayload },
+        dest:   { lat:dLatNum, lon:dLonNum, query: destQuerySummary, feature: destFeaturePayload },
         start_attach: startAttach,
         end_attach:   endAttach,
         route: {
