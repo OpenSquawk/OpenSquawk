@@ -887,33 +887,31 @@ const endpointSections: EndpointSection[] = [
         query: [
           { name: 'airport', type: 'string', required: true, description: 'ICAO designator of the airport.' },
           { name: 'origin_name', type: 'string', description: 'Name or designator of the origin feature (e.g. stand, gate, runway).' },
-          { name: 'origin_type', type: 'string', description: 'Optional hint for the origin feature type (runway, gate, stand, taxiway, holding).' },
-          { name: 'dest_name', type: 'string', description: 'Name or designator of the destination feature.' },
-          { name: 'dest_type', type: 'string', description: 'Optional hint for the destination feature type.' },
+          { name: 'dest_name', type: 'string', description: 'Name or designator of the destination feature.' }
         ],
-        sampleRequest: `curl "https://opensquawk.de/api/service/tools/airport-geocode?airport=EDDF&origin_name=Stand%20V155&origin_type=stand&dest_name=RWY%2025C&dest_type=runway"`,
+        sampleRequest: `curl "https://opensquawk.de/api/service/tools/airport-geocode?airport=EDDF&origin_name=Stand%20V155&dest_name=RWY%2025C"`,
         sampleResponse: `{
   "airport": "EDDF",
   "feature_count": 284,
   "origin": {
     "query": "Stand V155",
-    "type_hint": "stand",
     "result": {
       "type": "stand",
       "lat": 50.046321,
       "lon": 8.576842,
       "matched_alias": "V155",
+      "map_url": "https://www.openstreetmap.org/node/1234567890?mlat=50.046321&mlon=8.576842#map=19/50.046321/8.576842",
       "osm": { "type": "node", "id": 1234567890 }
     }
   },
   "dest": {
     "query": "RWY 25C",
-    "type_hint": "runway",
     "result": {
       "type": "runway",
       "lat": 50.043812,
       "lon": 8.569231,
       "matched_alias": "25C",
+      "map_url": "https://www.openstreetmap.org/way/987654321?mlat=50.043812&mlon=8.569231#map=17/50.043812/8.569231",
       "osm": { "type": "way", "id": 987654321 }
     }
   }

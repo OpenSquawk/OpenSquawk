@@ -34,10 +34,8 @@ type Feature = {
   lon: number
   tags: Record<string, string>
   aliases: string[]
-  normalizedAliases: Set<string>
+  normalizedAliases: Map<string, string>
 }
-
-type QueryType = 'runway' | 'gate' | 'stand' | 'taxiway' | 'holding'
 
 const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter'
 
@@ -179,10 +177,14 @@ function createFeature(element: OsmElement): Feature | null {
   const aliases = buildAliases(tags, featureType)
   if (aliases.length === 0) return null
 
-  const normalizedAliases = new Set<string>()
+  const normalizedAliases = new Map<string, string>()
   for (const alias of aliases) {
     const variants = normalizeWithPrefixes(alias)
-    for (const variant of variants) normalizedAliases.add(variant)
+    for (const variant of variants) {
+      if (!normalizedAliases.has(variant)) {
+        normalizedAliases.set(variant, alias)
+      }
+    }
   }
 
   if (normalizedAliases.size === 0) return null
@@ -199,99 +201,112 @@ function createFeature(element: OsmElement): Feature | null {
   }
 }
 
-function inferTypeFromQuery(query: string) {
-  let sanitized = query
-  let inferred: QueryType | undefined
-
-  const patterns: Array<{ hint: QueryType; detect: RegExp; remove: RegExp }> = [
-    { hint: 'runway', detect: /\b(runway|rwy)\b/i, remove: /\b(runway|rwy)\b/gi },
-    { hint: 'gate', detect: /\b(gate)\b/i, remove: /\b(gate)\b/gi },
-    {
-      hint: 'stand',
-      detect: /\b(stand|parking|standposition)\b/i,
-      remove: /\b(stand|parking|standposition)\b/gi
-    },
-    { hint: 'taxiway', detect: /\b(taxiway|taxi)\b/i, remove: /\b(taxiway|taxi)\b/gi },
-    {
-      hint: 'holding',
-      detect: /\b(holding|holdshort|holdingpoint)\b/i,
-      remove: /\b(holding|holdshort|holdingpoint)\b/gi
+function analyzeQuery(query: string) {
+  const trimmed = query.trim()
+  if (!trimmed) {
+    return {
+      trimmed,
+      sanitizedQuery: '',
+      runwayBias: false
     }
+  }
+
+  let sanitized = trimmed
+  const patterns: RegExp[] = [
+    /\b(runway|rwy)\b/gi,
+    /\b(gate)\b/gi,
+    /\b(stand|parking|standposition)\b/gi,
+    /\b(taxiway|taxi)\b/gi,
+    /\b(holding|holdshort|holdingpoint)\b/gi
   ]
 
-  for (const { hint, detect, remove } of patterns) {
-    if (detect.test(sanitized)) {
-      inferred = inferred ?? hint
-      sanitized = sanitized.replace(remove, ' ')
-    }
+  for (const pattern of patterns) {
+    sanitized = sanitized.replace(pattern, ' ')
   }
 
   sanitized = sanitized.replace(/\s+/g, ' ').trim()
 
+  const runwayBias =
+    /^\s*\d/.test(trimmed) ||
+    /\b(runway|rwy)\b/i.test(query) ||
+    /\d{1,2}[LRC]?\b/i.test(trimmed) ||
+    /\d{2}\s*\/\s*\d{2}/.test(trimmed)
+
   return {
-    sanitizedQuery: sanitized || query.trim(),
-    inferredType: inferred
+    trimmed,
+    sanitizedQuery: sanitized,
+    runwayBias
   }
 }
 
-function findMatch(
-  features: Feature[],
-  query: string,
-  typeHint?: QueryType
-): { feature: Feature; matchedAlias: string } | null {
+function buildMapUrl(feature: Feature) {
+  const zoom = feature.type === 'runway' ? 17 : 19
+  const lat = feature.lat.toFixed(6)
+  const lon = feature.lon.toFixed(6)
+  return `https://www.openstreetmap.org/${feature.osmType}/${feature.osmId}?mlat=${lat}&mlon=${lon}#map=${zoom}/${lat}/${lon}`
+}
+
+function findMatch(features: Feature[], query: string) {
   if (!query) return null
 
-  const queryVariants = normalizeWithPrefixes(query)
+  const { trimmed, sanitizedQuery, runwayBias } = analyzeQuery(query)
+  const baseQuery = sanitizedQuery || trimmed
+  if (!baseQuery) return null
+
+  const queryVariants = normalizeWithPrefixes(baseQuery)
   if (queryVariants.size === 0) return null
 
-  const typeFilters = typeHint
-    ? {
-        runway: ['runway'],
-        gate: ['gate'],
-        stand: ['stand'],
-        taxiway: ['taxiway'],
-        holding: ['holding_position']
-      }[typeHint]
-    : undefined
-
-  const candidates = typeFilters
-    ? features.filter((feature) => typeFilters.includes(feature.type))
-    : features
-
-  const fallbackCandidates = candidates.length > 0 ? candidates : features
-
-  for (const feature of fallbackCandidates) {
-    for (const variant of queryVariants) {
-      if (feature.normalizedAliases.has(variant)) {
-        return { feature, matchedAlias: variant }
+  const variantList = Array.from(queryVariants)
+  let best:
+    | {
+        feature: Feature
+        matchedAlias: string
+        score: number
       }
-    }
-  }
+    | null = null
 
-  // attempt loose matching (variant contains alias or vice versa)
-  for (const feature of fallbackCandidates) {
-    for (const variant of queryVariants) {
-      for (const alias of feature.normalizedAliases) {
-        if (variant.includes(alias) || alias.includes(variant)) {
-          return { feature, matchedAlias: alias }
+  for (const feature of features) {
+    for (const [aliasVariant, originalAlias] of feature.normalizedAliases) {
+      for (const variant of variantList) {
+        let score = 0
+        if (aliasVariant === variant) {
+          score = 100
+        } else if (aliasVariant.includes(variant) || variant.includes(aliasVariant)) {
+          score = 70
+        } else {
+          continue
+        }
+
+        if (runwayBias) {
+          if (feature.type === 'runway') score += 20
+          else score -= 10
+        }
+
+        if (feature.type === 'runway' && /^\d/.test(variant)) {
+          score += 10
+        }
+
+        if (feature.type === 'gate' || feature.type === 'stand') {
+          score += 2
+        }
+
+        if (!best || score > best.score) {
+          best = {
+            feature,
+            matchedAlias: originalAlias,
+            score
+          }
         }
       }
     }
   }
 
-  return null
-}
+  if (!best) return null
 
-function mapTypeHint(value: string | undefined): QueryType | undefined {
-  if (!value) return undefined
-  const normalized = value.trim().toLowerCase()
-  if (!normalized) return undefined
-  if (['runway', 'rwy'].includes(normalized)) return 'runway'
-  if (['gate'].includes(normalized)) return 'gate'
-  if (['stand', 'parking', 'standposition'].includes(normalized)) return 'stand'
-  if (['taxiway', 'taxi'].includes(normalized)) return 'taxiway'
-  if (['holding', 'holdshort', 'holdingpoint'].includes(normalized)) return 'holding'
-  return undefined
+  return {
+    feature: best.feature,
+    matchedAlias: best.matchedAlias
+  }
 }
 
 export default defineEventHandler(async (event) => {
@@ -300,8 +315,6 @@ export default defineEventHandler(async (event) => {
   const airport = typeof q.airport === 'string' ? q.airport.trim().toUpperCase() : ''
   const originName = typeof q.origin_name === 'string' ? q.origin_name.trim() : ''
   const destName = typeof q.dest_name === 'string' ? q.dest_name.trim() : ''
-  const originType = mapTypeHint(typeof q.origin_type === 'string' ? q.origin_type : undefined)
-  const destType = mapTypeHint(typeof q.dest_type === 'string' ? q.dest_type : undefined)
 
   if (!airport) {
     return { error: 'missing_airport' }
@@ -353,14 +366,11 @@ out center tags;
     return { error: 'no_features', airport, origin: originName || null, dest: destName || null }
   }
 
-  const find = (query: string, typeHint?: QueryType) => {
-    const { sanitizedQuery, inferredType } = inferTypeFromQuery(query)
-    const effectiveType = typeHint ?? inferredType
-    const match = findMatch(features, sanitizedQuery, effectiveType)
+  const find = (query: string) => {
+    const match = findMatch(features, query)
     if (!match) {
       return {
         query,
-        type_hint: effectiveType ?? null,
         result: null
       }
     }
@@ -368,12 +378,12 @@ out center tags;
     const { feature, matchedAlias } = match
     return {
       query,
-      type_hint: effectiveType ?? null,
       result: {
         type: feature.type,
         lat: feature.lat,
         lon: feature.lon,
         matched_alias: matchedAlias,
+        map_url: buildMapUrl(feature),
         osm: {
           type: feature.osmType,
           id: feature.osmId,
@@ -388,8 +398,8 @@ out center tags;
     feature_count: features.length
   }
 
-  if (originName) response.origin = find(originName, originType)
-  if (destName) response.dest = find(destName, destType)
+  if (originName) response.origin = find(originName)
+  if (destName) response.dest = find(destName)
 
   return response
 })
