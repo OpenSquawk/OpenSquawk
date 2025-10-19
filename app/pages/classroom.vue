@@ -2914,6 +2914,10 @@ async function loadLearnState() {
   const storedConfig = loadLocalAtcSettings()
   let appliedLocalOverride = false
   let canPersistOverride = false
+  let convertedLegacyTts = false
+  const hasStoredTtsPreference = storedConfig
+    ? Object.prototype.hasOwnProperty.call(storedConfig, 'tts')
+    : false
 
   try {
     const response = await api.get<LearnStateResponse>('/api/learn/state')
@@ -2922,6 +2926,11 @@ async function loadLearnState() {
       progress.value = (response.progress ?? {}) as LearnProgress
       cfg.value = {...defaultCfg, ...(response.config || {})}
       unlockedModules.value = sanitizeModuleList(response.unlockedModules)
+
+      if (cfg.value.tts && !hasStoredTtsPreference) {
+        cfg.value = {...cfg.value, tts: false}
+        convertedLegacyTts = true
+      }
 
       if (storedConfig && hasConfigPatchDifference(storedConfig, cfg.value)) {
         cfg.value = {...cfg.value, ...storedConfig}
@@ -2956,9 +2965,9 @@ async function loadLearnState() {
     dirtyState.xp = false
     dirtyState.progress = false
     dirtyState.unlocked = false
-    dirtyState.config = appliedLocalOverride
+    dirtyState.config = appliedLocalOverride || convertedLegacyTts
 
-    if (appliedLocalOverride && canPersistOverride) {
+    if ((appliedLocalOverride && canPersistOverride) || convertedLegacyTts) {
       schedulePersist()
     }
 
