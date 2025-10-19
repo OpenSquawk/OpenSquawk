@@ -1170,6 +1170,7 @@
         <div class="footer-meta">
           <span class="muted small">&copy; 2025 OpenSquawk. All rights reserved.</span>
           <NuxtLink to="/feedback" target="_blank" class="link ml-2">Give feedback ›</NuxtLink>
+          <a href="/" class="link ml-4">Back to opensquawk.de ›</a>
         </div>
       </div>
     </footer>
@@ -1357,6 +1358,20 @@ function similarity(a: string, b: string): number {
   const distance = lev(normA, normB)
   const maxLen = Math.max(normA.length, normB.length, 1)
   return 1 - distance / maxLen
+}
+
+function allowedDistance(length: number): number {
+  if (length <= 12) return 0
+  if (length <= 24) return 1
+  if (length <= 36) return 2
+  return 3
+}
+
+function tightenedThreshold(length: number, base: number): number {
+  if (length >= 36) return Math.max(base, 0.9)
+  if (length >= 24) return Math.max(base, 0.92)
+  if (length >= 16) return Math.max(base, 0.94)
+  return Math.max(base, 0.97)
 }
 
 const modules = shallowRef<ModuleDef[]>(learnModules)
@@ -3077,15 +3092,47 @@ const fieldStates = computed<Record<string, FieldState>>(() => {
     const alternatives = field.alternatives?.(scenario.value) ?? []
     const options = [expected, ...alternatives].map(norm).filter(Boolean)
     const normalizedAnswer = norm(answer)
-    const best = options.length ? Math.max(...options.map(option => similarity(normalizedAnswer, option))) : 0
-    const pass = answer ? best >= (field.threshold ?? 0.82) : false
+
+    let best = 0
+    let pass = false
+
+    if (answer && options.length) {
+      for (const option of options) {
+        if (!option) continue
+        if (normalizedAnswer === option) {
+          best = 1
+          pass = true
+          break
+        }
+
+        const distance = lev(normalizedAnswer, option)
+        const span = Math.max(option.length, normalizedAnswer.length, 1)
+        const score = 1 - distance / span
+        if (score > best) {
+          best = score
+        }
+
+        const allowance = allowedDistance(span)
+        if (allowance <= 0) continue
+
+        const threshold = tightenedThreshold(span, field.threshold ?? 0.82)
+        if (distance <= allowance && score >= threshold) {
+          pass = true
+        }
+      }
+
+      if (!pass && !best && options.length) {
+        best = Math.max(...options.map(option => similarity(normalizedAnswer, option)))
+      }
+    }
+
     map[field.key] = {
       key: field.key,
       label: field.label,
       expected,
       answer,
       similarity: answer ? best : 0,
-      pass
+      pass: Boolean(answer && pass)
     }
   }
   return map
