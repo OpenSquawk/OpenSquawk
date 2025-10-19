@@ -199,6 +199,41 @@ function createFeature(element: OsmElement): Feature | null {
   }
 }
 
+function inferTypeFromQuery(query: string) {
+  let sanitized = query
+  let inferred: QueryType | undefined
+
+  const patterns: Array<{ hint: QueryType; detect: RegExp; remove: RegExp }> = [
+    { hint: 'runway', detect: /\b(runway|rwy)\b/i, remove: /\b(runway|rwy)\b/gi },
+    { hint: 'gate', detect: /\b(gate)\b/i, remove: /\b(gate)\b/gi },
+    {
+      hint: 'stand',
+      detect: /\b(stand|parking|standposition)\b/i,
+      remove: /\b(stand|parking|standposition)\b/gi
+    },
+    { hint: 'taxiway', detect: /\b(taxiway|taxi)\b/i, remove: /\b(taxiway|taxi)\b/gi },
+    {
+      hint: 'holding',
+      detect: /\b(holding|holdshort|holdingpoint)\b/i,
+      remove: /\b(holding|holdshort|holdingpoint)\b/gi
+    }
+  ]
+
+  for (const { hint, detect, remove } of patterns) {
+    if (detect.test(sanitized)) {
+      inferred = inferred ?? hint
+      sanitized = sanitized.replace(remove, ' ')
+    }
+  }
+
+  sanitized = sanitized.replace(/\s+/g, ' ').trim()
+
+  return {
+    sanitizedQuery: sanitized || query.trim(),
+    inferredType: inferred
+  }
+}
+
 function findMatch(
   features: Feature[],
   query: string,
@@ -319,11 +354,13 @@ out center tags;
   }
 
   const find = (query: string, typeHint?: QueryType) => {
-    const match = findMatch(features, query, typeHint)
+    const { sanitizedQuery, inferredType } = inferTypeFromQuery(query)
+    const effectiveType = typeHint ?? inferredType
+    const match = findMatch(features, sanitizedQuery, effectiveType)
     if (!match) {
       return {
         query,
-        type_hint: typeHint ?? null,
+        type_hint: effectiveType ?? null,
         result: null
       }
     }
@@ -331,7 +368,7 @@ out center tags;
     const { feature, matchedAlias } = match
     return {
       query,
-      type_hint: typeHint ?? null,
+      type_hint: effectiveType ?? null,
       result: {
         type: feature.type,
         lat: feature.lat,
