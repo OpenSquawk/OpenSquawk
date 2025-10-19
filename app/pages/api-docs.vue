@@ -878,6 +878,48 @@ const endpointSections: EndpointSection[] = [
 }`,
         notes: 'Returns null route when no taxiway network is available in the search area.',
       },
+      {
+        method: 'GET',
+        path: '/api/service/tools/airport-geocode',
+        summary: 'Resolve named aerodrome features to coordinates for a specific airport.',
+        category: 'Tools & diagnostics',
+        auth: 'public',
+        query: [
+          { name: 'airport', type: 'string', required: true, description: 'ICAO designator of the airport.' },
+          { name: 'origin_name', type: 'string', description: 'Name or designator of the origin feature (e.g. stand, gate, runway).' },
+          { name: 'origin_type', type: 'string', description: 'Optional hint for the origin feature type (runway, gate, stand, taxiway, holding).' },
+          { name: 'dest_name', type: 'string', description: 'Name or designator of the destination feature.' },
+          { name: 'dest_type', type: 'string', description: 'Optional hint for the destination feature type.' },
+        ],
+        sampleRequest: `curl "https://opensquawk.de/api/service/tools/airport-geocode?airport=EDDF&origin_name=Stand%20V155&origin_type=stand&dest_name=RWY%2025C&dest_type=runway"`,
+        sampleResponse: `{
+  "airport": "EDDF",
+  "feature_count": 284,
+  "origin": {
+    "query": "Stand V155",
+    "type_hint": "stand",
+    "result": {
+      "type": "stand",
+      "lat": 50.046321,
+      "lon": 8.576842,
+      "matched_alias": "V155",
+      "osm": { "type": "node", "id": 1234567890 }
+    }
+  },
+  "dest": {
+    "query": "RWY 25C",
+    "type_hint": "runway",
+    "result": {
+      "type": "runway",
+      "lat": 50.043812,
+      "lon": 8.569231,
+      "matched_alias": "25C",
+      "osm": { "type": "way", "id": 987654321 }
+    }
+  }
+ }`,
+        notes: 'Returns null results when the feature cannot be matched within the selected aerodrome.',
+      },
     ],
   },
   {
