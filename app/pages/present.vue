@@ -141,9 +141,9 @@ const slides = [
     section: 'Intro',
     title: 'What OpenSquawk is aiming for',
     bullets: [
-      'Pipeline: Speech-to-Text → domain-tuned LLM → Text-to-Speech, all runnable on a home rig.',
-      'Open architecture that lets hobbyists and ops desks inspect every decision.',
-      'Clear guardrails so experimental automation never hides its reasoning.'
+      'Definition: a local-first Speech-to-Text → domain-tuned LLM → Text-to-Speech pipeline.',
+      'Every clearance is backed by transparent state and replayable reasoning trails.',
+      'Design goal: hobbyists and ops teams can self-host without recurring cloud fees.'
     ]
   },
   {
@@ -160,30 +160,37 @@ const slides = [
     section: 'Story',
     title: 'What the market already offers',
     bullets: [
-      'SayIntentions.AI: cloud-first, subscription, ~88k airports, rich features yet tough monthly pricing.',
-      'BeyondATC: one-time license, hybrid rule engine plus offline LLM for natural dialogue and traffic.',
-      'FSHud & Pilot2ATC: reliable rule-based control with menus or strict grammars slowly adding voice.',
-      'Open-source attempts like Red Griffin ATC or BlueSky stop short of full STT→LLM→TTS pipelines.'
-    ],
-    image: 'https://picsum.photos/seed/opensquawk-airfield/1200/675',
-    imageAlt: 'placeholder photo of a small airfield at dawn with soft light',
-    imageCredit: 'Photo placeholder via Lorem Picsum'
+      'SayIntentions.AI: cloud-first subscription (~€15–30/mo) with 88k airports, mentors, and multilingual AI crews.',
+      'BeyondATC: €30-ish one-time license using an offline LLM for phrasing while rules handle separation and AI traffic.',
+      'FSHud & Pilot2ATC: deterministic IFR coverage with strict phrase grammars; speech input is emerging but limited.',
+      'Open projects like Red Griffin ATC or BlueSky focus on menus or research sim work—no end-to-end STT→LLM→TTS.'
+    ]
   },
   {
     section: 'Story',
     title: 'Lessons learned from those teams',
     bullets: [
-      'Cloud-native AI ATC faces brutal recurring costs; offline-first keeps the lights on.',
+      'Cloud-native AI ATC faces brutal recurring costs; OpenSky’s shutdown proves free tiers need subsidies.',
       'Hybrid architectures—rules for separation, LLMs for phrasing—balance realism and safety.',
-      'Traffic management matters as much as speech; users notice when sequencing fails.'
+      'Traffic management matters as much as speech; users notice when sequencing fails.',
+      'Community expects transparency on data use, privacy, and fallback behaviour when AI hesitates.'
     ]
   },
   {
     section: 'Vision',
     title: 'So… what is OpenSquawk?',
     text: [
-      "It's an open-source AI ATC toolkit for simulators like MSFS and X-Plane.",
-      'It listens to pilot audio, interprets intent with a domain model, and responds using authentic radio phraseology.'
+      "It's an open-source AI ATC stack targeting MSFS first, with X-Plane close behind.",
+      'It listens to pilot audio, interprets intent with a domain model, and responds using authentic ICAO/FAA phraseology.'
+    ]
+  },
+  {
+    section: 'Vision',
+    title: 'Research-backed pillars',
+    bullets: [
+      'Hybrid control: rail-guard rules gate clearances while the LLM focuses on flexible phraseology.',
+      'Dataset strategy: leverage LiveATC-style corpora plus synthetic dialogues for finetuning.',
+      'Cost discipline: keep Whisper, LLM inference, and TTS local to dodge SayIntentions-style cloud burn.'
     ]
   },
   {
@@ -222,10 +229,7 @@ const slides = [
       'NOTAM & METAR polling feeds a shared event bus every minute.',
       'Lightweight rule engine tags events with context for experimentation.',
       'Early Nuxt dashboard streams a shared timeline for remote testers.'
-    ],
-    image: 'https://picsum.photos/seed/opensquawk-dashboard/1200/675',
-    imageAlt: 'placeholder photo of dashboard screens glowing with charts',
-    imageCredit: 'Photo placeholder via Lorem Picsum'
+    ]
   },
   {
     section: 'Progress',
@@ -243,6 +247,15 @@ const slides = [
       'How do we keep compute costs friendly as community radios scale?',
       'Which separation rules are essential for a credible first release?',
       'Where can we source and license ATC dialogue data for finetuning?'
+    ]
+  },
+  {
+    section: 'Progress',
+    title: 'Community and market signals',
+    bullets: [
+      'MSFS counts 15M pilots; even a tiny slice looking for offline ATC is a huge audience.',
+      'VATSIM peaks at 1k+ concurrent pilots, yet coverage gaps leave room for always-on AI.',
+      'Reddit and AVSIM threads confirm willingness to pay if realism and traffic handling hold up.'
     ]
   },
   {
@@ -358,10 +371,19 @@ const slides = [
     section: 'Tech',
     title: 'Keeping things safe-ish',
     bullets: [
-      'End-to-end tests replay anonymised traffic nightly.',
-      'OPA policies guard radio streams and redact sensitive fields.',
-      'Loki captures raw transcripts for 24 hours before purging.',
+      'Nightly replays of anonymised traffic validate phraseology and separation logic.',
+      'OPA policies guard radio streams, redact PII, and enforce audit scopes.',
+      'Loki captures raw transcripts for 24 hours before purging per community policy.',
       'Incident playbooks live in-repo with checklists and runbooks.'
+    ]
+  },
+  {
+    section: 'Tech',
+    title: 'Challenges the research flags',
+    bullets: [
+      'Traffic sequencing remains hard—expect simple hold-short/go-around logic before full conflict prediction.',
+      'STT accuracy vs. latency: Whisper small hits the target, but weaker GPUs may need quantised models.',
+      'Regional phraseology splits (FAA vs. ICAO) will ship as configurable rule packs, not one-size-fits-all.'
     ]
   },
   {
@@ -372,10 +394,7 @@ const slides = [
       'Release rules DSL v0.2 with a friendlier visual editor.',
       'Ship first-class integration for the open-source EFB tool SkyPad.',
       'Publish contribution guidelines and a lightweight governance RFC.'
-    ],
-    image: 'https://picsum.photos/seed/opensquawk-roadmap/1200/675',
-    imageAlt: 'placeholder photo of notes and roadmap sketches on a desk',
-    imageCredit: 'Photo placeholder via Lorem Picsum'
+    ]
   },
   {
     section: 'Roadmap',
