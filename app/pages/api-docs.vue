@@ -864,7 +864,7 @@ const endpointSections: EndpointSection[] = [
           { name: 'origin_lng', type: 'number', required: true, description: 'Origin longitude in decimal degrees.' },
           { name: 'dest_lat', type: 'number', required: true, description: 'Destination latitude in decimal degrees.' },
           { name: 'dest_lng', type: 'number', required: true, description: 'Destination longitude in decimal degrees.' },
-          { name: 'radius', type: 'number', description: 'Search radius in metres (default 2000).' },
+          { name: 'radius', type: 'number', description: 'Search radius in metres (default 5000).' },
         ],
         sampleRequest: `curl "https://opensquawk.de/api/service/tools/taxiroute?origin_lat=50.0506&origin_lng=8.5708&dest_lat=50.0473&dest_lng=8.5610&radius=2500"`,
         sampleResponse: `{
@@ -874,9 +874,10 @@ const endpointSections: EndpointSection[] = [
     "node_ids": [1234567890, 1234567990, 1234568021],
     "total_distance_m": 1580.3
   },
-  "names": ["L7", "L", "N"]
+  "names": ["L7", "L", "N"],
+  "names_collapsed": ["L", "N"]
 }`,
-        notes: 'Returns null route when no taxiway network is available in the search area.',
+        notes: 'Returns null route when no taxiway network is available in the search area. The names_collapsed array removes redundant numbered variants while names preserves the raw sequence.',
       },
     ],
   },
