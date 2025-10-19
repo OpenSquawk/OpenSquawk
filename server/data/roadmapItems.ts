@@ -16,6 +16,14 @@ export const ROADMAP_ITEMS: RoadmapItemDefinition[] = [
     icon: 'mdi-cellphone-sound',
   },
   {
+    key: 'button-control',
+    title: 'Button-controlled transmissions',
+    description:
+      'Hardware or on-screen push-to-talk button options for when speaking aloud is not possible or practical.',
+    category: 'Accessibility',
+    icon: 'mdi-gesture-tap-button',
+  },
+  {
     key: 'realism-upgrades',
     title: 'Phraseology realism boost',
     description:
