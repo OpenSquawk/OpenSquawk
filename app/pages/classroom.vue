@@ -43,7 +43,8 @@
                     v-if="option.id === activeExperience.id"
                     size="16"
                     class="experience-option-check"
-                >mdi-check</v-icon>
+                >mdi-check
+                </v-icon>
               </button>
             </div>
           </v-menu>
@@ -81,7 +82,9 @@
                   aria-label="Lesson search results"
               >
                 <div class="lesson-search-header">
-                  <span>{{ lessonSearchResults.length }} {{ lessonSearchResults.length === 1 ? 'match' : 'matches' }}</span>
+                  <span>{{ lessonSearchResults.length }} {{
+                      lessonSearchResults.length === 1 ? 'match' : 'matches'
+                    }}</span>
                   <button class="link small" type="button" @click="clearLessonSearch">Clear</button>
                 </div>
                 <div v-if="lessonSearchResults.length" class="lesson-search-groups" role="presentation">
@@ -94,7 +97,10 @@
                   >
                     <div class="lesson-search-group-header">
                       <div class="lesson-search-group-title">{{ group.module.title }}</div>
-                      <div v-if="group.module.subtitle" class="lesson-search-group-sub">{{ group.module.subtitle }}</div>
+                      <div v-if="group.module.subtitle" class="lesson-search-group-sub">{{
+                          group.module.subtitle
+                        }}
+                      </div>
                     </div>
                     <button
                         v-for="hit in group.hits"
@@ -106,9 +112,13 @@
                     >
                       <div class="lesson-search-item-text">
                         <div class="lesson-search-item-title">{{ hit.lesson.title }}</div>
-                        <div class="lesson-search-item-desc">{{ hit.lesson.desc || 'Practice radio calls with ATC' }}</div>
+                        <div class="lesson-search-item-desc">{{
+                            hit.lesson.desc || 'Practice radio calls with ATC'
+                          }}
+                        </div>
                       </div>
-                      <span class="lesson-score lesson-search-item-score" :class="lessonScoreClass(hit.module.id, hit.lesson.id)">
+                      <span class="lesson-score lesson-search-item-score"
+                            :class="lessonScoreClass(hit.module.id, hit.lesson.id)">
                         <v-icon size="14">{{ lessonScoreIcon(hit.module.id, hit.lesson.id) }}</v-icon>
                         {{ lessonScoreLabel(hit.module.id, hit.lesson.id) }}
                       </span>
@@ -140,7 +150,6 @@
         </div>
       </nav>
     </header>
-
 
 
     <!-- HUB -->
@@ -204,7 +213,8 @@
                       type="button"
                       class="tile-overlay-link"
                       @click.stop.prevent="attemptUnlockModule(m.id)"
-                  >unlock</button>
+                  >unlock
+                  </button>
                   this briefing.
                 </div>
               </div>
@@ -235,11 +245,13 @@
         <div class="play-tools">
           <div v-if="requiresFlightPlan" class="plan-status" :class="{ 'is-ready': !!currentPlan }">
             <div class="plan-status-icon">
-              <v-icon :icon="currentPlan ? 'mdi-check-circle-outline' : 'mdi-alert-circle-outline'" size="22" />
+              <v-icon :icon="currentPlan ? 'mdi-check-circle-outline' : 'mdi-alert-circle-outline'" size="22"/>
             </div>
             <div class="plan-status-body">
               <span class="plan-status-title">
-                {{ currentPlan ? (currentPlan.scenario.callsign || currentPlan.scenario.radioCall) : 'Flight plan pending' }}
+                {{
+                  currentPlan ? (currentPlan.scenario.callsign || currentPlan.scenario.radioCall) : 'Flight plan pending'
+                }}
               </span>
               <span class="plan-status-sub" v-if="currentPlan">{{ currentPlanRoute }}</span>
               <span class="plan-status-sub muted" v-else>Select or import a flight to launch.</span>
@@ -256,7 +268,9 @@
             </div>
           </div>
           <div v-if="moduleStage==='lessons'" class="stats">
-            <span class="stat"><v-icon size="18">mdi-check-circle-outline</v-icon> {{ doneCount(current.id) }}/{{ current.lessons.length }}</span>
+            <span class="stat"><v-icon size="18">mdi-check-circle-outline</v-icon> {{
+                doneCount(current.id)
+              }}/{{ current.lessons.length }}</span>
             <span class="stat"><v-icon size="18">mdi-star</v-icon> Ø {{ avgScore(current.id) }}%</span>
           </div>
         </div>
@@ -289,7 +303,7 @@
 
         <div v-if="flightPlanMode==='random'" class="plan-panel">
           <div class="plan-summary">
-            <NuxtImg :src="currentBriefingArt" alt="Mission hero" class="plan-hero" />
+            <NuxtImg :src="currentBriefingArt" alt="Mission hero" class="plan-hero"/>
             <div class="plan-summary-body">
               <span class="plan-tag">Auto flight</span>
               <div class="plan-callout">{{ displayCallsign(draftPlanScenario?.radioCall, draftPlanScenario) }}</div>
@@ -309,7 +323,8 @@
           </div>
         </div>
 
-        <form v-else-if="flightPlanMode==='manual'" class="plan-panel manual-panel" @submit.prevent="handleManualSubmit">
+        <form v-else-if="flightPlanMode==='manual'" class="plan-panel manual-panel"
+              @submit.prevent="handleManualSubmit">
           <div class="manual-grid">
             <div class="manual-form">
               <div class="manual-card manual-card--intro">
@@ -319,7 +334,8 @@
                   </div>
                   <div>
                     <div class="manual-card-title">Design your own mission</div>
-                    <p class="muted small">Fill in the essentials below. Expand the optional sections when you want to brief gates, taxi routes or procedures.</p>
+                    <p class="muted small">Fill in the essentials below. Expand the optional sections when you want to
+                      brief gates, taxi routes or procedures.</p>
                   </div>
                 </div>
               </div>
@@ -331,29 +347,30 @@
                   </div>
                   <div>
                     <div class="manual-card-title">Core flight data</div>
-                    <p class="muted small">We only need a callsign plus departure and destination to spin up a training scenario.</p>
+                    <p class="muted small">We only need a callsign plus departure and destination to spin up a training
+                      scenario.</p>
                   </div>
                 </div>
                 <div class="field-grid required-grid">
                   <label class="field">
                     <span>Airline ICAO<span class="required-dot" aria-hidden="true">•</span></span>
-                    <input v-model="manualForm.airlineCode" maxlength="4" placeholder="DLH" />
+                    <input v-model="manualForm.airlineCode" maxlength="4" placeholder="DLH"/>
                   </label>
                   <label class="field">
                     <span>Flight number<span class="required-dot" aria-hidden="true">•</span></span>
-                    <input v-model="manualForm.flightNumber" placeholder="400" />
+                    <input v-model="manualForm.flightNumber" placeholder="400"/>
                   </label>
                   <label class="field">
                     <span>Spoken callsign</span>
-                    <input v-model="manualForm.airlineCall" placeholder="Lufthansa" />
+                    <input v-model="manualForm.airlineCall" placeholder="Lufthansa"/>
                   </label>
                   <label class="field">
                     <span>Departure ICAO<span class="required-dot" aria-hidden="true">•</span></span>
-                    <input v-model="manualForm.departureIcao" placeholder="EDDF" maxlength="4" />
+                    <input v-model="manualForm.departureIcao" placeholder="EDDF" maxlength="4"/>
                   </label>
                   <label class="field">
                     <span>Destination ICAO<span class="required-dot" aria-hidden="true">•</span></span>
-                    <input v-model="manualForm.destinationIcao" placeholder="KJFK" maxlength="4" />
+                    <input v-model="manualForm.destinationIcao" placeholder="KJFK" maxlength="4"/>
                   </label>
                 </div>
               </div>
@@ -379,31 +396,31 @@
                     <div class="field-grid">
                       <label class="field">
                         <span>City</span>
-                        <input v-model="manualForm.departureCity" placeholder="Frankfurt" />
+                        <input v-model="manualForm.departureCity" placeholder="Frankfurt"/>
                       </label>
                       <label class="field">
                         <span>Airport name</span>
-                        <input v-model="manualForm.departureName" placeholder="Frankfurt/Main" />
+                        <input v-model="manualForm.departureName" placeholder="Frankfurt/Main"/>
                       </label>
                       <label class="field">
                         <span>Stand</span>
-                        <input v-model="manualForm.stand" placeholder="A12" />
+                        <input v-model="manualForm.stand" placeholder="A12"/>
                       </label>
                       <label class="field">
                         <span>Taxi route</span>
-                        <input v-model="manualForm.taxiRoute" placeholder="N3 U4" />
+                        <input v-model="manualForm.taxiRoute" placeholder="N3 U4"/>
                       </label>
                       <label class="field">
                         <span>Runway</span>
-                        <input v-model="manualForm.departureRunway" placeholder="25C" />
+                        <input v-model="manualForm.departureRunway" placeholder="25C"/>
                       </label>
                       <label class="field">
                         <span>SID</span>
-                        <input v-model="manualForm.sid" placeholder="ANEKI 7S" />
+                        <input v-model="manualForm.sid" placeholder="ANEKI 7S"/>
                       </label>
                       <label class="field">
                         <span>Transition</span>
-                        <input v-model="manualForm.transition" placeholder="ANEKI" />
+                        <input v-model="manualForm.transition" placeholder="ANEKI"/>
                       </label>
                     </div>
                   </div>
@@ -431,35 +448,35 @@
                     <div class="field-grid">
                       <label class="field">
                         <span>City</span>
-                        <input v-model="manualForm.destinationCity" placeholder="New York" />
+                        <input v-model="manualForm.destinationCity" placeholder="New York"/>
                       </label>
                       <label class="field">
                         <span>Airport name</span>
-                        <input v-model="manualForm.destinationName" placeholder="John F. Kennedy" />
+                        <input v-model="manualForm.destinationName" placeholder="John F. Kennedy"/>
                       </label>
                       <label class="field">
                         <span>Runway</span>
-                        <input v-model="manualForm.arrivalRunway" placeholder="22R" />
+                        <input v-model="manualForm.arrivalRunway" placeholder="22R"/>
                       </label>
                       <label class="field">
                         <span>STAR</span>
-                        <input v-model="manualForm.arrivalStar" placeholder="ROBER 3" />
+                        <input v-model="manualForm.arrivalStar" placeholder="ROBER 3"/>
                       </label>
                       <label class="field">
                         <span>Transition</span>
-                        <input v-model="manualForm.arrivalTransition" placeholder="ROBER" />
+                        <input v-model="manualForm.arrivalTransition" placeholder="ROBER"/>
                       </label>
                       <label class="field">
                         <span>Approach</span>
-                        <input v-model="manualForm.approach" placeholder="ILS 22R" />
+                        <input v-model="manualForm.approach" placeholder="ILS 22R"/>
                       </label>
                       <label class="field">
                         <span>Arrival stand</span>
-                        <input v-model="manualForm.arrivalStand" placeholder="Gate 5" />
+                        <input v-model="manualForm.arrivalStand" placeholder="Gate 5"/>
                       </label>
                       <label class="field">
                         <span>Taxi-in</span>
-                        <input v-model="manualForm.arrivalTaxiRoute" placeholder="B K5" />
+                        <input v-model="manualForm.arrivalTaxiRoute" placeholder="B K5"/>
                       </label>
                     </div>
                   </div>
@@ -477,7 +494,8 @@
                     <v-icon size="20">mdi-altimeter</v-icon>
                   </div>
                   <div class="optional-body">
-                    <div class="manual-card-title">Altitude &amp; codes <span class="optional-chip">optional</span></div>
+                    <div class="manual-card-title">Altitude &amp; codes <span class="optional-chip">optional</span>
+                    </div>
                     <p class="muted small">Initial altitudes, squawk, push timing and remarks.</p>
                   </div>
                   <v-icon size="18" class="chevron">mdi-chevron-down</v-icon>
@@ -487,23 +505,23 @@
                     <div class="field-grid">
                       <label class="field">
                         <span>Initial altitude (ft)</span>
-                        <input v-model="manualForm.initialAltitude" inputmode="numeric" placeholder="5000" />
+                        <input v-model="manualForm.initialAltitude" inputmode="numeric" placeholder="5000"/>
                       </label>
                       <label class="field">
                         <span>Climb altitude (ft)</span>
-                        <input v-model="manualForm.climbAltitude" inputmode="numeric" placeholder="7000" />
+                        <input v-model="manualForm.climbAltitude" inputmode="numeric" placeholder="7000"/>
                       </label>
                       <label class="field">
                         <span>Squawk</span>
-                        <input v-model="manualForm.squawk" placeholder="4213" />
+                        <input v-model="manualForm.squawk" placeholder="4213"/>
                       </label>
                       <label class="field">
                         <span>Push delay (min)</span>
-                        <input v-model="manualForm.pushDelay" inputmode="numeric" placeholder="5" />
+                        <input v-model="manualForm.pushDelay" inputmode="numeric" placeholder="5"/>
                       </label>
                       <label class="field wide">
                         <span>Briefing notes</span>
-                        <input v-model="manualForm.remarks" placeholder="Optional remarks" />
+                        <input v-model="manualForm.remarks" placeholder="Optional remarks"/>
                       </label>
                     </div>
                   </div>
@@ -571,12 +589,14 @@
 
         <div v-else class="plan-panel simbrief-panel">
           <div class="simbrief-hero-card">
-            <NuxtImg src="/img/learn/missions/full-flight/briefing-hero.png" alt="SimBrief import preview" class="simbrief-hero-art" format="webp" />
+            <NuxtImg src="/img/learn/missions/full-flight/briefing-hero.png" alt="SimBrief import preview"
+                     class="simbrief-hero-art" format="webp"/>
             <div class="simbrief-hero-overlay">
               <span class="simbrief-tag">SimBrief import</span>
               <h3 class="simbrief-hero-title">Load your airline dispatch</h3>
               <p class="simbrief-hero-text">
-                Sync the exact OFP you're flying with one click. We'll transform it into a mission-ready briefing and readback drill.
+                Sync the exact OFP you're flying with one click. We'll transform it into a mission-ready briefing and
+                readback drill.
               </p>
               <div class="simbrief-hero-highlights">
                 <span><v-icon size="16">mdi-airplane-cog</v-icon> Real routes</span>
@@ -607,7 +627,8 @@
                   <span class="step-number">2</span>
                   <span class="simbrief-step-title">Copy your Pilot ID</span>
                 </div>
-                <p>Find the ID on the share link of the finished OFP — it's the number we use to fetch your dispatch.</p>
+                <p>Find the ID on the share link of the finished OFP — it's the number we use to fetch your
+                  dispatch.</p>
               </div>
               <div class="simbrief-step-card">
                 <div class="simbrief-step-head">
@@ -644,7 +665,7 @@
             </p>
 
             <div v-if="simbriefForm.loading" class="simbrief-status">
-              <v-progress-circular indeterminate color="cyan" size="20" />
+              <v-progress-circular indeterminate color="cyan" size="20"/>
               <span class="muted small">Contacting SimBrief…</span>
             </div>
             <div v-if="flightPlanError" class="error-banner">
@@ -667,7 +688,7 @@
 
       <div v-else-if="moduleStage==='briefing' && briefingSnapshot" class="module-stage-panel mission-briefing">
         <section class="briefing-hero-banner">
-          <NuxtImg :src="currentBriefingArt" alt="Mission hero" class="briefing-hero-bg" />
+          <NuxtImg :src="currentBriefingArt" alt="Mission hero" class="briefing-hero-bg"/>
           <div class="briefing-hero-content">
             <div class="briefing-tag-row">
               <span class="plan-tag">Mission briefing</span>
@@ -714,7 +735,8 @@
         <div class="briefing-layout">
           <div class="briefing-main-grid">
             <div class="briefing-card">
-              <NuxtImg src="/img/learn/missions/full-flight/briefing-route.png" alt="Route preview" class="briefing-card-art" format="webp" />
+              <NuxtImg src="/img/learn/missions/full-flight/briefing-route.png" alt="Route preview"
+                       class="briefing-card-art" format="webp"/>
               <div class="card-title">
                 <v-icon size="16">mdi-map-marker-path</v-icon>
                 Flight deck setup
@@ -722,11 +744,14 @@
               <ul class="briefing-list">
                 <li><strong>Push</strong>: {{ briefingSnapshot.codes.push }}</li>
                 <li><strong>ATIS</strong>: Information {{ briefingSnapshot.departure.atis }}</li>
-                <li><strong>Delivery</strong>: {{ briefingSnapshot.departure.freq }} · {{ briefingSnapshot.departure.freqWords }}</li>
+                <li><strong>Delivery</strong>: {{ briefingSnapshot.departure.freq }} ·
+                  {{ briefingSnapshot.departure.freqWords }}
+                </li>
               </ul>
             </div>
             <div class="briefing-card">
-              <NuxtImg src="/img/learn/missions/full-flight/briefing-departure.png" alt="Departure" class="briefing-card-art" format="webp" />
+              <NuxtImg src="/img/learn/missions/full-flight/briefing-departure.png" alt="Departure"
+                       class="briefing-card-art" format="webp"/>
               <div class="card-title">
                 <v-icon size="16">mdi-airplane-takeoff</v-icon>
                 Departure flow
@@ -734,25 +759,32 @@
               <ul class="briefing-list">
                 <li><strong>Stand</strong>: {{ briefingSnapshot.departure.stand || 'As assigned' }}</li>
                 <li><strong>Taxi</strong>: {{ briefingSnapshot.departure.taxiRoute || 'As assigned' }}</li>
-                <li><strong>SID</strong>: {{ briefingSnapshot.departure.sid }} · {{ briefingSnapshot.departure.transition }}</li>
+                <li><strong>SID</strong>: {{ briefingSnapshot.departure.sid }} ·
+                  {{ briefingSnapshot.departure.transition }}
+                </li>
                 <li><strong>Initial altitude</strong>: {{ briefingSnapshot.altitudes.initial }}</li>
               </ul>
             </div>
             <div class="briefing-card">
-              <NuxtImg src="/img/learn/missions/full-flight/briefing-arrival.png" alt="Arrival" class="briefing-card-art" format="webp" />
+              <NuxtImg src="/img/learn/missions/full-flight/briefing-arrival.png" alt="Arrival"
+                       class="briefing-card-art" format="webp"/>
               <div class="card-title">
                 <v-icon size="16">mdi-airplane-landing</v-icon>
                 Arrival setup
               </div>
               <ul class="briefing-list">
-                <li><strong>STAR</strong>: {{ briefingSnapshot.arrival.star }} · {{ briefingSnapshot.arrival.transition }}</li>
+                <li><strong>STAR</strong>: {{ briefingSnapshot.arrival.star }} · {{
+                    briefingSnapshot.arrival.transition
+                  }}
+                </li>
                 <li><strong>Approach</strong>: {{ briefingSnapshot.arrival.approach }}</li>
                 <li><strong>Taxi-in</strong>: {{ briefingSnapshot.arrival.taxiRoute || 'As assigned' }}</li>
                 <li><strong>Arrival stand</strong>: {{ briefingSnapshot.arrival.stand || 'As assigned' }}</li>
               </ul>
             </div>
             <div class="briefing-card">
-              <NuxtImg src="/img/learn/missions/full-flight/briefing-weather.png" alt="Weather" class="briefing-card-art" format="webp" />
+              <NuxtImg src="/img/learn/missions/full-flight/briefing-weather.png" alt="Weather"
+                       class="briefing-card-art" format="webp"/>
               <div class="card-title">
                 <v-icon size="16">mdi-weather-cloudy</v-icon>
                 Weather snapshot
@@ -776,21 +808,25 @@
                   <span class="check-number">1</span>
                   <div>
                     <div class="check-title">Clearance &amp; push</div>
-                    <p class="muted small">Tune delivery, confirm ATIS {{ briefingSnapshot.departure.atis }} and expect push {{ briefingSnapshot.codes.push }}.</p>
+                    <p class="muted small">Tune delivery, confirm ATIS {{ briefingSnapshot.departure.atis }} and expect
+                      push {{ briefingSnapshot.codes.push }}.</p>
                   </div>
                 </li>
                 <li>
                   <span class="check-number">2</span>
                   <div>
                     <div class="check-title">Taxi &amp; departure</div>
-                    <p class="muted small">Follow taxi {{ briefingSnapshot.departure.taxiRoute || 'as assigned' }} to RWY {{ briefingSnapshot.departure.runway }} and fly the {{ briefingSnapshot.departure.sid }}.</p>
+                    <p class="muted small">Follow taxi {{ briefingSnapshot.departure.taxiRoute || 'as assigned' }} to
+                      RWY {{ briefingSnapshot.departure.runway }} and fly the {{ briefingSnapshot.departure.sid }}.</p>
                   </div>
                 </li>
                 <li>
                   <span class="check-number">3</span>
                   <div>
                     <div class="check-title">Arrival briefing</div>
-                    <p class="muted small">Plan for {{ briefingSnapshot.arrival.star }} leading to {{ briefingSnapshot.arrival.approach }} and taxi to {{ briefingSnapshot.arrival.stand || 'assigned stand' }}.</p>
+                    <p class="muted small">Plan for {{ briefingSnapshot.arrival.star }} leading to
+                      {{ briefingSnapshot.arrival.approach }} and taxi to
+                      {{ briefingSnapshot.arrival.stand || 'assigned stand' }}.</p>
                   </div>
                 </li>
               </ol>
@@ -809,8 +845,8 @@
             Adjust plan
           </button>
           <button class="btn primary" type="button" @click="handleBriefingConfirm()">
-            <v-icon size="18">{{ briefingReturnStage==='setup' ? 'mdi-airplane' : 'mdi-play-circle' }}</v-icon>
-            {{ briefingReturnStage==='setup' ? 'Start mission' : 'Return to mission' }}
+            <v-icon size="18">{{ briefingReturnStage === 'setup' ? 'mdi-airplane' : 'mdi-play-circle' }}</v-icon>
+            {{ briefingReturnStage === 'setup' ? 'Start mission' : 'Return to mission' }}
           </button>
         </div>
       </div>
@@ -1008,7 +1044,9 @@
                     <template v-for="(segment, idx) in activeLesson.readback"
                               :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
                       <span v-if="segment.type === 'text'" class="cloze-chunk cloze-text">
-                        {{ displayCallsign(typeof segment.text === 'function' && scenario ? segment.text(scenario) : segment.text) }}
+                        {{
+                          displayCallsign(typeof segment.text === 'function' && scenario ? segment.text(scenario) : segment.text)
+                        }}
                       </span>
                       <label
                           v-else
@@ -1065,7 +1103,8 @@
             <div class="lesson-tip-body">
               <div class="lesson-tip-title">Did you know?</div>
               <p class="muted small">
-                Use the dice icon “New scenario” to rehearse the same call with fresh data instantly. Just click it and you'll
+                Use the dice icon “New scenario” to rehearse the same call with fresh data instantly. Just click it and
+                you'll
                 get different values — repeat that 5–10 times per lesson and the radio call will really stick.
               </p>
             </div>
@@ -1073,7 +1112,6 @@
         </div>
       </div>
     </section>
-
 
 
     <!-- NEXT OBJECTIVE -->
@@ -1167,9 +1205,13 @@
         </div>
       </div>
       <div v-else class="container footer-container">
-        <div class="footer-meta">
-          <span class="muted small">&copy; 2025 OpenSquawk. All rights reserved.</span>
-          <NuxtLink to="/feedback" target="_blank" class="link ml-2">Give feedback ›</NuxtLink>
+        <div class="footer-meta gap-2 flex items-center justify-center">
+          <span class="muted small">
+          <a href="/" class="link">
+           ‹ Visit home</a>
+          </span>
+          &middot;
+          <NuxtLink to="/feedback" target="_blank" class="link">Give feedback ›</NuxtLink>
         </div>
       </div>
     </footer>
@@ -1277,7 +1319,14 @@ import {useAuthStore} from '~/stores/auth'
 import {createDefaultLearnConfig} from '~~/shared/learn/config'
 import type {LearnConfig, LearnProgress, LearnState} from '~~/shared/learn/config'
 import {learnModules, seedFullFlightScenario} from '~~/shared/data/learnModules'
-import {createBaseScenario, digitsToWords, lettersToNato, runwayToWords, altitudeToWords, minutesToWords} from '~~/shared/learn/scenario'
+import {
+  createBaseScenario,
+  digitsToWords,
+  lettersToNato,
+  runwayToWords,
+  altitudeToWords,
+  minutesToWords
+} from '~~/shared/learn/scenario'
 import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, Scenario} from '~~/shared/learn/types'
 import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
@@ -1359,6 +1408,20 @@ function similarity(a: string, b: string): number {
   return 1 - distance / maxLen
 }
 
+function allowedDistance(length: number): number {
+  if (length <= 12) return 0
+  if (length <= 24) return 1
+  if (length <= 36) return 2
+  return 3
+}
+
+function tightenedThreshold(length: number, base: number): number {
+  if (length >= 36) return Math.max(base, 0.9)
+  if (length >= 24) return Math.max(base, 0.92)
+  if (length >= 16) return Math.max(base, 0.94)
+  return Math.max(base, 0.97)
+}
+
 const modules = shallowRef<ModuleDef[]>(learnModules)
 
 type LessonSearchHit = {
@@ -1381,8 +1444,8 @@ const lessonSearchResults = computed<LessonSearchHit[]>(() => {
   modules.value.forEach(module => {
     module.lessons.forEach(lesson => {
       const searchable = [lesson.title, lesson.desc, module.title, module.subtitle, (lesson.keywords || []).join(' ')]
-        .filter(Boolean)
-        .join(' ')
+          .filter(Boolean)
+          .join(' ')
       const haystack = norm(searchable)
       const matchesTerms = terms.every(term => haystack.includes(term))
       const scores = [
@@ -1406,15 +1469,15 @@ const lessonSearchResults = computed<LessonSearchHit[]>(() => {
   })
 
   return results
-    .sort((a, b) => {
-      if (b.score === a.score) {
-        const moduleCompare = a.module.title.localeCompare(b.module.title)
-        if (moduleCompare !== 0) return moduleCompare
-        return a.lesson.title.localeCompare(b.lesson.title)
-      }
-      return b.score - a.score
-    })
-    .slice(0, 20)
+      .sort((a, b) => {
+        if (b.score === a.score) {
+          const moduleCompare = a.module.title.localeCompare(b.module.title)
+          if (moduleCompare !== 0) return moduleCompare
+          return a.lesson.title.localeCompare(b.lesson.title)
+        }
+        return b.score - a.score
+      })
+      .slice(0, 20)
 })
 
 type LessonSearchGroup = {
@@ -1440,16 +1503,16 @@ const lessonSearchGroups = computed<LessonSearchGroup[]>(() => {
   }
 
   return Array.from(groups.values())
-    .map(group => ({
-      ...group,
-      hits: group.hits.sort((a, b) => b.score - a.score)
-    }))
-    .sort((a, b) => {
-      if (b.score === a.score) {
-        return a.module.title.localeCompare(b.module.title)
-      }
-      return b.score - a.score
-    })
+      .map(group => ({
+        ...group,
+        hits: group.hits.sort((a, b) => b.score - a.score)
+      }))
+      .sort((a, b) => {
+        if (b.score === a.score) {
+          return a.module.title.localeCompare(b.module.title)
+        }
+        return b.score - a.score
+      })
 })
 
 function computeLessonSearchOverlayStyle(): Record<string, string> {
@@ -1567,7 +1630,7 @@ function displayCallsign(value?: string | null, source?: CallsignContext | null)
   if (!value) return ''
   const context = source ?? scenario.value
   if (!context) return value
-  const { radioCall, callsign } = context
+  const {radioCall, callsign} = context
   if (radioCall && callsign && value.includes(radioCall)) {
     return value.split(radioCall).join(callsign)
   }
@@ -1614,7 +1677,7 @@ const manualForm = reactive<ManualForm>({
 })
 const manualErrors = ref<string[]>([])
 const flightPlanError = ref<string | null>(null)
-const simbriefForm = reactive({ userId: '', loading: false })
+const simbriefForm = reactive({userId: '', loading: false})
 const simbriefPlanMeta = ref<{ callsign: string; route: string } | null>(null)
 const lessonTrack = ref<HTMLElement | null>(null)
 const moduleOverviewExpanded = ref(false)
@@ -1674,7 +1737,7 @@ const activeExperience = computed<ExperienceOption>(() => {
 async function handleExperienceSelect(option: ExperienceOption) {
   experienceMenu.value = false
   if (option.matches(route.path)) return
-  if( option.target === '_blank') {
+  if (option.target === '_blank') {
     window.open(option.to, '_blank')
     return
   }
@@ -1720,10 +1783,10 @@ function computeQuerySignature(query: Record<string, unknown>): string {
 }
 
 const isValidStage = (value: string | null): value is 'lessons' | 'setup' | 'briefing' =>
-  value === 'lessons' || value === 'setup' || value === 'briefing'
+    value === 'lessons' || value === 'setup' || value === 'briefing'
 
 const isValidPlanMode = (value: string | null): value is FlightPlanMode =>
-  value === 'random' || value === 'manual' || value === 'simbrief'
+    value === 'random' || value === 'manual' || value === 'simbrief'
 
 function buildStateRouteQuery(): Record<string, string> {
   const state: Record<string, string> = {}
@@ -1881,25 +1944,25 @@ function applyRouteStateFromQuery(query: RouteQueryLike) {
 
 if (typeof window !== 'undefined') {
   watch(
-    () => [panel.value, current.value?.id ?? null, moduleStage.value, activeLesson.value?.id ?? null, flightPlanMode.value],
-    () => {
-      void syncRouteFromState()
-    }
+      () => [panel.value, current.value?.id ?? null, moduleStage.value, activeLesson.value?.id ?? null, flightPlanMode.value],
+      () => {
+        void syncRouteFromState()
+      }
   )
 
   watch(
-    () => route.query,
-    newQuery => {
-      if (isSyncingRoute) {
-        lastSyncedQuerySignature = computeQuerySignature(newQuery as Record<string, unknown>)
-        return
+      () => route.query,
+      newQuery => {
+        if (isSyncingRoute) {
+          lastSyncedQuerySignature = computeQuerySignature(newQuery as Record<string, unknown>)
+          return
+        }
+        const signature = computeQuerySignature(newQuery as Record<string, unknown>)
+        if (signature === lastSyncedQuerySignature) {
+          return
+        }
+        applyRouteStateFromQuery(newQuery as RouteQueryLike)
       }
-      const signature = computeQuerySignature(newQuery as Record<string, unknown>)
-      if (signature === lastSyncedQuerySignature) {
-        return
-      }
-      applyRouteStateFromQuery(newQuery as RouteQueryLike)
-    }
   )
 }
 
@@ -1987,16 +2050,16 @@ const flightPlanModes: Array<{ id: FlightPlanMode; title: string; icon: string; 
 ]
 
 watch(
-  () => simbriefForm.userId,
-  value => {
-    if (typeof window === 'undefined') return
-    const trimmed = value.trim()
-    if (trimmed) {
-      window.localStorage.setItem(SIMBRIEF_STORAGE_KEY, trimmed)
-    } else {
-      window.localStorage.removeItem(SIMBRIEF_STORAGE_KEY)
+    () => simbriefForm.userId,
+    value => {
+      if (typeof window === 'undefined') return
+      const trimmed = value.trim()
+      if (trimmed) {
+        window.localStorage.setItem(SIMBRIEF_STORAGE_KEY, trimmed)
+      } else {
+        window.localStorage.removeItem(SIMBRIEF_STORAGE_KEY)
+      }
     }
-  }
 )
 
 function toggleManualSection(section: ManualSection) {
@@ -2395,7 +2458,7 @@ async function loadSimbriefPlan() {
   manualErrors.value = []
   simbriefForm.loading = true
   try {
-    const response = await api.get<{ data: any }>('/api/learn/simbrief', { query: { userId }, auth: true })
+    const response = await api.get<{ data: any }>('/api/learn/simbrief', {query: {userId}, auth: true})
     const payload = response?.data
     if (!payload) {
       flightPlanError.value = 'No SimBrief dispatch found.'
@@ -2599,6 +2662,7 @@ function normalizeSimbriefPlan(raw: any): MissionPlanInput {
 
   return plan
 }
+
 const hasSpokenTarget = ref(false)
 const pendingAutoSay = ref(false)
 const activeFrequency = ref<Frequency | null>(null)
@@ -2833,9 +2897,9 @@ type LearnStateResponse = LearnState
 function sanitizeModuleList(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   const sanitized = value
-    .filter(item => typeof item === 'string')
-    .map(item => item.trim())
-    .filter(item => item.length > 0)
+      .filter(item => typeof item === 'string')
+      .map(item => item.trim())
+      .filter(item => item.length > 0)
   return Array.from(new Set(sanitized))
 }
 
@@ -3077,15 +3141,47 @@ const fieldStates = computed<Record<string, FieldState>>(() => {
     const alternatives = field.alternatives?.(scenario.value) ?? []
     const options = [expected, ...alternatives].map(norm).filter(Boolean)
     const normalizedAnswer = norm(answer)
-    const best = options.length ? Math.max(...options.map(option => similarity(normalizedAnswer, option))) : 0
-    const pass = answer ? best >= (field.threshold ?? 0.82) : false
+
+    let best = 0
+    let pass = false
+
+    if (answer && options.length) {
+      for (const option of options) {
+        if (!option) continue
+        if (normalizedAnswer === option) {
+          best = 1
+          pass = true
+          break
+        }
+
+        const distance = lev(normalizedAnswer, option)
+        const span = Math.max(option.length, normalizedAnswer.length, 1)
+        const score = 1 - distance / span
+        if (score > best) {
+          best = score
+        }
+
+        const allowance = allowedDistance(span)
+        if (allowance <= 0) continue
+
+        const threshold = tightenedThreshold(span, field.threshold ?? 0.82)
+        if (distance <= allowance && score >= threshold) {
+          pass = true
+        }
+      }
+
+      if (!pass && !best && options.length) {
+        best = Math.max(...options.map(option => similarity(normalizedAnswer, option)))
+      }
+    }
+
     map[field.key] = {
       key: field.key,
       label: field.label,
       expected,
       answer,
       similarity: answer ? best : 0,
-      pass
+      pass: Boolean(answer && pass)
     }
   }
   return map
@@ -3266,8 +3362,8 @@ const missionFooterPrimary = computed(() => {
 const lessonAnswerSignature = computed(() => {
   if (!activeLesson.value) return ''
   return activeLesson.value.fields
-    .map(field => (userAnswers[field.key] ?? '').trim())
-    .join('|')
+      .map(field => (userAnswers[field.key] ?? '').trim())
+      .join('|')
 })
 
 const previousActionLabel = computed(() => {
@@ -5522,9 +5618,8 @@ onMounted(() => {
   position: relative;
   overflow: visible;
   border-color: color-mix(in srgb, var(--accent) 38%, transparent);
-  background:
-      radial-gradient(420px 260px at -10% -20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
-      linear-gradient(150deg, color-mix(in srgb, var(--bg2) 82%, transparent), color-mix(in srgb, var(--text) 6%, transparent));
+  background: radial-gradient(420px 260px at -10% -20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+  linear-gradient(150deg, color-mix(in srgb, var(--bg2) 82%, transparent), color-mix(in srgb, var(--text) 6%, transparent));
   --module-overview-gap: 28px;
   --lesson-track-max-height: 400px;
   --lesson-track-opacity: 1;
@@ -7598,33 +7693,42 @@ onMounted(() => {
   .plan-mode-card {
     min-width: 180px;
   }
+
   .plan-summary {
     flex-direction: column;
     align-items: flex-start;
   }
+
   .plan-hero {
     width: 100%;
     height: 140px;
   }
+
   .plan-actions .btn,
   .briefing-actions .btn {
     flex: 1 1 100%;
   }
+
   .manual-grid {
     grid-template-columns: 1fr;
   }
+
   .manual-preview {
     position: static;
   }
+
   .briefing-hero-content {
     padding: 24px;
   }
+
   .briefing-hero-title {
     font-size: 28px;
   }
+
   .briefing-layout {
     grid-template-columns: 1fr;
   }
+
   .briefing-sidebar {
     position: static;
   }
@@ -7650,10 +7754,12 @@ onMounted(() => {
     flex-wrap: nowrap;
     justify-content: space-between;
   }
+
   .hud-right[data-v-06cbe329] {
     /* justify-content: flex-start; */
     justify-content: flex-end;
   }
+
   .hud-inner {
     .sep, .hud-divider, .brand {
       @apply hidden
