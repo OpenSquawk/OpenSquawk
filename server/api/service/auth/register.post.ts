@@ -55,6 +55,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invitation code has expired' })
   }
 
+  const waitlistEntry = await WaitlistEntry.findOne({ email }).select('notes')
+  const waitlistNotes = waitlistEntry?.notes?.trim()
+
   const passwordHash = await hashPassword(password)
   const now = new Date()
 
@@ -64,6 +67,7 @@ export default defineEventHandler(async (event) => {
     name,
     acceptedPrivacyAt: now,
     acceptedTermsAt: now,
+    ...(waitlistNotes ? { adminNotes: waitlistNotes } : {}),
   })
 
   invitation.usedBy = user._id
