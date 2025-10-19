@@ -154,6 +154,144 @@ function toRuntimeAutoTransitions(transitions: DecisionNodeTransition[]): Runtim
     }))
 }
 
+type TransitionWithSource = {
+  source: DecisionNodeDocument
+  transition: DecisionNodeTransition
+}
+
+function describeTransitionType(transition: DecisionNodeTransition): string | null {
+  switch (transition.type) {
+    case 'next':
+      return 'on the standard progression'
+    case 'ok':
+      return 'when the acknowledgement branch is selected'
+    case 'bad':
+      return 'when the rejection branch is selected'
+    case 'timer':
+      return 'after its timer elapses'
+    case 'auto':
+      return 'through an automatic follow-up'
+    case 'interrupt':
+      return 'as an interrupt'
+    case 'return':
+      return 'when control returns from a nested sequence'
+    default:
+      return null
+  }
+}
+
+function describeAutoTrigger(trigger: DecisionNodeTransition['autoTrigger']): string | null {
+  if (!trigger) {
+    return null
+  }
+
+  if (typeof trigger.description === 'string' && trigger.description.trim().length) {
+    return trigger.description.trim()
+  }
+
+  let base: string
+  switch (trigger.type) {
+    case 'telemetry':
+      base = `the telemetry trigger monitoring ${trigger.parameter ?? 'the configured parameter'}`
+      break
+    case 'variable':
+      base = `the variable trigger watching ${trigger.variable ?? 'the configured variable'}`
+      break
+    case 'expression':
+      base = 'the expression trigger'
+      break
+    default:
+      base = 'the automatic trigger'
+      break
+  }
+
+  if (trigger.operator) {
+    base += ` with operator ${trigger.operator}`
+  }
+
+  if (typeof trigger.delayMs === 'number' && trigger.delayMs > 0) {
+    base += ' after its configured delay'
+  }
+
+  return `${base} fires`
+}
+
+function describeIncomingTransition({ source, transition }: TransitionWithSource): string | null {
+  const trimmedTitle = typeof source.title === 'string' ? source.title.trim() : ''
+  const sourceName = trimmedTitle.length ? trimmedTitle : source.stateId
+
+  const detailParts: string[] = []
+  if (transition.label) {
+    detailParts.push(`via "${transition.label}"`)
+  }
+
+  if (transition.description) {
+    detailParts.push(transition.description)
+  }
+
+  const typePhrase = describeTransitionType(transition)
+  if (typePhrase) {
+    detailParts.push(typePhrase)
+  }
+
+  const qualifiers: string[] = []
+  if (transition.condition) {
+    qualifiers.push(`condition "${transition.condition}" matches`)
+  }
+
+  if (transition.guard) {
+    qualifiers.push(`guard "${transition.guard}" allows it`)
+  }
+
+  const autoTriggerDescription = describeAutoTrigger(transition.autoTrigger)
+  if (autoTriggerDescription) {
+    qualifiers.push(autoTriggerDescription)
+  }
+
+  const segments: string[] = [`From ${sourceName}`]
+  if (detailParts.length) {
+    segments.push(detailParts.join(' '))
+  }
+
+  if (qualifiers.length) {
+    segments.push(`when ${qualifiers.join(' and ')}`)
+  }
+
+  const sentence = segments.join(' ').replace(/\s+/g, ' ').trim()
+  return sentence.length ? sentence : null
+}
+
+function buildEntrySummaryForState(
+  node: DecisionNodeDocument,
+  incoming: TransitionWithSource[],
+  startStateId: string
+): string | undefined {
+  if (node.stateId === startStateId) {
+    return 'Configured start state of this flow.'
+  }
+
+  if (!incoming.length) {
+    return 'Reached by external routing; no internal transitions target this state.'
+  }
+
+  const descriptions = incoming
+    .slice()
+    .sort((a, b) => (a.transition.order ?? 0) - (b.transition.order ?? 0))
+    .map((entry) => describeIncomingTransition(entry))
+    .filter((value): value is string => Boolean(value))
+
+  if (!descriptions.length) {
+    return 'Reached via transitions whose conditions are defined elsewhere.'
+  }
+
+  if (descriptions.length === 1) {
+    return `Entry condition: ${descriptions[0]}.`
+  }
+
+  const bulletList = descriptions.map((text) => `- ${text}`).join('\n')
+  return `Possible entry paths:\n${bulletList}`
+}
+
 function serializeRuntimeState(node: DecisionNodeDocument): RuntimeDecisionState {
   const obj = node.toObject<DecisionNodeDocument>({ virtuals: false })
   const transitions = Array.isArray(obj.transitions) ? obj.transitions : []
@@ -190,10 +328,37 @@ async function buildRuntimeTreeForDoc(
   nodeDocs?: DecisionNodeDocument[]
 ): Promise<RuntimeDecisionTree> {
   const nodes = nodeDocs ?? (await DecisionNode.find({ flow: flowDoc._id }))
+
+  const incomingMap = nodes.reduce<Record<string, TransitionWithSource[]>>((acc, node) => {
+    const nodeTransitions = Array.isArray(node.transitions) ? node.transitions : []
+    for (const transition of nodeTransitions) {
+      if (!transition?.target) {
+        continue
+      }
+      if (!acc[transition.target]) {
+        acc[transition.target] = []
+      }
+      acc[transition.target].push({ source: node, transition })
+    }
+    return acc
+  }, {})
+
   const states = nodes.reduce<Record<string, RuntimeDecisionState>>((acc, node) => {
     acc[node.stateId] = serializeRuntimeState(node)
     return acc
   }, {})
+
+  for (const node of nodes) {
+    const runtimeState = states[node.stateId]
+    if (!runtimeState) {
+      continue
+    }
+
+    const entrySummary = buildEntrySummaryForState(node, incomingMap[node.stateId] ?? [], flowDoc.startState)
+    if (entrySummary) {
+      runtimeState.entry_summary = entrySummary
+    }
+  }
 
   return {
     slug: flowDoc.slug,
