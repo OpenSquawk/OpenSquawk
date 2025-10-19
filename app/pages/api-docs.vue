@@ -864,9 +864,11 @@ const endpointSections: EndpointSection[] = [
           { name: 'origin_lat', type: 'number', description: 'Origin latitude in decimal degrees.' },
           { name: 'origin_lng', type: 'number', description: 'Origin longitude in decimal degrees.' },
           { name: 'origin_name', type: 'string', description: 'Name or designator of the origin feature (e.g. gate, stand, runway).' },
+          { name: 'origin_runway_end', type: 'string', description: 'When origin_name resolves to a runway, choose which threshold to use ("start" default, or "end").' },
           { name: 'dest_lat', type: 'number', description: 'Destination latitude in decimal degrees.' },
           { name: 'dest_lng', type: 'number', description: 'Destination longitude in decimal degrees.' },
           { name: 'dest_name', type: 'string', description: 'Name or designator of the destination feature.' },
+          { name: 'dest_runway_end', type: 'string', description: 'When dest_name resolves to a runway, choose which threshold to use ("start" default, or "end").' },
           { name: 'radius', type: 'number', description: 'Search radius in metres (default 5000).' },
         ],
         sampleRequest: `curl "https://opensquawk.de/api/service/tools/taxiroute?airport=EDDF&origin_name=Gate%20A5&dest_name=RWY%2025C&radius=2500"`,
@@ -893,18 +895,22 @@ const endpointSections: EndpointSection[] = [
     "lat": 50.0473,
     "lon": 8.561,
     "query": { "name": "RWY 25C", "lat": null, "lon": null },
-    "feature": {
-      "type": "runway",
-      "name": "25C",
-      "lat": 50.04726,
-      "lon": 8.561,
-      "matched_alias": "25C",
-      "primary_alias": "25C",
-      "map_url": "https://www.openstreetmap.org/way/987654321?mlat=50.047260&mlon=8.561000#map=17/50.047260/8.561000",
-      "osm": { "type": "way", "id": 987654321 },
-      "source": "name",
-      "distance_m": null
-    }
+      "feature": {
+        "type": "runway",
+        "name": "25C",
+        "lat": 50.04726,
+        "lon": 8.561,
+        "matched_alias": "25C",
+        "primary_alias": "25C",
+        "runway_endpoints": {
+          "start": { "lat": 50.0465, "lon": 8.5539 },
+          "end": { "lat": 50.0478, "lon": 8.5692 }
+        },
+        "map_url": "https://www.openstreetmap.org/way/987654321?mlat=50.047260&mlon=8.561000#map=17/50.047260/8.561000",
+        "osm": { "type": "way", "id": 987654321 },
+        "source": "name",
+        "distance_m": null
+      }
   },
   "start_attach": { "node_id": 111, "lat": 50.0507, "lon": 8.5709, "distance_m": 8.3 },
   "end_attach": { "node_id": 222, "lat": 50.0472, "lon": 8.5611, "distance_m": 5.7 },
@@ -915,7 +921,7 @@ const endpointSections: EndpointSection[] = [
   "names": ["L7", "L", "N"],
   "names_collapsed": ["L7", "N"]
 }`,
-        notes: 'Provide coordinates, feature names, or a mix of both. The service will resolve missing coordinates via the airport geocode lookup before computing the taxi route.',
+        notes: 'Provide coordinates, feature names, or a mix of both. Use origin_runway_end/dest_runway_end when referencing runway names to snap to the near or far threshold instead of the midpoint. The service resolves missing coordinates via the airport geocode lookup before computing the taxi route.',
       },
       {
         method: 'GET',

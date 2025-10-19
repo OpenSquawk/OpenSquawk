@@ -18,6 +18,16 @@ export default defineEventHandler(async (event) => {
     const originName = typeof q.origin_name === 'string' ? q.origin_name.trim() : ''
     const destName = typeof q.dest_name === 'string' ? q.dest_name.trim() : ''
 
+    const parseRunwayEnd = (value: unknown): 'start' | 'end' => {
+        if (typeof value !== 'string') return 'start'
+        const normalized = value.trim().toLowerCase()
+        if (normalized === 'end' || normalized === 'far') return 'end'
+        return 'start'
+    }
+
+    const originRunwayEnd = parseRunwayEnd(q.origin_runway_end)
+    const destRunwayEnd = parseRunwayEnd(q.dest_runway_end)
+
     let oLat: number | null = parseCoordinate(q.origin_lat)
     let oLon: number | null = parseCoordinate(q.origin_lng ?? q.origin_lon)
     let dLat: number | null = parseCoordinate(q.dest_lat)
@@ -83,6 +93,30 @@ export default defineEventHandler(async (event) => {
         destMatch = match
         dLat = match.feature.lat
         dLon = match.feature.lon
+    }
+
+    const applyRunwayEndpoint = (
+        match: ReturnType<typeof resolveFeature> | null,
+        preference: 'start' | 'end',
+        coordsProvided: boolean
+    ) => {
+        if (!match || coordsProvided) return null
+        if (match.feature.type !== 'runway') return null
+        const endpoints = match.feature.runwayEndpoints
+        if (!endpoints) return null
+        return preference === 'end' ? endpoints.end : endpoints.start
+    }
+
+    const originRunwayOverride = applyRunwayEndpoint(originMatch, originRunwayEnd, originCoordsProvided)
+    if (originRunwayOverride) {
+        oLat = originRunwayOverride.lat
+        oLon = originRunwayOverride.lon
+    }
+
+    const destRunwayOverride = applyRunwayEndpoint(destMatch, destRunwayEnd, destCoordsProvided)
+    if (destRunwayOverride) {
+        dLat = destRunwayOverride.lat
+        dLon = destRunwayOverride.lon
     }
 
     if (originCoordsProvided && originName && airport) {
