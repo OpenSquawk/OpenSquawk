@@ -184,6 +184,12 @@
                   </span>
                 </button>
               </div>
+              <textarea
+                  v-model.trim="updatesForm.notes"
+                  rows="3"
+                  placeholder="What do you want to learn with OpenSquawk? (optional)"
+                  class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-cyan-400"
+              />
               <div
                   v-if="updatesCaptchaVisible"
                   class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60"
@@ -1680,6 +1686,7 @@ const waitlistLoading = ref(false)
 
 const updatesForm = reactive({
   email: '',
+  notes: '',
   consentPrivacy: false,
   consentTerms: false,
   consentMarketing: false,
@@ -1871,6 +1878,7 @@ async function submitUpdates() {
   updatesCaptchaReminder.value = ''
 
   const email = updatesForm.email.trim()
+  const notes = updatesForm.notes.trim()
   if (!email) {
     updatesError.value = 'Please add your email so we can reach you.'
     return
@@ -1900,6 +1908,7 @@ async function submitUpdates() {
         '/api/service/waitlist',
         {
           email,
+          notes,
           consentPrivacy: updatesForm.consentPrivacy,
           consentTerms: updatesForm.consentTerms,
           wantsProductUpdates: updatesForm.consentMarketing,
@@ -1909,6 +1918,7 @@ async function submitUpdates() {
     )
     updatesSuccess.value = true
     updatesForm.email = ''
+    updatesForm.notes = ''
     updatesForm.consentPrivacy = false
     updatesForm.consentMarketing = false
     updatesForm.consentTerms = false
