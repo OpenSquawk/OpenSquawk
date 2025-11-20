@@ -15,6 +15,7 @@ export interface WaitlistEntryDocument extends mongoose.Document {
   updatesOptedInAt?: Date
   invitationCode?: mongoose.Types.ObjectId
   invitationSentAt?: Date
+  feedbackRequestedAt?: Date
 }
 
 const waitlistSchema = new mongoose.Schema<WaitlistEntryDocument>({
@@ -30,6 +31,7 @@ const waitlistSchema = new mongoose.Schema<WaitlistEntryDocument>({
   updatesOptedInAt: { type: Date },
   invitationCode: { type: Schema.Types.ObjectId, ref: 'InvitationCode' },
   invitationSentAt: { type: Date },
+  feedbackRequestedAt: { type: Date },
 })
 
 export const WaitlistEntry =
