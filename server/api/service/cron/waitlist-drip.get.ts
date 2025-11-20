@@ -2,7 +2,13 @@ import { defineEventHandler } from 'h3'
 import { InvitationCode } from '../../../models/InvitationCode'
 import { WaitlistEntry } from '../../../models/WaitlistEntry'
 import { sendMail } from '../../../utils/notifications'
-import { generateInvitationCode, renderInvitationEmail, renderInvitationText } from '../../../utils/invitations'
+import {
+  generateInvitationCode,
+  renderFeedbackEmail,
+  renderFeedbackText,
+  renderInvitationEmail,
+  renderInvitationText,
+} from '../../../utils/invitations'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 const INVITATION_DELAY_DAYS = 5
@@ -82,23 +88,8 @@ export default defineEventHandler(async () => {
 
     const requestedAt = new Date()
 
-    const text = [
-      'Hi there,',
-      '',
-      "It's been a little while since we sent your invite, and we would love to hear your thoughts.",
-      '',
-      'Share your feedback here:',
-      'https://opensquawk.de/feedback',
-      '',
-      'Thank you for helping us improve OpenSquawk!',
-    ].join('\n')
-
-    const html = [
-      '<p>Hi there,</p>',
-      '<p>It\'s been a little while since we sent your invite, and we would love to hear your thoughts.</p>',
-      '<p><a href="https://opensquawk.de/feedback">Share your feedback here</a></p>',
-      '<p>Thank you for helping us improve OpenSquawk!</p>',
-    ].join('')
+    const text = renderFeedbackText()
+    const html = await renderFeedbackEmail()
 
     await sendMail({
       to: email,
