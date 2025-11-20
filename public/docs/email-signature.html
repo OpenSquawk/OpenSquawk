@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" style="margin:0;padding:0;background:#f6fbff;">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <style>
+    html,body{margin:0!important;padding:0!important;background:#f6fbff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif;}
+    table{border-collapse:collapse!important;}
+    a{color:#0ea5e9;text-decoration:none;}
+    .signature-wrapper{width:100%;background:#f6fbff;}
+    .card{max-width:560px;background:rgba(15,23,42,0.02);border:1px solid rgba(14,165,233,.18);border-radius:14px;overflow:hidden;box-shadow:0 18px 60px rgba(12,30,66,.12);}
+    .bar{height:4px;background:linear-gradient(90deg,#06b6d4,#0ea5e9,#22d3ee);} 
+    .body{padding:18px 20px;}
+    .hello{font-size:16px;color:#0b1020;font-weight:600;margin:0;}
+    .muted{color:#334155;font-size:14px;margin:10px 0 0 0;line-height:1.5;}
+    .cta{display:inline-block;margin-top:12px;padding:10px 14px;border-radius:12px;background:#06b6d4;color:#fff!important;font-weight:700;box-shadow:0 0 26px rgba(34,211,238,.35);} 
+    .cta:hover{background:#22d3ee;}
+    .footer{margin-top:16px;padding-top:14px;border-top:1px solid rgba(15,23,42,0.08);} 
+    .name{font-weight:700;color:#0b1020;margin:0;}
+    .role{color:#475569;font-size:13px;margin:4px 0 0 0;}
+    .meta{color:#1e293b;font-size:13px;margin:8px 0 0 0;}
+    .note{color:#475569;font-size:12px;margin:12px 0 0 0;}
+    @media (prefers-color-scheme: dark){
+      html,body{background:#0b1020;}
+      .card{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,.12);box-shadow:0 18px 60px rgba(5,12,32,.5);} 
+      .hello,.name{color:#e5f2ff;}
+      .muted,.role,.meta,.note{color:rgba(255,255,255,.72);} 
+    }
+  </style>
+</head>
+<body class="signature-wrapper">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="left">
+        <table role="presentation" class="card" cellpadding="0" cellspacing="0">
+          <tr><td class="bar"></td></tr>
+          <tr>
+            <td class="body">
+              <p class="hello">Hello,</p>
+              <p class="muted">Danke für deine Nachricht! Ich melde mich so schnell wie möglich zurück. Falls du direkt Feedback zu OpenSquawk teilen möchtest, nutze gern den Link unten.</p>
+              <a class="cta" href="https://opensquawk.de/feedback" target="_blank" rel="noopener">Feedback geben</a>
+
+              <div class="footer">
+                <p class="name">Best,<br>Nick · OpenSquawk</p>
+                <p class="role">Live AI ATC · in development</p>
+                <p class="meta">info@opensquawk.de · opensquawk.de</p>
+                <p class="note">Hinweis: OpenSquawk ist nicht für den realen Flugbetrieb gedacht.</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
