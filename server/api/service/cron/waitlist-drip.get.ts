@@ -57,8 +57,8 @@ export default defineEventHandler(async () => {
     entry.invitationSentAt = sentAt
     await entry.save()
 
-    const html = await renderInvitationEmail(invitation.code)
-    const text = renderInvitationText(invitation.code)
+    const html = await renderInvitationEmail(invitation.code, email)
+    const text = renderInvitationText(invitation.code, email)
 
     await sendMail({
       to: email,
@@ -88,8 +88,8 @@ export default defineEventHandler(async () => {
 
     const requestedAt = new Date()
 
-    const text = renderFeedbackText()
-    const html = await renderFeedbackEmail()
+    const text = renderFeedbackText(email)
+    const html = await renderFeedbackEmail(email)
 
     await sendMail({
       to: email,

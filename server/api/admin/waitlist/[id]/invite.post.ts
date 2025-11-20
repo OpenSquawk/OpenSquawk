@@ -54,8 +54,8 @@ export default defineEventHandler(async (event) => {
   entry.invitationSentAt = now
   await entry.save()
 
-  const html = await renderInvitationEmail(invitation.code)
-  const text = renderInvitationText(invitation.code)
+  const html = await renderInvitationEmail(invitation.code, entry.email)
+  const text = renderInvitationText(invitation.code, entry.email)
 
   await sendMail({
     to: email,

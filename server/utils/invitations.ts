@@ -16,6 +16,16 @@ export function generateInvitationCode() {
   return randomBytes(4).toString('hex').toUpperCase()
 }
 
+function buildUnsubscribeUrl(email?: string) {
+  const baseUrl = 'https://opensquawk.de/unsubscribe'
+  if (!email) {
+    return baseUrl
+  }
+
+  const params = new URLSearchParams({ email })
+  return `${baseUrl}?${params.toString()}`
+}
+
 async function loadTemplate(kind: keyof CachedTemplates, filename: string, fallback: string) {
   if (cachedTemplates[kind]) {
     return cachedTemplates[kind] as string
@@ -34,17 +44,19 @@ async function loadTemplate(kind: keyof CachedTemplates, filename: string, fallb
   }
 }
 
-export async function renderInvitationEmail(code: string) {
+export async function renderInvitationEmail(code: string, email?: string) {
   const template = await loadTemplate(
     'invitations',
     'invites.html',
-    `<!DOCTYPE html><html><body><p>Your OpenSquawk invite code: <strong>{{INVITE_CODE}}</strong></p></body></html>`
+    `<!DOCTYPE html><html><body><p>Your OpenSquawk invite code: <strong>{{INVITE_CODE}}</strong></p><p><a href="{{UNSUBSCRIBE_URL}}">Unsubscribe</a> from updates</p></body></html>`
   )
 
-  return template.replace(/{{INVITE_CODE}}/g, code)
+  return template
+    .replace(/{{INVITE_CODE}}/g, code)
+    .replace(/{{UNSUBSCRIBE_URL}}/g, buildUnsubscribeUrl(email))
 }
 
-export function renderInvitationText(code: string) {
+export function renderInvitationText(code: string, email?: string) {
   const lines = [
     'Welcome to OpenSquawk!',
     '',
@@ -56,22 +68,25 @@ export function renderInvitationText(code: string) {
     '',
     'Blue skies,',
     'Your OpenSquawk crew',
+    '',
+    'If you would rather not receive emails from us, you can opt out here:',
+    buildUnsubscribeUrl(email),
   ]
 
   return lines.join('\n')
 }
 
-export async function renderFeedbackEmail() {
+export async function renderFeedbackEmail(email?: string) {
   const template = await loadTemplate(
     'feedback',
     'feedback-request.html',
-    `<!DOCTYPE html><html><body><p>We'd love your feedback: <a href="https://opensquawk.de/feedback">opensquawk.de/feedback</a></p></body></html>`
+    `<!DOCTYPE html><html><body><p>We'd love your feedback: <a href="https://opensquawk.de/feedback">opensquawk.de/feedback</a></p><p><a href="{{UNSUBSCRIBE_URL}}">Unsubscribe</a> from future emails</p></body></html>`
   )
 
-  return template
+  return template.replace(/{{UNSUBSCRIBE_URL}}/g, buildUnsubscribeUrl(email))
 }
 
-export function renderFeedbackText() {
+export function renderFeedbackText(email?: string) {
   const lines = [
     'Hi there,',
     '',
@@ -81,6 +96,9 @@ export function renderFeedbackText() {
     'https://opensquawk.de/feedback',
     '',
     'Thank you for helping us improve OpenSquawk!',
+    '',
+    'If you do not want any more emails, you can unsubscribe here:',
+    buildUnsubscribeUrl(email),
   ]
 
   return lines.join('\n')
