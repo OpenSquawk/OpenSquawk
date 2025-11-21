@@ -396,6 +396,12 @@
                       <v-chip color="purple" size="x-small" variant="tonal">{{ nodeForm.phase }}</v-chip>
                     </div>
                     <h3 class="truncate text-xl font-semibold">{{ nodeForm.title || 'Unbenannter Node' }}</h3>
+                    <p
+                      v-if="nodeForm.routerDescription"
+                      class="text-sm text-cyan-200/80"
+                    >
+                      {{ nodeForm.routerDescription }}
+                    </p>
                   </div>
                   <v-menu location="bottom end">
                     <template #activator="{ props }">
@@ -455,6 +461,13 @@
                 <v-window-item value="general">
                   <div class="space-y-4">
                     <v-textarea v-model="nodeForm.summary" label="Kurzbeschreibung" rows="2" hide-details color="cyan" />
+                    <v-textarea
+                      v-model="nodeForm.routerDescription"
+                      label="Routing Hinweis (LLM)"
+                      rows="2"
+                      hide-details
+                      color="cyan"
+                    />
                     <div class="grid grid-cols-2 gap-3">
                       <v-select
                         v-model="nodeForm.role"
@@ -1174,6 +1187,7 @@ interface CanvasNodeView {
   phase: string
   title?: string
   summary?: string
+  routerDescription?: string
   selected: boolean
   highlight: boolean
   dimmed: boolean
@@ -1427,13 +1441,14 @@ const nodeSelectorItems = computed(() => {
         id: node.stateId,
         title: node.title,
         summary: node.summary,
+        routerDescription: node.routerDescription,
         phase: node.phase,
         role: node.role,
         icon: node.layout?.icon,
         autopCount,
         matchesSearch:
           !query ||
-          [node.stateId, node.title, node.summary]
+          [node.stateId, node.title, node.summary, node.routerDescription]
             .filter(Boolean)
             .some((entry) => entry!.toLowerCase().includes(query)),
         matchesRole: role === 'all' || node.role === role,
@@ -1511,7 +1526,7 @@ const canvasNodes = computed<CanvasNodeView[]>(() => {
     const matchesAuto = !nodeFilter.autopOnly || autopCount > 0
     const matchesSearch =
       !query ||
-      [node.stateId, node.title, node.summary]
+      [node.stateId, node.title, node.summary, node.routerDescription]
         .filter(Boolean)
         .some((entry) => entry!.toLowerCase().includes(query))
 
@@ -1527,6 +1542,7 @@ const canvasNodes = computed<CanvasNodeView[]>(() => {
       phase: node.phase,
       title: node.title,
       summary: node.summary,
+      routerDescription: node.routerDescription,
       selected: selectedNodeId.value === node.stateId,
       highlight: matchesSearch,
       dimmed: dimmed && !matchesSearch,
@@ -2440,6 +2456,7 @@ async function createNodeRelative(referenceId: string, position: 'before' | 'aft
     stateId: candidateId,
     title: 'Neuer Node',
     summary: '',
+    routerDescription: '',
     role: reference.role || 'pilot',
     phase: reference.phase || 'general',
     transitions:

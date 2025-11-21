@@ -108,6 +108,10 @@ export default defineEventHandler(async (event) => {
     stateId,
     title: typeof body.title === 'string' ? body.title.trim() || undefined : undefined,
     summary: typeof body.summary === 'string' ? body.summary.trim() || undefined : undefined,
+    routerDescription:
+      typeof body.routerDescription === 'string'
+        ? body.routerDescription.trim() || undefined
+        : undefined,
     role,
     phase,
     sayTemplate: typeof body.sayTemplate === 'string' ? body.sayTemplate.trim() || undefined : undefined,

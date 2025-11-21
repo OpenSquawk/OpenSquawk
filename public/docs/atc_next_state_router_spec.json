@@ -1,0 +1,58 @@
+{
+  "name": "ATC Next State Router",
+  "request": {
+    "method": "POST",
+    "path": "/route/next-state",
+    "content_type": "application/json",
+    "body_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "system_prompt": { "type": "string", "description": "Fixes the task and output contract for the router model." },
+        "current_state_text": { "type": "string", "description": "Short English sentence describing the current aircraft situation." },
+        "candidate_next_states": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "key": { "type": "string", "description": "Internal state identifier that may be selected next." },
+              "description": { "type": "string", "description": "One-line applicability note explaining when this state fits." }
+            },
+            "required": ["key", "description"]
+          }
+        },
+        "pilot_utterance": { "type": "string", "description": "Verbatim or normalized pilot transmission." }
+      },
+      "required": ["system_prompt", "current_state_text", "candidate_next_states", "pilot_utterance"]
+    },
+    "example": {
+      "system_prompt": "You are an ATC state router...",
+      "current_state_text": "A320 holding short RWY 25R at EDDL, IFR, ready for departure.",
+      "candidate_next_states": [
+        { "key": "REQUEST_TAKEOFF", "description": "Pilot requests takeoff clearance from holding short." },
+        { "key": "RADIO_CHECK", "description": "Pilot asks for readability/strength check." },
+        { "key": "REQUEST_DEPARTURE_INSTRUCTIONS", "description": "Pilot asks for initial heading/altitude after departure." }
+      ],
+      "pilot_utterance": "Düsseldorf Tower, DLH123 ready for departure runway two five right."
+    }
+  },
+  "response": {
+    "content_type": "application/json",
+    "body_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pilot_intent": { "type": "string", "description": "Short clause summarising the pilot's intent." },
+        "rationale": { "type": "string", "description": "Why the selected state matches, referencing context and candidate notes." },
+        "next_state_key": { "type": "string", "description": "One of the provided candidate keys." }
+      },
+      "required": ["pilot_intent", "rationale", "next_state_key"]
+    },
+    "example": {
+      "pilot_intent": "Request takeoff clearance",
+      "rationale": "Pilot states 'ready for departure' while holding short RWY 25R. This matches REQUEST_TAKEOFF.",
+      "next_state_key": "REQUEST_TAKEOFF"
+    }
+  }
+}

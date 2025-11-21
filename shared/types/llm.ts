@@ -30,6 +30,7 @@ export interface CandidateTraceEntry {
     flow: string
     name?: string
     summary?: string
+    router_description?: string
     role?: string
     triggers?: DecisionNodeTrigger[]
     conditions?: DecisionNodeCondition[]
