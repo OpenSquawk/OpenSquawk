@@ -165,11 +165,11 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { takeoffEddf } from '~/../../shared/data/flightlab/takeoff-eddf'
-import { useFlightLabEngine } from '~/../../shared/composables/flightlab/useFlightLabEngine'
-import { useFlightLabAudio } from '~/../../shared/composables/flightlab/useFlightLabAudio'
-import { useFlightLabSync } from '~/../../shared/composables/flightlab/useFlightLabSync'
-import type { FlightLabButton } from '~/../../shared/data/flightlab/types'
+import { takeoffEddf } from '~~/shared/data/flightlab/takeoff-eddf'
+import { useFlightLabEngine } from '~~/shared/composables/flightlab/useFlightLabEngine'
+import { useFlightLabAudio } from '~~/shared/composables/flightlab/useFlightLabAudio'
+import { useFlightLabSync } from '~~/shared/composables/flightlab/useFlightLabSync'
+import type { FlightLabButton } from '~~/shared/data/flightlab/types'
 
 definePageMeta({ layout: false })
 useHead({ title: 'FlightLab - Dein erster Start' })

@@ -122,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { takeoffEddf } from '~/../../shared/data/flightlab/takeoff-eddf'
+import { takeoffEddf } from '~~/shared/data/flightlab/takeoff-eddf'
 
 definePageMeta({
   layout: false,

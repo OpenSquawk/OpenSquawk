@@ -249,9 +249,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { takeoffEddf } from '~/../../shared/data/flightlab/takeoff-eddf'
-import { useFlightLabEngine } from '~/../../shared/composables/flightlab/useFlightLabEngine'
-import { useFlightLabSync } from '~/../../shared/composables/flightlab/useFlightLabSync'
+import { takeoffEddf } from '~~/shared/data/flightlab/takeoff-eddf'
+import { useFlightLabEngine } from '~~/shared/composables/flightlab/useFlightLabEngine'
+import { useFlightLabSync } from '~~/shared/composables/flightlab/useFlightLabSync'
 
 definePageMeta({ layout: false })
 useHead({ title: 'FlightLab - Instructor Panel' })
