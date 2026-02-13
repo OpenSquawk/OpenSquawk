@@ -29,3 +29,6 @@ storage
 storage/**
 .yarn-state.gz
 .yarn/state.gz
+
+# Worktrees
+.worktrees
