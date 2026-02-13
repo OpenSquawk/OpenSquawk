@@ -132,7 +132,7 @@
                 :disabled="!canSkipBack"
                 @click="handleSkipBack"
               >
-                Zurueck
+                Zurück
               </v-btn>
               <v-btn
                 variant="outlined"
@@ -235,7 +235,7 @@
       <v-card class="rounded-2xl bg-[#0b1328] border border-white/10">
         <v-card-title class="text-base font-semibold pt-5 px-5">Szenario neustarten?</v-card-title>
         <v-card-text class="text-sm text-white/60 px-5">
-          Der gesamte Fortschritt wird zurueckgesetzt. Der Teilnehmer startet bei Phase 1.
+          Der gesamte Fortschritt wird zurückgesetzt. Der Teilnehmer startet bei Phase 1.
         </v-card-text>
         <v-card-actions class="px-5 pb-5">
           <v-spacer />

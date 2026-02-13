@@ -4,7 +4,7 @@ import type { FlightLabScenario } from './types'
 export const takeoffEddf: FlightLabScenario = {
   id: 'takeoff-eddf',
   title: 'Dein erster Start',
-  description: 'Gemeinsam vom Rollfeld in Frankfurt bis auf 10.000 Fuss - Schritt fuer Schritt, in deinem Tempo.',
+  description: 'Gemeinsam vom Rollfeld in Frankfurt bis auf 10.000 Fuß - Schritt für Schritt, in deinem Tempo.',
   icon: 'mdi-airplane-takeoff',
   aircraft: 'Airbus A320',
   airport: 'Frankfurt (EDDF)',
@@ -14,21 +14,21 @@ export const takeoffEddf: FlightLabScenario = {
     // --- Phase 0: Welcome ---
     {
       id: 'welcome',
-      atcMessage: 'Hey! Willkommen im Cockpit. Ich bin dein Begleiter heute, du kannst mich jederzeit alles fragen. Erstmal, sitz bequem? Kopfhoerer passen gut? Schau dich ruhig mal um. Sieht wild aus mit den ganzen Knoepfen, oder? Keine Sorge, wir brauchen heute fast nichts davon. Ich sag dir genau was du anfassen musst.',
+      atcMessage: 'Hey! Willkommen im Cockpit. Ich bin dein Begleiter heute, du kannst mich jederzeit alles fragen. Erstmal, sitz bequem? Kopfhörer passen gut? Schau dich ruhig mal um. Sieht wild aus mit den ganzen Knöpfen, oder? Keine Sorge, wir brauchen heute fast nichts davon. Ich sag dir genau was du anfassen musst.',
       explanation: 'Du sitzt im Cockpit eines Airbus A320 am Flughafen Frankfurt. Nimm dir Zeit, dich umzuschauen.',
-      instructorNote: 'Teilnehmer ist gerade angekommen. Koerpersprache beobachten. Bei sichtbarer Anspannung ggf. eingreifen.',
+      instructorNote: 'Teilnehmer ist gerade angekommen. Körpersprache beobachten. Bei sichtbarer Anspannung ggf. eingreifen.',
       buttons: [
         { id: 'ready', label: 'Ja, bin bereit!', icon: 'mdi-check-circle', next: 'briefing', type: 'primary' },
-        { id: 'nervous', label: 'Mir ist etwas mulmig', icon: 'mdi-emoticon-neutral', next: 'welcome_comfort', type: 'comfort', instructorAlert: 'Teilnehmer ist nervoes' },
-        { id: 'tellmore', label: 'Erzaehl mir erstmal mehr', icon: 'mdi-information', next: 'welcome_detail', type: 'info' },
+        { id: 'nervous', label: 'Mir ist etwas mulmig', icon: 'mdi-emoticon-neutral', next: 'welcome_comfort', type: 'comfort', instructorAlert: 'Teilnehmer ist nervös' },
+        { id: 'tellmore', label: 'Erzähl mir erstmal mehr', icon: 'mdi-information', next: 'welcome_detail', type: 'info' },
       ],
       sounds: [],
     },
     {
       id: 'welcome_comfort',
-      atcMessage: 'Das ist voellig okay, und total normal! Jeder der hier zum ersten Mal sitzt, dem gehts genauso. Weisst du was, lass uns kurz zusammen durchatmen. Einmal tief einatmen... und langsam wieder aus. Nochmal. Gut so. Wir machen hier alles in deinem Tempo. Du bestimmst wann es weitergeht, okay?',
+      atcMessage: 'Das ist völlig okay, und total normal! Jeder der hier zum ersten Mal sitzt, dem gehts genauso. Weißt du was, lass uns kurz zusammen durchatmen. Einmal tief einatmen... und langsam wieder aus. Nochmal. Gut so. Wir machen hier alles in deinem Tempo. Du bestimmst wann es weitergeht, okay?',
       explanation: 'Atme ruhig ein und aus. Es gibt keinen Zeitdruck.',
-      instructorNote: 'Teilnehmer hat Nervositaet signalisiert. Aufmerksam bleiben.',
+      instructorNote: 'Teilnehmer hat Nervosität signalisiert. Aufmerksam bleiben.',
       buttons: [
         { id: 'ready_after_comfort', label: 'Okay, ich bin bereit', icon: 'mdi-check-circle', next: 'briefing', type: 'primary' },
         { id: 'still_nervous', label: 'Noch einen Moment', icon: 'mdi-timer-sand', next: 'welcome_comfort_2', type: 'comfort' },
@@ -37,8 +37,8 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'welcome_comfort_2',
-      atcMessage: 'Kein Problem, nimm dir alle Zeit die du brauchst. Wusstest du, dass dieser Flieger hier einer der sichersten der Welt ist? Der A320 fliegt seit ueber 35 Jahren und Millionen Menschen fliegen jeden Tag damit. Und heute sitzt du vorne drin, das ist doch was, oder?',
-      instructorNote: 'Zweite Nervositaets-Runde. Bei Bedarf muendlich im Raum eingreifen.',
+      atcMessage: 'Kein Problem, nimm dir alle Zeit die du brauchst. Wusstest du, dass dieser Flieger hier einer der sichersten der Welt ist? Der A320 fliegt seit über 35 Jahren und Millionen Menschen fliegen jeden Tag damit. Und heute sitzt du vorne drin, das ist doch was, oder?',
+      instructorNote: 'Zweite Nervositäts-Runde. Bei Bedarf mündlich im Raum eingreifen.',
       buttons: [
         { id: 'ready_after_comfort_2', label: 'Okay, starten wir!', icon: 'mdi-check-circle', next: 'briefing', type: 'primary' },
       ],
@@ -46,7 +46,7 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'welcome_detail',
-      atcMessage: 'Klar! Also, wir sitzen hier in einem echten Airbus A320 Cockpit. Das ist der Flugzeugtyp, mit dem du wahrscheinlich schon mal als Passagier geflogen bist. All die Knoepfe und Schalter, die sehen erst ueberwältigend aus, aber die meisten brauchen wir heute gar nicht. Wir machen heute einen Start, von hier auf der Startbahn bis auf 3 Kilometer Hoehe. Ich erklaer dir alles Schritt fuer Schritt.',
+      atcMessage: 'Klar! Also, wir sitzen hier in einem echten Airbus A320 Cockpit. Das ist der Flugzeugtyp, mit dem du wahrscheinlich schon mal als Passagier geflogen bist. All die Knöpfe und Schalter, die sehen erst überwältigend aus, aber die meisten brauchen wir heute gar nicht. Wir machen heute einen Start, von hier auf der Startbahn bis auf 3 Kilometer Höhe. Ich erklär dir alles Schritt für Schritt.',
       buttons: [
         { id: 'ready_after_detail', label: 'Alles klar, weiter!', icon: 'mdi-check-circle', next: 'briefing', type: 'primary' },
         { id: 'questions', label: 'Ich hab noch Fragen', icon: 'mdi-help-circle', next: 'welcome_questions', type: 'info' },
@@ -55,7 +55,7 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'welcome_questions',
-      atcMessage: 'Frag ruhig! Wenn du was ueber einen bestimmten Knopf wissen willst, zeig einfach drauf, oder frag mich einfach. Wir haben alle Zeit der Welt.',
+      atcMessage: 'Frag ruhig! Wenn du was über einen bestimmten Knopf wissen willst, zeig einfach drauf, oder frag mich einfach. Wir haben alle Zeit der Welt.',
       buttons: [
         { id: 'ready_after_questions', label: 'Okay, bin bereit!', icon: 'mdi-check-circle', next: 'briefing', type: 'primary' },
       ],
@@ -65,9 +65,9 @@ export const takeoffEddf: FlightLabScenario = {
     // --- Phase 1: Briefing ---
     {
       id: 'briefing',
-      atcMessage: 'Okay, ich erklaer dir kurz was wir heute machen. Wir stehen hier auf der Startbahn 25 Center in Frankfurt. Das ist eine der laengsten Startbahnen in Europa, ueber 4 Kilometer lang. Wir werden gemeinsam starten und ganz gemuetlich auf 10.000 Fuss steigen, das sind ungefaehr 3 Kilometer Hoehe. Ich sag dir jeden einzelnen Schritt vorher an. Du musst nichts wissen und nichts auswendig koennen. Ich bin die ganze Zeit da.',
-      explanation: 'Startbahn 25C, Frankfurt. Ziel: 10.000 Fuss (ca. 3 km Hoehe).',
-      instructorNote: 'Briefing Phase. Teilnehmer sollte aufmerksam zuhoeren.',
+      atcMessage: 'Okay, ich erklär dir kurz was wir heute machen. Wir stehen hier auf der Startbahn 25 Center in Frankfurt. Das ist eine der längsten Startbahnen in Europa, über 4 Kilometer lang. Wir werden gemeinsam starten und ganz gemütlich auf 10.000 Fuß steigen, das sind ungefähr 3 Kilometer Höhe. Ich sag dir jeden einzelnen Schritt vorher an. Du musst nichts wissen und nichts auswendig können. Ich bin die ganze Zeit da.',
+      explanation: 'Startbahn 25C, Frankfurt. Ziel: 10.000 Fuß (ca. 3 km Höhe).',
+      instructorNote: 'Briefing Phase. Teilnehmer sollte aufmerksam zuhören.',
       buttons: [
         { id: 'lets_go', label: 'Okay, los gehts!', icon: 'mdi-play-circle', next: 'runway', type: 'primary' },
         { id: 'how_long', label: 'Wie lange dauert das?', icon: 'mdi-clock', next: 'briefing_duration', type: 'info' },
@@ -77,7 +77,7 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'briefing_duration',
-      atcMessage: 'Das Ganze dauert ungefaehr 10 bis 15 Minuten, aber wie gesagt, wir gehen in deinem Tempo. Wenn du irgendwo eine Pause brauchst, sag einfach Bescheid.',
+      atcMessage: 'Das Ganze dauert ungefähr 10 bis 15 Minuten, aber wie gesagt, wir gehen in deinem Tempo. Wenn du irgendwo eine Pause brauchst, sag einfach Bescheid.',
       buttons: [
         { id: 'go_after_duration', label: 'Gut, los gehts!', icon: 'mdi-play-circle', next: 'runway', type: 'primary' },
       ],
@@ -85,7 +85,7 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'briefing_safety',
-      atcMessage: 'Gute Frage! Erstens: Wir sind hier in einem Simulator, es kann wirklich ueberhaupt nichts passieren. Zweitens: Im echten Flugzeug gibt es fuer alles doppelte und dreifache Sicherheitssysteme. Die Piloten trainieren genau solche Situationen regelmaessig. Aber heute hier ist alles sicher, versprochen.',
+      atcMessage: 'Gute Frage! Erstens: Wir sind hier in einem Simulator, es kann wirklich überhaupt nichts passieren. Zweitens: Im echten Flugzeug gibt es für alles doppelte und dreifache Sicherheitssysteme. Die Piloten trainieren genau solche Situationen regelmäßig. Aber heute hier ist alles sicher, versprochen.',
       buttons: [
         { id: 'go_after_safety', label: 'Okay, dann los!', icon: 'mdi-play-circle', next: 'runway', type: 'primary' },
       ],
@@ -95,7 +95,7 @@ export const takeoffEddf: FlightLabScenario = {
     // --- Phase 2: On the Runway ---
     {
       id: 'runway',
-      atcMessage: 'So, wir stehen jetzt auf der Startbahn. Schau mal nach vorne durch die Scheibe. Siehst du die Lichter auf der Bahn? Die gruenen und die weissen? Da entlang gehts gleich. Links und rechts ist Gras, vor uns die lange Bahn. Die Bahn ist fast so breit wie eine Autobahn. Alles ganz sicher hier.',
+      atcMessage: 'So, wir stehen jetzt auf der Startbahn. Schau mal nach vorne durch die Scheibe. Siehst du die Lichter auf der Bahn? Die grünen und die weißen? Da entlang gehts gleich. Links und rechts ist Gras, vor uns die lange Bahn. Die Bahn ist fast so breit wie eine Autobahn. Alles ganz sicher hier.',
       explanation: 'Schau nach vorne - die Lichter zeigen die Startbahn.',
       instructorNote: 'Teilnehmer orientiert sich auf der Bahn. Sicherstellen dass er/sie nach vorne schaut.',
       buttons: [
@@ -108,7 +108,7 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'runway_help',
-      atcMessage: 'Schau geradeaus durch die grosse Scheibe vor dir. Du siehst einen langen grauen Streifen, das ist die Startbahn. Darauf sind weisse Striche und am Rand gruene Lichter. Ganz am Ende siehst du vielleicht Baeume oder Gebaeude, da ist das Ende der Bahn.',
+      atcMessage: 'Schau geradeaus durch die große Scheibe vor dir. Du siehst einen langen grauen Streifen, das ist die Startbahn. Darauf sind weiße Striche und am Rand grüne Lichter. Ganz am Ende siehst du vielleicht Bäume oder Gebäude, da ist das Ende der Bahn.',
       buttons: [
         { id: 'see_now', label: 'Ah ja, jetzt seh ichs!', icon: 'mdi-eye', next: 'engines_pre', type: 'primary' },
       ],
@@ -118,9 +118,9 @@ export const takeoffEddf: FlightLabScenario = {
     // --- Phase 3: Engine Spool Up ---
     {
       id: 'engines_pre',
-      atcMessage: 'Okay, jetzt kommt der spannende Teil! Gleich werden die Triebwerke hochgefahren. Das wird lauter, aber das ist voellig normal. Die Triebwerke sind die zwei grossen runden Duesen unter den Fluegeln. Das Geraeusch kennst du vom Fliegen als Passagier, nur hoerst du es jetzt von vorne. Bist du bereit?',
+      atcMessage: 'Okay, jetzt kommt der spannende Teil! Gleich werden die Triebwerke hochgefahren. Das wird lauter, aber das ist völlig normal. Die Triebwerke sind die zwei großen runden Düsen unter den Flügeln. Das Geräusch kennst du vom Fliegen als Passagier, nur hörst du es jetzt von vorne. Bist du bereit?',
       explanation: 'Gleich wird es lauter - die Triebwerke werden hochgefahren.',
-      instructorNote: 'Vor Schub-Erhoehung. Auf Anspannung achten.',
+      instructorNote: 'Vor Schub-Erhöhung. Auf Anspannung achten.',
       buttons: [
         { id: 'engines_ready', label: 'Ja, Triebwerke an!', icon: 'mdi-engine', next: 'engines_spool', type: 'primary' },
         { id: 'engines_nervous', label: 'Wird das sehr laut?', icon: 'mdi-volume-high', next: 'engines_loud_info', type: 'info' },
@@ -129,7 +129,7 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'engines_loud_info',
-      atcMessage: 'Es wird deutlich lauter, ja. Ungefaehr so wie wenn du auf der Autobahn das Fenster aufmachst. Deine Kopfhoerer daempfen das etwas. Und du wirst merken, nach ein paar Sekunden gewoehnt man sich daran. Das Geraeusch ist Power, die Triebwerke arbeiten fuer uns.',
+      atcMessage: 'Es wird deutlich lauter, ja. Ungefähr so wie wenn du auf der Autobahn das Fenster aufmachst. Deine Kopfhörer dämpfen das etwas. Und du wirst merken, nach ein paar Sekunden gewöhnt man sich daran. Das Geräusch ist Power, die Triebwerke arbeiten für uns.',
       buttons: [
         { id: 'engines_ok', label: 'Okay, mach die Triebwerke an', icon: 'mdi-engine', next: 'engines_spool', type: 'primary' },
       ],
@@ -137,12 +137,12 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'engines_spool',
-      atcMessage: 'Schub wird gesetzt! Hoerst du wie es lauter wird? Das Pfeifen und Brummen, das sind die Triebwerke die auf volle Leistung gehen. Spuerst du wie es dich ganz leicht in den Sitz drueckt? Das ist die Kraft der Triebwerke. Alles voellig normal.',
-      explanation: 'Die Triebwerke laufen auf voller Leistung. Du spuerst den Schub.',
-      instructorNote: 'Schub gesetzt. Engine Sound laeuft. Auf Reaktion achten.',
+      atcMessage: 'Schub wird gesetzt! Hörst du wie es lauter wird? Das Pfeifen und Brummen, das sind die Triebwerke die auf volle Leistung gehen. Spürst du wie es dich ganz leicht in den Sitz drückt? Das ist die Kraft der Triebwerke. Alles völlig normal.',
+      explanation: 'Die Triebwerke laufen auf voller Leistung. Du spürst den Schub.',
+      instructorNote: 'Schub gesetzt. Engine Sound läuft. Auf Reaktion achten.',
       buttons: [
         { id: 'engines_continue', label: 'Okay, weiter!', icon: 'mdi-arrow-right-circle', next: 'takeoff_roll', type: 'primary' },
-        { id: 'engines_loud', label: 'Das ist ganz schoen laut!', icon: 'mdi-volume-high', next: 'engines_loud_comfort', type: 'comfort' },
+        { id: 'engines_loud', label: 'Das ist ganz schön laut!', icon: 'mdi-volume-high', next: 'engines_loud_comfort', type: 'comfort' },
         { id: 'engines_pause', label: 'Kurz pausieren', icon: 'mdi-pause-circle', next: 'engines_pause_phase', type: 'comfort', instructorAlert: 'Teilnehmer braucht Pause bei Triebwerk-Phase' },
       ],
       sounds: [
@@ -159,12 +159,12 @@ export const takeoffEddf: FlightLabScenario = {
         logic: 'AND',
       },
       simConditionTimeoutMs: 20000,
-      simConditionHelpMessage: 'Schub-Hebel nach vorne schieben bis N1 bei etwa 85 Prozent. Dann die Parkbremse loesen.',
+      simConditionHelpMessage: 'Schub-Hebel nach vorne schieben bis N1 bei etwa 85 Prozent. Dann die Parkbremse lösen.',
       simConditionNextPhase: 'takeoff_roll',
     },
     {
       id: 'engines_loud_comfort',
-      atcMessage: 'Ja, das ist ordentlich Power! Aber weisst du was cool ist? Das Geraeusch bedeutet dass alles perfekt laeuft. Wenn die Triebwerke leise waeren, dann wuerde was fehlen. Laut heisst hier: alles gut, wir haben Schub. Du machst das super!',
+      atcMessage: 'Ja, das ist ordentlich Power! Aber weißt du was cool ist? Das Geräusch bedeutet dass alles perfekt läuft. Wenn die Triebwerke leise wären, dann würde was fehlen. Laut heißt hier: alles gut, wir haben Schub. Du machst das super!',
       buttons: [
         { id: 'continue_after_loud', label: 'Stimmt, weiter gehts!', icon: 'mdi-arrow-right-circle', next: 'takeoff_roll', type: 'primary' },
       ],
@@ -173,7 +173,7 @@ export const takeoffEddf: FlightLabScenario = {
     {
       id: 'engines_pause_phase',
       atcMessage: 'Kein Problem! Wir machen eine kurze Pause. Atme ein paar Mal tief durch. Wir rollen hier nicht weg, versprochen. Wenn du bereit bist, gehts weiter.',
-      instructorNote: 'Pause angefordert. Ggf. muendlich nachfragen ob alles okay ist.',
+      instructorNote: 'Pause angefordert. Ggf. mündlich nachfragen ob alles okay ist.',
       buttons: [
         { id: 'resume_after_pause', label: 'Okay, weiter', icon: 'mdi-play-circle', next: 'takeoff_roll', type: 'primary' },
       ],
@@ -183,9 +183,9 @@ export const takeoffEddf: FlightLabScenario = {
     // --- Phase 4: Takeoff Roll ---
     {
       id: 'takeoff_roll',
-      atcMessage: 'Wir rollen jetzt los! Du spuerst wie es dich staerker in den Sitz drueckt. Das ist nur die Beschleunigung, wie bei einem richtig schnellen Auto. Die Bahn rumpelt ein bisschen unter uns, das sind die Fugen im Beton. Wir werden jetzt schnell schneller. Schau nach vorne auf die Bahn!',
+      atcMessage: 'Wir rollen jetzt los! Du spürst wie es dich stärker in den Sitz drückt. Das ist nur die Beschleunigung, wie bei einem richtig schnellen Auto. Die Bahn rumpelt ein bisschen unter uns, das sind die Fugen im Beton. Wir werden jetzt schnell schneller. Schau nach vorne auf die Bahn!',
       explanation: 'Der Startlauf beginnt. Das Rumpeln sind die Fugen in der Startbahn.',
-      instructorNote: 'Startlauf beginnt. Kritische Phase fuer Angstpatienten. Aufmerksam bleiben.',
+      instructorNote: 'Startlauf beginnt. Kritische Phase für Angstpatienten. Aufmerksam bleiben.',
       buttons: [
         { id: 'roll_continue', label: 'Weiter!', icon: 'mdi-arrow-right-circle', next: 'rotation', type: 'primary' },
         { id: 'roll_rumble', label: 'Es rumpelt so!', icon: 'mdi-vibrate', next: 'roll_rumble_explain', type: 'info' },
@@ -208,7 +208,7 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'roll_rumble_explain',
-      atcMessage: 'Das Rumpeln kommt von den Radern auf der Betonbahn. Die Bahn ist aus einzelnen Betonplatten und dazwischen sind kleine Fugen. Genau wie wenn du mit dem Auto ueber Kopfsteinpflaster faehrst. Das hoert sofort auf wenn wir in der Luft sind, versprochen!',
+      atcMessage: 'Das Rumpeln kommt von den Rädern auf der Betonbahn. Die Bahn ist aus einzelnen Betonplatten und dazwischen sind kleine Fugen. Genau wie wenn du mit dem Auto über Kopfsteinpflaster fährst. Das hört sofort auf wenn wir in der Luft sind, versprochen!',
       buttons: [
         { id: 'rumble_ok', label: 'Alles klar, weiter!', icon: 'mdi-arrow-right-circle', next: 'rotation', type: 'primary' },
       ],
@@ -216,8 +216,8 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'roll_afraid_comfort',
-      atcMessage: 'Hey, das ist voellig okay. Du bist absolut sicher hier. Das Rumpeln hoert gleich auf, sobald wir in der Luft sind. Atme einmal tief ein... und langsam wieder aus. Gut so. Du machst das grossartig. Das was du gerade spuerst, das ist Adrenalin. Das ist dein Koerper der sagt hey, das ist aufregend. Wollen wir weitermachen?',
-      instructorNote: 'ANGST-Reaktion beim Startlauf. Muendlich unterstuetzen falls noetig.',
+      atcMessage: 'Hey, das ist völlig okay. Du bist absolut sicher hier. Das Rumpeln hört gleich auf, sobald wir in der Luft sind. Atme einmal tief ein... und langsam wieder aus. Gut so. Du machst das großartig. Das was du gerade spürst, das ist Adrenalin. Das ist dein Körper der sagt hey, das ist aufregend. Wollen wir weitermachen?',
+      instructorNote: 'ANGST-Reaktion beim Startlauf. Mündlich unterstützen falls nötig.',
       buttons: [
         { id: 'afraid_continue', label: 'Ja, weiter', icon: 'mdi-check-circle', next: 'rotation', type: 'primary' },
         { id: 'afraid_stop', label: 'Ich brauch noch einen Moment', icon: 'mdi-pause-circle', next: 'roll_pause', type: 'comfort' },
@@ -236,9 +236,9 @@ export const takeoffEddf: FlightLabScenario = {
     // --- Phase 5: Rotation ---
     {
       id: 'rotation',
-      atcMessage: 'Und jetzt... wir heben ab! Spuerst du das? Das Rumpeln hoert auf! Wir sind in der Luft! Das leichte Kribbeln im Bauch, das kennt jeder, das ist wie bei einer Achterbahn. Schau mal nach rechts oder links raus wenn du magst, du siehst wie der Boden kleiner wird. Frankfurt von oben!',
-      explanation: 'Wir haben abgehoben! Das Kribbeln im Bauch ist voellig normal.',
-      instructorNote: 'Abheben. Oft emotionaler Moment. Positiv verstaerken.',
+      atcMessage: 'Und jetzt... wir heben ab! Spürst du das? Das Rumpeln hört auf! Wir sind in der Luft! Das leichte Kribbeln im Bauch, das kennt jeder, das ist wie bei einer Achterbahn. Schau mal nach rechts oder links raus wenn du magst, du siehst wie der Boden kleiner wird. Frankfurt von oben!',
+      explanation: 'Wir haben abgehoben! Das Kribbeln im Bauch ist völlig normal.',
+      instructorNote: 'Abheben. Oft emotionaler Moment. Positiv verstärken.',
       buttons: [
         { id: 'rotation_wow', label: 'Wow!', icon: 'mdi-star', next: 'gear_retract', type: 'primary' },
         { id: 'rotation_belly', label: 'Das Kribbeln im Bauch...', icon: 'mdi-emoticon-neutral', next: 'rotation_belly_explain', type: 'info' },
@@ -262,7 +262,7 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'rotation_belly_explain',
-      atcMessage: 'Das Kribbeln kommt daher, dass sich der Winkel aendert. Die Nase geht hoch und du spuerst kurz so eine Leichtigkeit, wie in einem Aufzug der schnell anfaehrt. Das dauert nur ein paar Sekunden und hoert dann auf. Jeder hat das, sogar die Piloten spueren das noch.',
+      atcMessage: 'Das Kribbeln kommt daher, dass sich der Winkel ändert. Die Nase geht hoch und du spürst kurz so eine Leichtigkeit, wie in einem Aufzug der schnell anfährt. Das dauert nur ein paar Sekunden und hört dann auf. Jeder hat das, sogar die Piloten spüren das noch.',
       buttons: [
         { id: 'belly_ok', label: 'Okay, weiter!', icon: 'mdi-arrow-right-circle', next: 'gear_retract', type: 'primary' },
       ],
@@ -272,9 +272,9 @@ export const takeoffEddf: FlightLabScenario = {
     // --- Phase 6: Gear Retraction ---
     {
       id: 'gear_retract',
-      atcMessage: 'Jetzt fahren wir die Raeder ein. Gleich hoerst du ein Geraeusch unter dir. Ein Rumpeln, ein Klacken und dann ein Bumm wenn die Klappen zugehen. Das sind die Raeder die in den Bauch vom Flugzeug hochfahren. Genau das Geraeusch was du als Passagier auch immer hoerst, kurz nach dem Start. Jetzt weisst du was es ist!',
-      explanation: 'Die Raeder werden eingefahren. Das Geraeusch ist das Fahrwerk.',
-      instructorNote: 'Fahrwerk wird eingefahren. Geraeusch kann ueberraschen.',
+      atcMessage: 'Jetzt fahren wir die Räder ein. Gleich hörst du ein Geräusch unter dir. Ein Rumpeln, ein Klacken und dann ein Bumm wenn die Klappen zugehen. Das sind die Räder die in den Bauch vom Flugzeug hochfahren. Genau das Geräusch was du als Passagier auch immer hörst, kurz nach dem Start. Jetzt weißt du was es ist!',
+      explanation: 'Die Räder werden eingefahren. Das Geräusch ist das Fahrwerk.',
+      instructorNote: 'Fahrwerk wird eingefahren. Geräusch kann überraschen.',
       buttons: [
         { id: 'gear_know', label: 'Ah, das kenne ich!', icon: 'mdi-lightbulb', next: 'climb', type: 'primary' },
         { id: 'gear_what', label: 'Was war das?!', icon: 'mdi-alert-circle', next: 'gear_explain', type: 'comfort', instructorAlert: 'Teilnehmer erschrocken bei Fahrwerk' },
@@ -295,7 +295,7 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'gear_explain',
-      atcMessage: 'Keine Sorge! Das waren nur die Raeder. Die werden nach dem Start eingeklappt damit das Flugzeug schneller fliegen kann. Stell dir vor du faehrst Fahrrad und klappst die Stuetzraeder hoch. Genau das Gleiche, nur groesser. Das Geraeusch kommt von der Hydraulik und den Klappen die sich schliessen.',
+      atcMessage: 'Keine Sorge! Das waren nur die Räder. Die werden nach dem Start eingeklappt damit das Flugzeug schneller fliegen kann. Stell dir vor du fährst Fahrrad und klappst die Stützräder hoch. Genau das Gleiche, nur größer. Das Geräusch kommt von der Hydraulik und den Klappen die sich schließen.',
       buttons: [
         { id: 'gear_explained', label: 'Okay, verstanden!', icon: 'mdi-check-circle', next: 'climb', type: 'primary' },
       ],
@@ -305,8 +305,8 @@ export const takeoffEddf: FlightLabScenario = {
     // --- Phase 7: Climb ---
     {
       id: 'climb',
-      atcMessage: 'Wir steigen jetzt ganz gemuetlich weiter hoch. Alles laeuft perfekt. Hoerst du wie die Triebwerke etwas leiser werden? Das ist normal, wir brauchen jetzt weniger Schub als beim Start. Wie ein Auto das vom ersten in den dritten Gang schaltet. Wir sind jetzt schon auf ueber 3.000 Fuss.',
-      explanation: 'Steigflug laeuft. Die Triebwerke werden leiser - das ist normal.',
+      atcMessage: 'Wir steigen jetzt ganz gemütlich weiter hoch. Alles läuft perfekt. Hörst du wie die Triebwerke etwas leiser werden? Das ist normal, wir brauchen jetzt weniger Schub als beim Start. Wie ein Auto das vom ersten in den dritten Gang schaltet. Wir sind jetzt schon auf über 3.000 Fuß.',
+      explanation: 'Steigflug läuft. Die Triebwerke werden leiser - das ist normal.',
       instructorNote: 'Steigflug. Teilnehmer sollte sich jetzt etwas entspannen.',
       buttons: [
         { id: 'climb_height', label: 'Wie hoch sind wir?', icon: 'mdi-altimeter', next: 'climb_height_info', type: 'info' },
@@ -325,12 +325,12 @@ export const takeoffEddf: FlightLabScenario = {
         logic: 'AND',
       },
       simConditionTimeoutMs: 30000,
-      simConditionHelpMessage: 'Steigrate erhoehen auf etwa 2000 Fuss pro Minute. Sidestick leicht nach hinten halten.',
+      simConditionHelpMessage: 'Steigrate erhöhen auf etwa 2000 Fuß pro Minute. Sidestick leicht nach hinten halten.',
       simConditionNextPhase: 'climb_high',
     },
     {
       id: 'climb_height_info',
-      atcMessage: 'Wir sind gerade auf ungefaehr 5.000 Fuss, das sind 1.500 Meter. Noch die Haelfte bis zu unserem Ziel. Wenn du nach unten schaust, siehst du die Autobahnen und Haeuser ganz klein werden. Ziemlich cool, oder?',
+      atcMessage: 'Wir sind gerade auf ungefähr 5.000 Fuß, das sind 1.500 Meter. Noch die Hälfte bis zu unserem Ziel. Wenn du nach unten schaust, siehst du die Autobahnen und Häuser ganz klein werden. Ziemlich cool, oder?',
       buttons: [
         { id: 'height_continue', label: 'Weiter hoch!', icon: 'mdi-arrow-up-circle', next: 'climb_high', type: 'primary' },
       ],
@@ -338,8 +338,8 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'climb_queasy_comfort',
-      atcMessage: 'Das kann passieren. Schau am besten geradeaus nach vorne, nicht nach unten. Atme langsam und gleichmaessig. Das leichte Schaukeln kommt von den Luftstroemungen, das ist wie Wellen auf einem See. Ganz normal. Es wird gleich ruhiger wenn wir hoeher sind.',
-      instructorNote: 'Unwohlsein. Ggf. muendlich eingreifen oder Pause anbieten.',
+      atcMessage: 'Das kann passieren. Schau am besten geradeaus nach vorne, nicht nach unten. Atme langsam und gleichmäßig. Das leichte Schaukeln kommt von den Luftströmungen, das ist wie Wellen auf einem See. Ganz normal. Es wird gleich ruhiger wenn wir höher sind.',
+      instructorNote: 'Unwohlsein. Ggf. mündlich eingreifen oder Pause anbieten.',
       buttons: [
         { id: 'queasy_continue', label: 'Geht schon, weiter', icon: 'mdi-arrow-up-circle', next: 'climb_high', type: 'primary' },
         { id: 'queasy_pause', label: 'Kurze Pause bitte', icon: 'mdi-pause-circle', next: 'climb_pause', type: 'comfort' },
@@ -356,9 +356,9 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'climb_high',
-      atcMessage: 'Wir kommen unserem Ziel naeher! 8.000 Fuss... 9.000 Fuss... Gleich sind wir da. Du machst das wirklich super. Noch ein kleines Stueck...',
-      explanation: 'Fast da! Noch etwas steigen bis 10.000 Fuss.',
-      instructorNote: 'Kurz vor Level-off. Positiv verstaerken.',
+      atcMessage: 'Wir kommen unserem Ziel näher! 8.000 Fuß... 9.000 Fuß... Gleich sind wir da. Du machst das wirklich super. Noch ein kleines Stück...',
+      explanation: 'Fast da! Noch etwas steigen bis 10.000 Fuß.',
+      instructorNote: 'Kurz vor Level-off. Positiv verstärken.',
       buttons: [
         { id: 'almost_there', label: 'Fast geschafft!', icon: 'mdi-flag-checkered', next: 'leveloff', type: 'primary' },
       ],
@@ -370,15 +370,15 @@ export const takeoffEddf: FlightLabScenario = {
         logic: 'AND',
       },
       simConditionTimeoutMs: 60000,
-      simConditionHelpMessage: 'Weiter steigen bis 10.000 Fuss. Halte die Nase leicht oben.',
+      simConditionHelpMessage: 'Weiter steigen bis 10.000 Fuß. Halte die Nase leicht oben.',
       simConditionNextPhase: 'leveloff',
     },
 
     // --- Phase 8: Level-off & Debrief ---
     {
       id: 'leveloff',
-      atcMessage: '10.000 Fuss! Wir sind da! Ich nehme die Nase jetzt etwas runter und wir fliegen geradeaus. Spuerst du wie es ruhiger wird? Kein Steigen mehr, einfach geradeaus gleiten. Du hast gerade einen kompletten Start hingelegt. Von der Startbahn bis hier hoch. Wie fuehlst du dich?',
-      explanation: 'Geschafft! 10.000 Fuss erreicht. Wir fliegen jetzt geradeaus.',
+      atcMessage: '10.000 Fuß! Wir sind da! Ich nehme die Nase jetzt etwas runter und wir fliegen geradeaus. Spürst du wie es ruhiger wird? Kein Steigen mehr, einfach geradeaus gleiten. Du hast gerade einen kompletten Start hingelegt. Von der Startbahn bis hier hoch. Wie fühlst du dich?',
+      explanation: 'Geschafft! 10.000 Fuß erreicht. Wir fliegen jetzt geradeaus.',
       instructorNote: 'Level-off erreicht! Emotionaler Moment. Abwarten was kommt.',
       buttons: [
         { id: 'debrief_cool', label: 'Das war cool!', icon: 'mdi-party-popper', next: 'debrief', type: 'primary' },
@@ -405,8 +405,8 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'debrief',
-      atcMessage: 'Du hast heute was richtig Tolles gemacht. All die Geraeusche die dich als Passagier vielleicht verunsichert haben, jetzt weisst du was sie bedeuten. Das Rumpeln auf der Bahn, das Kribbeln beim Abheben, das Klacken vom Fahrwerk, die Triebwerke die lauter und leiser werden. Alles ganz normal und alles ganz sicher. Du kannst stolz auf dich sein!',
-      explanation: 'Du hast es geschafft! Alle Geraeusche haben eine normale Erklaerung.',
+      atcMessage: 'Du hast heute was richtig Tolles gemacht. All die Geräusche die dich als Passagier vielleicht verunsichert haben, jetzt weißt du was sie bedeuten. Das Rumpeln auf der Bahn, das Kribbeln beim Abheben, das Klacken vom Fahrwerk, die Triebwerke die lauter und leiser werden. Alles ganz normal und alles ganz sicher. Du kannst stolz auf dich sein!',
+      explanation: 'Du hast es geschafft! Alle Geräusche haben eine normale Erklärung.',
       instructorNote: 'Debriefing. Ggf. im Raum nachbesprechen. Emotionen zulassen.',
       buttons: [
         { id: 'restart', label: 'Nochmal von vorne', icon: 'mdi-refresh', next: 'welcome', type: 'info' },
@@ -416,16 +416,16 @@ export const takeoffEddf: FlightLabScenario = {
     },
     {
       id: 'debrief_restart',
-      atcMessage: 'Ha, das hoer ich gern! Wollen wir nochmal von vorne anfangen? Beim zweiten Mal ist es meistens schon viel entspannter!',
+      atcMessage: 'Ha, das hör ich gern! Wollen wir nochmal von vorne anfangen? Beim zweiten Mal ist es meistens schon viel entspannter!',
       buttons: [
         { id: 'yes_restart', label: 'Ja, nochmal!', icon: 'mdi-refresh', next: 'welcome', type: 'primary' },
-        { id: 'no_finish', label: 'Nee, reicht fuer heute', icon: 'mdi-check-circle', next: 'debrief', type: 'primary' },
+        { id: 'no_finish', label: 'Nee, reicht für heute', icon: 'mdi-check-circle', next: 'debrief', type: 'primary' },
       ],
       sounds: [],
     },
     {
       id: 'debrief_pause',
-      atcMessage: 'Natuerlich. Nimm dir alle Zeit. Das war viel fuer einen Tag. Wenn du magst, koennen wir spaeter nochmal.',
+      atcMessage: 'Natürlich. Nimm dir alle Zeit. Das war viel für einen Tag. Wenn du magst, können wir später nochmal.',
       buttons: [
         { id: 'end_after_pause', label: 'Danke, das reicht', icon: 'mdi-check-circle', next: 'end', type: 'primary' },
         { id: 'continue_after_pause', label: 'Nochmal starten', icon: 'mdi-refresh', next: 'welcome', type: 'info' },
@@ -436,7 +436,7 @@ export const takeoffEddf: FlightLabScenario = {
     // --- End ---
     {
       id: 'end',
-      atcMessage: 'Danke, dass du heute mitgemacht hast. Du hast einen echten Start erlebt und weisst jetzt was all die Geraeusche und Gefuehle bedeuten. Das naechste Mal wenn du als Passagier im Flieger sitzt, wirst du vieles wiedererkennen. Machs gut!',
+      atcMessage: 'Danke, dass du heute mitgemacht hast. Du hast einen echten Start erlebt und weißt jetzt was all die Geräusche und Gefühle bedeuten. Das nächste Mal wenn du als Passagier im Flieger sitzt, wirst du vieles wiedererkennen. Machs gut!',
       explanation: 'Das Szenario ist beendet. Du kannst jederzeit nochmal starten.',
       instructorNote: 'Szenario beendet. Nachbesprechung im Raum.',
       buttons: [

@@ -100,7 +100,7 @@
       <div class="mx-auto max-w-screen-lg flex items-center gap-2">
         <template v-if="engine.conditionsMet.value">
           <v-icon icon="mdi-check-circle" size="16" class="text-emerald-400" />
-          <span class="text-xs text-emerald-300">Bedingungen erfuellt</span>
+          <span class="text-xs text-emerald-300">Bedingungen erfüllt</span>
         </template>
         <template v-else>
           <v-progress-circular indeterminate size="14" width="2" color="cyan" />
@@ -171,7 +171,7 @@
               :disabled="audio.isSpeaking.value"
               @click="audio.replayLastMessage()"
             >
-              Nochmal anhoeren
+              Nochmal anhören
             </v-btn>
 
             <v-spacer />
@@ -229,7 +229,7 @@
         <v-card-text class="px-5 space-y-4">
           <!-- Explanation -->
           <div v-if="currentPhase?.explanation">
-            <p class="text-xs text-white/40 uppercase tracking-wider mb-1">Erklaerung</p>
+            <p class="text-xs text-white/40 uppercase tracking-wider mb-1">Erklärung</p>
             <p class="text-sm text-white/80 leading-relaxed">{{ currentPhase.explanation }}</p>
           </div>
 
@@ -246,7 +246,7 @@
                 <span>{{ formatCondition(cond) }}</span>
               </div>
               <p class="text-xs text-white/30 mt-1">
-                Logik: {{ currentPhase.simConditions.logic === 'AND' ? 'Alle muessen zutreffen' : 'Mindestens eine muss zutreffen' }}
+                Logik: {{ currentPhase.simConditions.logic === 'AND' ? 'Alle müssen zutreffen' : 'Mindestens eine muss zutreffen' }}
               </p>
             </div>
           </div>
@@ -259,7 +259,7 @@
         </v-card-text>
         <v-card-actions class="px-5 pb-5">
           <v-spacer />
-          <v-btn variant="text" class="text-white/50" @click="showDetails = false">Schliessen</v-btn>
+          <v-btn variant="text" class="text-white/50" @click="showDetails = false">Schließen</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -318,7 +318,7 @@ const conditionLabels: Record<string, string> = {
   AIRSPEED_INDICATED: 'Geschwindigkeit',
   GROUND_VELOCITY: 'Bodengeschwindigkeit',
   VERTICAL_SPEED: 'Steigrate',
-  PLANE_ALTITUDE: 'Hoehe',
+  PLANE_ALTITUDE: 'Höhe',
   PLANE_PITCH_DEGREES: 'Neigung',
   TURB_ENG_N1_1: 'Triebwerk 1 (N1)',
   TURB_ENG_N1_2: 'Triebwerk 2 (N1)',
@@ -333,7 +333,7 @@ const conditionUnits: Record<string, string> = {
   AIRSPEED_INDICATED: 'Knoten',
   GROUND_VELOCITY: 'Knoten',
   VERTICAL_SPEED: 'ft/min',
-  PLANE_ALTITUDE: 'Fuss',
+  PLANE_ALTITUDE: 'Fuß',
   PLANE_PITCH_DEGREES: 'Grad',
   TURB_ENG_N1_1: '%',
   TURB_ENG_N1_2: '%',
@@ -341,10 +341,10 @@ const conditionUnits: Record<string, string> = {
 }
 
 const operatorLabels: Record<string, string> = {
-  '>': 'groesser als',
+  '>': 'größer als',
   '<': 'kleiner als',
   '>=': 'mindestens',
-  '<=': 'hoechstens',
+  '<=': 'höchstens',
   '==': 'gleich',
   '!=': 'ungleich',
 }
@@ -362,7 +362,7 @@ function formatCondition(cond: SimCondition): string {
       return cond.value ? `${label}: Ausgefahren` : `${label}: Eingefahren`
     }
     if (cond.variable === 'BRAKE_PARKING_POSITION') {
-      return cond.value ? `${label}: Angezogen` : `${label}: Geloest`
+      return cond.value ? `${label}: Angezogen` : `${label}: Gelöst`
     }
     return `${label}: ${cond.value ? 'An' : 'Aus'}`
   }

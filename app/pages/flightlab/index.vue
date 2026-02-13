@@ -14,7 +14,7 @@
         </div>
         <NuxtLink to="/" class="text-sm text-white/50 transition hover:text-white/80">
           <v-icon icon="mdi-arrow-left" size="16" class="mr-1" />
-          Zurueck
+          Zurück
         </NuxtLink>
       </div>
     </header>
@@ -33,12 +33,12 @@
             </span>
             <h1 class="text-3xl font-semibold leading-tight sm:text-4xl md:text-5xl">
               Fliegen verstehen.<br />
-              <span class="text-cyan-300">Angst ueberwinden.</span>
+              <span class="text-cyan-300">Angst überwinden.</span>
             </h1>
             <p class="max-w-2xl text-base text-white/80 sm:text-lg">
-              Schritt fuer Schritt durch echte Flugphasen - mit erklaerenden Stimmen,
-              realistischen Cockpit-Geraeuschen und deinem persoenlichen Tempo.
-              Entwickelt fuer Menschen mit Flugangst, begleitet von erfahrenen Instruktoren.
+              Schritt für Schritt durch echte Flugphasen - mit erklärenden Stimmen,
+              realistischen Cockpit-Geräuschen und deinem persönlichen Tempo.
+              Entwickelt für Menschen mit Flugangst, begleitet von erfahrenen Instruktoren.
             </p>
           </div>
         </div>
@@ -46,7 +46,7 @@
 
       <!-- Scenarios Grid -->
       <section class="mx-auto w-full max-w-screen-xl px-4 py-12 sm:px-6 md:px-8">
-        <h2 class="mb-8 text-xl font-semibold text-white/90">Verfuegbare Szenarien</h2>
+        <h2 class="mb-8 text-xl font-semibold text-white/90">Verfügbare Szenarien</h2>
 
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <!-- Takeoff Scenario Card -->
@@ -112,7 +112,7 @@
             <div class="text-center">
               <v-icon icon="mdi-airplane-landing" size="40" class="mb-3 text-white/20" />
               <p class="text-sm font-medium text-white/30">Weitere Szenarien</p>
-              <p class="text-xs text-white/20">Demnachst verfuegbar</p>
+              <p class="text-xs text-white/20">Demnächst verfügbar</p>
             </div>
           </div>
         </div>
