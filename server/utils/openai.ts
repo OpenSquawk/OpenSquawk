@@ -175,6 +175,42 @@ function buildSpokenVariants(key: string, value: string): string[] {
     return Array.from(variants)
 }
 
+/**
+ * Quick heuristic readback check: verifies that the pilot's utterance
+ * contains the required fields (dest, runway, squawk, etc.) by matching
+ * against spoken variants of the expected values.
+ * Returns 'ok' if all required fields are present, 'missing' with the
+ * list of missing keys otherwise.
+ */
+function quickReadbackCheck(
+    utterance: string,
+    readbackKeys: string[],
+    variables: Record<string, any>
+): { status: 'ok' | 'missing'; missing: string[] } {
+    if (!readbackKeys.length) return { status: 'ok', missing: [] }
+
+    const sanitized = sanitizeForQuickMatch(utterance)
+    const missing: string[] = []
+
+    for (const key of readbackKeys) {
+        const expected = resolveReadbackValue(key, { variables } as any)
+        if (!expected) continue // Can't verify if no expected value
+
+        const variants = buildSpokenVariants(key, expected)
+        const found = variants.some(variant =>
+            sanitized.includes(sanitizeForQuickMatch(variant))
+        )
+        if (!found) {
+            missing.push(key)
+        }
+    }
+
+    return {
+        status: missing.length === 0 ? 'ok' : 'missing',
+        missing,
+    }
+}
+
 function pickTransition(
     transitions: Array<{ to: string }> | undefined,
     candidates: Array<{ id: string; state: any }>
@@ -529,13 +565,10 @@ async function prepareDecisionCandidates(
         }
     }
 
-    for (const [flowSlug, tree] of Object.entries(system.flows || {})) {
-        const startStateId = tree.start_state
-        if (!startStateId) continue
-        const indexed = index.get(startStateId)
-        const state = indexed?.state ? { ...indexed.state } : tree.states?.[startStateId]
-        addCandidate(startStateId, flowSlug, state)
-    }
+    // Note: Previously, all flow start states were added as candidates here.
+    // This was removed because it polluted the candidate pool and caused the
+    // LLM to pick unrelated flow starts. Flow switches should be defined via
+    // explicit transitions in the decision tree instead.
 
     const candidates = Array.from(candidateMap.values())
     const context = { variables: input.variables || {}, flags: input.flags || {} }
@@ -906,15 +939,55 @@ function extractJsonObject(text: string): any | null {
     }
 }
 
+function buildDecisionObject(stateId: string, candidate: DecisionCandidate | undefined, index: Map<string, IndexedStateEntry>): LLMDecisionResult['decision'] {
+    const decision: LLMDecisionResult['decision'] = { next_state: stateId }
+    // Attach the say_tpl from the chosen state so the frontend can speak it
+    // without an extra lookup. Checks the candidate first, then the runtime index.
+    const sayTpl = candidate?.state?.say_tpl ?? index.get(stateId)?.state?.say_tpl
+    if (sayTpl) {
+        decision.controller_say_tpl = sayTpl
+    }
+    return decision
+}
+
 export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisionResult> {
     const utterance = (input.pilot_utterance || '').trim()
     const prepared = await prepareDecisionCandidates(input, utterance)
+    const { index } = await getRuntimeSystemIndex()
 
     const trace: LLMDecisionTrace = {
         calls: [],
         candidateTimeline: prepared.timeline,
     }
     let pilotIntent: string | null = null
+
+    // Heuristic readback check: if the current state requires a readback
+    // (e.g. pilot just read back a clearance), verify the required fields
+    // are present in the utterance BEFORE routing. This catches obvious
+    // readback errors without needing an LLM call.
+    const readbackKeys = READBACK_REQUIREMENTS[input.state_id] || input.state?.readback_required || []
+    if (readbackKeys.length > 0 && utterance) {
+        const check = quickReadbackCheck(utterance, readbackKeys, input.variables || {})
+        if (check.status === 'missing' && check.missing.length > 0) {
+            // Readback incomplete — try to route to bad_next (repeat instruction)
+            const badTargets = (input.state?.bad_next ?? []).map((t: any) => t?.to).filter(Boolean)
+            const badCandidate = badTargets.length > 0
+                ? prepared.candidateIndex.get(badTargets[0]) ?? null
+                : null
+            if (badCandidate) {
+                trace.autoSelection = {
+                    id: badCandidate.id,
+                    flow: badCandidate.flow,
+                    reason: `Readback missing fields: ${check.missing.join(', ')}`,
+                }
+                return {
+                    decision: buildDecisionObject(badCandidate.id, badCandidate, index),
+                    trace,
+                    pilot_intent: 'incomplete_readback',
+                }
+            }
+        }
+    }
 
     if (prepared.autoSelected) {
         trace.autoSelection = {
@@ -923,7 +996,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             reason: 'Heuristic routing resolved a single remaining candidate.',
         }
         return {
-            decision: { next_state: prepared.autoSelected.id },
+            decision: buildDecisionObject(prepared.autoSelected.id, prepared.autoSelected, index),
             trace,
             pilot_intent: pilotIntent,
         }
@@ -940,7 +1013,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
             reason: 'No viable candidates after heuristic evaluation; falling back to default transition.',
             selected: fallbackState,
         }
-        return { decision: { next_state: fallbackState }, trace, pilot_intent: pilotIntent }
+        return { decision: buildDecisionObject(fallbackState, undefined, index), trace, pilot_intent: pilotIntent }
     }
 
     const optimizedInput = optimizeInputForLLM({
@@ -1020,14 +1093,14 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
 
             if (resolved) {
                 return {
-                    decision: { next_state: resolved.id },
+                    decision: buildDecisionObject(resolved.id, resolved, index),
                     trace,
                     pilot_intent: pilotIntent,
                 }
             }
 
             return {
-                decision: { next_state: nextState },
+                decision: buildDecisionObject(nextState, undefined, index),
                 trace,
                 pilot_intent: pilotIntent,
             }
@@ -1047,7 +1120,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         }
 
         return {
-            decision: { next_state: fallbackState },
+            decision: buildDecisionObject(fallbackState, fallbackCandidate ?? undefined, index),
             trace,
             pilot_intent: pilotIntent,
         }
