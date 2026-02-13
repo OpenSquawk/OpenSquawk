@@ -150,6 +150,17 @@ export const takeoffEddf: FlightLabScenario = {
         { id: 'engine-spool', action: 'play', volume: 0.5, loop: false },
         { id: 'engine-cruise', action: 'play', volume: 0.4, loop: true },
       ],
+      simConditions: {
+        conditions: [
+          { variable: 'TURB_ENG_N1_1', operator: '>=', value: 85 },
+          { variable: 'TURB_ENG_N1_2', operator: '>=', value: 85 },
+          { variable: 'BRAKE_PARKING_POSITION', operator: '==', value: false },
+        ],
+        logic: 'AND',
+      },
+      simConditionTimeoutMs: 20000,
+      simConditionHelpMessage: 'Schub-Hebel nach vorne schieben bis N1 bei etwa 85 Prozent. Dann die Parkbremse loesen.',
+      simConditionNextPhase: 'takeoff_roll',
     },
     {
       id: 'engines_loud_comfort',
@@ -184,6 +195,16 @@ export const takeoffEddf: FlightLabScenario = {
         { id: 'runway-rumble', action: 'play', volume: 0.5, loop: true },
         { id: 'wind-low', action: 'play', volume: 0.3, loop: true },
       ],
+      simConditions: {
+        conditions: [
+          { variable: 'AIRSPEED_INDICATED', operator: '>=', value: 140 },
+          { variable: 'SIM_ON_GROUND', operator: '==', value: true },
+        ],
+        logic: 'AND',
+      },
+      simConditionTimeoutMs: 45000,
+      simConditionHelpMessage: 'Warte bis die Geschwindigkeit 140 Knoten erreicht. Schau auf den Speed-Tape links am Display.',
+      simConditionNextPhase: 'rotation',
     },
     {
       id: 'roll_rumble_explain',
@@ -228,6 +249,16 @@ export const takeoffEddf: FlightLabScenario = {
         { id: 'wind-low', action: 'crossfade', volume: 0.0 },
         { id: 'wind-high', action: 'play', volume: 0.35, loop: true },
       ],
+      simConditions: {
+        conditions: [
+          { variable: 'SIM_ON_GROUND', operator: '==', value: false },
+          { variable: 'PLANE_PITCH_DEGREES', operator: '>', value: 5 },
+        ],
+        logic: 'AND',
+      },
+      simConditionTimeoutMs: 15000,
+      simConditionHelpMessage: 'Sidestick sanft nach hinten ziehen bis die Nase hochgeht.',
+      simConditionNextPhase: 'gear_retract',
     },
     {
       id: 'rotation_belly_explain',
@@ -252,6 +283,15 @@ export const takeoffEddf: FlightLabScenario = {
       sounds: [
         { id: 'gear-retract', action: 'play', volume: 0.6, loop: false },
       ],
+      simConditions: {
+        conditions: [
+          { variable: 'GEAR_HANDLE_POSITION', operator: '==', value: false },
+        ],
+        logic: 'AND',
+      },
+      simConditionTimeoutMs: 10000,
+      simConditionHelpMessage: 'Fahrwerk-Hebel nach oben schieben. Der Hebel ist links neben dem Mitteldisplay.',
+      simConditionNextPhase: 'climb',
     },
     {
       id: 'gear_explain',
@@ -277,6 +317,16 @@ export const takeoffEddf: FlightLabScenario = {
         { id: 'engine-cruise', action: 'crossfade', volume: 0.3 },
         { id: 'wind-high', action: 'crossfade', volume: 0.25 },
       ],
+      simConditions: {
+        conditions: [
+          { variable: 'PLANE_ALTITUDE', operator: '>', value: 2000 },
+          { variable: 'VERTICAL_SPEED', operator: '>', value: 1000 },
+        ],
+        logic: 'AND',
+      },
+      simConditionTimeoutMs: 30000,
+      simConditionHelpMessage: 'Steigrate erhoehen auf etwa 2000 Fuss pro Minute. Sidestick leicht nach hinten halten.',
+      simConditionNextPhase: 'climb_high',
     },
     {
       id: 'climb_height_info',
@@ -313,6 +363,15 @@ export const takeoffEddf: FlightLabScenario = {
         { id: 'almost_there', label: 'Fast geschafft!', icon: 'mdi-flag-checkered', next: 'leveloff', type: 'primary' },
       ],
       sounds: [],
+      simConditions: {
+        conditions: [
+          { variable: 'PLANE_ALTITUDE', operator: '>=', value: 9800 },
+        ],
+        logic: 'AND',
+      },
+      simConditionTimeoutMs: 60000,
+      simConditionHelpMessage: 'Weiter steigen bis 10.000 Fuss. Halte die Nase leicht oben.',
+      simConditionNextPhase: 'leveloff',
     },
 
     // --- Phase 8: Level-off & Debrief ---
@@ -332,6 +391,17 @@ export const takeoffEddf: FlightLabScenario = {
         { id: 'wind-high', action: 'crossfade', volume: 0.15 },
         { id: 'chime', action: 'play', volume: 0.3, loop: false },
       ],
+      simConditions: {
+        conditions: [
+          { variable: 'VERTICAL_SPEED', operator: '<', value: 500 },
+          { variable: 'VERTICAL_SPEED', operator: '>', value: -500 },
+          { variable: 'PLANE_ALTITUDE', operator: '>=', value: 9500 },
+        ],
+        logic: 'AND',
+      },
+      simConditionTimeoutMs: 20000,
+      simConditionHelpMessage: 'Nase etwas senken zum Geradeausflug. Steigrate auf nahe Null bringen.',
+      simConditionNextPhase: 'debrief',
     },
     {
       id: 'debrief',

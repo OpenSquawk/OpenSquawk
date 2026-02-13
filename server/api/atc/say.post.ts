@@ -126,7 +126,7 @@ export default defineEventHandler(async (event) => {
         sessionId?: string;
     }>(event);
 
-    const user = await requireUserSession(event);
+    // const user = await requireUserSession(event);
 
     const rawSessionId = typeof body?.sessionId === "string"
         ? body.sessionId.trim()
@@ -222,11 +222,9 @@ export default defineEventHandler(async (event) => {
             ttsProvider
         };
 
-        // await writeFile(fileJson, JSON.stringify(meta, null, 2), "utf-8");
-
         try {
             await TransmissionLog.create({
-                user: user._id,
+                // user: user._id,
                 role: "atc",
                 channel: "say",
                 direction: "outgoing",

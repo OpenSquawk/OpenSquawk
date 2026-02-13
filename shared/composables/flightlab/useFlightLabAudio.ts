@@ -1,5 +1,5 @@
 // shared/composables/flightlab/useFlightLabAudio.ts
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { FlightLabSound } from '../../data/flightlab/types'
 import { getReadabilityProfile, createNoiseGenerators } from '../../utils/radioEffects'
 import type { PizzicatoLite as PizzicatoLiteType } from '../../utils/pizzicatoLite'
@@ -12,6 +12,10 @@ export function useFlightLabAudio() {
   const soundBuffers = ref<Map<string, AudioBuffer>>(new Map())
   let speechQueue: Promise<void> = Promise.resolve()
   let pizzicato: PizzicatoLiteType | null = null
+
+  // --- Replay Cache ---
+  const lastSpokenAudio = ref<{ base64: string; mime: string; readability: number; text: string } | null>(null)
+  const canReplay = computed(() => lastSpokenAudio.value !== null && !isSpeaking.value)
 
   function getContext(): AudioContext {
     if (!audioContext.value) {
@@ -125,6 +129,13 @@ export function useFlightLabAudio() {
           })
 
           if (res.success && res.audio?.base64) {
+            // Cache for replay
+            lastSpokenAudio.value = {
+              base64: res.audio.base64,
+              mime: res.audio.mime,
+              readability: options?.readability ?? 5,
+              text,
+            }
             await playWithRadioEffects(res.audio.base64, res.audio.mime, options?.readability ?? 5)
           }
         } catch (e) {
@@ -179,6 +190,31 @@ export function useFlightLabAudio() {
     stopNoise.forEach((fn: () => void) => fn())
   }
 
+  async function replayLastMessage(): Promise<void> {
+    if (!lastSpokenAudio.value || isSpeaking.value) return
+    const { base64, mime, readability } = lastSpokenAudio.value
+    return new Promise((resolve) => {
+      speechQueue = speechQueue.then(async () => {
+        isSpeaking.value = true
+        try {
+          await playWithRadioEffects(base64, mime, readability)
+        } catch (e) {
+          console.error('[FlightLabAudio] Replay error:', e)
+        } finally {
+          isSpeaking.value = false
+          resolve()
+        }
+      }).catch(() => {
+        isSpeaking.value = false
+        resolve()
+      })
+    })
+  }
+
+  function clearReplayCache() {
+    lastSpokenAudio.value = null
+  }
+
   function stopAllSounds() {
     for (const [id] of activeSounds.value) {
       stopAmbientSound(id)
@@ -200,8 +236,12 @@ export function useFlightLabAudio() {
 
   return {
     isSpeaking,
+    canReplay,
+    lastSpokenAudio,
     preloadSounds,
     speakAtcMessage,
+    replayLastMessage,
+    clearReplayCache,
     handlePhaseSounds,
     playAmbientSound,
     stopAmbientSound,

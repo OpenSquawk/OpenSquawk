@@ -25,8 +25,21 @@
           <span class="text-xs text-white/40 tabular-nums">{{ engine.progress.value }}%</span>
         </div>
 
-        <!-- Right: Session + Controls -->
+        <!-- Right: Auto-Advance Toggle + Session + Controls -->
         <div class="flex items-center gap-2">
+          <!-- Auto-Advance Toggle -->
+          <div class="flex items-center gap-1.5">
+            <v-switch
+              :model-value="engine.autoAdvanceEnabled.value"
+              density="compact"
+              hide-details
+              color="cyan"
+              class="auto-advance-toggle"
+              @update:model-value="engine.toggleAutoAdvance()"
+            />
+            <span class="text-xs text-white/40 hidden sm:inline">Sim Auto</span>
+          </div>
+
           <!-- Session indicator -->
           <div v-if="sync.isConnected.value" class="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-400/30 px-3 py-1">
             <div class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -79,6 +92,23 @@
       </div>
     </header>
 
+    <!-- SimCondition Status Bar -->
+    <div
+      v-if="engine.autoAdvanceEnabled.value && engine.hasSimConditions.value"
+      class="shrink-0 border-b border-white/5 bg-[#0b1328]/60 px-4 py-2"
+    >
+      <div class="mx-auto max-w-screen-lg flex items-center gap-2">
+        <template v-if="engine.conditionsMet.value">
+          <v-icon icon="mdi-check-circle" size="16" class="text-emerald-400" />
+          <span class="text-xs text-emerald-300">Bedingungen erfuellt</span>
+        </template>
+        <template v-else>
+          <v-progress-circular indeterminate size="14" width="2" color="cyan" />
+          <span class="text-xs text-white/40">Warte auf Sim-Bedingungen...</span>
+        </template>
+      </div>
+    </div>
+
     <!-- Main Content -->
     <main class="flex-1 flex flex-col justify-center px-4 py-6 sm:py-10">
       <div class="mx-auto w-full max-w-screen-sm space-y-6">
@@ -88,19 +118,37 @@
           <p class="text-sm text-amber-200">Pausiert - der Instructor setzt gleich fort</p>
         </div>
 
+        <!-- Help Message Banner -->
+        <div
+          v-if="engine.showingHelpMessage.value && engine.helpMessageText.value"
+          class="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4"
+        >
+          <div class="flex items-start gap-3">
+            <v-icon icon="mdi-lightbulb" size="22" class="text-amber-300 mt-0.5 shrink-0" />
+            <div class="flex-1">
+              <p class="text-sm text-amber-200 leading-relaxed">{{ engine.helpMessageText.value }}</p>
+              <v-btn
+                size="small"
+                variant="text"
+                color="amber"
+                class="mt-2 -ml-2"
+                @click="engine.dismissHelpMessage()"
+              >
+                Verstanden
+              </v-btn>
+            </div>
+          </div>
+        </div>
+
         <!-- ATC Message Area -->
         <div
           v-if="currentPhase"
           class="rounded-3xl border border-white/10 bg-[#0b1328]/90 p-6 sm:p-8 shadow-xl shadow-cyan-500/5"
         >
-          <!-- Speaking indicator -->
+          <!-- Voice Animation -->
           <div v-if="audio.isSpeaking.value" class="mb-4 flex items-center gap-2">
-            <div class="flex items-center gap-1">
-              <span class="h-3 w-0.5 animate-pulse rounded-full bg-cyan-400" style="animation-delay: 0ms" />
-              <span class="h-4 w-0.5 animate-pulse rounded-full bg-cyan-400" style="animation-delay: 150ms" />
-              <span class="h-2 w-0.5 animate-pulse rounded-full bg-cyan-400" style="animation-delay: 300ms" />
-              <span class="h-5 w-0.5 animate-pulse rounded-full bg-cyan-400" style="animation-delay: 100ms" />
-              <span class="h-3 w-0.5 animate-pulse rounded-full bg-cyan-400" style="animation-delay: 250ms" />
+            <div class="voice-bars flex items-end gap-[3px]">
+              <span v-for="i in 8" :key="i" class="voice-bar" :style="{ animationDelay: `${(i - 1) * 80}ms` }" />
             </div>
             <span class="text-xs text-cyan-300/70">Spricht...</span>
           </div>
@@ -110,11 +158,36 @@
             {{ currentPhase.atcMessage }}
           </p>
 
-          <!-- Explanation -->
-          <p v-if="currentPhase.explanation" class="mt-4 text-sm text-white/50 leading-relaxed border-t border-white/5 pt-4">
-            <v-icon icon="mdi-information-outline" size="14" class="mr-1 text-cyan-400/50" />
-            {{ currentPhase.explanation }}
-          </p>
+          <!-- Replay + Details row -->
+          <div class="mt-4 flex items-center gap-2 border-t border-white/5 pt-4">
+            <!-- Replay button -->
+            <v-btn
+              v-if="audio.canReplay.value"
+              size="small"
+              variant="text"
+              color="cyan"
+              prepend-icon="mdi-replay"
+              class="-ml-2"
+              :disabled="audio.isSpeaking.value"
+              @click="audio.replayLastMessage()"
+            >
+              Nochmal anhoeren
+            </v-btn>
+
+            <v-spacer />
+
+            <!-- More details button -->
+            <v-btn
+              v-if="currentPhase.explanation || currentPhase.simConditions || currentPhase.instructorNote"
+              size="small"
+              variant="text"
+              class="text-white/40 -mr-2"
+              prepend-icon="mdi-information-outline"
+              @click="showDetails = true"
+            >
+              Mehr Details
+            </v-btn>
+          </div>
         </div>
 
         <!-- End screen -->
@@ -146,6 +219,51 @@
       </div>
     </main>
 
+    <!-- Details Dialog -->
+    <v-dialog v-model="showDetails" max-width="440">
+      <v-card class="rounded-2xl bg-[#0b1328] border border-white/10">
+        <v-card-title class="text-base font-semibold pt-5 px-5 flex items-center gap-2">
+          <v-icon icon="mdi-information-outline" size="20" class="text-cyan-400" />
+          Details
+        </v-card-title>
+        <v-card-text class="px-5 space-y-4">
+          <!-- Explanation -->
+          <div v-if="currentPhase?.explanation">
+            <p class="text-xs text-white/40 uppercase tracking-wider mb-1">Erklaerung</p>
+            <p class="text-sm text-white/80 leading-relaxed">{{ currentPhase.explanation }}</p>
+          </div>
+
+          <!-- Sim Conditions -->
+          <div v-if="currentPhase?.simConditions">
+            <p class="text-xs text-white/40 uppercase tracking-wider mb-1">Sim-Bedingungen</p>
+            <div class="space-y-1">
+              <div
+                v-for="(cond, idx) in currentPhase.simConditions.conditions"
+                :key="idx"
+                class="flex items-center gap-2 text-sm text-white/70"
+              >
+                <v-icon icon="mdi-chevron-right" size="14" class="text-cyan-400/50" />
+                <span>{{ formatCondition(cond) }}</span>
+              </div>
+              <p class="text-xs text-white/30 mt-1">
+                Logik: {{ currentPhase.simConditions.logic === 'AND' ? 'Alle muessen zutreffen' : 'Mindestens eine muss zutreffen' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Instructor Note -->
+          <div v-if="currentPhase?.instructorNote">
+            <p class="text-xs text-white/40 uppercase tracking-wider mb-1">Instructor-Hinweis</p>
+            <p class="text-sm text-white/60 leading-relaxed italic">{{ currentPhase.instructorNote }}</p>
+          </div>
+        </v-card-text>
+        <v-card-actions class="px-5 pb-5">
+          <v-spacer />
+          <v-btn variant="text" class="text-white/50" @click="showDetails = false">Schliessen</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Restart confirmation dialog -->
     <v-dialog v-model="showRestartConfirm" max-width="340">
       <v-card class="rounded-2xl bg-[#0b1328] border border-white/10">
@@ -169,7 +287,7 @@ import { takeoffEddf } from '~~/shared/data/flightlab/takeoff-eddf'
 import { useFlightLabEngine } from '~~/shared/composables/flightlab/useFlightLabEngine'
 import { useFlightLabAudio } from '~~/shared/composables/flightlab/useFlightLabAudio'
 import { useFlightLabSync } from '~~/shared/composables/flightlab/useFlightLabSync'
-import type { FlightLabButton } from '~~/shared/data/flightlab/types'
+import type { FlightLabButton, SimCondition } from '~~/shared/data/flightlab/types'
 
 definePageMeta({ layout: false })
 useHead({ title: 'FlightLab - Dein erster Start' })
@@ -180,6 +298,7 @@ const sync = useFlightLabSync()
 
 const joinCode = ref('')
 const showRestartConfirm = ref(false)
+const showDetails = ref(false)
 
 const currentPhase = computed(() => engine.currentPhase.value)
 
@@ -193,6 +312,65 @@ const allSoundIds = computed(() => {
   }
   return [...ids]
 })
+
+// --- Condition formatting for Details dialog ---
+const conditionLabels: Record<string, string> = {
+  AIRSPEED_INDICATED: 'Geschwindigkeit',
+  GROUND_VELOCITY: 'Bodengeschwindigkeit',
+  VERTICAL_SPEED: 'Steigrate',
+  PLANE_ALTITUDE: 'Hoehe',
+  PLANE_PITCH_DEGREES: 'Neigung',
+  TURB_ENG_N1_1: 'Triebwerk 1 (N1)',
+  TURB_ENG_N1_2: 'Triebwerk 2 (N1)',
+  SIM_ON_GROUND: 'Am Boden',
+  GEAR_HANDLE_POSITION: 'Fahrwerk',
+  FLAPS_HANDLE_INDEX: 'Klappen-Stufe',
+  BRAKE_PARKING_POSITION: 'Parkbremse',
+  AUTOPILOT_MASTER: 'Autopilot',
+}
+
+const conditionUnits: Record<string, string> = {
+  AIRSPEED_INDICATED: 'Knoten',
+  GROUND_VELOCITY: 'Knoten',
+  VERTICAL_SPEED: 'ft/min',
+  PLANE_ALTITUDE: 'Fuss',
+  PLANE_PITCH_DEGREES: 'Grad',
+  TURB_ENG_N1_1: '%',
+  TURB_ENG_N1_2: '%',
+  FLAPS_HANDLE_INDEX: '',
+}
+
+const operatorLabels: Record<string, string> = {
+  '>': 'groesser als',
+  '<': 'kleiner als',
+  '>=': 'mindestens',
+  '<=': 'hoechstens',
+  '==': 'gleich',
+  '!=': 'ungleich',
+}
+
+function formatCondition(cond: SimCondition): string {
+  const label = conditionLabels[cond.variable] || cond.variable
+  const op = operatorLabels[cond.operator] || cond.operator
+  const unit = conditionUnits[cond.variable] || ''
+
+  if (typeof cond.value === 'boolean') {
+    if (cond.variable === 'SIM_ON_GROUND') {
+      return cond.value ? `${label}: Ja` : `${label}: Nein (in der Luft)`
+    }
+    if (cond.variable === 'GEAR_HANDLE_POSITION') {
+      return cond.value ? `${label}: Ausgefahren` : `${label}: Eingefahren`
+    }
+    if (cond.variable === 'BRAKE_PARKING_POSITION') {
+      return cond.value ? `${label}: Angezogen` : `${label}: Geloest`
+    }
+    return `${label}: ${cond.value ? 'An' : 'Aus'}`
+  }
+
+  return `${label} ${op} ${cond.value}${unit ? ' ' + unit : ''}`
+}
+
+// --- Button handling ---
 
 function getButtonColor(type?: string) {
   switch (type) {
@@ -226,11 +404,17 @@ async function handleJoin() {
 function handleRestart() {
   showRestartConfirm.value = false
   audio.stopAllSounds()
+  audio.clearReplayCache()
   engine.restart()
   if (sync.isConnected.value) {
     sync.sendParticipantAction('restart', 'restart', 'welcome')
   }
 }
+
+// --- Help message TTS callback ---
+engine.setOnHelpMessage(async (text: string) => {
+  await audio.speakAtcMessage(text, { speed: 0.85, readability: 5 })
+})
 
 // Watch phase changes to trigger TTS + sounds
 watch(() => engine.currentPhaseId.value, async (newId, oldId) => {
@@ -282,7 +466,48 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  engine.cleanup()
   audio.dispose()
   sync.disconnect()
 })
 </script>
+
+<style scoped>
+/* Voice animation bars */
+.voice-bars {
+  height: 24px;
+}
+.voice-bar {
+  display: inline-block;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(to top, rgba(34, 211, 238, 0.6), rgba(34, 211, 238, 1));
+  animation: voice-bounce 0.6s ease-in-out infinite alternate;
+}
+.voice-bar:nth-child(1) { height: 8px; }
+.voice-bar:nth-child(2) { height: 14px; }
+.voice-bar:nth-child(3) { height: 6px; }
+.voice-bar:nth-child(4) { height: 18px; }
+.voice-bar:nth-child(5) { height: 10px; }
+.voice-bar:nth-child(6) { height: 16px; }
+.voice-bar:nth-child(7) { height: 7px; }
+.voice-bar:nth-child(8) { height: 12px; }
+
+@keyframes voice-bounce {
+  0% { transform: scaleY(0.3); opacity: 0.5; }
+  100% { transform: scaleY(1); opacity: 1; }
+}
+
+/* Auto-advance toggle compact styling */
+.auto-advance-toggle :deep(.v-switch__track) {
+  height: 18px;
+  min-width: 32px;
+}
+.auto-advance-toggle :deep(.v-switch__thumb) {
+  height: 14px;
+  width: 14px;
+}
+.auto-advance-toggle :deep(.v-selection-control) {
+  min-height: 24px;
+}
+</style>
