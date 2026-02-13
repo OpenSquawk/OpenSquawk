@@ -16,6 +16,40 @@ export interface FlightLabButton {
   instructorAlert?: string
 }
 
+// --- MSFS SimConnect Telemetry ---
+
+/** MSFS2020 SimConnect variable state — keys match SimConnect naming */
+export interface FlightLabTelemetryState {
+  AIRSPEED_INDICATED: number        // knots
+  GROUND_VELOCITY: number           // knots
+  VERTICAL_SPEED: number            // feet per minute
+  PLANE_ALTITUDE: number            // feet MSL
+  PLANE_PITCH_DEGREES: number       // degrees
+  TURB_ENG_N1_1: number             // percent (0-100), engine 1
+  TURB_ENG_N1_2: number             // percent (0-100), engine 2
+  SIM_ON_GROUND: boolean
+  GEAR_HANDLE_POSITION: boolean     // true = down, false = up
+  FLAPS_HANDLE_INDEX: number        // 0-4 for A320
+  BRAKE_PARKING_POSITION: boolean   // true = set, false = released
+  AUTOPILOT_MASTER: boolean
+  timestamp?: number
+}
+
+export type SimConditionOperator = '>' | '<' | '>=' | '<=' | '==' | '!='
+
+export interface SimCondition {
+  variable: keyof FlightLabTelemetryState
+  operator: SimConditionOperator
+  value: number | boolean
+}
+
+export interface SimConditionGroup {
+  conditions: SimCondition[]
+  logic: 'AND' | 'OR'
+}
+
+// --- Phase ---
+
 export interface FlightLabPhase {
   id: string
   atcMessage: string
@@ -24,7 +58,17 @@ export interface FlightLabPhase {
   sounds?: FlightLabSound[]
   instructorNote?: string
   autoAdvanceAfterTTS?: boolean
+  /** SimConnect conditions for auto-advance (when sim data available) */
+  simConditions?: SimConditionGroup
+  /** How long to wait (ms) before showing help if conditions not met. Default 20000 */
+  simConditionTimeoutMs?: number
+  /** Help message spoken via TTS when timeout reached */
+  simConditionHelpMessage?: string
+  /** Phase to advance to when conditions are met */
+  simConditionNextPhase?: string
 }
+
+// --- Scenario ---
 
 export interface FlightLabScenario {
   id: string
@@ -37,6 +81,8 @@ export interface FlightLabScenario {
   callsign: string
   phases: FlightLabPhase[]
 }
+
+// --- Session / WebSocket ---
 
 export type FlightLabRole = 'instructor' | 'participant'
 
