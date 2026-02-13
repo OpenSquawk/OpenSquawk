@@ -73,5 +73,10 @@ export default defineNuxtConfig({
         '~/assets/css/opensquawk-glass.css',
         '~/assets/css/learn-theme.css'
     ],
+    nitro: {
+        experimental: {
+            websocket: true,
+        },
+    },
 
 })
