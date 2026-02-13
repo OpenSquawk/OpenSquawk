@@ -474,6 +474,25 @@
                 append-inner-icon="mdi-send"
                 @click:append-inner="sendPilotText"
             />
+
+            <!-- Suggested next phrases (debug aid) -->
+            <div v-if="expectedPilotPhrases.length" class="space-y-1">
+              <p class="text-[11px] uppercase tracking-[0.25em] text-white/40">Suggested phrases</p>
+              <div class="flex flex-wrap gap-2">
+                <v-chip
+                    v-for="phrase in expectedPilotPhrases"
+                    :key="phrase.stateId"
+                    size="small"
+                    color="cyan"
+                    variant="outlined"
+                    class="cursor-pointer text-xs font-mono"
+                    @click="pilotInput = phrase.text"
+                >
+                  {{ phrase.text }}
+                </v-chip>
+              </div>
+            </div>
+
             <p class="text-xs text-white/50">
               For emergencies when PTT fails or for testing
             </p>
@@ -997,7 +1016,9 @@ const {
   moveTo: forceMove,
   normalizeATCText,
   renderATCMessage,
-  getStateDetails
+  getStateDetails,
+  collectAtcStatesUntilPilotTurn,
+  expectedPilotPhrases,
 } = engine
 
 const lastTransmission = ref('')
@@ -1892,8 +1913,26 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
 
     applyLLMDecision(decision, normalizedTrace ?? null)
 
+    // If decision explicitly has controller_say_tpl, speak it
     if (decision.controller_say_tpl && !decision.radio_check) {
       scheduleControllerSpeech(decision.controller_say_tpl)
+    }
+
+    // Auto-advance through ATC/system states and speak any say_tpl messages.
+    // This is the key fix: after a decision moves us to a new state, we need
+    // to walk through all non-pilot states (ATC replies, system transitions)
+    // until we reach the next pilot state, speaking each ATC message via TTS.
+    if (!decision.radio_check) {
+      await nextTick()
+      const atcMessages = collectAtcStatesUntilPilotTurn()
+      for (const msg of atcMessages) {
+        // Don't double-speak if the decision already had controller_say_tpl
+        // for this exact template
+        if (decision.controller_say_tpl && msg.say_tpl === decision.controller_say_tpl) {
+          continue
+        }
+        scheduleControllerSpeech(msg.say_tpl)
+      }
     }
   } catch (e) {
     console.error('LLM decision failed', e)
@@ -1951,6 +1990,18 @@ const startMonitoring = async (flightPlan: any) => {
   }
 
   await fetchAirportFrequencies(flightPlan.dep || flightPlan.departure)
+
+  // If the start state is an ATC state, auto-advance and speak its message
+  // so the pilot sees the first prompt immediately after connecting.
+  try {
+    await nextTick()
+    const startMessages = collectAtcStatesUntilPilotTurn()
+    for (const msg of startMessages) {
+      scheduleControllerSpeech(msg.say_tpl)
+    }
+  } catch (err) {
+    console.warn('Initial state advance failed:', err)
+  }
 }
 
 const startDemoFlight = () => {

@@ -794,9 +794,39 @@ export default function useCommunicationsEngine() {
         if (!s) {
             throw new Error('Decision state unavailable')
         }
-        const candidates = nextCandidates.value
+        let candidates = nextCandidates.value
             .map(id => ({ id, state: states.value[id], flow: runtime.slug }))
             .filter(candidate => candidate.state)
+
+        // "Look through" auto-behavior check states (e.g. CD_READBACK_CHECK).
+        // If ALL candidates are check_readback/monitor states, expand them to
+        // their ok_next + bad_next targets so the LLM can evaluate the pilot's
+        // readback directly and route to the correct outcome.
+        const allAutoCheck = candidates.length > 0 && candidates.every(c =>
+            c.state.auto === 'check_readback' || c.state.auto === 'monitor'
+        )
+        if (allAutoCheck) {
+            const expanded: typeof candidates = []
+            const seen = new Set<string>()
+            for (const c of candidates) {
+                const targets = [
+                    ...(c.state.ok_next ?? []),
+                    ...(c.state.bad_next ?? []),
+                    ...(c.state.next ?? []),
+                ]
+                for (const t of targets) {
+                    if (!t?.to || seen.has(t.to)) continue
+                    seen.add(t.to)
+                    const targetState = states.value[t.to]
+                    if (targetState) {
+                        expanded.push({ id: t.to, state: targetState, flow: runtime.slug })
+                    }
+                }
+            }
+            if (expanded.length > 0) {
+                candidates = expanded
+            }
+        }
 
         return {
             state_id: s.id,
@@ -894,6 +924,133 @@ export default function useCommunicationsEngine() {
     function processUserTransmission(transcript: string): string | null {
         return processPilotTransmission(transcript)
     }
+
+    /**
+     * After a decision lands on a state, walk forward through all non-pilot
+     * states (ATC replies, system checks, handoffs) collecting ATC messages
+     * that need TTS playback, until we reach the next pilot state.
+     *
+     * This is the core auto-advance mechanism for the live ATC flow.
+     * It handles:
+     * - ATC states with say_tpl (collect for TTS, advance)
+     * - System states (check_readback, monitor, etc) — advance via ok_next
+     * - Handoff states (advance automatically)
+     * - States with single unambiguous transitions
+     */
+    function collectAtcStatesUntilPilotTurn(maxHops = 30): Array<{ stateId: string; say_tpl: string; rendered: string; normalized: string }> {
+        const messages: Array<{ stateId: string; say_tpl: string; rendered: string; normalized: string }> = []
+        const visited = new Set<string>()
+        let hops = 0
+
+        while (hops++ < maxHops) {
+            const s = currentState.value
+            if (!s) break
+
+            // Prevent infinite loops
+            if (visited.has(s.id)) break
+            visited.add(s.id)
+
+            // If we're on a pilot state, stop — it's the pilot's turn to speak
+            if (s.role === 'pilot') break
+
+            // If this is an end state, stop
+            const endStates = tree.value?.end_states ?? []
+            if (endStates.includes(s.id)) break
+
+            // Collect ATC/system messages for TTS
+            if (s.say_tpl) {
+                messages.push({
+                    stateId: s.id,
+                    say_tpl: s.say_tpl,
+                    rendered: renderTpl(s.say_tpl, exposeCtx()),
+                    normalized: normalizeATCText(s.say_tpl, exposeCtxFlat()),
+                })
+            }
+
+            // Determine the next state to advance to.
+            // Strategy:
+            // 1. For auto-behavior states (check_readback, monitor, pop_stack),
+            //    prefer ok_next (assume success for auto-advance)
+            // 2. For states with a single eligible transition, take it
+            // 3. For ambiguous states (multiple eligible), stop
+            let nextId: string | null = null
+
+            const auto = s.auto
+            if (auto === 'check_readback' || auto === 'monitor' || auto === 'pop_stack_or_route_by_intent') {
+                // Auto-behavior states: prefer ok_next, then next
+                const okTransitions = (s.ok_next ?? []).filter(t => {
+                    if (!t?.to) return false
+                    if (t.when && !evaluateConditionExpression(t.when)) return false
+                    if (t.guard && !evaluateConditionExpression(t.guard)) return false
+                    return true
+                })
+                if (okTransitions.length > 0) {
+                    nextId = okTransitions[0].to
+                }
+            }
+
+            if (!nextId) {
+                // Collect all eligible transitions
+                const allTransitions = [
+                    ...(s.next ?? []),
+                    ...(s.ok_next ?? []),
+                ] as Array<{ to?: string; when?: string; guard?: string }>
+
+                const eligible = allTransitions.filter(t => {
+                    if (!t?.to) return false
+                    if (t.when && !evaluateConditionExpression(t.when)) return false
+                    if (t.guard && !evaluateConditionExpression(t.guard)) return false
+                    return true
+                })
+
+                // Only advance if there's exactly one unambiguous path
+                if (eligible.length === 1) {
+                    nextId = eligible[0].to!
+                }
+            }
+
+            if (!nextId || !states.value[nextId]) break
+
+            // Advance to the next state (moveTo handles logging, actions, handoffs)
+            moveTo(nextId)
+        }
+
+        return messages
+    }
+
+    /**
+     * Computed: expected pilot phrases for the current state.
+     * If we're on a pilot state, returns that state's utterance_tpl rendered.
+     * If we're on an ATC state, looks at the next candidates that are pilot states.
+     */
+    const expectedPilotPhrases = computed<Array<{ stateId: string; text: string; normalized: string }>>(() => {
+        const s = currentState.value
+        if (!s) return []
+
+        // If current state IS a pilot state with utterance_tpl, show it
+        if (s.role === 'pilot' && s.utterance_tpl) {
+            return [{
+                stateId: s.id,
+                text: renderTpl(s.utterance_tpl, exposeCtx()),
+                normalized: normalizeATCText(s.utterance_tpl, exposeCtxFlat()),
+            }]
+        }
+
+        // Otherwise look at next candidates that are pilot states
+        const results: Array<{ stateId: string; text: string; normalized: string }> = []
+        for (const id of nextCandidates.value) {
+            const state = states.value[id]
+            if (!state) continue
+            if (state.role === 'pilot' && state.utterance_tpl) {
+                results.push({
+                    stateId: id,
+                    text: renderTpl(state.utterance_tpl, exposeCtx()),
+                    normalized: normalizeATCText(state.utterance_tpl, exposeCtxFlat()),
+                })
+            }
+        }
+        return results
+    })
 
     function resolveTelemetryValue(parameter: string) {
         const value = (telemetry.value as any)[parameter]
@@ -1256,6 +1413,8 @@ export default function useCommunicationsEngine() {
         processUserTransmission,
         buildLLMContext,
         applyLLMDecision,
+        collectAtcStatesUntilPilotTurn,
+        expectedPilotPhrases,
 
         // Flow Control
         moveTo,
