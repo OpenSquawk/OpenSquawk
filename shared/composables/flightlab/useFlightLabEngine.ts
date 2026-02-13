@@ -26,7 +26,9 @@ export function useFlightLabEngine(scenario: FlightLabScenario) {
     if (idx === -1) {
       // We're in a sub-phase, find the closest main phase from history
       for (let i = history.value.length - 1; i >= 0; i--) {
-        const mainIdx = mainPhaseIds.indexOf(history.value[i].phaseId)
+        const entry = history.value[i]
+        if (!entry) continue
+        const mainIdx = mainPhaseIds.indexOf(entry.phaseId)
         if (mainIdx !== -1) return Math.round((mainIdx / (mainPhaseIds.length - 1)) * 100)
       }
       return 0
@@ -65,15 +67,17 @@ export function useFlightLabEngine(scenario: FlightLabScenario) {
 
   function skipForward() {
     const idx = mainPhaseIds.indexOf(currentPhaseId.value)
-    if (idx >= 0 && idx < mainPhaseIds.length - 1) {
-      goToPhase(mainPhaseIds[idx + 1])
+    const next = mainPhaseIds[idx + 1]
+    if (idx >= 0 && next) {
+      goToPhase(next)
     }
   }
 
   function skipBack() {
     const idx = mainPhaseIds.indexOf(currentPhaseId.value)
-    if (idx > 0) {
-      goToPhase(mainPhaseIds[idx - 1])
+    const prev = mainPhaseIds[idx - 1]
+    if (idx > 0 && prev) {
+      goToPhase(prev)
     }
   }
 
