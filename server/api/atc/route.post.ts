@@ -206,8 +206,7 @@ export default defineEventHandler(async (event): Promise<RouteResponse> => {
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: buildUserPrompt(body) },
       ],
-      temperature: 0.1,
-      max_tokens: 150,
+      max_completion_tokens: 150,
       reasoning_effort: 'low' as any,
     })
 
