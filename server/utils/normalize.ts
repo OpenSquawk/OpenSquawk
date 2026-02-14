@@ -15,6 +15,10 @@ if (openaiBaseUrl) {
 
 export const normalize = new OpenAI(normalizeClientOptions);
 
+export function getOpenAIClient(): OpenAI {
+  return normalize;
+}
+
 export const LLM_MODEL = llmModel;
 export const TTS_MODEL = ttsModel;
 

@@ -1,6 +1,6 @@
 // server/api/llm/latency.get.ts
 import { createError } from 'h3'
-import { getOpenAIClient } from '../../../utils/openai'
+import { getOpenAIClient } from '../../../utils/normalize'
 import { getServerRuntimeConfig } from '../../../utils/runtimeConfig'
 
 const SYSTEM_PROMPT =
