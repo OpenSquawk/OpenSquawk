@@ -190,6 +190,29 @@ export function useAtcEngine() {
     const interaction = phase.interactions.find(i => i.id === res.chosen)
     if (!interaction) throw new Error(`Interaction not found: ${res.chosen}`)
 
+    // 4b. Fetch taxi route if needed (before rendering template)
+    if (
+      (interaction.id === 'request_taxi' || interaction.id === 'contact_ground_arrival')
+      && state.vars.dep
+    ) {
+      try {
+        const taxiField = interaction.id === 'request_taxi' ? 'taxi_route' : 'arrival_taxi_route'
+        const originName = interaction.id === 'request_taxi' ? state.vars.stand : state.vars.arrival_runway
+        const destName = interaction.id === 'request_taxi' ? state.vars.runway : state.vars.arrival_stand
+        const airport = interaction.id === 'request_taxi' ? state.vars.dep : state.vars.dest
+        if (originName && destName && airport) {
+          const taxiRes = await $fetch<any>('/api/service/tools/taxiroute', {
+            params: { airport, origin_name: originName, dest_name: destName },
+          })
+          if (taxiRes?.names_collapsed?.length) {
+            state.vars[taxiField] = taxiRes.names_collapsed.join(' ')
+          }
+        }
+      } catch (e) {
+        console.warn('[engine] Taxi route fetch failed, using fallback:', e)
+      }
+    }
+
     // 5. Apply updates
     let variablesUpdated: Record<string, any> = {}
     if (interaction.updates) {
