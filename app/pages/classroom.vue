@@ -1065,7 +1065,7 @@
                         <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert
                         </v-icon>
                         <small v-if="result" class="blank-feedback">
-                          Soll: {{ fieldExpectedValue(segment.key) }}
+                          Expected: {{ fieldExpectedValue(segment.key) }}
                         </small>
                       </label>
                     </template>
@@ -1262,7 +1262,7 @@
             <v-slider
                 hide-details
                 v-model="cfg.audioSpeed"
-                :min="0.7"
+                :min="0.5"
                 :max="1.3"
                 :step="0.05"
                 color="cyan"
@@ -1331,7 +1331,7 @@ import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, Scenario} fr
 import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
-import {DEFAULT_AIRLINE_TELEPHONY, normalizeRadioPhrase} from '~~/shared/utils/radioSpeech'
+import {DEFAULT_AIRLINE_TELEPHONY, normalizeRadioPhrase, normalizeMetarPhrase} from '~~/shared/utils/radioSpeech'
 
 definePageMeta({middleware: ['require-auth', 'require-classroom-intro']})
 
@@ -2724,7 +2724,7 @@ function sanitizeLearnConfigPatch(input: any): LearnConfigPatch {
 
   if (typeof input.audioSpeed === 'number' && Number.isFinite(input.audioSpeed)) {
     const rounded = Math.round(input.audioSpeed * 20) / 20
-    patch.audioSpeed = Math.min(1.3, Math.max(0.7, rounded))
+    patch.audioSpeed = Math.min(1.3, Math.max(0.5, rounded))
   }
 
   if (typeof input.voice === 'string') {
@@ -4370,11 +4370,14 @@ async function say(text: string) {
   const playbackToken = ++activePlaybackToken
 
   const normalizedRate = computeSpeechRate()
-  const spokenPhrase = normalizeRadioPhrase(trimmed, {
-    airlineMap: DEFAULT_AIRLINE_TELEPHONY,
-    expandAirports: true,
-    expandCallsigns: true
-  })
+  const isMetarLesson = activeLesson.value?.id === 'metar' || activeLesson.value?.id === 'atis'
+  const spokenPhrase = isMetarLesson
+      ? normalizeMetarPhrase(trimmed)
+      : normalizeRadioPhrase(trimmed, {
+          airlineMap: DEFAULT_AIRLINE_TELEPHONY,
+          expandAirports: true,
+          expandCallsigns: true
+        })
   const speakText = spokenPhrase || trimmed
 
   const hasBrowserTts = cfg.value.tts && typeof window !== 'undefined' && 'speechSynthesis' in window
