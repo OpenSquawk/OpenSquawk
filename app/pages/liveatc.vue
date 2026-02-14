@@ -183,11 +183,27 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useAtcEngine } from '~~/shared/atc/engine'
 import { getPhaseOrder, getPhase } from '~~/shared/atc/phases'
 import type { Transmission, FlightPlan } from '~~/shared/atc/types'
+import { useApi } from '~/composables/useApi'
+import { useAuthStore } from '~/stores/auth'
+
+definePageMeta({ middleware: ['require-auth'] })
 
 // For radio effects (conditional import)
 let applyRadioEffect: ((audioBuffer: AudioBuffer, ctx: AudioContext, level: number) => AudioBuffer) | null = null
 
-const engine = useAtcEngine()
+const api = useApi()
+const auth = useAuthStore()
+
+// Create an authenticated fetch wrapper for the engine
+function authFetch<T = any>(url: string, opts: any = {}): Promise<T> {
+  const headers = { ...opts.headers } as Record<string, string>
+  if (auth.accessToken) {
+    headers.Authorization = `Bearer ${auth.accessToken}`
+  }
+  return $fetch(url, { ...opts, headers }) as Promise<T>
+}
+
+const engine = useAtcEngine({ apiFetch: authFetch as any })
 const screen = ref<'setup' | 'session'>('setup')
 const processing = ref(false)
 const isSpeaking = ref(false)
@@ -316,9 +332,8 @@ async function handleRecordingComplete(payload: { audio: string; format: string 
   processing.value = true
   try {
     // 1. STT via ptt endpoint
-    const sttRes = await $fetch<{ success: boolean; transcription: string }>('/api/atc/ptt', {
-      method: 'POST',
-      body: { audio: payload.audio, format: payload.format },
+    const sttRes = await api.post<{ success: boolean; transcription: string }>('/api/atc/ptt', {
+      audio: payload.audio, format: payload.format,
     })
     if (!sttRes.success || !sttRes.transcription) return
 
@@ -369,17 +384,14 @@ async function speakAtc(text: string) {
 
 async function speakSingle(text: string) {
   try {
-    const res = await $fetch<{
+    const res = await api.post<{
       success: boolean
       audio: { base64: string; mime: string }
       normalized: string
     }>('/api/atc/say', {
-      method: 'POST',
-      body: {
-        text,
-        level: settings.value.signalLevel,
-        speed: settings.value.speechSpeed,
-      },
+      text,
+      level: settings.value.signalLevel,
+      speed: settings.value.speechSpeed,
     })
 
     if (!res.success || !res.audio?.base64) return
@@ -431,10 +443,7 @@ function startTelemetryPoll() {
   stopTelemetryPoll()
   telemetryInterval = setInterval(async () => {
     try {
-      const data = await $fetch<any>('/api/bridge/data', {
-        method: 'POST',
-        body: { status: 'poll' },
-      }).catch(() => null)
+      const data = await api.post<any>('/api/bridge/data', { status: 'poll' }).catch(() => null)
       if (data && typeof data === 'object') {
         telemetryConnected.value = true
         engine.updateTelemetry({

@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
     if (!url.pathname.startsWith('/api/')) {
         return
     }
-    if (url.pathname.startsWith('/api/atc/')) {
+    if (url.pathname.startsWith('/api/atc/say')) {
         return
     }
     if (url.pathname.startsWith('/api/service/')) {
@@ -15,7 +15,6 @@ export default defineEventHandler(async (event) => {
     if (url.pathname.startsWith('/api/bridge/')) {
         return
     }
-    // /api/decision-flows/ was removed in Live ATC v2
     if (event.node.req.method === 'OPTIONS') {
         return
     }

@@ -42,7 +42,13 @@ function makeDefaultState(): EngineState {
   }
 }
 
-export function useAtcEngine() {
+export interface AtcEngineOptions {
+  /** Custom fetch function (e.g. with auth headers). Defaults to $fetch. */
+  apiFetch?: typeof $fetch
+}
+
+export function useAtcEngine(options: AtcEngineOptions = {}) {
+  const fetchFn = options.apiFetch ?? $fetch
   const state = reactive<EngineState>(makeDefaultState())
 
   const currentPhase = computed<Phase | undefined>(() => getPhase(state.currentPhase))
@@ -178,7 +184,7 @@ export function useAtcEngine() {
       recentTransmissions: recentTx,
     }
 
-    const res = await $fetch<RouteResponse>('/api/atc/route', {
+    const res = await fetchFn<RouteResponse>('/api/atc/route', {
       method: 'POST',
       body: req,
     })
@@ -201,7 +207,7 @@ export function useAtcEngine() {
         const destName = interaction.id === 'request_taxi' ? state.vars.runway : state.vars.arrival_stand
         const airport = interaction.id === 'request_taxi' ? state.vars.dep : state.vars.dest
         if (originName && destName && airport) {
-          const taxiRes = await $fetch<any>('/api/service/tools/taxiroute', {
+          const taxiRes = await fetchFn<any>('/api/service/tools/taxiroute', {
             params: { airport, origin_name: originName, dest_name: destName },
           })
           if (taxiRes?.names_collapsed?.length) {
