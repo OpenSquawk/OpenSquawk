@@ -180,9 +180,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { useAtcEngine } from '~/shared/atc/engine'
-import { getPhaseOrder, getPhase } from '~/shared/atc/phases'
-import type { Transmission, FlightPlan } from '~/shared/atc/types'
+import { useAtcEngine } from '~~/shared/atc/engine'
+import { getPhaseOrder, getPhase } from '~~/shared/atc/phases'
+import type { Transmission, FlightPlan } from '~~/shared/atc/types'
 
 // For radio effects (conditional import)
 let applyRadioEffect: ((audioBuffer: AudioBuffer, ctx: AudioContext, level: number) => AudioBuffer) | null = null
@@ -248,8 +248,8 @@ const standbyUnit = computed(() => {
 })
 
 // ── Transmissions ──
-const reversedTransmissions = computed(() =>
-  [...engine.state.transmissions].reverse()
+const reversedTransmissions = computed<Transmission[]>(() =>
+  ([...engine.state.transmissions] as Transmission[]).reverse()
 )
 
 const latestAtcTx = computed<Transmission | undefined>(() =>
@@ -337,7 +337,7 @@ async function handleRecordingComplete(payload: { audio: string; format: string 
       phase: engine.state.currentPhase,
       frequency: engine.currentPhase.value?.frequency ?? '',
       debug: {},
-    })
+    } as any)
   } finally {
     processing.value = false
   }

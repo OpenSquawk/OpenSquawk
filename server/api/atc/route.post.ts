@@ -104,7 +104,7 @@ function heuristicReadbackCheck(
   // Clearly good readback (>= 70% of values present)
   if (ratio >= 0.7) {
     const readbackOk = candidates.find((c) => c.intent.toLowerCase().includes('correct') || c.id.includes('ok'))
-    const chosen = readbackOk || candidates[0]
+    const chosen = readbackOk ?? candidates[0]!
     return {
       chosen: chosen.id,
       reason: 'Heuristic: readback contains required values',
@@ -123,7 +123,7 @@ function heuristicReadbackCheck(
   // Clearly bad readback (< 30% of values present)
   if (ratio < 0.3 && valuesToCheck.length >= 2) {
     const readbackBad = candidates.find((c) => c.intent.toLowerCase().includes('incorrect') || c.id.includes('bad'))
-    const chosen = readbackBad || candidates[0]
+    const chosen = readbackBad ?? candidates[0]!
     return {
       chosen: chosen.id,
       reason: 'Heuristic: readback missing most required values',
@@ -160,10 +160,11 @@ export default defineEventHandler(async (event): Promise<RouteResponse> => {
 
   // ── Fast path: single candidate → auto-select ──
   if (body.candidates.length === 1) {
+    const single = body.candidates[0]!
     return {
-      chosen: body.candidates[0].id,
+      chosen: single.id,
       reason: 'Only one candidate available',
-      pilotIntent: body.candidates[0].intent,
+      pilotIntent: single.intent,
       confidence: 'high',
       tokensUsed: 0,
       durationMs: Date.now() - startMs,
@@ -207,8 +208,7 @@ export default defineEventHandler(async (event): Promise<RouteResponse> => {
       ],
       temperature: 0.1,
       max_tokens: 150,
-      // @ts-expect-error -- reasoning_effort supported by OpenAI API but not yet in all type defs
-      reasoning_effort: 'low',
+      reasoning_effort: 'low' as any,
     })
 
     const durationMs = Date.now() - startMs
@@ -224,7 +224,7 @@ export default defineEventHandler(async (event): Promise<RouteResponse> => {
         parsed.chosen === 'off_schema' || body.candidates.some((c) => c.id === parsed.chosen)
 
       return {
-        chosen: validId ? parsed.chosen : body.candidates[0].id,
+        chosen: validId ? parsed.chosen : body.candidates[0]!.id,
         reason: String(parsed.reason || 'LLM selected'),
         pilotIntent: String(parsed.pilotIntent || body.pilotSaid),
         confidence: validId ? validateConfidence(parsed.confidence) : 'low',
@@ -237,7 +237,7 @@ export default defineEventHandler(async (event): Promise<RouteResponse> => {
     // Malformed JSON fallback
     console.warn('[route.post] LLM returned malformed JSON, falling back to first candidate:', rawContent)
     return {
-      chosen: body.candidates[0].id,
+      chosen: body.candidates[0]!.id,
       reason: 'LLM response was malformed, defaulting to first candidate',
       pilotIntent: body.pilotSaid,
       confidence: 'low',

@@ -162,26 +162,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-
-interface TransmissionDebug {
-  sttRaw?: string
-  llmRequest?: { currentPhase: string; currentInteraction: string; pilotSaid: string; candidates: { id: string; intent: string }[]; contextSent: unknown }
-  llmResponse?: { chosenInteraction: string; confidence: 'high' | 'medium' | 'low'; reason: string; tokensUsed: number; durationMs: number; model: string }
-  engineAction?: { templateUsed: string; variablesUpdated: Record<string, unknown>; handoff?: { from: string; to: string }; phaseChanged?: { from: string; to: string } }
-  telemetryTrigger?: { parameter: string; condition: string; value: unknown }
-  readbackResult?: { complete: boolean; missing?: string[] }
-}
-
-interface Transmission {
-  id: string
-  timestamp: Date
-  speaker: 'pilot' | 'atc' | 'system'
-  message: string
-  normalized?: string
-  phase: string
-  frequency: string
-  debug: TransmissionDebug
-}
+import type { Transmission, TransmissionDebug } from '~~/shared/atc/types'
 
 const props = defineProps<{ transmission: Transmission }>()
 
