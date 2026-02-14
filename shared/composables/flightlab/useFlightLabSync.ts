@@ -14,6 +14,7 @@ export function useFlightLabSync() {
     onInstructorMessage: [] as Array<(text: string, withRadioEffect: boolean) => void>,
     onPeerJoined: [] as Array<(peerRole: FlightLabRole) => void>,
     onPeerLeft: [] as Array<(peerRole: FlightLabRole) => void>,
+    onTelemetry: [] as Array<(data: any) => void>,
     onError: [] as Array<(msg: string) => void>,
   }
 
@@ -70,6 +71,9 @@ export function useFlightLabSync() {
       case 'peer-left':
         callbacks.onPeerLeft.forEach(cb => cb(data.role))
         break
+      case 'telemetry':
+        callbacks.onTelemetry.forEach(cb => cb(data.data))
+        break
       case 'error':
         callbacks.onError.forEach(cb => cb(data.message))
         break
@@ -90,6 +94,11 @@ export function useFlightLabSync() {
   async function joinSession(code: string, joinRole: FlightLabRole = 'participant') {
     await connect()
     send({ type: 'join-session', code: code.toUpperCase(), role: joinRole })
+  }
+
+  /** Subscribe this session to receive telemetry for the given userId */
+  function subscribeTelemetry(userId: string) {
+    send({ type: 'subscribe-telemetry', userId })
   }
 
   function sendParticipantAction(phaseId: string, buttonId: string, nextPhaseId: string) {
@@ -117,6 +126,7 @@ export function useFlightLabSync() {
   function onInstructorMessage(cb: (text: string, withRadioEffect: boolean) => void) { callbacks.onInstructorMessage.push(cb) }
   function onPeerJoined(cb: (role: FlightLabRole) => void) { callbacks.onPeerJoined.push(cb) }
   function onPeerLeft(cb: (role: FlightLabRole) => void) { callbacks.onPeerLeft.push(cb) }
+  function onTelemetry(cb: (data: any) => void) { callbacks.onTelemetry.push(cb) }
   function onError(cb: (msg: string) => void) { callbacks.onError.push(cb) }
 
   return {
@@ -126,6 +136,7 @@ export function useFlightLabSync() {
     remoteState,
     createSession,
     joinSession,
+    subscribeTelemetry,
     sendParticipantAction,
     sendInstructorCommand,
     sendInstructorMessage,
@@ -134,6 +145,7 @@ export function useFlightLabSync() {
     onInstructorMessage,
     onPeerJoined,
     onPeerLeft,
+    onTelemetry,
     onError,
   }
 }

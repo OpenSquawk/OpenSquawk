@@ -1,5 +1,6 @@
 // server/api/flightlab/ws.ts
 import { defineWebSocketHandler } from 'h3'
+import { flightlabTelemetryStore } from '../../utils/flightlabTelemetry'
 
 interface FlightLabSession {
   code: string
@@ -10,10 +11,24 @@ interface FlightLabSession {
   participantConnected: boolean
   instructorConnected: boolean
   history: Array<{ phaseId: string; buttonId: string; timestamp: number }>
-  peers: Map<string, { role: 'instructor' | 'participant'; peer: any }>
+  peers: Map<string, { role: 'instructor' | 'participant'; peer: any; userId?: string }>
+  /** User IDs subscribed to telemetry for this session */
+  telemetryUserIds: Set<string>
 }
 
 const sessions = new Map<string, FlightLabSession>()
+
+// Map userId → session code for telemetry routing
+const userSessionMap = new Map<string, string>()
+
+// Subscribe to telemetry store updates and relay to WebSocket clients
+flightlabTelemetryStore.subscribe((userId, data) => {
+  const sessionCode = userSessionMap.get(userId)
+  if (!sessionCode) return
+  const session = sessions.get(sessionCode)
+  if (!session) return
+  broadcastToSession(session, { type: 'telemetry', data })
+})
 
 function generateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // No I,O,0,1 for readability
@@ -77,6 +92,7 @@ export default defineWebSocketHandler({
           instructorConnected: true,
           history: [],
           peers: new Map([[peerId, { role: 'instructor', peer }]]),
+          telemetryUserIds: new Set(),
         }
         sessions.set(code, session)
         peer.send(JSON.stringify({ type: 'session-created', code, state: getSessionState(session) }))
@@ -147,6 +163,17 @@ export default defineWebSocketHandler({
         }, peerId)
         break
       }
+
+      case 'subscribe-telemetry': {
+        // Client sends their userId so bridge data gets routed to their session
+        const session = findSessionByPeer(peerId)
+        if (!session || !data.userId) return
+        const peerInfo = session.peers.get(peerId)
+        if (peerInfo) peerInfo.userId = data.userId
+        session.telemetryUserIds.add(data.userId)
+        userSessionMap.set(data.userId, session.code)
+        break
+      }
     }
   },
 
@@ -155,6 +182,11 @@ export default defineWebSocketHandler({
     for (const [code, session] of sessions) {
       const peerInfo = session.peers.get(peerId)
       if (peerInfo) {
+        // Clean up telemetry subscription
+        if (peerInfo.userId) {
+          session.telemetryUserIds.delete(peerInfo.userId)
+          userSessionMap.delete(peerInfo.userId)
+        }
         session.peers.delete(peerId)
         if (peerInfo.role === 'participant') session.participantConnected = false
         if (peerInfo.role === 'instructor') session.instructorConnected = false

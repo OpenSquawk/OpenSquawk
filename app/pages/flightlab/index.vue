@@ -126,6 +126,7 @@ import { takeoffEddf } from '~~/shared/data/flightlab/takeoff-eddf'
 
 definePageMeta({
   layout: false,
+  middleware: ['require-auth'],
 })
 
 useHead({

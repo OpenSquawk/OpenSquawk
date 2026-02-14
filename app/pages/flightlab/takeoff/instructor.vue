@@ -253,8 +253,11 @@ import { takeoffEddf } from '~~/shared/data/flightlab/takeoff-eddf'
 import { useFlightLabEngine } from '~~/shared/composables/flightlab/useFlightLabEngine'
 import { useFlightLabSync } from '~~/shared/composables/flightlab/useFlightLabSync'
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: false, middleware: ['require-auth'] })
 useHead({ title: 'FlightLab - Instructor Panel' })
+
+// Guard: skip all logic on server
+if (!import.meta.client) throw new Error('Client-only page')
 
 const engine = useFlightLabEngine(takeoffEddf)
 const sync = useFlightLabSync()

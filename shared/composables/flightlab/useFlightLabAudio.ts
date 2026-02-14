@@ -12,6 +12,7 @@ export function useFlightLabAudio() {
   const soundBuffers = ref<Map<string, AudioBuffer>>(new Map())
   let speechQueue: Promise<void> = Promise.resolve()
   let pizzicato: PizzicatoLiteType | null = null
+  let currentSpeechReject: (() => void) | null = null
 
   // --- Replay Cache ---
   const lastSpokenAudio = ref<{ base64: string; mime: string; readability: number; text: string } | null>(null)
@@ -151,6 +152,9 @@ export function useFlightLabAudio() {
     })
   }
 
+  let currentPizzicatoSound: any = null
+  let currentNoiseStoppers: Array<() => void> = []
+
   async function playWithRadioEffects(base64: string, _mime: string, readability: number) {
     const pz = await loadPizzicato()
     if (!pz) return
@@ -158,6 +162,7 @@ export function useFlightLabAudio() {
     const profile = getReadabilityProfile(readability)
 
     const sound = await pz.createSoundFromBase64(ctx, base64)
+    currentPizzicatoSound = sound
 
     // Apply radio filter chain
     sound.addEffect(new pz.Effects.HighPassFilter(ctx, { frequency: profile.eq.highpass, q: profile.eq.highpassQ }))
@@ -185,9 +190,28 @@ export function useFlightLabAudio() {
     sound.setVolume(profile.gain)
 
     const stopNoise = createNoiseGenerators(ctx, sound.duration, profile, readability)
+    currentNoiseStoppers = stopNoise
 
     await sound.play()
     stopNoise.forEach((fn: () => void) => fn())
+    currentPizzicatoSound = null
+    currentNoiseStoppers = []
+  }
+
+  /** Skip currently playing TTS speech immediately */
+  function skipSpeech() {
+    if (!isSpeaking.value) return
+    // Stop the pizzicato sound
+    if (currentPizzicatoSound) {
+      try { currentPizzicatoSound.stop() } catch {}
+      currentPizzicatoSound = null
+    }
+    // Stop noise generators
+    currentNoiseStoppers.forEach((fn) => { try { fn() } catch {} })
+    currentNoiseStoppers = []
+    isSpeaking.value = false
+    // Reset the speech queue so next speech can start fresh
+    speechQueue = Promise.resolve()
   }
 
   async function replayLastMessage(): Promise<void> {
@@ -248,6 +272,7 @@ export function useFlightLabAudio() {
     crossfadeSound,
     stopAllSounds,
     setMasterVolume,
+    skipSpeech,
     dispose,
   }
 }
