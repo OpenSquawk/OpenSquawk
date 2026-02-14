@@ -25,7 +25,7 @@ export const LEARN_CONFIG_DEFAULTS: LearnConfig = {
   radioLevel: 5,
   voice: '',
   audioChallenge: true,
-  audioSpeed: 1,
+  audioSpeed: 0.85,
 }
 
 export function createDefaultLearnConfig(): LearnConfig {

@@ -59,6 +59,21 @@ export const DEFAULT_AIRLINE_TELEPHONY: AirlineTelephonyMap = {
     EZY: "Easy",
 };
 
+const METAR_WEATHER: Record<string, string> = {
+    '+TSRA': 'thunderstorm with heavy rain', 'TSRA': 'thunderstorm with rain',
+    '+SHRA': 'heavy rain showers', '-SHRA': 'light rain showers', 'SHRA': 'rain showers',
+    '+RA': 'heavy rain', '-RA': 'light rain', 'RA': 'rain',
+    '+SN': 'heavy snow', '-SN': 'light snow', 'SN': 'snow',
+    '+DZ': 'heavy drizzle', '-DZ': 'light drizzle', 'DZ': 'drizzle',
+    'FG': 'fog', 'BR': 'mist', 'HZ': 'haze',
+    'TS': 'thunderstorm', 'SH': 'showers', 'FZ': 'freezing',
+    'GR': 'hail', 'GS': 'small hail',
+};
+
+const METAR_CLOUD: Record<string, string> = {
+    'FEW': 'few', 'SCT': 'scattered', 'BKN': 'broken', 'OVC': 'overcast',
+};
+
 export interface NormalizeRadioOptions {
     airlineMap?: AirlineTelephonyMap;
     expandCallsigns?: boolean;
@@ -252,6 +267,83 @@ function sidSuffixSpeak(prefix: string, digit: string, letter: string): string {
     return `${prefix} ${spellIcaoDigits(digit)} ${spellIcaoLetters(letter)}`;
 }
 
+function approachSpeak(type: string, runway: string, suffix: string): string {
+    const rw = runwaySpeak(runway);
+    const phonetic = ICAO_LETTERS[suffix.toUpperCase()] ?? suffix;
+    return `${type} ${rw} ${phonetic}`;
+}
+
+export function normalizeMetarPhrase(metar: string): string {
+    const parts: string[] = [];
+
+    // Wind: 28015KT or 28015G25KT or VRB05KT
+    const windMatch = metar.match(/\b(VRB|\d{3})(\d{2,3})(G(\d{2,3}))?KT\b/);
+    if (windMatch) {
+        const dir = windMatch[1] === 'VRB' ? 'variable' : `${spellIcaoDigits(windMatch[1]!)} degrees`;
+        const speed = spellIcaoDigits(windMatch[2]!);
+        let windPart = `wind ${dir}, ${speed} knots`;
+        if (windMatch[4]) {
+            windPart += `, gusting ${spellIcaoDigits(windMatch[4])} knots`;
+        }
+        parts.push(windPart);
+    }
+
+    // Visibility: 9999, 0800, CAVOK
+    if (metar.includes('CAVOK')) {
+        parts.push('CAVOK');
+    } else {
+        const visMatch = metar.match(/(?<!\d)\b(\d{4})\b(?!Z|KT)/);
+        if (visMatch) {
+            const vis = parseInt(visMatch[1]!);
+            if (vis >= 9999) {
+                parts.push(`visibility, ${spellIcaoDigits('1')} ${spellIcaoDigits('0')} kilometers or more`);
+            } else {
+                parts.push(`visibility, ${spellIcaoDigits(vis.toString())} meters`);
+            }
+        }
+    }
+
+    // Weather phenomena (match longest codes first)
+    const wxPatterns = Object.keys(METAR_WEATHER).sort((a, b) => b.length - a.length);
+    for (const wx of wxPatterns) {
+        if (new RegExp(`\\b${wx.replace('+', '\\+')}\\b`).test(metar) || metar.includes(` ${wx} `)) {
+            const spoken = METAR_WEATHER[wx];
+            if (spoken) parts.push(spoken);
+            break;
+        }
+    }
+
+    // Clouds: BKN025, SCT040, FEW010, OVC008
+    const cloudRegex = /\b(FEW|SCT|BKN|OVC)(\d{3})\b/g;
+    let cloudMatch;
+    while ((cloudMatch = cloudRegex.exec(metar)) !== null) {
+        const cover = METAR_CLOUD[cloudMatch[1]!] ?? cloudMatch[1];
+        const alt = parseInt(cloudMatch[2]!) * 100;
+        parts.push(`${cover}, ${altitudeSpeak(alt)}`);
+    }
+
+    // Temperature: 15/08 or M02/M05
+    const tempMatch = metar.match(/\b(M?\d{2})\/(M?\d{2})\b/);
+    if (tempMatch) {
+        const speakTemp = (raw: string) => {
+            if (raw.startsWith('M')) {
+                return `minus ${spellIcaoDigits(raw.slice(1))}`;
+            }
+            return spellIcaoDigits(raw);
+        };
+        parts.push(`temperature ${speakTemp(tempMatch[1]!)}, dew point ${speakTemp(tempMatch[2]!)}`);
+    }
+
+    // QNH: Q1013
+    const qnhMatch = metar.match(/\bQ(\d{4})\b/);
+    if (qnhMatch) {
+        parts.push(qnhSpeak(qnhMatch[1]!));
+    }
+
+    if (!parts.length) return metar;
+    return parts.join(', ');
+}
+
 export function normalizeRadioPhrase(text: string, options: NormalizeRadioOptions = {}): string {
     const opts = { ...DEFAULT_OPTIONS, ...options };
     let out = text;
@@ -265,10 +357,15 @@ export function normalizeRadioPhrase(text: string, options: NormalizeRadioOption
     out = out.replace(/\bQNH\s*(\d{3,4})\b/gi, (_, qnh: string) => qnhSpeak(qnh));
 
     if (opts.sidSuffixIcao) {
-        out = out.replace(/\b([A-Z]{4,6})(\s?)(\d)([A-Z])\b/g, (_match, prefix: string, _gap: string, digit: string, letter: string) => {
+        out = out.replace(/\b([A-Z]{4,6})\s*(\d)\s*([A-Z])\b/g, (_match, prefix: string, digit: string, letter: string) => {
             return sidSuffixSpeak(prefix, digit, letter);
         });
     }
+
+    out = out.replace(
+        /\b(ILS|VOR|RNAV|LOC|RNP)\s+(\d{2}[LCR]?)\s+([A-Z])\b/gi,
+        (_match, type: string, runway: string, suffix: string) => approachSpeak(type.toUpperCase(), runway, suffix)
+    );
 
     if (opts.expandAirports) {
         out = out.replace(/\b([A-Z]{4})\b/g, (_match, code: string) => icaoAirportSpeak(code));

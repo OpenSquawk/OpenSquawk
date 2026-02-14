@@ -759,7 +759,8 @@ const readbackLessons = [
         expected: scenario => scenario.pushDelayWords,
         alternatives: scenario => [
           scenario.pushDelayWords,
-          `${scenario.pushDelayMinutes} minutes`
+          `${scenario.pushDelayMinutes} minutes`,
+          scenario.pushDelayMinutes.toString()
         ],
         width: 'md'
       },
