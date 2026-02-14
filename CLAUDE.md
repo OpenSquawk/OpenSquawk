@@ -7,24 +7,36 @@
 - MongoDB models in `/server/models`
 
 ## Key Files
-- `/shared/utils/communicationsEngine.ts` — Core state machine composable (used by `/pm` live ATC)
-- `/server/utils/openai.ts` — LLM decision router (`routeDecision()`)
-- `/server/services/decisionFlowService.ts` — Builds runtime decision trees from MongoDB
-- `/app/pages/pm.vue` — Live ATC page (speech-to-text, PTT, text input)
-- `/app/pages/classroom.vue` — Classroom learning mode (separate system, does NOT use communicationsEngine)
+- `/shared/atc/engine.ts` — Core ATC engine composable `useAtcEngine()` (phase-based state machine)
+- `/shared/atc/types.ts` — All ATC type definitions (Phase, Interaction, EngineState, Transmission, etc.)
+- `/shared/atc/phases/` — Flight phase modules (clearance, ground, tower, departure, enroute, approach, landing, taxiIn, emergency)
+- `/shared/atc/templateRenderer.ts` — `{var}` placeholder renderer for ATC templates
+- `/shared/atc/telemetryWatcher.ts` — Telemetry condition evaluator for auto-advance
+- `/server/api/atc/route.post.ts` — LLM router endpoint (token-efficient, picks from predefined candidates)
+- `/server/api/atc/ptt.post.ts` — STT-only endpoint (Whisper transcription)
+- `/server/api/atc/say.post.ts` — TTS endpoint (3 providers: OpenAI, Speaches, Piper)
+- `/app/pages/liveatc.vue` — Live ATC page (v2)
+- `/app/pages/classroom.vue` — Classroom learning mode (separate system)
 
-## Live ATC Flow (/pm)
-1. User inputs (PTT or text) → `handlePilotTransmission()`
-2. `processPilotTransmission()` logs the pilot message
-3. `buildLLMContext()` builds candidates from `nextCandidates`
-4. POST `/api/llm/decide` → `routeDecision()` selects next state
-5. `applyLLMDecision()` moves to next state, updates vars/flags
-6. `collectAtcStatesUntilPilotTurn()` advances through ATC/system states
-7. Each ATC `say_tpl` is spoken via TTS (`scheduleControllerSpeech`)
+## Live ATC Flow (/liveatc)
+1. `initFlight(plan)` → sets up vars, phase='clearance'
+2. User inputs (PTT or text) → `handlePilotInput(text)`
+3. Engine builds candidates from current phase interactions
+4. POST `/api/atc/route` → LLM picks best matching interaction
+5. Engine renders ATC template, applies updates, checks readback
+6. TTS plays ATC response via POST `/api/atc/say`
+7. Telemetry auto-advances phases when conditions met
 
-## Decision Tree States
-States have `role: 'pilot' | 'atc' | 'system'`. ATC states have `say_tpl` (what controller says). Pilot states have `utterance_tpl` (expected pilot response). Transitions: `next`, `ok_next`, `bad_next`, `timer_next`.
+## Design System
+- Dark glassmorphism: `--bg: #0b1020`, `--accent: #22d3ee` (cyan)
+- `.glass`, `.panel`, `.hud` CSS classes
+- Vuetify 3 + mdi icons + scoped CSS
 
 ## Commands
 - `bun run dev` — dev server
-- Decision trees are stored in MongoDB and fetched via `/api/decision-flows/runtime`
+- `npx nuxi typecheck` — type check (note: pre-existing errors in radioSpeech.ts)
+
+## IMPORTANT: Agent Work Rules
+- **NEVER dispatch parallel subagents for large tasks** — they hit prompt limits and waste all work
+- Always work sequentially, one task at a time, commit after each
+- For small independent tasks (< 50 LOC each), parallel is OK
