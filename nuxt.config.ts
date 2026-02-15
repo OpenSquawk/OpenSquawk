@@ -78,5 +78,8 @@ export default defineNuxtConfig({
             websocket: true,
         },
     },
+    image: {
+        provider: process.env.NUXT_IMAGE_PROVIDER || 'ipx',
+    },
 
 })
