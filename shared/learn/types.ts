@@ -1,3 +1,5 @@
+import type { DecisionLesson } from './decision-types'
+
 export type BlankWidth = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
 export type FrequencyType = 'ATIS' | 'DEL' | 'GND' | 'TWR' | 'DEP' | 'APP' | 'CTR'
@@ -192,14 +194,17 @@ export type Lesson = {
 export type ModuleMeta = {
   flightPlan?: boolean
   briefingArt?: string
+  exerciseType?: 'cloze' | 'decision'
 }
+
+export type ModuleLesson = Lesson | DecisionLesson
 
 export type ModuleDef = {
   id: string
   title: string
   subtitle: string
   art: string
-  lessons: Lesson[]
+  lessons: ModuleLesson[]
   meta?: ModuleMeta
 }
 

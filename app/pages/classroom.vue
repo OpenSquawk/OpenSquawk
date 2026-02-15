@@ -974,13 +974,13 @@
                 </div>
               </div>
             </div>
-            <div class="console-grid">
+            <div v-if="activeClozeLesson" class="console-grid">
               <div class="col">
                 <div class="label">Briefing</div>
                 <div class="panel">
                   <div class="target-row">
                     <div class="target-main">
-                      <div class="muted small">{{ activeLesson.desc }}</div>
+                      <div class="muted small">{{ activeClozeLesson.desc }}</div>
                       <div
                           class="target-text"
                           :class="{ 'audio-blur': audioContentHidden }"
@@ -1031,7 +1031,7 @@
                   </div>
                 </div>
                 <div class="hints">
-                  <div v-for="hint in activeLesson.hints" :key="hint" class="hint">
+                  <div v-for="hint in activeClozeLesson.hints" :key="hint" class="hint">
                     <v-icon size="16">mdi-lightbulb-on-outline</v-icon>
                     {{ hint }}
                   </div>
@@ -1051,7 +1051,7 @@
                 <div class="label">Your readback</div>
                 <div class="panel readback-panel">
                   <div class="cloze">
-                    <template v-for="(segment, idx) in activeLesson.readback"
+                    <template v-for="(segment, idx) in activeClozeLesson.readback"
                               :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
                       <span v-if="segment.type === 'text'" class="cloze-chunk cloze-text">
                         {{
@@ -1098,15 +1098,36 @@
                 <div v-if="result" class="score">
                   <div class="score-num">{{ result.score }}%</div>
                   <div class="muted small">
-                    Fields correct: {{ result.hits }}/{{ activeLesson.fields.length }} · Similarity:
+                    Fields correct: {{ result.hits }}/{{ activeClozeLesson.fields.length }} · Similarity:
                     {{ Math.round(result.sim * 100) }}%
                   </div>
                 </div>
               </div>
             </div>
 
+            <div v-else-if="activeDecisionLesson" class="decision-console">
+              <div class="label">Controller decision</div>
+              <div class="panel decision-panel">
+                <div class="muted small">{{ activeDecisionLesson.desc }}</div>
+                <div class="hints decision-hints">
+                  <div v-for="hint in activeDecisionLesson.hints" :key="hint" class="hint">
+                    <v-icon size="16">mdi-lightbulb-on-outline</v-icon>
+                    {{ hint }}
+                  </div>
+                </div>
+                <DecisionExercise :scenario="decisionScenario" @complete="handleDecisionComplete"/>
+                <div v-if="decisionResult" class="score decision-score-inline">
+                  <div class="score-num">{{ decisionResult.score }}%</div>
+                  <div class="muted small">
+                    Safety {{ decisionResult.safety }}% · Correctness {{ decisionResult.correctness }}% ·
+                    Efficiency {{ decisionResult.efficiency }}%
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
-          <div v-if="showScenarioPracticeHint" class="lesson-tip" role="note">
+          <div v-if="showScenarioPracticeHint && activeClozeLesson" class="lesson-tip" role="note">
             <div class="lesson-tip-icon">
               <v-icon size="20">mdi-dice-multiple</v-icon>
             </div>
@@ -1326,6 +1347,7 @@ import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRe
 import {useRoute, useRouter} from '#imports'
 import {useApi} from '~/composables/useApi'
 import {useAuthStore} from '~/stores/auth'
+import DecisionExercise from '~/components/learn/DecisionExercise.vue'
 import {createDefaultLearnConfig} from '~~/shared/learn/config'
 import type {LearnConfig, LearnProgress, LearnState} from '~~/shared/learn/config'
 import {learnModules, learnTracks, seedFullFlightScenario} from '~~/shared/data/learnModules'
@@ -1337,7 +1359,8 @@ import {
   altitudeToWords,
   minutesToWords
 } from '~~/shared/learn/scenario'
-import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, Scenario, TrackDef} from '~~/shared/learn/types'
+import type {DecisionLesson, DecisionScenario} from '~~/shared/learn/decision-types'
+import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, ModuleLesson, Scenario, TrackDef} from '~~/shared/learn/types'
 import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
@@ -1432,12 +1455,20 @@ function tightenedThreshold(length: number, base: number): number {
   return Math.max(base, 0.97)
 }
 
+function isClozeLesson(lesson: ModuleLesson | null | undefined): lesson is Lesson {
+  return Boolean(lesson && 'fields' in lesson && 'readback' in lesson)
+}
+
+function isDecisionLesson(lesson: ModuleLesson | null | undefined): lesson is DecisionLesson {
+  return Boolean(lesson && !('fields' in lesson))
+}
+
 const tracks = shallowRef<TrackDef[]>(learnTracks)
 const modules = computed<ModuleDef[]>(() => tracks.value.flatMap(t => t.modules))
 
 type LessonSearchHit = {
   module: ModuleDef
-  lesson: Lesson
+  lesson: ModuleLesson
   score: number
 }
 
@@ -1632,10 +1663,15 @@ type ManualForm = {
 
 const panel = ref<'hub' | 'module'>('hub')
 const current = ref<ModuleDef | null>(null)
-const activeLesson = ref<Lesson | null>(null)
+const activeLesson = ref<ModuleLesson | null>(null)
 const scenario = ref<Scenario | null>(null)
+const decisionScenario = ref<DecisionScenario | null>(null)
+const decisionResult = ref<{ score: number; safety: number; correctness: number; efficiency: number } | null>(null)
 const moduleStage = ref<'lessons' | 'setup' | 'briefing'>('lessons')
 const pendingLessonId = ref<string | null>(null)
+
+const activeClozeLesson = computed(() => (isClozeLesson(activeLesson.value) ? activeLesson.value : null))
+const activeDecisionLesson = computed(() => (isDecisionLesson(activeLesson.value) ? activeLesson.value : null))
 
 function displayCallsign(value?: string | null, source?: CallsignContext | null): string {
   if (!value) return ''
@@ -2570,7 +2606,7 @@ function restartCurrentMission() {
 function startLessonsForCurrent() {
   if (!current.value) return
   const mod = current.value
-  let next: Lesson | undefined
+  let next: ModuleLesson | undefined
   if (pendingLessonId.value) {
     next = mod.lessons.find(lesson => lesson.id === pendingLessonId.value)
   }
@@ -3102,8 +3138,8 @@ onBeforeUnmount(() => {
 
 const fieldMap = computed<Record<string, LessonField>>(() => {
   const map: Record<string, LessonField> = {}
-  if (activeLesson.value) {
-    for (const field of activeLesson.value.fields) {
+  if (activeClozeLesson.value) {
+    for (const field of activeClozeLesson.value.fields) {
       map[field.key] = field
     }
   }
@@ -3111,7 +3147,7 @@ const fieldMap = computed<Record<string, LessonField>>(() => {
 })
 
 const firstReadbackFieldKey = computed<string | null>(() => {
-  const lesson = activeLesson.value
+  const lesson = activeClozeLesson.value
   if (!lesson) return null
   const firstField = lesson.readback.find(segment => segment.type === 'field')
   if (!firstField || firstField.type !== 'field') return null
@@ -3145,8 +3181,8 @@ function focusFirstReadbackField() {
 
 const fieldStates = computed<Record<string, FieldState>>(() => {
   const map: Record<string, FieldState> = {}
-  if (!activeLesson.value || !scenario.value) return map
-  for (const field of activeLesson.value.fields) {
+  if (!activeClozeLesson.value || !scenario.value) return map
+  for (const field of activeClozeLesson.value.fields) {
     const expected = field.expected(scenario.value).trim()
     const answer = (userAnswers[field.key] ?? '').trim()
     const alternatives = field.alternatives?.(scenario.value) ?? []
@@ -3247,10 +3283,10 @@ function fieldExpectedValue(key: string): string {
 }
 
 const targetPhrase = computed(() => {
-  if (!activeLesson.value || !scenario.value) return ''
-  return displayCallsign(activeLesson.value.phrase(scenario.value), scenario.value)
+  if (!activeClozeLesson.value || !scenario.value) return ''
+  return displayCallsign(activeClozeLesson.value.phrase(scenario.value), scenario.value)
 })
-const lessonInfo = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.info(scenario.value) : []))
+const lessonInfo = computed(() => (activeClozeLesson.value && scenario.value ? activeClozeLesson.value.info(scenario.value) : []))
 const showScenarioPracticeHint = computed(() => {
   if (!current.value || !activeLesson.value) return false
   const index = modules.value.findIndex(module => module.id === current.value?.id)
@@ -3327,11 +3363,16 @@ const nextActionLabel = computed(() => {
 })
 
 const lessonHasInput = computed(() => {
-  if (!activeLesson.value) return false
-  return activeLesson.value.fields.some(field => {
-    const value = userAnswers[field.key]
-    return typeof value === 'string' && value.trim().length > 0
-  })
+  if (activeClozeLesson.value) {
+    return activeClozeLesson.value.fields.some(field => {
+      const value = userAnswers[field.key]
+      return typeof value === 'string' && value.trim().length > 0
+    })
+  }
+  if (activeDecisionLesson.value) {
+    return Boolean(decisionResult.value)
+  }
+  return false
 })
 
 const canAdvanceLesson = computed(() => Boolean(nextLessonMeta.value || nextMissionMeta.value))
@@ -3340,7 +3381,17 @@ const missionFooterNoop = () => {
 }
 
 const missionFooterPrimary = computed(() => {
-  if (lessonHasInput.value && !result.value) {
+  if (activeDecisionLesson.value && !decisionResult.value) {
+    return {
+      label: 'Complete decision',
+      icon: 'mdi-traffic-light-outline',
+      disabled: true,
+      action: missionFooterNoop,
+      mode: 'is-check'
+    }
+  }
+
+  if (activeClozeLesson.value && lessonHasInput.value && !result.value) {
     return {
       label: evaluating.value ? 'Checking…' : 'Check lesson',
       icon: 'mdi-check',
@@ -3371,8 +3422,8 @@ const missionFooterPrimary = computed(() => {
 })
 
 const lessonAnswerSignature = computed(() => {
-  if (!activeLesson.value) return ''
-  return activeLesson.value.fields
+  if (!activeClozeLesson.value) return ''
+  return activeClozeLesson.value.fields
       .map(field => (userAnswers[field.key] ?? '').trim())
       .join('|')
 })
@@ -3399,6 +3450,8 @@ watch(activeLesson, lesson => {
   } else {
     stopAudio()
     scenario.value = null
+    decisionScenario.value = null
+    decisionResult.value = null
   }
 })
 
@@ -3480,8 +3533,23 @@ function rollScenario(clear = false) {
   if (!activeLesson.value) return
   pendingAutoSay.value = false
   stopAudio()
+  decisionResult.value = null
+
+  if (isDecisionLesson(activeLesson.value)) {
+    decisionScenario.value = activeLesson.value.generate()
+    scenario.value = null
+    activeFrequency.value = null
+    resetAnswers(true)
+    resetAudioReveal()
+    if (clear) {
+      result.value = null
+    }
+    return
+  }
+
   const generated = activeLesson.value.generate()
   scenario.value = generated
+  decisionScenario.value = null
   const defaultType = activeLesson.value.defaultFrequency
   activeFrequency.value = generated.frequencies.find(freq => freq.type === (defaultType || 'DEL')) || generated.frequencies[0] || null
   resetAnswers(true)
@@ -3565,8 +3633,16 @@ function setActiveFrequency(freq: Frequency) {
 }
 
 function resetAnswers(clearResult = false) {
-  if (!activeLesson.value) return
-  const keys = activeLesson.value.fields.map(field => field.key)
+  if (!activeClozeLesson.value) {
+    Object.keys(userAnswers).forEach(key => {
+      delete userAnswers[key]
+    })
+    if (clearResult) {
+      result.value = null
+    }
+    return
+  }
+  const keys = activeClozeLesson.value.fields.map(field => field.key)
   Object.keys(userAnswers).forEach(key => {
     if (!keys.includes(key)) {
       delete userAnswers[key]
@@ -3585,15 +3661,15 @@ function clearAnswers() {
 }
 
 function fillSolution() {
-  if (!activeLesson.value || !scenario.value) return
-  for (const field of activeLesson.value.fields) {
+  if (!activeClozeLesson.value || !scenario.value) return
+  for (const field of activeClozeLesson.value.fields) {
     userAnswers[field.key] = field.expected(scenario.value)
   }
 }
 
 function computeScore(): ScoreResult | null {
-  if (!activeLesson.value) return null
-  const details = activeLesson.value.fields
+  if (!activeClozeLesson.value) return null
+  const details = activeClozeLesson.value.fields
       .map(field => fieldStates.value[field.key])
       .filter(Boolean) as FieldState[]
   if (!details.length) return null
@@ -3610,42 +3686,74 @@ function computeScore(): ScoreResult | null {
 }
 
 function evaluate() {
-  if (!activeLesson.value || !current.value) return
+  if (!activeClozeLesson.value || !current.value || !activeLesson.value) return
   evaluating.value = true
   try {
     const summary = computeScore()
     if (!summary) return
     result.value = summary
-
-    const modId = current.value.id
-    const lesId = activeLesson.value.id
-    if (!progress.value[modId]) progress.value[modId] = {}
-    const previous = progress.value[modId][lesId] || {best: 0, done: false}
-    const best = Math.max(previous.best || 0, summary.score)
-    const passed = summary.passed || summary.score >= 80
-    const wasDone = previous.done
-
-    progress.value[modId][lesId] = {best, done: passed}
-
-    let gained = 0
-    if (passed && !wasDone) gained += 40
-    if (summary.score >= 95 && summary.score > (previous.best || 0)) gained += 15
-    if (summary.score >= 80 && summary.score > (previous.best || 0)) gained += 10
-
-    if (gained) {
-      xp.value += gained
-      toastNow(`+${gained} XP · ${activeLesson.value.title}`)
-    }
+    applyLessonProgress(summary.score, summary.passed || summary.score >= 80, activeLesson.value.title)
   } finally {
     evaluating.value = false
   }
 }
 
+function applyLessonProgress(score: number, passed: boolean, lessonTitle: string) {
+  if (!current.value || !activeLesson.value) return
+  const modId = current.value.id
+  const lesId = activeLesson.value.id
+  if (!progress.value[modId]) progress.value[modId] = {}
+  const previous = progress.value[modId][lesId] || {best: 0, done: false}
+  const best = Math.max(previous.best || 0, score)
+  const completed = passed || previous.done
+  const wasDone = previous.done
+
+  progress.value[modId][lesId] = {best, done: completed}
+
+  let gained = 0
+  if (completed && !wasDone) gained += 40
+  if (score >= 95 && score > (previous.best || 0)) gained += 15
+  if (score >= 80 && score > (previous.best || 0)) gained += 10
+
+  if (gained) {
+    xp.value += gained
+    toastNow(`+${gained} XP · ${lessonTitle}`)
+  }
+}
+
+function handleDecisionComplete(payload: { score: number; safety: number; correctness: number; efficiency: number }) {
+  if (!activeLesson.value || !activeDecisionLesson.value) return
+  decisionResult.value = payload
+  result.value = null
+  applyLessonProgress(payload.score, payload.score >= 80, activeLesson.value.title)
+}
+
+function moduleTrackLocation(id: string): { track: TrackDef; index: number } | null {
+  for (const track of tracks.value) {
+    const index = track.modules.findIndex(module => module.id === id)
+    if (index >= 0) {
+      return { track, index }
+    }
+  }
+  return null
+}
+
 function isModuleUnlocked(id: string) {
   if (unlockedModules.value.includes(id)) return true
-  if (id === 'normalize') return true
-  const order = modules.value.findIndex(module => module.id === id)
-  const previous = modules.value[order - 1]
+  const location = moduleTrackLocation(id)
+  if (!location) return true
+  const { track, index } = location
+
+  if (track.id === 'abnormal') {
+    if (!moduleCompleted('normalize') || !moduleCompleted('arc')) return false
+  }
+
+  if (track.id === 'atc-perspective') {
+    if (!moduleCompleted('decision-tree')) return false
+  }
+
+  if (index === 0) return true
+  const previous = track.modules[index - 1]
   return previous ? pct(previous.id) >= 80 : true
 }
 
@@ -3670,6 +3778,8 @@ function openModule(id: string, options: { autoStart?: boolean } = {}) {
   panel.value = module ? 'module' : 'hub'
   pendingAutoStart.value = options.autoStart ?? false
   activeLesson.value = null
+  decisionScenario.value = null
+  decisionResult.value = null
 
   if (!module) {
     activeLesson.value = null
@@ -3727,7 +3837,7 @@ function goToPrimaryObjective() {
   panel.value = 'hub'
 }
 
-function selectLesson(lesson: Lesson) {
+function selectLesson(lesson: ModuleLesson) {
   activeLesson.value = lesson
 }
 
@@ -6437,6 +6547,26 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.decision-console {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.decision-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.decision-hints {
+  margin-bottom: 4px;
+}
+
+.decision-score-inline {
+  margin-top: 4px;
 }
 
 .cloze {

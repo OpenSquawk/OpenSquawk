@@ -1,4 +1,5 @@
-import { createBaseScenario, createScenarioSeries, digitsToWords, formatTemp, lettersToNato } from '~~/shared/learn/scenario'
+import { createBaseScenario, createScenarioSeries, digitsToWords, formatTemp, lettersToNato, minutesToWords } from '~~/shared/learn/scenario'
+import { atcPerspectiveModules } from '~~/shared/data/learnDecisionModules'
 import type { ModuleDef, Scenario, TrackDef } from '~~/shared/learn/types'
 
 function gradientArt(colors: string[]): string {
@@ -3258,513 +3259,6 @@ const fullFlightLessons = [
 ]
 
 /* ────────────────────────────────────────────────────────────
- *  ABNORMAL COMMUNICATIONS
- * ──────────────────────────────────────────────────────────── */
-
-const abnormalCommsLessons = [
-  {
-    id: 'conditional-crossing',
-    title: 'Conditional Runway Crossing',
-    desc: 'Cross a runway behind specific traffic',
-    keywords: ['Conditional', 'Runway', 'Crossing'],
-    hints: [
-      'Conditional clearances always start AND end with the condition — "behind" appears twice.',
-      'Identify the traffic type before the runway and intersection.',
-      'Never cross until the condition is met — the departing traffic must be clear.'
-    ],
-    fields: [
-      {
-        key: 'traffic-type',
-        label: 'Traffic',
-        expected: () => 'departing 737',
-        alternatives: () => ['departing 737', 'Departing 737', 'departing Boeing 737'],
-        placeholder: 'e.g. departing 737',
-        width: 'md' as const
-      },
-      {
-        key: 'runway',
-        label: 'Runway',
-        expected: (scenario: Scenario) => scenario.runway,
-        alternatives: (scenario: Scenario) => [scenario.runway, scenario.runway.replace(/^0/, '')],
-        placeholder: 'e.g. 25C',
-        width: 'sm' as const
-      },
-      {
-        key: 'intersection',
-        label: 'Intersection',
-        expected: (scenario: Scenario) => scenario.taxiRoute.split(' ')[0],
-        placeholder: 'e.g. A5',
-        width: 'sm' as const
-      }
-    ],
-    readback: [
-      { type: 'text' as const, text: 'Behind ' },
-      { type: 'field' as const, key: 'traffic-type', width: 'md' as const },
-      { type: 'text' as const, text: ', cross runway ' },
-      { type: 'field' as const, key: 'runway', width: 'sm' as const },
-      { type: 'text' as const, text: ' at ' },
-      { type: 'field' as const, key: 'intersection', width: 'sm' as const },
-      { type: 'text' as const, text: (scenario: Scenario) => `, behind, ${scenario.radioCall}` }
-    ],
-    defaultFrequency: 'GND' as const,
-    phrase: (scenario: Scenario) =>
-      `${scenario.radioCall}, behind the departing 737, cross runway ${scenario.runway} at ${scenario.taxiRoute.split(' ')[0]}, behind.`,
-    info: (scenario: Scenario) => [
-      `Traffic: departing 737`,
-      `Runway: ${scenario.runway}`,
-      `Intersection: ${scenario.taxiRoute.split(' ')[0]}`,
-      'Conditional clearances must include the condition at the start AND end of the readback.'
-    ],
-    generate: createBaseScenario
-  },
-  {
-    id: 'complex-holding',
-    title: 'Complex Holding Pattern',
-    desc: 'Copy a full holding clearance with all parameters',
-    keywords: ['Holding', 'Pattern', 'EFC'],
-    hints: [
-      'Holding clearances have six parts: direction, fix, inbound course, turn direction, leg time, and EFC.',
-      'Right turns are standard — only non-standard (left) turns are explicitly stated.',
-      'EFC is "expect further clearance" — copy the Zulu time carefully.'
-    ],
-    fields: [
-      {
-        key: 'direction',
-        label: 'Direction',
-        expected: () => 'east',
-        alternatives: () => ['east', 'west', 'north', 'south', 'northeast', 'northwest', 'southeast', 'southwest'],
-        threshold: 0.8,
-        placeholder: 'e.g. east',
-        width: 'sm' as const
-      },
-      {
-        key: 'fix',
-        label: 'Fix',
-        expected: (scenario: Scenario) => scenario.holdingFix,
-        placeholder: 'e.g. TOBAK',
-        width: 'sm' as const
-      },
-      {
-        key: 'inbound-course',
-        label: 'Inbound course',
-        expected: (scenario: Scenario) => scenario.holdingInbound,
-        placeholder: 'e.g. 270',
-        width: 'sm' as const,
-        inputmode: 'numeric' as const
-      },
-      {
-        key: 'turn-direction',
-        label: 'Turn direction',
-        expected: (scenario: Scenario) => scenario.holdingTurn,
-        alternatives: (scenario: Scenario) => [scenario.holdingTurn, scenario.holdingTurn === 'right' ? 'right' : 'left'],
-        placeholder: 'e.g. right',
-        width: 'sm' as const
-      },
-      {
-        key: 'leg-time',
-        label: 'Leg time',
-        expected: (scenario: Scenario) => scenario.holdingLegTime,
-        placeholder: 'e.g. 1.5',
-        width: 'sm' as const
-      },
-      {
-        key: 'efc-time',
-        label: 'EFC time',
-        expected: (scenario: Scenario) => scenario.holdingEfc,
-        placeholder: 'e.g. 1435',
-        width: 'sm' as const,
-        inputmode: 'numeric' as const
-      }
-    ],
-    readback: [
-      { type: 'text' as const, text: 'Hold ' },
-      { type: 'field' as const, key: 'direction', width: 'sm' as const },
-      { type: 'text' as const, text: ' of ' },
-      { type: 'field' as const, key: 'fix', width: 'sm' as const },
-      { type: 'text' as const, text: ', inbound course ' },
-      { type: 'field' as const, key: 'inbound-course', width: 'sm' as const },
-      { type: 'text' as const, text: ', ' },
-      { type: 'field' as const, key: 'turn-direction', width: 'sm' as const },
-      { type: 'text' as const, text: ' turns, ' },
-      { type: 'field' as const, key: 'leg-time', width: 'sm' as const },
-      { type: 'text' as const, text: ' minute legs, expect further clearance ' },
-      { type: 'field' as const, key: 'efc-time', width: 'sm' as const },
-      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` }
-    ],
-    defaultFrequency: 'CTR' as const,
-    phrase: (scenario: Scenario) =>
-      `${scenario.radioCall}, hold east of ${scenario.holdingFix}, inbound course ${scenario.holdingInbound}, ${scenario.holdingTurn} turns, ${scenario.holdingLegTime} minute legs, expect further clearance ${scenario.holdingEfc}.`,
-    info: (scenario: Scenario) => [
-      `Fix: ${scenario.holdingFix}`,
-      `Inbound course: ${scenario.holdingInbound}`,
-      `Turn: ${scenario.holdingTurn}, Leg: ${scenario.holdingLegTime} min`,
-      `EFC: ${scenario.holdingEfc}Z`
-    ],
-    generate: createBaseScenario
-  },
-  {
-    id: 'amended-departure',
-    title: 'Amended Departure Clearance',
-    desc: 'Copy a full re-clearance with SID, altitude, frequency and squawk',
-    keywords: ['Amended', 'Clearance', 'Departure'],
-    hints: [
-      'An amended clearance replaces the original — copy every element.',
-      'Note "climb via SID except maintain" — the initial altitude caps the SID.',
-      'Departure frequency and squawk may differ from the original clearance.'
-    ],
-    fields: [
-      {
-        key: 'destination',
-        label: 'Destination',
-        expected: (scenario: Scenario) => scenario.destination.name,
-        placeholder: 'e.g. Munich',
-        width: 'md' as const
-      },
-      {
-        key: 'sid',
-        label: 'SID',
-        expected: (scenario: Scenario) => scenario.sid,
-        placeholder: 'e.g. TOBAK 5Q',
-        width: 'md' as const
-      },
-      {
-        key: 'altitude',
-        label: 'Initial altitude',
-        expected: (scenario: Scenario) => scenario.altitudes.initial.toString(),
-        placeholder: 'e.g. 5000',
-        width: 'sm' as const,
-        inputmode: 'numeric' as const
-      },
-      {
-        key: 'expect-alt',
-        label: 'Expect altitude',
-        expected: (scenario: Scenario) => scenario.altitudes.climb.toString(),
-        placeholder: 'e.g. 7000',
-        width: 'sm' as const,
-        inputmode: 'numeric' as const
-      },
-      {
-        key: 'dep-freq',
-        label: 'Departure freq',
-        expected: (scenario: Scenario) => scenario.departureFreq,
-        placeholder: 'e.g. 125.350',
-        width: 'md' as const
-      },
-      {
-        key: 'squawk',
-        label: 'Squawk',
-        expected: (scenario: Scenario) => scenario.squawk,
-        placeholder: 'e.g. 4521',
-        width: 'sm' as const,
-        inputmode: 'numeric' as const
-      }
-    ],
-    readback: [
-      { type: 'text' as const, text: 'Amended clearance, cleared to ' },
-      { type: 'field' as const, key: 'destination', width: 'md' as const },
-      { type: 'text' as const, text: ' via ' },
-      { type: 'field' as const, key: 'sid', width: 'md' as const },
-      { type: 'text' as const, text: ' departure, climb via SID except maintain ' },
-      { type: 'field' as const, key: 'altitude', width: 'sm' as const },
-      { type: 'text' as const, text: ', expect ' },
-      { type: 'field' as const, key: 'expect-alt', width: 'sm' as const },
-      { type: 'text' as const, text: ' ten minutes after departure, departure frequency ' },
-      { type: 'field' as const, key: 'dep-freq', width: 'md' as const },
-      { type: 'text' as const, text: ', squawk ' },
-      { type: 'field' as const, key: 'squawk', width: 'sm' as const },
-      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` }
-    ],
-    defaultFrequency: 'DEL' as const,
-    phrase: (scenario: Scenario) =>
-      `${scenario.radioCall}, amended clearance: Cleared to ${scenario.destination.name} via ${scenario.sid} departure, climb via SID except maintain ${scenario.altitudes.initial}, expect ${scenario.altitudes.climb} ten minutes after departure, departure frequency ${scenario.departureFreq}, squawk ${scenario.squawk}.`,
-    info: (scenario: Scenario) => [
-      `Destination: ${scenario.destination.name}`,
-      `SID: ${scenario.sid}`,
-      `Initial: ${scenario.altitudes.initial}, Expect: ${scenario.altitudes.climb}`,
-      `Dep freq: ${scenario.departureFreq}, Squawk: ${scenario.squawk}`
-    ],
-    generate: createBaseScenario
-  },
-  {
-    id: 'speed-then-altitude',
-    title: 'Speed Then Altitude',
-    desc: 'Execute a sequential speed-then-descend instruction',
-    keywords: ['Speed', 'Descent', 'Sequential'],
-    hints: [
-      '"Then" means sequential — reduce speed FIRST, begin descent SECOND.',
-      'Read back both values in the correct order to confirm you understood the sequence.',
-      'Do not descend until the target speed is reached.'
-    ],
-    fields: [
-      {
-        key: 'speed',
-        label: 'Speed (kt)',
-        expected: (scenario: Scenario) => scenario.speedRestriction.toString(),
-        placeholder: 'e.g. 210',
-        width: 'sm' as const,
-        inputmode: 'numeric' as const
-      },
-      {
-        key: 'level',
-        label: 'Flight level',
-        expected: (scenario: Scenario) => scenario.approachAltitude.toString(),
-        placeholder: 'e.g. 5000',
-        width: 'sm' as const,
-        inputmode: 'numeric' as const
-      }
-    ],
-    readback: [
-      { type: 'text' as const, text: 'Reduce speed ' },
-      { type: 'field' as const, key: 'speed', width: 'sm' as const },
-      { type: 'text' as const, text: ' knots, then descend and maintain flight level ' },
-      { type: 'field' as const, key: 'level', width: 'sm' as const },
-      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` }
-    ],
-    defaultFrequency: 'APP' as const,
-    phrase: (scenario: Scenario) =>
-      `${scenario.radioCall}, reduce speed ${scenario.speedRestriction} knots, then descend and maintain flight level ${scenario.approachAltitude}.`,
-    info: (scenario: Scenario) => [
-      `Speed: ${scenario.speedRestriction} knots`,
-      `Descend to: FL${scenario.approachAltitude}`,
-      '"Then" = sequential: speed first, descent second.'
-    ],
-    generate: createBaseScenario
-  },
-  {
-    id: 'immediate-traffic',
-    title: 'Immediate Turn for Traffic',
-    desc: 'Execute an immediate heading change for traffic avoidance',
-    keywords: ['Immediate', 'Traffic', 'Avoidance'],
-    hints: [
-      'IMMEDIATELY means begin the turn while reading back — do not wait.',
-      'Traffic calls include clock position, distance, direction and altitude.',
-      'Comply first, then read back — safety overrides normal sequencing.'
-    ],
-    fields: [
-      {
-        key: 'turn-direction',
-        label: 'Turn direction',
-        expected: () => 'left',
-        alternatives: () => ['left'],
-        placeholder: 'e.g. left',
-        width: 'sm' as const
-      },
-      {
-        key: 'heading',
-        label: 'Heading',
-        expected: (scenario: Scenario) => scenario.vectorHeading,
-        placeholder: 'e.g. 270',
-        width: 'sm' as const,
-        inputmode: 'numeric' as const
-      }
-    ],
-    readback: [
-      { type: 'text' as const, text: 'IMMEDIATELY turning left heading ' },
-      { type: 'field' as const, key: 'heading', width: 'sm' as const },
-      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` }
-    ],
-    defaultFrequency: 'APP' as const,
-    phrase: (scenario: Scenario) =>
-      `${scenario.radioCall}, turn left IMMEDIATELY heading ${scenario.vectorHeading}, traffic 12 o'clock, 3 miles, opposite direction, same level.`,
-    info: (scenario: Scenario) => [
-      `Turn: left heading ${scenario.vectorHeading}`,
-      'Traffic: 12 o\'clock, 3 miles, opposite direction, same level',
-      'IMMEDIATELY = execute while reading back.'
-    ],
-    generate: createBaseScenario
-  },
-  {
-    id: 'multiple-crossing-restrictions',
-    title: 'Multiple Crossing Restrictions',
-    desc: 'Copy a STAR descent with two crossing fixes and altitudes',
-    keywords: ['STAR', 'Crossing', 'Restrictions'],
-    hints: [
-      'Each crossing fix has its own altitude restriction — copy them separately.',
-      'Restrictions can be "at", "at or above", or "at or below" — the wording matters.',
-      'Read back each fix and restriction in the order given.'
-    ],
-    fields: [
-      {
-        key: 'fix1',
-        label: 'Fix 1',
-        expected: (scenario: Scenario) => scenario.crossingFix1,
-        placeholder: 'e.g. ANEKI',
-        width: 'sm' as const
-      },
-      {
-        key: 'restriction1',
-        label: 'Restriction',
-        expected: (scenario: Scenario) => scenario.crossingRestriction1,
-        alternatives: (scenario: Scenario) => [scenario.crossingRestriction1],
-        threshold: 0.8,
-        placeholder: 'e.g. at or above',
-        width: 'md' as const
-      },
-      {
-        key: 'alt1',
-        label: 'Altitude 1',
-        expected: (scenario: Scenario) => scenario.crossingAlt1,
-        placeholder: 'e.g. 10000',
-        width: 'sm' as const,
-        inputmode: 'numeric' as const
-      },
-      {
-        key: 'fix2',
-        label: 'Fix 2',
-        expected: (scenario: Scenario) => scenario.crossingFix2,
-        placeholder: 'e.g. TOBAK',
-        width: 'sm' as const
-      },
-      {
-        key: 'alt2',
-        label: 'Altitude 2',
-        expected: (scenario: Scenario) => scenario.crossingAlt2,
-        placeholder: 'e.g. 6000',
-        width: 'sm' as const,
-        inputmode: 'numeric' as const
-      }
-    ],
-    readback: [
-      { type: 'text' as const, text: 'Descend via the STAR, cross ' },
-      { type: 'field' as const, key: 'fix1', width: 'sm' as const },
-      { type: 'text' as const, text: ' ' },
-      { type: 'field' as const, key: 'restriction1', width: 'md' as const },
-      { type: 'text' as const, text: ' ' },
-      { type: 'field' as const, key: 'alt1', width: 'sm' as const },
-      { type: 'text' as const, text: ', cross ' },
-      { type: 'field' as const, key: 'fix2', width: 'sm' as const },
-      { type: 'text' as const, text: ' at ' },
-      { type: 'field' as const, key: 'alt2', width: 'sm' as const },
-      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` }
-    ],
-    defaultFrequency: 'CTR' as const,
-    phrase: (scenario: Scenario) =>
-      `${scenario.radioCall}, descend via the STAR, cross ${scenario.crossingFix1} ${scenario.crossingRestriction1} ${scenario.crossingAlt1}, cross ${scenario.crossingFix2} at ${scenario.crossingAlt2}.`,
-    info: (scenario: Scenario) => [
-      `Fix 1: ${scenario.crossingFix1} — ${scenario.crossingRestriction1} ${scenario.crossingAlt1}`,
-      `Fix 2: ${scenario.crossingFix2} — at ${scenario.crossingAlt2}`,
-      'Read back each crossing restriction separately.'
-    ],
-    generate: createBaseScenario
-  },
-  {
-    id: 'tcas-ra-override',
-    title: 'TCAS RA Override',
-    desc: 'Reject an ATC instruction due to a TCAS Resolution Advisory',
-    keywords: ['TCAS', 'RA', 'Override'],
-    hints: [
-      'A TCAS RA always takes priority over ATC instructions — you MUST follow the RA.',
-      'Tell ATC "Unable, TCAS RA" to reject their instruction.',
-      'Once clear of conflict, report back: "Clear of conflict, returning to [assigned level]".'
-    ],
-    fields: [
-      {
-        key: 'rejection',
-        label: 'Rejection',
-        expected: () => 'Unable, TCAS RA',
-        alternatives: () => ['Unable, TCAS RA', 'Unable TCAS RA', 'unable, TCAS RA', 'unable TCAS RA'],
-        threshold: 0.75,
-        placeholder: 'e.g. Unable, TCAS RA',
-        width: 'lg' as const
-      },
-      {
-        key: 'resolution',
-        label: 'Resolution report',
-        expected: (scenario: Scenario) => `Clear of conflict, returning to flight level ${scenario.altitudes.climb}`,
-        alternatives: (scenario: Scenario) => [
-          `Clear of conflict, returning to flight level ${scenario.altitudes.climb}`,
-          `Clear of conflict, returning to FL${Math.round(scenario.altitudes.climb / 100)}`,
-          `clear of conflict, returning to flight level ${scenario.altitudes.climb}`,
-        ],
-        threshold: 0.6,
-        placeholder: 'e.g. Clear of conflict, returning to ...',
-        width: 'xl' as const
-      }
-    ],
-    readback: [
-      { type: 'field' as const, key: 'rejection', width: 'lg' as const },
-      { type: 'text' as const, text: ' · ' },
-      { type: 'field' as const, key: 'resolution', width: 'xl' as const },
-      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` }
-    ],
-    defaultFrequency: 'CTR' as const,
-    phrase: (scenario: Scenario) =>
-      `${scenario.radioCall}, descend flight level ${scenario.altitudes.initial}. [TCAS commands: CLIMB, CLIMB NOW]`,
-    info: (scenario: Scenario) => [
-      'ATC says descend — but your TCAS RA commands CLIMB.',
-      'TCAS RA always overrides ATC. Follow the RA, then report clear of conflict.',
-      `Return to: flight level ${scenario.altitudes.climb}`
-    ],
-    generate: createBaseScenario
-  },
-  {
-    id: 'late-runway-change',
-    title: 'Late Runway Change',
-    desc: 'Cancel approach and accept vectors to a new runway',
-    keywords: ['Runway Change', 'Vectors', 'Approach'],
-    hints: [
-      'Read back the cancelled runway, the new heading, the new runway, and the new altitude.',
-      'Confirm which runway is cancelled and which is the new assignment.',
-      'Late changes happen — stay calm and copy all four elements.'
-    ],
-    fields: [
-      {
-        key: 'old-runway',
-        label: 'Old runway',
-        expected: (scenario: Scenario) => scenario.arrivalRunway,
-        alternatives: (scenario: Scenario) => [scenario.arrivalRunway, scenario.arrivalRunway.replace(/^0/, '')],
-        placeholder: 'e.g. 25C',
-        width: 'sm' as const
-      },
-      {
-        key: 'heading',
-        label: 'Heading',
-        expected: (scenario: Scenario) => scenario.vectorHeading,
-        placeholder: 'e.g. 180',
-        width: 'sm' as const,
-        inputmode: 'numeric' as const
-      },
-      {
-        key: 'new-runway',
-        label: 'New runway',
-        expected: (scenario: Scenario) => scenario.runway,
-        alternatives: (scenario: Scenario) => [scenario.runway, scenario.runway.replace(/^0/, '')],
-        placeholder: 'e.g. 07R',
-        width: 'sm' as const
-      },
-      {
-        key: 'altitude',
-        label: 'Altitude',
-        expected: (scenario: Scenario) => scenario.approachAltitude.toString(),
-        placeholder: 'e.g. 4000',
-        width: 'sm' as const,
-        inputmode: 'numeric' as const
-      }
-    ],
-    readback: [
-      { type: 'text' as const, text: 'Cancel approach runway ' },
-      { type: 'field' as const, key: 'old-runway', width: 'sm' as const },
-      { type: 'text' as const, text: ', turn right heading ' },
-      { type: 'field' as const, key: 'heading', width: 'sm' as const },
-      { type: 'text' as const, text: ', vectors runway ' },
-      { type: 'field' as const, key: 'new-runway', width: 'sm' as const },
-      { type: 'text' as const, text: ', descend ' },
-      { type: 'field' as const, key: 'altitude', width: 'sm' as const },
-      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` }
-    ],
-    defaultFrequency: 'APP' as const,
-    phrase: (scenario: Scenario) =>
-      `${scenario.radioCall}, cancel approach runway ${scenario.arrivalRunway}, turn right heading ${scenario.vectorHeading}, vectors runway ${scenario.runway}, descend ${scenario.approachAltitude}.`,
-    info: (scenario: Scenario) => [
-      `Cancelled: runway ${scenario.arrivalRunway}`,
-      `New: runway ${scenario.runway}, heading ${scenario.vectorHeading}`,
-      `Descend to: ${scenario.approachAltitude}`
-    ],
-    generate: createBaseScenario
-  }
-]
-
-/* ────────────────────────────────────────────────────────────
  *  ABNORMAL COMMS
  * ──────────────────────────────────────────────────────────── */
 
@@ -4691,6 +4185,1302 @@ const vatsimEssentialsLessons = [
   }
 ]
 
+function emergencyCallsignAlternatives(scenario: Scenario): string[] {
+  return [
+    scenario.radioCall,
+    `${scenario.airlineCall} ${scenario.flightNumber}`,
+    scenario.callsign
+  ]
+}
+
+function emergencyStation(scenario: Scenario): string {
+  return `${scenario.airport.city} Center`
+}
+
+function emergencyAssistance(): string {
+  return 'priority vectors and immediate approach'
+}
+
+function emergencyCancelReason(scenario: Scenario): string {
+  return `${scenario.emergencyProblem} resolved`
+}
+
+function squawkPhraseology(scenario: Scenario): string {
+  if (scenario.squawk === '7600') return 'radio failure, squawking seven six zero zero'
+  if (scenario.squawk === '7500') return 'unlawful interference, squawk seven five zero zero set'
+  return 'general emergency, squawking seven seven zero zero'
+}
+
+function createSquawkCodeScenario(): Scenario {
+  const scenario = createBaseScenario()
+  const code = sample(['7700', '7600', '7500'])
+  scenario.squawk = code
+  scenario.squawkWords = digitsToWords(code)
+  if (code === '7700') {
+    scenario.emergencyProblem = 'engine fire'
+    scenario.emergencyIntent = `immediate landing at ${scenario.airport.city}`
+  } else if (code === '7600') {
+    scenario.emergencyProblem = 'radio failure'
+    scenario.emergencyIntent = 'continue with lost comms procedure'
+  } else {
+    scenario.emergencyProblem = 'unlawful interference'
+    scenario.emergencyIntent = 'request discreet handling'
+  }
+  return scenario
+}
+
+const emergencyBasicsLessons = [
+  {
+    id: 'mayday-declaration',
+    title: 'MAYDAY Declaration',
+    desc: 'Build a complete MAYDAY call with position, fuel and souls on board',
+    keywords: ['Emergency', 'MAYDAY', 'Distress'],
+    hints: [
+      'Say MAYDAY three times first, then station and callsign.',
+      'Include nature, intentions, position, heading, fuel in minutes and souls on board.'
+    ],
+    fields: [
+      {
+        key: 'mayday-station',
+        label: 'Station',
+        expected: scenario => emergencyStation(scenario),
+        alternatives: scenario => [`${scenario.airport.city} center`, `${scenario.airport.name} center`],
+        width: 'lg' as const
+      },
+      {
+        key: 'mayday-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'mayday-nature',
+        label: 'Nature',
+        expected: scenario => scenario.emergencyProblem,
+        width: 'xl' as const
+      },
+      {
+        key: 'mayday-intentions',
+        label: 'Intentions',
+        expected: scenario => scenario.emergencyIntent,
+        width: 'xl' as const
+      },
+      {
+        key: 'mayday-position',
+        label: 'Position',
+        expected: scenario => scenario.positionDescription,
+        alternatives: scenario => [scenario.positionDescription.toLowerCase()],
+        threshold: 0.7,
+        width: 'xl' as const
+      },
+      {
+        key: 'mayday-heading',
+        label: 'Heading',
+        expected: scenario => scenario.emergencyHeading,
+        alternatives: scenario => [scenario.emergencyHeadingWords],
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'mayday-fuel',
+        label: 'Fuel (minutes)',
+        expected: scenario => scenario.fuelMinutes.toString(),
+        alternatives: scenario => [scenario.fuelMinutesWords, `${scenario.fuelMinutes} minutes`],
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'mayday-souls',
+        label: 'Souls on board',
+        expected: scenario => scenario.soulsOnBoard.toString(),
+        alternatives: scenario => [scenario.soulsOnBoardWords],
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'MAYDAY MAYDAY MAYDAY, ' },
+      { type: 'field' as const, key: 'mayday-station', width: 'lg' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'mayday-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'mayday-nature', width: 'xl' as const },
+      { type: 'text' as const, text: ', intentions ' },
+      { type: 'field' as const, key: 'mayday-intentions', width: 'xl' as const },
+      { type: 'text' as const, text: ', position ' },
+      { type: 'field' as const, key: 'mayday-position', width: 'xl' as const },
+      { type: 'text' as const, text: ', heading ' },
+      { type: 'field' as const, key: 'mayday-heading', width: 'sm' as const },
+      { type: 'text' as const, text: ', fuel ' },
+      { type: 'field' as const, key: 'mayday-fuel', width: 'sm' as const },
+      { type: 'text' as const, text: ' minutes, ' },
+      { type: 'field' as const, key: 'mayday-souls', width: 'sm' as const },
+      { type: 'text' as const, text: ' souls on board' }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: scenario =>
+      `You have ${scenario.emergencyProblem}. Declare full MAYDAY with heading ${scenario.emergencyHeading}, fuel ${scenario.fuelMinutes} minutes, and ${scenario.soulsOnBoard} souls on board.`,
+    info: scenario => [
+      'MAYDAY is spoken three times for distress.',
+      `Position: ${scenario.positionDescription}`,
+      'Fuel must be given as time remaining, not kilograms or pounds.'
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'pan-pan-declaration',
+    title: 'PAN PAN Declaration',
+    desc: 'Build a complete PAN PAN urgency message',
+    keywords: ['Emergency', 'PAN PAN', 'Urgency'],
+    hints: [
+      'PAN PAN is spoken three times (six words total: PAN PAN PAN PAN PAN PAN).',
+      'Include requested assistance and fuel time.'
+    ],
+    fields: [
+      {
+        key: 'pan-addressee',
+        label: 'Addressee',
+        expected: scenario => emergencyStation(scenario),
+        alternatives: () => ['all stations'],
+        width: 'lg' as const
+      },
+      {
+        key: 'pan-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'pan-position',
+        label: 'Position',
+        expected: scenario => scenario.positionDescription,
+        alternatives: scenario => [scenario.positionDescription.toLowerCase()],
+        threshold: 0.7,
+        width: 'xl' as const
+      },
+      {
+        key: 'pan-nature',
+        label: 'Nature',
+        expected: scenario => scenario.emergencyProblem,
+        width: 'xl' as const
+      },
+      {
+        key: 'pan-assistance',
+        label: 'Assistance',
+        expected: () => emergencyAssistance(),
+        alternatives: () => ['priority vectors', 'priority handling', 'immediate approach'],
+        threshold: 0.6,
+        width: 'xl' as const
+      },
+      {
+        key: 'pan-fuel',
+        label: 'Fuel (minutes)',
+        expected: scenario => scenario.fuelMinutes.toString(),
+        alternatives: scenario => [scenario.fuelMinutesWords, `${scenario.fuelMinutes} minutes`],
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'pan-souls',
+        label: 'POB',
+        expected: scenario => scenario.soulsOnBoard.toString(),
+        alternatives: scenario => [scenario.soulsOnBoardWords],
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'PAN PAN PAN PAN PAN PAN, ' },
+      { type: 'field' as const, key: 'pan-addressee', width: 'lg' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'pan-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', position ' },
+      { type: 'field' as const, key: 'pan-position', width: 'xl' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'pan-nature', width: 'xl' as const },
+      { type: 'text' as const, text: ', request ' },
+      { type: 'field' as const, key: 'pan-assistance', width: 'xl' as const },
+      { type: 'text' as const, text: ', fuel ' },
+      { type: 'field' as const, key: 'pan-fuel', width: 'sm' as const },
+      { type: 'text' as const, text: ' minutes, ' },
+      { type: 'field' as const, key: 'pan-souls', width: 'sm' as const },
+      { type: 'text' as const, text: ' souls on board' }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: scenario =>
+      `Passenger issue on board and no immediate danger. Build a full PAN PAN call with fuel ${scenario.fuelMinutes} minutes and ${scenario.soulsOnBoard} souls on board.`,
+    info: () => [
+      'PAN PAN is urgency, not distress.',
+      'Souls on board includes passengers and crew.'
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'mayday-vs-panpan-fuel',
+    title: 'MAYDAY FUEL vs PAN PAN FUEL',
+    desc: 'Choose the correct fuel urgency call and build the message',
+    keywords: ['Fuel', 'MAYDAY FUEL', 'PAN PAN FUEL'],
+    hints: [
+      'Below final reserve: MAYDAY FUEL.',
+      'Above reserve but critical trend: PAN PAN FUEL / MINIMUM FUEL.'
+    ],
+    fields: [
+      {
+        key: 'fuel-call-type',
+        label: 'Call type',
+        expected: scenario => (scenario.fuelMinutes <= 30 ? 'MAYDAY FUEL' : 'PAN PAN FUEL'),
+        alternatives: scenario => (scenario.fuelMinutes <= 30 ? ['MAYDAY', 'mayday fuel'] : ['PAN PAN', 'minimum fuel']),
+        width: 'md' as const
+      },
+      {
+        key: 'fuel-state',
+        label: 'Fuel state',
+        expected: scenario => `${scenario.fuelMinutes} minutes`,
+        alternatives: scenario => [scenario.fuelMinutes.toString(), scenario.fuelMinutesWords],
+        width: 'md' as const
+      },
+      {
+        key: 'fuel-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'fuel-request',
+        label: 'Request',
+        expected: () => emergencyAssistance(),
+        alternatives: () => ['priority handling', 'shortest approach', 'direct vectors'],
+        threshold: 0.6,
+        width: 'xl' as const
+      }
+    ],
+    readback: [
+      { type: 'field' as const, key: 'fuel-call-type', width: 'md' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'fuel-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', fuel ' },
+      { type: 'field' as const, key: 'fuel-state', width: 'md' as const },
+      { type: 'text' as const, text: ', request ' },
+      { type: 'field' as const, key: 'fuel-request', width: 'xl' as const }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: scenario =>
+      `Planned final reserve is 30 minutes. Current fuel remaining is ${scenario.fuelMinutes} minutes. Choose the correct fuel urgency call.`,
+    info: scenario => [
+      'MINIMUM/PAN PAN fuel is advisory when still above reserve.',
+      `Current fuel: ${scenario.fuelMinutes} minutes (reserve threshold: 30).`
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'emergency-descent',
+    title: 'Emergency Descent',
+    desc: 'Announce emergency descent and squawk assignment',
+    keywords: ['Emergency Descent', '7700'],
+    hints: [
+      'State leaving level and intention to descend immediately.',
+      'Squawk 7700 for general emergency.'
+    ],
+    fields: [
+      {
+        key: 'descent-station',
+        label: 'Station',
+        expected: scenario => emergencyStation(scenario),
+        width: 'lg' as const
+      },
+      {
+        key: 'descent-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'descent-level',
+        label: 'Leaving level',
+        expected: scenario => scenario.altitudes.climb.toString(),
+        alternatives: scenario => [scenario.altitudes.climbWords, `FL${Math.round(scenario.altitudes.climb / 100)}`],
+        width: 'md' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'descent-squawk',
+        label: 'Squawk',
+        expected: () => '7700',
+        alternatives: () => ['seven seven zero zero', '7700'],
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'MAYDAY MAYDAY MAYDAY, ' },
+      { type: 'field' as const, key: 'descent-station', width: 'lg' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'descent-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', emergency descent, leaving ' },
+      { type: 'field' as const, key: 'descent-level', width: 'md' as const },
+      { type: 'text' as const, text: ', squawking ' },
+      { type: 'field' as const, key: 'descent-squawk', width: 'sm' as const }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: scenario =>
+      `${scenario.radioCall}, cabin depressurization, emergency descent from ${scenario.altitudes.climb}.`,
+    info: () => [
+      'General emergency code is 7700.',
+      'Execute the descent while transmitting.'
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'emergency-query-response',
+    title: 'ATC Emergency Query Response',
+    desc: 'Respond with fuel in minutes and souls on board',
+    keywords: ['Fuel', 'Souls on Board', 'Emergency'],
+    hints: [
+      'Fuel must be reported in minutes, not weight.',
+      'Souls on board includes crew and passengers.'
+    ],
+    fields: [
+      {
+        key: 'query-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'query-fuel',
+        label: 'Fuel (minutes)',
+        expected: scenario => scenario.fuelMinutes.toString(),
+        alternatives: scenario => [scenario.fuelMinutesWords, `${scenario.fuelMinutes} minutes`],
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'query-souls',
+        label: 'Souls',
+        expected: scenario => scenario.soulsOnBoard.toString(),
+        alternatives: scenario => [scenario.soulsOnBoardWords],
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      }
+    ],
+    readback: [
+      { type: 'field' as const, key: 'query-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', fuel ' },
+      { type: 'field' as const, key: 'query-fuel', width: 'sm' as const },
+      { type: 'text' as const, text: ' minutes, ' },
+      { type: 'field' as const, key: 'query-souls', width: 'sm' as const },
+      { type: 'text' as const, text: ' souls on board' }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: () => 'State fuel remaining and souls on board.',
+    info: () => [
+      'ATC expects fuel in minutes remaining.',
+      'Do not report fuel in kilograms or pounds for this question.'
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'cancel-emergency',
+    title: 'Cancel Emergency',
+    desc: 'Cancel MAYDAY/PAN PAN when the situation is resolved',
+    keywords: ['Cancel', 'MAYDAY', 'PAN PAN'],
+    hints: [
+      'State cancel MAYDAY or cancel PAN PAN explicitly.',
+      'Briefly provide reason and intentions.'
+    ],
+    fields: [
+      {
+        key: 'cancel-station',
+        label: 'Station',
+        expected: scenario => emergencyStation(scenario),
+        width: 'lg' as const
+      },
+      {
+        key: 'cancel-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'cancel-calltype',
+        label: 'Cancel type',
+        expected: () => 'MAYDAY',
+        alternatives: () => ['PAN PAN', 'mayday', 'pan pan'],
+        width: 'md' as const
+      },
+      {
+        key: 'cancel-reason',
+        label: 'Reason',
+        expected: scenario => emergencyCancelReason(scenario),
+        alternatives: scenario => ['problem resolved', `${scenario.emergencyProblem} resolved`],
+        threshold: 0.6,
+        width: 'xl' as const
+      },
+      {
+        key: 'cancel-intentions',
+        label: 'Intentions',
+        expected: scenario => scenario.emergencyIntent,
+        width: 'xl' as const
+      }
+    ],
+    readback: [
+      { type: 'field' as const, key: 'cancel-station', width: 'lg' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'cancel-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', cancel ' },
+      { type: 'field' as const, key: 'cancel-calltype', width: 'md' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'cancel-reason', width: 'xl' as const },
+      { type: 'text' as const, text: ', request ' },
+      { type: 'field' as const, key: 'cancel-intentions', width: 'xl' as const }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: scenario =>
+      `Situation stabilised. Cancel the emergency and state next intent: ${scenario.emergencyIntent}.`,
+    info: () => [
+      'Only cancel when emergency is actually resolved and controllable.',
+      'Use short, unambiguous phraseology.'
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'emergency-squawk-codes',
+    title: 'Emergency Squawk Codes',
+    desc: 'Choose and report the correct emergency transponder code',
+    keywords: ['7700', '7600', '7500', 'Squawk'],
+    hints: [
+      '7700 = general emergency, 7600 = radio failure, 7500 = unlawful interference.',
+      '7500 is never cancelled by routine radio phraseology.'
+    ],
+    fields: [
+      {
+        key: 'squawk-code',
+        label: 'Squawk',
+        expected: scenario => scenario.squawk,
+        alternatives: scenario => [scenario.squawkWords, scenario.squawk.split('').join(' ')],
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'squawk-phrase',
+        label: 'Phraseology',
+        expected: scenario => squawkPhraseology(scenario),
+        alternatives: () => [
+          'general emergency, squawking seven seven zero zero',
+          'radio failure, squawking seven six zero zero',
+          'unlawful interference, squawk seven five zero zero set'
+        ],
+        threshold: 0.65,
+        width: 'xl' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Squawking ' },
+      { type: 'field' as const, key: 'squawk-code', width: 'sm' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'squawk-phrase', width: 'xl' as const }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: scenario =>
+      `Scenario: ${scenario.emergencyProblem}. Choose the correct squawk and phraseology.`,
+    info: scenario => [
+      `Current scenario cue: ${scenario.emergencyProblem}`,
+      '7500 should not be casually discussed if unlawful interference is suspected.'
+    ],
+    generate: createSquawkCodeScenario
+  }
+]
+
+const medicalEmergencySeries = createScenarioSeries(() => {
+  const scenario = createBaseScenario()
+  scenario.emergencyProblem = 'medical emergency on board'
+  scenario.emergencyIntent = `priority landing at ${scenario.destination.city}`
+  return scenario
+})
+
+const engineFailureSeries = createScenarioSeries(() => {
+  const scenario = createBaseScenario()
+  scenario.emergencyProblem = 'engine failure'
+  scenario.emergencyIntent = `vectors for immediate return to ${scenario.airport.city}`
+  return scenario
+})
+
+const fuelEmergencySeries = createScenarioSeries(() => {
+  const scenario = createBaseScenario()
+  scenario.emergencyProblem = 'fuel critical state'
+  scenario.fuelMinutes = randInt(20, 35)
+  scenario.fuelMinutesWords = minutesToWords(scenario.fuelMinutes)
+  scenario.emergencyIntent = `priority direct approach to runway ${scenario.arrivalRunway}`
+  return scenario
+})
+
+const diversionSeries = createScenarioSeries(() => {
+  const scenario = createBaseScenario()
+  scenario.emergencyProblem = 'technical issue requiring diversion'
+  scenario.emergencyIntent = `divert to ${scenario.destination.city}`
+  return scenario
+})
+
+const makeMedicalEmergencyGenerator = (reset = false) => () => {
+  if (reset) medicalEmergencySeries.reset()
+  return medicalEmergencySeries()
+}
+
+const makeEngineFailureGenerator = (reset = false) => () => {
+  if (reset) engineFailureSeries.reset()
+  return engineFailureSeries()
+}
+
+const makeFuelEmergencyGenerator = (reset = false) => () => {
+  if (reset) fuelEmergencySeries.reset()
+  return fuelEmergencySeries()
+}
+
+const makeDiversionGenerator = (reset = false) => () => {
+  if (reset) diversionSeries.reset()
+  return diversionSeries()
+}
+
+const emergencyScenarioLessons = [
+  {
+    id: 'medical-cruise-checkin',
+    title: 'Medical Emergency · Cruise Check-in',
+    desc: 'Normal check-in before the urgency call',
+    keywords: ['Medical', 'Scenario', 'Check-in'],
+    hints: [
+      'Start with callsign, level and position.',
+      'This step sets context before the PAN PAN call.'
+    ],
+    fields: [
+      {
+        key: 'med-check-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'med-check-level',
+        label: 'Level',
+        expected: scenario => scenario.altitudes.climb.toString(),
+        alternatives: scenario => [scenario.altitudes.climbWords, `FL${Math.round(scenario.altitudes.climb / 100)}`],
+        width: 'md' as const
+      },
+      {
+        key: 'med-check-position',
+        label: 'Position',
+        expected: scenario => scenario.positionDescription,
+        alternatives: scenario => [scenario.positionDescription.toLowerCase()],
+        threshold: 0.7,
+        width: 'xl' as const
+      }
+    ],
+    readback: [
+      { type: 'field' as const, key: 'med-check-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', level ' },
+      { type: 'field' as const, key: 'med-check-level', width: 'md' as const },
+      { type: 'text' as const, text: ', position ' },
+      { type: 'field' as const, key: 'med-check-position', width: 'xl' as const }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: scenario => `${scenario.radioCall}, report level ${scenario.altitudes.climb} and position.`,
+    info: () => ['Build a clean baseline report before escalating urgency.'],
+    generate: makeMedicalEmergencyGenerator(true)
+  },
+  {
+    id: 'medical-panpan-declaration',
+    title: 'Medical Emergency · PAN PAN',
+    desc: 'Declare urgency and request priority handling',
+    keywords: ['Medical', 'PAN PAN', 'Scenario'],
+    hints: [
+      'Use PAN PAN six-word opener.',
+      'Include assistance request, fuel time and souls on board.'
+    ],
+    fields: [
+      {
+        key: 'med-pan-station',
+        label: 'Station',
+        expected: scenario => emergencyStation(scenario),
+        width: 'lg' as const
+      },
+      {
+        key: 'med-pan-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'med-pan-assist',
+        label: 'Assistance',
+        expected: () => emergencyAssistance(),
+        alternatives: () => ['priority handling', 'immediate vectors'],
+        width: 'xl' as const
+      },
+      {
+        key: 'med-pan-fuel',
+        label: 'Fuel',
+        expected: scenario => scenario.fuelMinutes.toString(),
+        alternatives: scenario => [scenario.fuelMinutesWords],
+        width: 'sm' as const
+      },
+      {
+        key: 'med-pan-souls',
+        label: 'Souls',
+        expected: scenario => scenario.soulsOnBoard.toString(),
+        alternatives: scenario => [scenario.soulsOnBoardWords],
+        width: 'sm' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'PAN PAN PAN PAN PAN PAN, ' },
+      { type: 'field' as const, key: 'med-pan-station', width: 'lg' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'med-pan-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', request ' },
+      { type: 'field' as const, key: 'med-pan-assist', width: 'xl' as const },
+      { type: 'text' as const, text: ', fuel ' },
+      { type: 'field' as const, key: 'med-pan-fuel', width: 'sm' as const },
+      { type: 'text' as const, text: ' minutes, ' },
+      { type: 'field' as const, key: 'med-pan-souls', width: 'sm' as const },
+      { type: 'text' as const, text: ' souls on board' }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: () => 'Passenger requires urgent medical support. Declare PAN PAN and request priority.',
+    info: () => ['Urgency is communicated with PAN PAN unless immediate distress exists.'],
+    generate: makeMedicalEmergencyGenerator()
+  },
+  {
+    id: 'medical-priority-vectors',
+    title: 'Medical Emergency · Priority Vectors',
+    desc: 'Read back priority heading and altitude',
+    keywords: ['Medical', 'Vectors', 'Priority'],
+    hints: [
+      'Read back heading and altitude exactly.',
+      'Expect a direct transition to approach.'
+    ],
+    fields: [
+      {
+        key: 'med-vector-heading',
+        label: 'Heading',
+        expected: scenario => scenario.vectorHeading,
+        alternatives: scenario => [scenario.vectorHeadingWords],
+        width: 'sm' as const
+      },
+      {
+        key: 'med-vector-alt',
+        label: 'Altitude',
+        expected: scenario => scenario.approachAltitude.toString(),
+        alternatives: scenario => [scenario.approachAltitudeWords],
+        width: 'md' as const
+      },
+      {
+        key: 'med-vector-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Heading ' },
+      { type: 'field' as const, key: 'med-vector-heading', width: 'sm' as const },
+      { type: 'text' as const, text: ', descend ' },
+      { type: 'field' as const, key: 'med-vector-alt', width: 'md' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'med-vector-callsign', width: 'lg' as const }
+    ],
+    defaultFrequency: 'APP',
+    phrase: scenario =>
+      `${scenario.radioCall}, priority approved, turn heading ${scenario.vectorHeadingWords}, descend ${scenario.approachAltitudeWords}.`,
+    info: () => ['Keep readback concise during emergency vectoring.'],
+    generate: makeMedicalEmergencyGenerator()
+  },
+  {
+    id: 'medical-landing-ambulance',
+    title: 'Medical Emergency · Landing + Ambulance',
+    desc: 'Read back landing clearance and request ambulance on stand',
+    keywords: ['Medical', 'Landing', 'Ambulance'],
+    hints: [
+      'Read back runway and landing clearance first.',
+      'Add the ambulance confirmation request at the end.'
+    ],
+    fields: [
+      {
+        key: 'med-landing-runway',
+        label: 'Runway',
+        expected: scenario => scenario.arrivalRunway,
+        alternatives: scenario => [scenario.arrivalRunwayWords],
+        width: 'sm' as const
+      },
+      {
+        key: 'med-landing-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'med-landing-request',
+        label: 'Additional request',
+        expected: () => 'confirm ambulance standing by',
+        alternatives: () => ['ambulance standing by', 'request ambulance on stand'],
+        threshold: 0.6,
+        width: 'xl' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Runway ' },
+      { type: 'field' as const, key: 'med-landing-runway', width: 'sm' as const },
+      { type: 'text' as const, text: ', cleared to land, ' },
+      { type: 'field' as const, key: 'med-landing-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'med-landing-request', width: 'xl' as const }
+    ],
+    defaultFrequency: 'TWR',
+    phrase: scenario =>
+      `${scenario.radioCall}, runway ${scenario.arrivalRunwayWords} cleared to land. Ambulance will meet you after vacating.`,
+    info: scenario => [`Stand planned: ${scenario.arrivalStand}`],
+    generate: makeMedicalEmergencyGenerator()
+  },
+  {
+    id: 'engine-mayday-declaration',
+    title: 'Engine Failure · MAYDAY',
+    desc: 'Declare MAYDAY for engine failure and intentions',
+    keywords: ['Engine Failure', 'MAYDAY', 'Scenario'],
+    hints: [
+      'Distress calls use MAYDAY three times.',
+      'State nature and immediate intention.'
+    ],
+    fields: [
+      {
+        key: 'eng-mayday-station',
+        label: 'Station',
+        expected: scenario => emergencyStation(scenario),
+        width: 'lg' as const
+      },
+      {
+        key: 'eng-mayday-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'eng-mayday-nature',
+        label: 'Nature',
+        expected: scenario => scenario.emergencyProblem,
+        width: 'xl' as const
+      },
+      {
+        key: 'eng-mayday-intentions',
+        label: 'Intentions',
+        expected: scenario => scenario.emergencyIntent,
+        width: 'xl' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'MAYDAY MAYDAY MAYDAY, ' },
+      { type: 'field' as const, key: 'eng-mayday-station', width: 'lg' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'eng-mayday-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'eng-mayday-nature', width: 'xl' as const },
+      { type: 'text' as const, text: ', intentions ' },
+      { type: 'field' as const, key: 'eng-mayday-intentions', width: 'xl' as const }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: () => 'Engine failure after climb. Make the MAYDAY declaration.',
+    info: () => ['Keep the initial MAYDAY concise and unambiguous.'],
+    generate: makeEngineFailureGenerator(true)
+  },
+  {
+    id: 'engine-emergency-descent',
+    title: 'Engine Failure · Emergency Descent',
+    desc: 'Coordinate emergency descent with level and heading',
+    keywords: ['Engine Failure', 'Descent'],
+    hints: [
+      'Report leaving level and assigned heading.',
+      'Include squawk 7700 if not already assigned.'
+    ],
+    fields: [
+      {
+        key: 'eng-descent-level',
+        label: 'Leaving level',
+        expected: scenario => scenario.altitudes.climb.toString(),
+        alternatives: scenario => [scenario.altitudes.climbWords],
+        width: 'md' as const
+      },
+      {
+        key: 'eng-descent-heading',
+        label: 'Heading',
+        expected: scenario => scenario.emergencyHeading,
+        alternatives: scenario => [scenario.emergencyHeadingWords],
+        width: 'sm' as const
+      },
+      {
+        key: 'eng-descent-squawk',
+        label: 'Squawk',
+        expected: () => '7700',
+        alternatives: () => ['seven seven zero zero'],
+        width: 'sm' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Emergency descent leaving ' },
+      { type: 'field' as const, key: 'eng-descent-level', width: 'md' as const },
+      { type: 'text' as const, text: ', heading ' },
+      { type: 'field' as const, key: 'eng-descent-heading', width: 'sm' as const },
+      { type: 'text' as const, text: ', squawking ' },
+      { type: 'field' as const, key: 'eng-descent-squawk', width: 'sm' as const }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: scenario =>
+      `${scenario.radioCall}, descend immediately, fly heading ${scenario.emergencyHeadingWords}, squawk 7700.`,
+    info: () => ['Execute first, then complete readback.'],
+    generate: makeEngineFailureGenerator()
+  },
+  {
+    id: 'engine-atc-vectors',
+    title: 'Engine Failure · ATC Vectors',
+    desc: 'Read back vectors and altitude toward immediate approach',
+    keywords: ['Engine Failure', 'Vectors'],
+    hints: [
+      'Heading and altitude are safety critical.',
+      'Keep callsign at the end.'
+    ],
+    fields: [
+      {
+        key: 'eng-vector-heading',
+        label: 'Heading',
+        expected: scenario => scenario.vectorHeading,
+        alternatives: scenario => [scenario.vectorHeadingWords],
+        width: 'sm' as const
+      },
+      {
+        key: 'eng-vector-alt',
+        label: 'Altitude',
+        expected: scenario => scenario.approachAltitude.toString(),
+        alternatives: scenario => [scenario.approachAltitudeWords],
+        width: 'md' as const
+      },
+      {
+        key: 'eng-vector-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Heading ' },
+      { type: 'field' as const, key: 'eng-vector-heading', width: 'sm' as const },
+      { type: 'text' as const, text: ', descend ' },
+      { type: 'field' as const, key: 'eng-vector-alt', width: 'md' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'eng-vector-callsign', width: 'lg' as const }
+    ],
+    defaultFrequency: 'APP',
+    phrase: scenario =>
+      `${scenario.radioCall}, turn left heading ${scenario.vectorHeadingWords}, descend ${scenario.approachAltitudeWords}, vectors ILS.`,
+    info: () => ['Readback should be short and exact.'],
+    generate: makeEngineFailureGenerator()
+  },
+  {
+    id: 'engine-ils-landing',
+    title: 'Engine Failure · ILS and Landing',
+    desc: 'Confirm ILS approach and landing clearance',
+    keywords: ['Engine Failure', 'ILS', 'Landing'],
+    hints: [
+      'Confirm approach type and runway.',
+      'Landing clearance readback should include runway and callsign.'
+    ],
+    fields: [
+      {
+        key: 'eng-ils-approach',
+        label: 'Approach',
+        expected: scenario => scenario.approach,
+        width: 'lg' as const
+      },
+      {
+        key: 'eng-ils-runway',
+        label: 'Runway',
+        expected: scenario => scenario.arrivalRunway,
+        alternatives: scenario => [scenario.arrivalRunwayWords],
+        width: 'sm' as const
+      },
+      {
+        key: 'eng-ils-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Cleared ' },
+      { type: 'field' as const, key: 'eng-ils-approach', width: 'lg' as const },
+      { type: 'text' as const, text: ' runway ' },
+      { type: 'field' as const, key: 'eng-ils-runway', width: 'sm' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'eng-ils-callsign', width: 'lg' as const }
+    ],
+    defaultFrequency: 'APP',
+    phrase: scenario =>
+      `${scenario.radioCall}, cleared ${scenario.approach} approach runway ${scenario.arrivalRunwayWords}, then cleared to land.`,
+    info: () => ['Continue precise phraseology even under high workload.'],
+    generate: makeEngineFailureGenerator()
+  },
+  {
+    id: 'fuel-panpan-initial',
+    title: 'Fuel Emergency · PAN PAN FUEL',
+    desc: 'Declare initial fuel urgency above final reserve',
+    keywords: ['Fuel', 'PAN PAN FUEL', 'Scenario'],
+    hints: [
+      'Initial advisory is PAN PAN FUEL when still above reserve.',
+      'State current fuel in minutes.'
+    ],
+    fields: [
+      {
+        key: 'fuel-pan-call',
+        label: 'Call type',
+        expected: () => 'PAN PAN FUEL',
+        alternatives: () => ['PAN PAN', 'minimum fuel'],
+        width: 'md' as const
+      },
+      {
+        key: 'fuel-pan-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'fuel-pan-minutes',
+        label: 'Fuel minutes',
+        expected: scenario => scenario.fuelMinutes.toString(),
+        alternatives: scenario => [scenario.fuelMinutesWords],
+        width: 'sm' as const
+      }
+    ],
+    readback: [
+      { type: 'field' as const, key: 'fuel-pan-call', width: 'md' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'fuel-pan-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', fuel ' },
+      { type: 'field' as const, key: 'fuel-pan-minutes', width: 'sm' as const },
+      { type: 'text' as const, text: ' minutes, request priority vectors' }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: scenario =>
+      `Fuel trend is worsening with ${scenario.fuelMinutes} minutes remaining. Start with PAN PAN FUEL advisory.`,
+    info: () => ['Use MAYDAY FUEL only once reserve is below planned final reserve.'],
+    generate: makeFuelEmergencyGenerator(true)
+  },
+  {
+    id: 'fuel-priority-readback',
+    title: 'Fuel Emergency · Priority Readback',
+    desc: 'Read back priority vectors and approach planning',
+    keywords: ['Fuel', 'Priority', 'Vectors'],
+    hints: [
+      'Acknowledge heading and descent clearly.',
+      'Prepare for the upgrade call if fuel worsens.'
+    ],
+    fields: [
+      {
+        key: 'fuel-priority-heading',
+        label: 'Heading',
+        expected: scenario => scenario.vectorHeading,
+        alternatives: scenario => [scenario.vectorHeadingWords],
+        width: 'sm' as const
+      },
+      {
+        key: 'fuel-priority-alt',
+        label: 'Altitude',
+        expected: scenario => scenario.approachAltitude.toString(),
+        alternatives: scenario => [scenario.approachAltitudeWords],
+        width: 'md' as const
+      },
+      {
+        key: 'fuel-priority-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Heading ' },
+      { type: 'field' as const, key: 'fuel-priority-heading', width: 'sm' as const },
+      { type: 'text' as const, text: ', descend ' },
+      { type: 'field' as const, key: 'fuel-priority-alt', width: 'md' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'fuel-priority-callsign', width: 'lg' as const }
+    ],
+    defaultFrequency: 'APP',
+    phrase: scenario =>
+      `${scenario.radioCall}, priority accepted, fly heading ${scenario.vectorHeadingWords}, descend ${scenario.approachAltitudeWords}.`,
+    info: () => ['Keep workload low with short readbacks.'],
+    generate: makeFuelEmergencyGenerator()
+  },
+  {
+    id: 'fuel-upgrade-mayday',
+    title: 'Fuel Emergency · Upgrade to MAYDAY FUEL',
+    desc: 'Escalate from PAN PAN FUEL to MAYDAY FUEL',
+    keywords: ['Fuel', 'MAYDAY FUEL', 'Escalation'],
+    hints: [
+      'When fuel goes below reserve, upgrade immediately to MAYDAY FUEL.',
+      'State minimum information fast and clearly.'
+    ],
+    fields: [
+      {
+        key: 'fuel-upgrade-call',
+        label: 'Call type',
+        expected: () => 'MAYDAY FUEL',
+        alternatives: () => ['MAYDAY', 'mayday fuel'],
+        width: 'md' as const
+      },
+      {
+        key: 'fuel-upgrade-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'fuel-upgrade-request',
+        label: 'Request',
+        expected: () => 'immediate approach and landing priority',
+        alternatives: () => ['immediate approach', 'landing priority', 'priority landing'],
+        threshold: 0.6,
+        width: 'xl' as const
+      }
+    ],
+    readback: [
+      { type: 'field' as const, key: 'fuel-upgrade-call', width: 'md' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'fuel-upgrade-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', request ' },
+      { type: 'field' as const, key: 'fuel-upgrade-request', width: 'xl' as const }
+    ],
+    defaultFrequency: 'APP',
+    phrase: () => 'Fuel now below planned final reserve. Upgrade call to MAYDAY FUEL.',
+    info: () => ['Do not delay the escalation when reserve is compromised.'],
+    generate: makeFuelEmergencyGenerator()
+  },
+  {
+    id: 'fuel-direct-approach-landing',
+    title: 'Fuel Emergency · Direct and Landing',
+    desc: 'Read back direct vectors and immediate landing clearance',
+    keywords: ['Fuel', 'Direct', 'Landing'],
+    hints: [
+      'Confirm direct fix/runway and final clearance.',
+      'Keep readback crisp to reduce frequency load.'
+    ],
+    fields: [
+      {
+        key: 'fuel-direct-heading',
+        label: 'Heading',
+        expected: scenario => scenario.vectorHeading,
+        alternatives: scenario => [scenario.vectorHeadingWords],
+        width: 'sm' as const
+      },
+      {
+        key: 'fuel-direct-runway',
+        label: 'Runway',
+        expected: scenario => scenario.arrivalRunway,
+        alternatives: scenario => [scenario.arrivalRunwayWords],
+        width: 'sm' as const
+      },
+      {
+        key: 'fuel-direct-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Heading ' },
+      { type: 'field' as const, key: 'fuel-direct-heading', width: 'sm' as const },
+      { type: 'text' as const, text: ', cleared straight-in runway ' },
+      { type: 'field' as const, key: 'fuel-direct-runway', width: 'sm' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'fuel-direct-callsign', width: 'lg' as const }
+    ],
+    defaultFrequency: 'TWR',
+    phrase: scenario =>
+      `${scenario.radioCall}, turn heading ${scenario.vectorHeadingWords}, direct final runway ${scenario.arrivalRunwayWords}, cleared to land.`,
+    info: () => ['Emergency fuel arrivals require fastest safe path to runway.'],
+    generate: makeFuelEmergencyGenerator()
+  },
+  {
+    id: 'diversion-problem-report',
+    title: 'Diversion · Problem Report',
+    desc: 'Report the issue that requires diversion',
+    keywords: ['Diversion', 'Report', 'Scenario'],
+    hints: [
+      'State callsign and problem in one concise line.',
+      'Prepare to request alternate routing next.'
+    ],
+    fields: [
+      {
+        key: 'div-report-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'div-report-problem',
+        label: 'Problem',
+        expected: scenario => scenario.emergencyProblem,
+        width: 'xl' as const
+      }
+    ],
+    readback: [
+      { type: 'field' as const, key: 'div-report-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'div-report-problem', width: 'xl' as const }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: scenario => `${scenario.radioCall}, report your issue for ATC coordination.`,
+    info: () => ['Keep the first report short to open diversion coordination quickly.'],
+    generate: makeDiversionGenerator(true)
+  },
+  {
+    id: 'diversion-request',
+    title: 'Diversion · Request Alternate',
+    desc: 'Request diversion to the alternate airport',
+    keywords: ['Diversion', 'Request', 'Alternate'],
+    hints: [
+      'Use explicit request diversion phraseology.',
+      'Name the alternate airport/city clearly.'
+    ],
+    fields: [
+      {
+        key: 'div-request-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      },
+      {
+        key: 'div-request-alt',
+        label: 'Alternate',
+        expected: scenario => scenario.destination.city,
+        alternatives: scenario => [scenario.destination.icao, scenario.destination.name],
+        width: 'md' as const
+      }
+    ],
+    readback: [
+      { type: 'field' as const, key: 'div-request-callsign', width: 'lg' as const },
+      { type: 'text' as const, text: ', request diversion to ' },
+      { type: 'field' as const, key: 'div-request-alt', width: 'md' as const }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: scenario => `${scenario.radioCall}, request diversion to ${scenario.destination.city}.`,
+    info: scenario => [`Alternate planned: ${scenario.destination.city} (${scenario.destination.icao})`],
+    generate: makeDiversionGenerator()
+  },
+  {
+    id: 'diversion-new-clearance',
+    title: 'Diversion · New Clearance',
+    desc: 'Read back new routing and altitude for alternate',
+    keywords: ['Diversion', 'Clearance', 'Readback'],
+    hints: [
+      'Treat diversion clearance like a full amendment.',
+      'Read destination, route and altitude.'
+    ],
+    fields: [
+      {
+        key: 'div-clear-destination',
+        label: 'Destination',
+        expected: scenario => scenario.destination.city,
+        alternatives: scenario => [scenario.destination.icao],
+        width: 'md' as const
+      },
+      {
+        key: 'div-clear-transition',
+        label: 'Direct fix',
+        expected: scenario => scenario.transition,
+        width: 'md' as const
+      },
+      {
+        key: 'div-clear-altitude',
+        label: 'Altitude',
+        expected: scenario => scenario.altitudes.initial.toString(),
+        alternatives: scenario => [scenario.altitudes.initialWords],
+        width: 'md' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Cleared to ' },
+      { type: 'field' as const, key: 'div-clear-destination', width: 'md' as const },
+      { type: 'text' as const, text: ', direct ' },
+      { type: 'field' as const, key: 'div-clear-transition', width: 'md' as const },
+      { type: 'text' as const, text: ', maintain ' },
+      { type: 'field' as const, key: 'div-clear-altitude', width: 'md' as const }
+    ],
+    defaultFrequency: 'CTR',
+    phrase: scenario =>
+      `${scenario.radioCall}, amended clearance: proceed direct ${scenario.transition}, maintain ${scenario.altitudes.initial}, cleared ${scenario.destination.city}.`,
+    info: () => ['Diversion clearance replaces previous routing.'],
+    generate: makeDiversionGenerator()
+  },
+  {
+    id: 'diversion-approach-landing',
+    title: 'Diversion · Approach and Landing',
+    desc: 'Complete diversion with approach and landing readback',
+    keywords: ['Diversion', 'Approach', 'Landing'],
+    hints: [
+      'Confirm approach type and runway at alternate.',
+      'End with full callsign.'
+    ],
+    fields: [
+      {
+        key: 'div-approach-type',
+        label: 'Approach',
+        expected: scenario => scenario.approach,
+        width: 'lg' as const
+      },
+      {
+        key: 'div-approach-runway',
+        label: 'Runway',
+        expected: scenario => scenario.arrivalRunway,
+        alternatives: scenario => [scenario.arrivalRunwayWords],
+        width: 'sm' as const
+      },
+      {
+        key: 'div-approach-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: emergencyCallsignAlternatives,
+        width: 'lg' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Cleared ' },
+      { type: 'field' as const, key: 'div-approach-type', width: 'lg' as const },
+      { type: 'text' as const, text: ' runway ' },
+      { type: 'field' as const, key: 'div-approach-runway', width: 'sm' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'div-approach-callsign', width: 'lg' as const }
+    ],
+    defaultFrequency: 'APP',
+    phrase: scenario =>
+      `${scenario.radioCall}, cleared ${scenario.approach} approach runway ${scenario.arrivalRunwayWords}, then contact tower for landing.`,
+    info: scenario => [`Alternate destination: ${scenario.destination.name}`],
+    generate: makeDiversionGenerator()
+  }
+]
+
 export const learnModules: ModuleDef[] = [
   {
     id: 'normalize',
@@ -4752,8 +5542,28 @@ export const learnTracks: TrackDef[] = [
         art: gradientArt(['#b71c1c', '#c62828', '#d32f2f']),
         lessons: abnormalCommsLessons,
       },
+      {
+        id: 'emergency-basics',
+        title: 'Emergency · Basics',
+        subtitle: 'MAYDAY, PAN PAN, squawk codes and fuel emergencies',
+        art: gradientArt(['#e65100', '#ef6c00', '#f57c00']),
+        lessons: emergencyBasicsLessons,
+      },
+      {
+        id: 'emergency-scenarios',
+        title: 'Emergency · Scenario Flights',
+        subtitle: 'Multi-step emergency scenarios from onset to landing',
+        art: gradientArt(['#ff6f00', '#ff8f00', '#ffa000']),
+        lessons: emergencyScenarioLessons,
+      },
     ],
   },
+  {
+    id: 'atc-perspective',
+    title: 'ATC Perspective Missions',
+    subtitle: 'Understand, decide and control like ATC',
+    modules: atcPerspectiveModules,
+  }
 ]
 
 export default learnModules
