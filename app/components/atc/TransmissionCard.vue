@@ -453,11 +453,12 @@ function isChosen(id: string): boolean {
 }
 
 .tx-candidate {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 16px auto 1fr;
+  align-items: baseline;
   gap: 6px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 4px 6px;
+  border-radius: 6px;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.72rem;
   color: var(--t3);
@@ -470,8 +471,8 @@ function isChosen(id: string): boolean {
 
 .tx-candidate-icon {
   font-size: 0.8rem;
-  width: 14px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .tx-candidate--chosen .tx-candidate-icon {
@@ -480,11 +481,15 @@ function isChosen(id: string): boolean {
 
 .tx-candidate-id {
   font-weight: 600;
-  min-width: 80px;
+  white-space: nowrap;
 }
 
 .tx-candidate-intent {
   color: var(--t3);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Variable chips */

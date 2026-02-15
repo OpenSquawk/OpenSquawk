@@ -682,19 +682,28 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* ═══════ BASE (self-contained, no classroom dependency) ═══════ */
+.scene {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+}
+
 /* ═══════ LAYOUT ═══════ */
 .setup-container {
   max-width: 460px;
-  padding-top: 32px;
+  margin: 0 auto;
+  padding: 48px 20px 32px;
 }
 
 .session-layout {
-  max-width: 500px;
+  max-width: 520px;
   margin: 0 auto;
-  padding: 4px 12px 24px;
+  padding: 12px 16px 32px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 /* ═══════ SETUP ═══════ */
@@ -702,20 +711,21 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-bottom: 16px;
+  padding-bottom: 20px;
 }
 
 .setup-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .setup-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
+  min-width: 0;
 }
 
 .setup-label {
@@ -727,7 +737,7 @@ onUnmounted(() => {
 
 .setup-row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 /* ═══════ SHARED INPUT ═══════ */
@@ -744,6 +754,8 @@ onUnmounted(() => {
   letter-spacing: 0.05em;
   outline: none;
   transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .input-field:focus {
@@ -760,13 +772,15 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
-  margin-top: 8px;
+  gap: 10px;
 }
 
 .flight-header-left {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .flight-callsign {
@@ -775,12 +789,20 @@ onUnmounted(() => {
   font-weight: 700;
   color: var(--accent);
   letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.flight-header-left .muted {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .flight-header-right {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .phase-badge {
@@ -791,6 +813,7 @@ onUnmounted(() => {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--accent);
+  white-space: nowrap;
 }
 
 .phase-dot {
@@ -798,6 +821,7 @@ onUnmounted(() => {
   height: 7px;
   border-radius: 50%;
   background: var(--accent);
+  flex-shrink: 0;
   animation: phase-glow 2s ease-in-out infinite;
 }
 
@@ -820,19 +844,20 @@ onUnmounted(() => {
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 0.75rem;
   color: var(--t2);
+  white-space: nowrap;
 }
 
 .telem-on { color: #22c55e; display: flex; align-items: center; }
 .telem-off { color: var(--t3); opacity: 0.4; display: flex; align-items: center; }
 
 /* ═══════ LATEST ATC ═══════ */
-.latest-atc { padding: 12px 14px; }
+.latest-atc { padding: 14px 16px; }
 
 .latest-atc-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .latest-atc-label {
@@ -863,6 +888,7 @@ onUnmounted(() => {
   font-size: 0.9rem;
   line-height: 1.5;
   color: var(--text);
+  word-break: break-word;
 }
 
 /* ═══════ PILOT SUGGESTIONS ═══════ */
@@ -894,11 +920,12 @@ onUnmounted(() => {
   text-align: left;
   white-space: normal;
   line-height: 1.4;
-  padding: 8px 12px;
+  padding: 10px 14px;
   font-size: 0.82rem;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+  word-break: break-word;
 }
 
 .suggestion-text {
@@ -920,7 +947,7 @@ onUnmounted(() => {
 
 .suggestion-edit {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -928,6 +955,7 @@ onUnmounted(() => {
   flex: 1;
   font-size: 0.85rem;
   padding: 8px 10px;
+  min-width: 0;
 }
 
 /* ═══════ EMERGENCY ═══════ */
@@ -948,7 +976,11 @@ onUnmounted(() => {
 
 .emergency-btn:hover { background: rgba(239, 68, 68, 0.2); }
 
-.emergency-menu { display: flex; gap: 6px; padding: 6px; }
+.emergency-menu {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+}
 
 .emergency-opt--mayday {
   background: #ef4444 !important;
@@ -979,7 +1011,9 @@ onUnmounted(() => {
 }
 
 /* ═══════ COMM LOG ═══════ */
-.comm-log { margin-top: 4px; }
+.comm-log {
+  margin-top: 2px;
+}
 
 .comm-log-header {
   display: flex;
@@ -988,7 +1022,7 @@ onUnmounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   padding: 0 2px;
 }
 
@@ -1010,7 +1044,9 @@ onUnmounted(() => {
 .comm-log-empty { text-align: center; padding: 24px; }
 
 /* ═══════ DEBUG & SETTINGS ═══════ */
-.debug-panel, .settings-panel { margin-top: 4px; }
+.debug-panel, .settings-panel {
+  margin-top: 2px;
+}
 
 .debug-summary, .settings-summary {
   display: flex;
@@ -1024,7 +1060,7 @@ onUnmounted(() => {
 }
 
 .debug-body, .settings-body {
-  padding: 0 14px 14px;
+  padding: 4px 14px 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1045,11 +1081,12 @@ onUnmounted(() => {
 .debug-sliders {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .debug-slider-row, .setting-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 90px 1fr 55px;
   align-items: center;
   gap: 10px;
   font-size: 0.8rem;
@@ -1057,26 +1094,29 @@ onUnmounted(() => {
 }
 
 .debug-slider-row label, .setting-row label {
-  min-width: 100px;
   color: var(--t3);
   font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .debug-slider-row input[type="range"], .setting-row input[type="range"] {
-  flex: 1;
+  width: 100%;
   accent-color: var(--accent);
 }
 
 .debug-slider-row input[type="checkbox"], .setting-row input[type="checkbox"] {
   accent-color: var(--accent);
+  justify-self: start;
 }
 
 .debug-value {
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 0.75rem;
   color: var(--accent);
-  min-width: 50px;
   text-align: right;
+  white-space: nowrap;
 }
 
 .debug-state {
@@ -1096,14 +1136,36 @@ onUnmounted(() => {
   gap: 8px;
   font-size: 0.78rem;
   color: var(--t2);
-  padding: 1px 0;
+  padding: 2px 0;
 }
 
-.debug-state-row span { color: var(--t3); min-width: 90px; }
+.debug-state-row span { color: var(--t3); min-width: 90px; flex-shrink: 0; }
 
 .debug-state-row code {
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 0.75rem;
   color: var(--accent);
+  word-break: break-all;
+}
+
+/* ═══════ RESPONSIVE ═══════ */
+@media (max-width: 400px) {
+  .session-layout {
+    padding: 8px 12px 24px;
+    gap: 12px;
+  }
+
+  .flight-header {
+    padding: 8px 10px;
+  }
+
+  .flight-callsign {
+    font-size: 1rem;
+  }
+
+  .debug-slider-row, .setting-row {
+    grid-template-columns: 80px 1fr 45px;
+    gap: 6px;
+  }
 }
 </style>
