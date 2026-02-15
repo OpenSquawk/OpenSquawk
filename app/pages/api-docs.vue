@@ -112,6 +112,10 @@
                   protected routes via <code class="bg-white/10 px-1">Authorization: Bearer &lt;token&gt;</code>. Refresh the token by
                   calling <code class="bg-white/10 px-1">POST /api/service/auth/refresh</code> with the refresh cookie present.
                 </p>
+                <p>
+                  Bridge endpoints under <code class="bg-white/10 px-1">/api/bridge/*</code> use
+                  <code class="bg-white/10 px-1">x-bridge-token</code> instead of the Authorization header for bridge authentication.
+                </p>
               </div>
               <div class="space-y-2">
                 <h3 class="text-lg font-semibold text-white">Base URLs</h3>
@@ -128,7 +132,7 @@
               <h2 class="text-2xl font-semibold">Endpoint catalog</h2>
               <p class="text-sm text-white/60">
                 Endpoints are grouped by audience. Public endpoints do not require a bearer token. Protected endpoints require a
-                valid access token. Rate limits and additional business rules are documented per route.
+                valid access token. Bridge endpoints require <code class="bg-white/10 px-1">x-bridge-token</code>. Rate limits and additional business rules are documented per route.
               </p>
             </header>
             <p v-if="hasActiveSearch && filteredSections.length" class="text-sm text-white/50">
@@ -200,6 +204,9 @@
                               <span v-if="endpoint.auth === 'protected'"
                                 class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
                                 <v-icon icon="mdi-lock" size="14" /> Access token required
+                              </span>
+                              <span v-else-if="endpoint.auth === 'bridge'" class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
+                                <v-icon icon="mdi-connection" size="14" /> Bridge token required
                               </span>
                               <span v-else class="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1">
                                 <v-icon icon="mdi-earth" size="14" /> Public
@@ -336,7 +343,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-type AuthLevel = 'public' | 'protected'
+type AuthLevel = 'public' | 'protected' | 'bridge'
 
 interface QueryField {
   name: string
@@ -408,6 +415,7 @@ const BASE_URL = 'https://opensquawk.de'
 const sectionCategoryOrder: Record<string, string[]> = {
   'Public endpoints': ['Waitlist & marketing', 'Feedback & insights', 'Authentication & onboarding', 'Tools & diagnostics'],
   'Protected endpoints': ['Session controls', 'Invitation management', 'ATC synthesis', 'Decision engine'],
+  'Bridge endpoints': ['Bridge integration'],
 }
 
 const sectionCategoryDescriptions: Record<string, Record<string, string>> = {
@@ -422,6 +430,9 @@ const sectionCategoryDescriptions: Record<string, Record<string, string>> = {
     'Invitation management': 'Review existing codes or mint new invitations once eligible.',
     'ATC synthesis': 'Voice generation and transcription endpoints for ATC training scenarios.',
     'Decision engine': 'LLM router access for orchestrating scenario logic.',
+  },
+  'Bridge endpoints': {
+    'Bridge integration': 'Routes used by the desktop bridge client. Bridge authentication uses the x-bridge-token header.',
   },
 }
 
@@ -1125,6 +1136,107 @@ const endpointSections: EndpointSection[] = [
   "radio_check": false
 }`,
         notes: 'Returns HTTP 500 when the router or downstream LLM fails.',
+      },
+    ],
+  },
+  {
+    title: 'Bridge endpoints',
+    description: 'Bridge routes authenticate with x-bridge-token. The connect route additionally requires a user access token.',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/api/bridge/me',
+        summary: 'Get bridge link and simulator status for the provided bridge token.',
+        category: 'Bridge integration',
+        auth: 'bridge',
+        sampleRequest: `curl -X GET https://opensquawk.de/api/bridge/me \
+  -H 'x-bridge-token: <bridge-token>'`,
+        sampleResponse: `{
+  "token": "<bridge-token>",
+  "connected": true,
+  "user": {
+    "id": "661e2a...",
+    "email": "jane.pilot@example.com",
+    "name": "Jane Pilot"
+  },
+  "simConnected": true,
+  "flightActive": false,
+  "connectedAt": "2026-02-15T10:10:10.000Z",
+  "lastStatusAt": "2026-02-15T10:12:00.000Z"
+}`,
+      },
+      {
+        method: 'POST',
+        path: '/api/bridge/status',
+        summary: 'Update heartbeat/sim status for a bridge instance.',
+        category: 'Bridge integration',
+        auth: 'bridge',
+        body: [
+          { name: 'simConnected', type: 'boolean', description: 'Whether the simulator is currently reachable.' },
+          { name: 'flightActive', type: 'boolean', description: 'Whether an active flight is currently detected.' },
+        ],
+        sampleRequest: `curl -X POST https://opensquawk.de/api/bridge/status \
+  -H 'x-bridge-token: <bridge-token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "simConnected": true,
+    "flightActive": false
+  }'`,
+        sampleResponse: `{
+  "token": "<bridge-token>",
+  "connected": true,
+  "user": {
+    "id": "661e2a...",
+    "email": "jane.pilot@example.com",
+    "name": "Jane Pilot"
+  },
+  "simConnected": true,
+  "flightActive": false,
+  "connectedAt": "2026-02-15T10:10:10.000Z",
+  "lastStatusAt": "2026-02-15T10:12:00.000Z"
+}`,
+      },
+      {
+        method: 'POST',
+        path: '/api/bridge/data',
+        summary: 'Stream telemetry payloads from the bridge into the FlightLab telemetry channel.',
+        category: 'Bridge integration',
+        auth: 'bridge',
+        body: [
+          { name: '<telemetry keys>', type: 'object', required: true, description: 'Arbitrary telemetry fields from the sim bridge payload.' },
+        ],
+        sampleRequest: `curl -X POST https://opensquawk.de/api/bridge/data \
+  -H 'x-bridge-token: <bridge-token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "AIRSPEED_INDICATED": 145.2,
+    "GROUND_VELOCITY": 142.8,
+    "VERTICAL_SPEED": 0,
+    "PLANE_ALTITUDE": 364,
+    "SIM_ON_GROUND": true
+  }'`,
+        sampleResponse: `HTTP 204 No Content`,
+        notes: 'Returns HTTP 401 if the bridge token is missing, invalid, or not linked to a user.',
+      },
+      {
+        method: 'POST',
+        path: '/api/bridge/connect',
+        summary: 'Link the bridge token to the currently signed-in user account.',
+        category: 'Bridge integration',
+        auth: 'protected',
+        sampleRequest: `curl -X POST https://opensquawk.de/api/bridge/connect \
+  -H 'Authorization: Bearer <token>' \
+  -H 'x-bridge-token: <bridge-token>'`,
+        sampleResponse: `{
+  "success": true,
+  "token": "<bridge-token>",
+  "connectedAt": "2026-02-15T10:10:10.000Z",
+  "user": {
+    "id": "661e2a...",
+    "email": "jane.pilot@example.com",
+    "name": "Jane Pilot"
+  }
+}`,
       },
     ],
   },

@@ -1,11 +1,12 @@
-import { defineEventHandler, readBody, getHeader } from 'h3'
-import { resolveUserFromToken } from '../../utils/auth'
+import { createError, defineEventHandler, readBody } from 'h3'
+import { BridgeToken } from '../../models/BridgeToken'
+import { getBridgeTokenFromHeader } from '../../utils/bridge'
 import { flightlabTelemetryStore } from '../../utils/flightlabTelemetry'
 
 /**
  * Receives MSFS SimConnect telemetry data from an external bridge application.
  *
- * The bridge should POST telemetry data with an Authorization header so we
+ * The bridge should POST telemetry data with an x-bridge-token header so we
  * can route the data to the correct FlightLab WebSocket session.
  *
  * ──────────────────────────────────────────
@@ -13,7 +14,7 @@ import { flightlabTelemetryStore } from '../../utils/flightlabTelemetry'
  * ──────────────────────────────────────────
  *
  * POST /api/bridge/data
- * Authorization: Bearer <user-jwt-token>
+ * x-bridge-token: <bridge-token>
  * Content-Type: application/json
  *
  * {
@@ -37,17 +38,23 @@ import { flightlabTelemetryStore } from '../../utils/flightlabTelemetry'
  * ──────────────────────────────────────────
  */
 export default defineEventHandler(async (event) => {
-  // Resolve user from Bearer token (optional — also works with ?userId query param)
-  const user = await resolveUserFromToken(event)
-  const userId = user?._id?.toString()
-    ?? new URL(event.node.req.url ?? '', 'http://localhost').searchParams.get('userId')
+  const bridgeToken = getBridgeTokenFromHeader(event)
+  if (!bridgeToken) {
+    throw createError({ statusCode: 401, statusMessage: 'x-bridge-token header fehlt oder ist ungültig.' })
+  }
 
+  const bridgeDocument = await BridgeToken.findOne({ token: bridgeToken }).select('user')
+  const userId = bridgeDocument?.user?.toString() ?? null
   if (!userId) {
-    event.node.res.statusCode = 401
-    return { error: 'Authorization required — send Bearer token or ?userId query param' }
+    throw createError({ statusCode: 401, statusMessage: 'Bridge-Token ist nicht mit einem Nutzer verknüpft.' })
   }
 
   const body = await readBody(event)
+  const telemetryKeys = body && typeof body === 'object' ? Object.keys(body as Record<string, unknown>) : []
+  console.info(
+    `\x1b[35m[bridge:data]\x1b[0m token=\x1b[96m${bridgeToken.slice(0, 6)}...\x1b[0m user=\x1b[92m${userId}\x1b[0m telemetryKeys=\x1b[92m${telemetryKeys.length}\x1b[0m payload=`,
+    body,
+  )
 
   // Store telemetry and broadcast to WebSocket subscribers
   flightlabTelemetryStore.update(userId, body)

@@ -196,6 +196,31 @@
                 <p class="mt-1 font-medium text-white">{{ formattedLastStatusAt }}</p>
               </div>
             </div>
+
+            <div class="rounded-2xl border border-white/10 bg-[#0B132A]/75">
+              <button
+                type="button"
+                class="flex w-full items-center justify-between px-4 py-3 text-left"
+                @click="liveTelemetryOpen = !liveTelemetryOpen"
+              >
+                <div>
+                  <p class="text-sm font-semibold text-white">Live telemetry details</p>
+                  <p class="text-xs text-white/50">Last telemetry: {{ formattedLastTelemetryAt }}</p>
+                </div>
+                <span class="text-xs uppercase tracking-[0.24em] text-white/55">
+                  {{ liveTelemetryOpen ? 'Hide' : 'Show' }}
+                </span>
+              </button>
+              <div v-if="liveTelemetryOpen" class="border-t border-white/10 px-4 py-3">
+                <p v-if="liveTelemetryLoading" class="text-xs uppercase tracking-[0.24em] text-white/45">Loading telemetry …</p>
+                <p v-else-if="liveTelemetryError" class="text-sm text-red-300">{{ liveTelemetryError }}</p>
+                <p v-else-if="!liveTelemetry?.telemetry" class="text-sm text-white/60">No telemetry received yet.</p>
+                <pre
+                  v-else
+                  class="max-h-72 overflow-auto rounded-xl border border-white/10 bg-black/40 p-3 text-xs leading-5 text-[#9be6f2]"
+                ><code>{{ liveTelemetryJson }}</code></pre>
+              </div>
+            </div>
           </div>
 
           <p v-if="statusLoading" class="mt-6 text-xs uppercase tracking-[0.38em] text-white/45">Refreshing …</p>
@@ -226,6 +251,12 @@ interface BridgeStatusPayload {
   lastStatusAt: string | null
 }
 
+interface BridgeLivePayload {
+  connected: boolean
+  lastTelemetryAt: string | null
+  telemetry: Record<string, any> | null
+}
+
 useHead({ title: 'Link Bridge · OpenSquawk' })
 
 const route = useRoute()
@@ -241,6 +272,11 @@ const statusInitialized = ref(false)
 const statusError = ref('')
 const statusLoading = ref(false)
 const statusRequestActive = ref(false)
+const liveTelemetry = ref<BridgeLivePayload | null>(null)
+const liveTelemetryOpen = ref(false)
+const liveTelemetryLoading = ref(false)
+const liveTelemetryError = ref('')
+const liveTelemetryRequestActive = ref(false)
 
 const copiedToken = ref(false)
 
@@ -277,6 +313,13 @@ const connectionSubLabel = computed(() => {
 
 const formattedConnectedAt = computed(() => formatTimestamp(connectionStatus.value?.connectedAt ?? null))
 const formattedLastStatusAt = computed(() => formatTimestamp(connectionStatus.value?.lastStatusAt ?? null))
+const formattedLastTelemetryAt = computed(() => formatTimestamp(liveTelemetry.value?.lastTelemetryAt ?? null))
+const liveTelemetryJson = computed(() => {
+  if (!liveTelemetry.value?.telemetry) {
+    return null
+  }
+  return JSON.stringify(liveTelemetry.value.telemetry, null, 2)
+})
 
 const successBannerVisible = computed(() => connectSuccess.value || Boolean(connectionStatus.value?.connected))
 
@@ -304,9 +347,9 @@ async function connectBridge() {
   try {
     await $fetch('/api/bridge/connect', {
       method: 'POST',
-      body: { token: token.value },
       headers: {
         Authorization: `Bearer ${accessToken.value}`,
+        'x-bridge-token': token.value,
       },
     })
     connectSuccess.value = true
@@ -337,7 +380,9 @@ async function fetchStatus(force = false) {
 
   try {
     const response = await $fetch<BridgeStatusPayload>('/api/bridge/me', {
-      params: { token: token.value },
+      headers: {
+        'x-bridge-token': token.value,
+      },
     })
     connectionStatus.value = response
     statusError.value = ''
@@ -345,6 +390,7 @@ async function fetchStatus(force = false) {
     if (response.connected) {
       connectSuccess.value = true
     }
+    await fetchLiveTelemetry(force)
   } catch (err: any) {
     statusError.value =
       err?.data?.statusMessage ||
@@ -354,6 +400,39 @@ async function fetchStatus(force = false) {
   } finally {
     statusRequestActive.value = false
     statusLoading.value = false
+  }
+}
+
+async function fetchLiveTelemetry(force = false) {
+  if (!hasToken.value) {
+    return
+  }
+  if (liveTelemetryRequestActive.value) {
+    return
+  }
+
+  liveTelemetryRequestActive.value = true
+  if (force || !liveTelemetry.value) {
+    liveTelemetryLoading.value = true
+  }
+
+  try {
+    const response = await $fetch<BridgeLivePayload>('/api/bridge/live', {
+      headers: {
+        'x-bridge-token': token.value,
+      },
+    })
+    liveTelemetry.value = response
+    liveTelemetryError.value = ''
+  } catch (err: any) {
+    liveTelemetryError.value =
+      err?.data?.statusMessage ||
+      err?.response?._data?.statusMessage ||
+      err?.message ||
+      'We could not fetch live telemetry.'
+  } finally {
+    liveTelemetryRequestActive.value = false
+    liveTelemetryLoading.value = false
   }
 }
 
@@ -397,6 +476,9 @@ watch(token, () => {
   connectionStatus.value = null
   statusInitialized.value = false
   statusError.value = ''
+  liveTelemetry.value = null
+  liveTelemetryError.value = ''
+  liveTelemetryOpen.value = false
   startPolling()
 })
 

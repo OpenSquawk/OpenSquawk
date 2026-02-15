@@ -1,21 +1,47 @@
-MSFS Telemetry: { status: 'idle', ts: 1758407137, sim_connected: true, flight_loaded: false }                                                                        12:27:11 AM
-MSFS Telemetry: { status: 'idle', ts: 1758407227, sim_connected: true, flight_loaded: false }                                                                        12:27:11 AM
-MSFS Telemetry: { status: 'idle', ts: 1758407237, sim_connected: true, flight_loaded: false }                                                                        12:27:11 AM
-MSFS Telemetry: { status: 'active',                                                                                                                                  12:27:14 AM
-ts: 1758407240,
-latitude: 50.043941,
-longitude: 8.581944,
-altitude_ft_true: 369,
-altitude_ft_indicated: 365,
-ias_kt: 12.8,
-tas_kt: 12.9,
-groundspeed_kt: 12,
-on_ground: true,
-eng_on: true,
-n1_pct: 19.8,
-transponder_code: 0,
-com_active_frequency: 118.000,
-com_standby_frequency: 118.000,
-MSFS Telemetry: { status: 'idle', ts: 1758407248, sim_connected: false, flight_loaded: false }                                                                       12:27:22 AM
-MSFS Telemetry: { status: 'idle', ts: 1758407293, sim_connected: false, flight_loaded: false }                                                                       12:28:07 AM
-MSFS Telemetry: { status: 'idle', ts: 1758407338, sim_connected: false, flight_loaded: false }           
+# MSFS Bridge API Examples
+
+All bridge endpoints authenticate bridge clients via the `x-bridge-token` header.
+
+## 1. Read Bridge status
+
+```bash
+curl -X GET 'https://opensquawk.de/api/bridge/me' \
+  -H 'x-bridge-token: <bridge-token>'
+```
+
+## 2. Push Bridge heartbeat/status
+
+```bash
+curl -X POST 'https://opensquawk.de/api/bridge/status' \
+  -H 'Content-Type: application/json' \
+  -H 'x-bridge-token: <bridge-token>' \
+  -d '{
+    "simConnected": true,
+    "flightActive": false
+  }'
+```
+
+## 3. Push telemetry data
+
+```bash
+curl -X POST 'https://opensquawk.de/api/bridge/data' \
+  -H 'Content-Type: application/json' \
+  -H 'x-bridge-token: <bridge-token>' \
+  -d '{
+    "AIRSPEED_INDICATED": 145.2,
+    "GROUND_VELOCITY": 142.8,
+    "VERTICAL_SPEED": 0,
+    "PLANE_ALTITUDE": 364,
+    "SIM_ON_GROUND": true
+  }'
+```
+
+## 4. Link bridge token to signed-in user
+
+This endpoint still requires a user JWT for account auth, plus the bridge token header:
+
+```bash
+curl -X POST 'https://opensquawk.de/api/bridge/connect' \
+  -H 'Authorization: Bearer <user-jwt>' \
+  -H 'x-bridge-token: <bridge-token>'
+```

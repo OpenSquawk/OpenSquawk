@@ -1,21 +1,23 @@
 import { createError, readBody } from 'h3'
 import { BridgeToken } from '../../models/BridgeToken'
-import { normalizeBridgeToken } from '../../utils/bridge'
+import { getBridgeTokenFromHeader } from '../../utils/bridge'
 import type { UserDocument } from '../../models/User'
 
 interface StatusBody {
-  token?: string
   simConnected?: boolean
   flightActive?: boolean
 }
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody<StatusBody>(event)
-  const token = normalizeBridgeToken(body.token)
-
+  const token = getBridgeTokenFromHeader(event)
   if (!token) {
-    throw createError({ statusCode: 400, statusMessage: 'Token muss übergeben werden.' })
+    throw createError({ statusCode: 401, statusMessage: 'x-bridge-token header fehlt oder ist ungültig.' })
   }
+
+  const body = await readBody<StatusBody>(event)
+  console.info(
+    `\x1b[33m[bridge:status]\x1b[0m token=\x1b[96m${token.slice(0, 6)}...\x1b[0m simConnected=\x1b[92m${String(body.simConnected)}\x1b[0m flightActive=\x1b[92m${String(body.flightActive)}\x1b[0m`,
+  )
 
   const updatePayload: Record<string, unknown> = {
     lastStatusAt: new Date(),
@@ -60,4 +62,3 @@ export default defineEventHandler(async (event) => {
     lastStatusAt: document.lastStatusAt ? document.lastStatusAt.toISOString() : null,
   }
 })
-
