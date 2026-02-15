@@ -35,60 +35,34 @@
             <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#16BBD7]/15 text-sm font-semibold text-[#16BBD7]">1</span>
             <div>
               <p class="text-xs uppercase tracking-[0.32em] text-white/55">Step 1</p>
-              <h2 class="text-lg font-semibold">Sign in</h2>
+              <h2 class="text-lg font-semibold">{{ isAuthenticated ? 'Signed in' : 'Sign in required' }}</h2>
             </div>
           </div>
-          <p class="mt-4 text-sm text-white/70">Use your OpenSquawk login so we can link the Bridge to the right account.</p>
+          <p class="mt-4 text-sm text-white/70">
+            {{ isAuthenticated ? 'You are authenticated with your OpenSquawk account.' : 'Please sign in once to link your Bridge token.' }}
+          </p>
 
-          <div v-if="isAuthenticated" class="mt-6 rounded-2xl border border-[#16BBD7]/40 bg-[#16BBD7]/10 px-5 py-4 text-sm">
-            <p class="font-medium text-[#16BBD7]">You&rsquo;re signed in</p>
-            <p class="mt-1 text-white/70">Logged in as <span class="font-semibold text-white">{{ authDisplayName }}</span>.</p>
-          </div>
-
-          <form v-else class="mt-6 space-y-4" @submit.prevent="submitLogin">
-            <div class="space-y-2">
-              <label class="block text-sm font-medium text-white/70">Email</label>
-              <input
-                v-model.trim="loginForm.email"
-                type="email"
-                required
-                autocomplete="email"
-                class="w-full rounded-2xl border border-white/10 bg-[#0B132A]/90 px-4 py-3 text-sm text-white placeholder-white/40 outline-none transition focus:border-[#16BBD7]/60 focus:ring-2 focus:ring-[#16BBD7]/60"
-              />
+          <template v-if="isAuthenticated">
+            <div class="mt-6 rounded-2xl border border-[#16BBD7]/40 bg-[#16BBD7]/10 px-5 py-4 text-sm">
+              <p class="font-medium text-[#16BBD7]">You&rsquo;re signed in</p>
+              <p class="mt-1 text-white/70">Logged in as <span class="font-semibold text-white">{{ authDisplayName }}</span>.</p>
+              <p class="mt-3 text-xs text-white/60">
+                Wrong account?
+                <NuxtLink to="/logout" class="font-semibold text-[#72d9ea] transition hover:text-[#9be6f2]">Log out</NuxtLink>
+                and sign in again.
+              </p>
             </div>
-            <div class="space-y-2">
-              <div class="flex items-center justify-between">
-                <label class="block text-sm font-medium text-white/70">Password</label>
-                <NuxtLink
-                  to="/forgot-password"
-                  class="text-xs font-semibold uppercase tracking-[0.28em] text-[#16BBD7] transition hover:text-[#72d9ea]"
-                >
-                  Forgot?
-                </NuxtLink>
-              </div>
-              <input
-                v-model="loginForm.password"
-                type="password"
-                required
-                autocomplete="current-password"
-                class="w-full rounded-2xl border border-white/10 bg-[#0B132A]/90 px-4 py-3 text-sm text-white placeholder-white/40 outline-none transition focus:border-[#16BBD7]/60 focus:ring-2 focus:ring-[#16BBD7]/60"
-              />
+          </template>
+          <template v-else>
+            <div class="mt-6">
+              <NuxtLink
+                :to="loginTarget"
+                class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea]"
+              >
+                Go to login
+              </NuxtLink>
             </div>
-
-            <button
-              type="submit"
-              class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea] disabled:cursor-not-allowed disabled:bg-[#16BBD7]/60"
-              :disabled="loginLoading"
-            >
-              <span v-if="loginLoading" class="flex items-center gap-2">
-                <span class="h-4 w-4 animate-spin rounded-full border-2 border-[#0B1020]/30 border-t-[#0B1020]"/>
-                Signing in …
-              </span>
-              <span v-else>Sign in</span>
-            </button>
-
-            <p v-if="loginError" class="text-sm text-red-300">{{ loginError }}</p>
-          </form>
+          </template>
         </section>
 
         <section class="mt-6 rounded-3xl border border-white/10 bg-[#111832]/85 p-6 shadow-[0_24px_70px_rgba(5,10,30,0.55)] sm:p-8">
@@ -127,8 +101,8 @@
               <span v-else>Link Bridge</span>
             </button>
 
-            <p v-if="!isAuthenticated" class="text-sm text-white/60">Sign in above to enable the link button.</p>
             <p v-if="connectError" class="text-sm text-red-300">{{ connectError }}</p>
+            <p v-if="!isAuthenticated" class="text-sm text-white/60">Sign in first to enable bridge linking.</p>
 
             <div
               v-if="successBannerVisible"
@@ -233,7 +207,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useHead, useRoute } from '#imports'
 import { useAuthStore } from '~/stores/auth'
@@ -258,10 +232,6 @@ const route = useRoute()
 const auth = useAuthStore()
 const { user, accessToken, isAuthenticated, initialized } = storeToRefs(auth)
 
-const loginForm = reactive({ email: '', password: '' })
-const loginLoading = ref(false)
-const loginError = ref('')
-
 const connectLoading = ref(false)
 const connectError = ref('')
 const connectSuccess = ref(false)
@@ -283,6 +253,7 @@ const token = computed(() => {
 })
 
 const hasToken = computed(() => token.value.length > 0)
+const loginTarget = computed(() => `/login?redirect=${encodeURIComponent(route.fullPath || '/bridge')}`)
 
 const authDisplayName = computed(() => {
   if (!user.value) return ''
@@ -323,32 +294,8 @@ function formatTimestamp(value: string | null) {
   }).format(parsed)
 }
 
-async function submitLogin() {
-  loginError.value = ''
-  connectError.value = ''
-  if (!loginForm.email || !loginForm.password) {
-    loginError.value = 'Please enter your email and password.'
-    return
-  }
-
-  loginLoading.value = true
-  try {
-    await auth.login({ email: loginForm.email, password: loginForm.password })
-    connectSuccess.value = false
-    await fetchStatus(true)
-  } catch (err: any) {
-    loginError.value =
-      err?.data?.statusMessage ||
-      err?.response?._data?.statusMessage ||
-      err?.message ||
-      'Login failed.'
-  } finally {
-    loginLoading.value = false
-  }
-}
-
 async function connectBridge() {
-  if (!hasToken.value || !isAuthenticated.value || !accessToken.value) {
+  if (!hasToken.value || !accessToken.value) {
     return
   }
 
