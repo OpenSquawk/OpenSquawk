@@ -4143,9 +4143,8 @@ async function playAudioSource(source: CachedAudio, targetRate: number, token: n
   const basePlaybackRate = supportsNativeSpeed
       ? clampRate(desiredRate / (nativeRate || 1), 0.5, 2)
       : desiredRate
-  const needsRateFallback = !supportsNativeSpeed && Math.abs(basePlaybackRate - 1) > 0.0001
-  const playbackRate = needsRateFallback ? 1 : basePlaybackRate
-  const htmlPlaybackRate = needsRateFallback ? basePlaybackRate : playbackRate
+  const playbackRate = basePlaybackRate
+  const htmlPlaybackRate = basePlaybackRate
 
   const playWithoutEffects = async () => {
     if (token !== activePlaybackToken) return
@@ -4179,7 +4178,7 @@ async function playAudioSource(source: CachedAudio, targetRate: number, token: n
       throw new Error('Audio engine unavailable')
     }
 
-    const sound = await pizzicato.createSoundFromBase64(ctx, source.base64)
+    const sound = await pizzicato.createSoundFromBase64(ctx, source.base64, mime)
     if (token !== activePlaybackToken) {
       sound.clearEffects()
       return
