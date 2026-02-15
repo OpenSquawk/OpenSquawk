@@ -615,9 +615,7 @@ watch(() => engine.currentPhaseId.value, async (newId, oldId) => {
   if (!newId || newId === oldId) return
   const phase = engine.currentPhase.value
   if (!phase) return
-  if (phase.sounds && phase.sounds.length > 0) {
-    audio.handlePhaseSounds(phase.sounds)
-  }
+  audio.handlePhaseSounds(phase.sounds ?? [])
   if (phase.atcMessage) {
     await audio.speakAtcMessage(phase.atcMessage, { speed: 0.9, readability: 5 })
   }

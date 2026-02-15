@@ -98,6 +98,16 @@ export function useFlightLabAudio() {
   }
 
   function handlePhaseSounds(sounds: FlightLabSound[]) {
+    // Collect sound IDs that the new phase explicitly manages
+    const managedIds = new Set(sounds.map((s) => s.id))
+
+    // Stop any active looping sounds that aren't referenced by the new phase
+    for (const [id, entry] of activeSounds.value) {
+      if (!managedIds.has(id) && entry.source.loop) {
+        stopAmbientSound(id)
+      }
+    }
+
     for (const s of sounds) {
       switch (s.action) {
         case 'play':
