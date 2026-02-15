@@ -29,7 +29,7 @@
       </div>
     </section>
 
-    <main class="container-outer news-main -mt-8 space-y-10 pb-16 pt-10 md:-mt-10 md:pb-20 md:pt-12" id="feed">
+    <main class="container-outer news-main space-y-10 pb-16 pt-10 md:pb-20 md:pt-12" id="feed">
       <section>
         <div v-if="posts.length" class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           <article

@@ -32,7 +32,7 @@
       </div>
     </section>
 
-    <main class="container-outer roadmap-main -mt-8 space-y-8 pb-16 pt-10 md:-mt-10 md:pb-20 md:pt-12">
+    <main class="container-outer roadmap-main space-y-8 pb-16 pt-10 md:pb-20 md:pt-12">
       <section class="card roadmap-hero" data-aos="fade-up">
         <div class="space-y-4">
           <h2 class="text-2xl font-semibold md:text-3xl">How to vote</h2>
