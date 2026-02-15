@@ -1,20 +1,19 @@
-import { createError, readBody } from 'h3'
+import { createError } from 'h3'
 import { requireUserSession } from '../../utils/auth'
-import { normalizeBridgeToken } from '../../utils/bridge'
+import { getBridgeTokenFromHeader } from '../../utils/bridge'
 import { BridgeToken } from '../../models/BridgeToken'
-
-interface ConnectBody {
-  token?: string
-}
 
 export default defineEventHandler(async (event) => {
   const user = await requireUserSession(event)
-  const body = await readBody<ConnectBody>(event)
-  const token = normalizeBridgeToken(body.token)
+  const token = getBridgeTokenFromHeader(event)
 
   if (!token) {
-    throw createError({ statusCode: 400, statusMessage: 'Ungültiger Token übergeben.' })
+    throw createError({ statusCode: 401, statusMessage: 'x-bridge-token header fehlt oder ist ungültig.' })
   }
+
+  console.info(
+    `\x1b[32m[bridge:connect]\x1b[0m token=\x1b[96m${token.slice(0, 6)}...\x1b[0m user=\x1b[92m${String(user._id)}\x1b[0m`,
+  )
 
   const now = new Date()
 
@@ -47,4 +46,3 @@ export default defineEventHandler(async (event) => {
     },
   }
 })
-

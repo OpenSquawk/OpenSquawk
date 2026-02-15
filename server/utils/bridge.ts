@@ -1,3 +1,5 @@
+import { getHeader, type H3Event } from 'h3'
+
 export function normalizeBridgeToken(input: unknown) {
   if (typeof input !== 'string') {
     return null
@@ -12,3 +14,6 @@ export function normalizeBridgeToken(input: unknown) {
   return token
 }
 
+export function getBridgeTokenFromHeader(event: H3Event) {
+  return normalizeBridgeToken(getHeader(event, 'x-bridge-token'))
+}

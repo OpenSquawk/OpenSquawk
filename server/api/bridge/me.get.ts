@@ -1,15 +1,16 @@
-import { createError, getQuery } from 'h3'
+import { createError } from 'h3'
 import { BridgeToken } from '../../models/BridgeToken'
-import { normalizeBridgeToken } from '../../utils/bridge'
+import { getBridgeTokenFromHeader } from '../../utils/bridge'
 import type { UserDocument } from '../../models/User'
 
 export default defineEventHandler(async (event) => {
-  const query = getQuery(event)
-  const token = normalizeBridgeToken(query.token as string | undefined)
+  const token = getBridgeTokenFromHeader(event)
 
   if (!token) {
-    throw createError({ statusCode: 400, statusMessage: 'Token muss übergeben werden.' })
+    throw createError({ statusCode: 401, statusMessage: 'x-bridge-token header fehlt oder ist ungültig.' })
   }
+
+  console.info(`\x1b[36m[bridge:me]\x1b[0m token=\x1b[96m${token.slice(0, 6)}...\x1b[0m request received`)
 
   const document = await BridgeToken.findOne({ token }).populate('user', 'name email')
 
@@ -41,4 +42,3 @@ export default defineEventHandler(async (event) => {
     lastStatusAt: document.lastStatusAt ? document.lastStatusAt.toISOString() : null,
   }
 })
-
