@@ -89,7 +89,8 @@ async function speachesTTS(
     voice: string,
     model: string,
     response_format: AudioFmt,
-    baseUrl: string
+    baseUrl: string,
+    speed: number = 1.0
 ): Promise<Buffer> {
     const url = `${baseUrl.replace(/\/+$/, "")}/v1/audio/speech`;
     const body = {
@@ -97,7 +98,8 @@ async function speachesTTS(
         model,
         voice,
         // API erwartet "response_format": "mp3" | "flac" | "wav" | "pcm"
-        response_format
+        response_format,
+        speed
     };
     const res = await fetch(url, {
         method: "POST",
@@ -174,7 +176,7 @@ export default defineEventHandler(async (event) => {
             if (!baseUrl) {
                 throw new Error("SPEACHES_BASE_URL not set");
             }
-            audioBuffer = await speachesTTS(normalized, voice, model, fmt, baseUrl);
+            audioBuffer = await speachesTTS(normalized, voice, model, fmt, baseUrl, speed);
             modelUsed = model;
             // Server returns the correct format according to response_format
             actualMime = fmtToMime(fmt);

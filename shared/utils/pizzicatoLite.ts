@@ -13,7 +13,7 @@ export type SupportedEffect =
   | TremoloEffect
 
 export interface PizzicatoLite {
-  createSoundFromBase64(context: AudioContext, base64: string): Promise<PizzicatoSound>
+  createSoundFromBase64(context: AudioContext, base64: string, mime?: string): Promise<PizzicatoSound>
   Effects: {
     HighPassFilter: typeof HighPassFilterEffect
     LowPassFilter: typeof LowPassFilterEffect
@@ -46,18 +46,30 @@ const createDistortionCurve = (amount: number, context: AudioContext) => {
   return curve
 }
 
+const setPreservesPitch = (media: HTMLMediaElement, preserve: boolean) => {
+  try { (media as any).preservesPitch = preserve } catch { /* unsupported */ }
+  try { (media as any).mozPreservesPitch = preserve } catch { /* unsupported */ }
+  try { (media as any).webkitPreservesPitch = preserve } catch { /* unsupported */ }
+}
+
 class PizzicatoSound {
   private context: AudioContext
   private buffer: AudioBuffer
+  private base64: string
+  private mime: string
   private outputNode: GainNode
   private sourceNode: AudioBufferSourceNode | null = null
+  private mediaElement: HTMLAudioElement | null = null
+  private mediaSourceNode: MediaElementAudioSourceNode | null = null
   private effects: EffectNode[] = []
   private isPlaying = false
-  private playbackRate = 1
+  private _playbackRate = 1
 
-  constructor(context: AudioContext, buffer: AudioBuffer) {
+  constructor(context: AudioContext, buffer: AudioBuffer, base64: string, mime: string) {
     this.context = context
     this.buffer = buffer
+    this.base64 = base64
+    this.mime = mime
     this.outputNode = context.createGain()
     this.outputNode.gain.value = 1
     this.outputNode.connect(this.context.destination)
@@ -81,15 +93,14 @@ class PizzicatoSound {
   }
 
   setPlaybackRate(value: number) {
-    const clamped = clamp(value, 0.25, 4)
-    this.playbackRate = clamped
-    if (this.sourceNode) {
-      try {
-        this.sourceNode.playbackRate.value = clamped
-      } catch {
-        // ignore rate assignment errors
-      }
+    this._playbackRate = clamp(value, 0.25, 4)
+    if (this.mediaElement) {
+      this.mediaElement.playbackRate = this._playbackRate
     }
+  }
+
+  private get needsRateAdjustment(): boolean {
+    return Math.abs(this._playbackRate - 1) > 0.001
   }
 
   async play(): Promise<void> {
@@ -97,9 +108,18 @@ class PizzicatoSound {
       this.stop()
     }
 
+    // Use MediaElement path when rate != 1 so preservesPitch works.
+    // BufferSource path is used at normal speed (no pitch issue).
+    if (this.needsRateAdjustment) {
+      return this.playViaMediaElement()
+    }
+    return this.playViaBuffer()
+  }
+
+  private async playViaBuffer(): Promise<void> {
     const source = this.context.createBufferSource()
     source.buffer = this.buffer
-    source.playbackRate.value = this.playbackRate
+    source.playbackRate.value = 1
 
     const connectedNodes: AudioNode[] = []
 
@@ -141,15 +161,74 @@ class PizzicatoSound {
     })
   }
 
-  stop() {
-    if (!this.isPlaying || !this.sourceNode) {
-      return
+  private async playViaMediaElement(): Promise<void> {
+    const audio = new Audio(`data:${this.mime};base64,${this.base64}`)
+    audio.playbackRate = this._playbackRate
+    setPreservesPitch(audio, true)
+
+    // MediaElementSourceNode routes audio through Web Audio effects chain
+    const mediaSource = this.context.createMediaElementSource(audio)
+
+    const connectedNodes: AudioNode[] = []
+
+    let currentNode: AudioNode = mediaSource
+    for (const effect of this.effects) {
+      connectedNodes.push(currentNode)
+      currentNode.connect(effect.inputNode)
+      currentNode = effect.outputNode
+      effect.onActivate?.()
     }
 
-    try {
-      this.sourceNode.stop()
-    } catch {
-      // ignore stop errors
+    connectedNodes.push(currentNode)
+    currentNode.connect(this.outputNode)
+
+    this.mediaElement = audio
+    this.mediaSourceNode = mediaSource
+    this.isPlaying = true
+
+    return new Promise((resolve) => {
+      const cleanup = () => {
+        this.isPlaying = false
+        connectedNodes.forEach(node => {
+          try {
+            node.disconnect()
+          } catch {
+            // ignore disconnect errors
+          }
+        })
+        this.effects.forEach(effect => effect.onDeactivate?.())
+        this.mediaElement = null
+        this.mediaSourceNode = null
+        resolve()
+      }
+
+      audio.onended = cleanup
+      audio.onerror = cleanup
+
+      audio.play().catch(() => {
+        cleanup()
+      })
+    })
+  }
+
+  stop() {
+    if (!this.isPlaying) return
+
+    if (this.sourceNode) {
+      try {
+        this.sourceNode.stop()
+      } catch {
+        // ignore stop errors
+      }
+    }
+
+    if (this.mediaElement) {
+      try {
+        this.mediaElement.pause()
+        this.mediaElement.currentTime = 0
+      } catch {
+        // ignore stop errors
+      }
     }
   }
 }
@@ -359,10 +438,10 @@ export const loadPizzicatoLite = async (): Promise<PizzicatoLite | null> => {
   if (cachedInstance) return cachedInstance
 
   const instance: PizzicatoLite = {
-    async createSoundFromBase64(context: AudioContext, base64: string) {
+    async createSoundFromBase64(context: AudioContext, base64: string, mime: string = 'audio/wav') {
       const arrayBuffer = decodeBase64ToArrayBuffer(base64)
       const audioBuffer = await context.decodeAudioData(arrayBuffer.slice(0))
-      return new PizzicatoSound(context, audioBuffer)
+      return new PizzicatoSound(context, audioBuffer, base64, mime)
     },
     Effects: {
       HighPassFilter: HighPassFilterEffect,
