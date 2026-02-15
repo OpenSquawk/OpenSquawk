@@ -95,6 +95,14 @@ export const ROADMAP_ITEMS: RoadmapItemDefinition[] = [
     category: 'Traffic',
     icon: 'mdi-airplane-takeoff',
   },
+  {
+    key: 'frequency-sim-control',
+    title: 'Frequency-driven simulator control',
+    description:
+      'Use natural commands on frequency (for example "set me up for an approach from 5,000 ft to EDDF 07R" or "change my altitude to X") and let the bridge apply those changes directly in the sim.',
+    category: 'Bridge',
+    icon: 'mdi-radio-tower',
+  },
 ]
 
 export const ROADMAP_ITEM_KEYS = new Set(ROADMAP_ITEMS.map((item) => item.key))

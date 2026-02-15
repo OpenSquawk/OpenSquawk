@@ -1,6 +1,6 @@
 ---
 title: "Classroom Update: Slower Audio, Smarter Phonetics, and METAR That Actually Makes Sense"
-date: "2025-02-14"
+date: "2026-02-14"
 summary: "We listened to your feedback and improved audio clarity, fixed phonetic edge cases, and made METAR lessons actually understandable."
 readingTime: "2 min read"
 ---
@@ -49,7 +49,6 @@ Now:
 
 ## Small Fixes
 
-- The readback feedback label now says **"Expected:"** instead of the German "Soll:" -- sorry about that.
 - The **Pushback Delay** lesson now accepts both the word form ("five") and the numeral ("5") for the delay field.
 
 ---
