@@ -3257,6 +3257,406 @@ const fullFlightLessons = [
   }
 ]
 
+/* ────────────────────────────────────────────────────────────
+ *  VATSIM ESSENTIALS
+ * ──────────────────────────────────────────────────────────── */
+
+const vatsimEssentialsLessons = [
+  {
+    id: 'unicom-blind-call',
+    title: 'Unicom Blind Call',
+    desc: 'Announce your intentions when no ATC is online',
+    keywords: ['VATSIM', 'Unicom', '122.800'],
+    hints: [
+      'When no controller is online, announce on the advisory frequency (122.800 or local CTAF).',
+      'Format: "[Callsign], [Airport] Traffic, [position], [intention]".',
+      'Keep it brief — other pilots just need to know where you are and what you plan to do.'
+    ],
+    fields: [
+      {
+        key: 'icao',
+        label: 'Airport ICAO',
+        expected: (scenario: Scenario) => scenario.airport.icao,
+        placeholder: 'ICAO code',
+        width: 'sm' as const
+      },
+      {
+        key: 'position',
+        label: 'Position',
+        expected: (scenario: Scenario) => scenario.positionDescription,
+        alternatives: (scenario: Scenario) => [
+          scenario.positionDescription,
+          scenario.positionDescription.toLowerCase(),
+        ],
+        threshold: 0.7,
+        placeholder: 'e.g. 10 miles south',
+        width: 'lg' as const
+      },
+      {
+        key: 'intention',
+        label: 'Intention',
+        expected: () => 'inbound for landing',
+        alternatives: () => [
+          'inbound for landing',
+          'inbound',
+          'inbound runway',
+          'inbound for ILS approach',
+          'inbound for approach',
+        ],
+        threshold: 0.6,
+        placeholder: 'e.g. inbound for landing',
+        width: 'lg' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: (scenario: Scenario) => `${scenario.radioCall}, ` },
+      { type: 'field' as const, key: 'icao', width: 'sm' as const },
+      { type: 'text' as const, text: ' Traffic, ' },
+      { type: 'field' as const, key: 'position', width: 'lg' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'intention', width: 'lg' as const },
+    ],
+    defaultFrequency: undefined,
+    phrase: (scenario: Scenario) =>
+      `No ATC online at ${scenario.airport.name}. You are ${scenario.positionDescription}, planning to land. Make a blind call on the advisory frequency.`,
+    info: (scenario: Scenario) => [
+      `Airport: ${scenario.airport.icao} — ${scenario.airport.name}`,
+      `Position: ${scenario.positionDescription}`,
+      'Advisory frequency: 122.800 (or local CTAF)'
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'radio-check-readability',
+    title: 'Radio Check & Readability',
+    desc: 'Initiate a radio check and confirm readability',
+    keywords: ['Radio Check', 'Readability', 'Basics'],
+    hints: [
+      'Format: "[Station], [Callsign], radio check [frequency]".',
+      'Readability scale: 1 = unreadable, 2 = barely readable, 3 = readable with difficulty, 4 = readable, 5 = perfectly readable.',
+      'Confirm with: "Readability [number], [Callsign]".'
+    ],
+    fields: [
+      {
+        key: 'station',
+        label: 'Station',
+        expected: (scenario: Scenario) => `${scenario.airport.city} Delivery`,
+        alternatives: (scenario: Scenario) => [
+          `${scenario.airport.city} Delivery`,
+          `${scenario.airport.name} Delivery`,
+          `${scenario.airport.city} delivery`,
+        ],
+        threshold: 0.75,
+        placeholder: 'e.g. Frankfurt Delivery',
+        width: 'lg' as const
+      },
+      {
+        key: 'frequency',
+        label: 'Frequency',
+        expected: (scenario: Scenario) => scenario.deliveryFreq,
+        alternatives: (scenario: Scenario) => [
+          scenario.deliveryFreq,
+          scenario.deliveryFreq.replace('.', ','),
+        ],
+        placeholder: 'e.g. 121.900',
+        width: 'md' as const
+      },
+      {
+        key: 'readability',
+        label: 'Readability',
+        expected: (scenario: Scenario) => scenario.readability.toString(),
+        alternatives: (scenario: Scenario) => [
+          scenario.readability.toString(),
+          scenario.readabilityWord,
+        ],
+        placeholder: '1-5',
+        width: 'xs' as const,
+        inputmode: 'numeric' as const
+      }
+    ],
+    readback: [
+      { type: 'field' as const, key: 'station', width: 'lg' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}, radio check ` },
+      { type: 'field' as const, key: 'frequency', width: 'md' as const },
+      { type: 'text' as const, text: ' · Readability ' },
+      { type: 'field' as const, key: 'readability', width: 'xs' as const },
+    ],
+    defaultFrequency: 'DEL',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, ${scenario.readabilityPhrase}.`,
+    info: (scenario: Scenario) => [
+      `Station: ${scenario.airport.city} Delivery`,
+      `Frequency: ${scenario.deliveryFreq}`,
+      `Readability: ${scenario.readability} — ${scenario.readabilityWord}`,
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'say-again-targeted',
+    title: 'Say Again (Targeted)',
+    desc: 'Request the specific missing part of a garbled clearance',
+    keywords: ['Say Again', 'Comms', 'Recovery'],
+    hints: [
+      'Never just say "say again" — always specify WHAT you missed.',
+      'Use: "Say again [element]" or "Say again all before [word]" or "Say again all after [word]".',
+      'Common targets: clearance limit, routing, squawk code, altitude.'
+    ],
+    fields: [
+      {
+        key: 'say-again-target',
+        label: 'Say again target',
+        expected: () => 'clearance limit and routing',
+        alternatives: () => [
+          'clearance limit and routing',
+          'clearance limit',
+          'routing',
+          'all before squawk',
+          'destination and routing',
+          'all before departure frequency',
+        ],
+        threshold: 0.55,
+        placeholder: 'e.g. clearance limit and routing',
+        width: 'xl' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: (scenario: Scenario) => `${scenario.radioCall}, say again ` },
+      { type: 'field' as const, key: 'say-again-target', width: 'xl' as const },
+    ],
+    defaultFrequency: 'DEL',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, cleared to... [garbled] ...${scenario.sid} departure, squawk ${scenario.squawkWords}.`,
+    info: (scenario: Scenario) => [
+      'The clearance limit (destination) and routing were garbled.',
+      `You heard: SID "${scenario.sid}" and squawk "${scenario.squawk}"`,
+      'Request specifically what you missed — not "say again all".'
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'monitor-vs-contact',
+    title: 'Monitor vs Contact',
+    desc: 'Know when to call in and when to just listen',
+    keywords: ['Frequency', 'Monitor', 'Contact', 'VATSIM'],
+    hints: [
+      '"Contact [station]" = switch frequency AND make an initial call.',
+      '"Monitor [station]" = switch frequency and LISTEN ONLY — do NOT transmit.',
+      'This is the most common VATSIM beginner mistake.'
+    ],
+    fields: [
+      {
+        key: 'action',
+        label: 'Action',
+        expected: () => 'contact',
+        alternatives: () => ['contact', 'Contact'],
+        placeholder: 'contact or monitor',
+        width: 'md' as const
+      },
+      {
+        key: 'facility',
+        label: 'Facility',
+        expected: (scenario: Scenario) => `${scenario.airport.city} Tower`,
+        alternatives: (scenario: Scenario) => [
+          `${scenario.airport.city} Tower`,
+          `${scenario.airport.city} tower`,
+          `${scenario.airport.name} Tower`,
+        ],
+        threshold: 0.75,
+        placeholder: 'e.g. Frankfurt Tower',
+        width: 'lg' as const
+      },
+      {
+        key: 'freq',
+        label: 'Frequency',
+        expected: (scenario: Scenario) => scenario.towerFreq,
+        placeholder: 'e.g. 118.700',
+        width: 'md' as const
+      },
+      {
+        key: 'initial-call',
+        label: 'Initial call',
+        expected: (scenario: Scenario) =>
+          `${scenario.airport.city} Tower, ${scenario.radioCall}, ${scenario.altitudes.initialWords} feet, information ${scenario.atisCodeWord}`,
+        alternatives: (scenario: Scenario) => [
+          `${scenario.airport.city} Tower, ${scenario.radioCall}, ${scenario.altitudes.initial} feet, information ${scenario.atisCode}`,
+          `${scenario.airport.city} Tower, ${scenario.radioCall}, ${scenario.altitudes.initial}, information ${scenario.atisCode}`,
+        ],
+        threshold: 0.55,
+        placeholder: 'Full initial call on new frequency',
+        width: 'xl' as const
+      }
+    ],
+    readback: [
+      { type: 'field' as const, key: 'action', width: 'md' as const },
+      { type: 'text' as const, text: ' ' },
+      { type: 'field' as const, key: 'facility', width: 'lg' as const },
+      { type: 'text' as const, text: ' ' },
+      { type: 'field' as const, key: 'freq', width: 'md' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall} · ` },
+      { type: 'field' as const, key: 'initial-call', width: 'xl' as const },
+    ],
+    defaultFrequency: 'GND',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, contact ${scenario.airport.city} Tower ${scenario.towerFreq}.`,
+    info: (scenario: Scenario) => [
+      '"Contact" means: switch AND call in with your position + ATIS.',
+      `Station: ${scenario.airport.city} Tower on ${scenario.towerFreq}`,
+      `Your altitude: ${scenario.altitudes.initial} ft, ATIS: ${scenario.atisCode}`,
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'two-step-freq-change',
+    title: 'Two-Step Frequency Change',
+    desc: 'Read back a combined instruction then make the initial call',
+    keywords: ['Frequency', 'Handoff', 'Climb'],
+    hints: [
+      'When ATC gives an instruction + frequency change, read back BOTH before switching.',
+      'After switching: make your initial call with callsign, altitude, and ATIS.',
+      'Format: "[Station], [Callsign], climbing/at [altitude], information [ATIS]".'
+    ],
+    fields: [
+      {
+        key: 'climb-alt',
+        label: 'Climb altitude',
+        expected: (scenario: Scenario) => `flight level ${scenario.altitudes.climbWords.replace(/ thousand/g, '').replace(/\s+/g, ' ')}`,
+        alternatives: (scenario: Scenario) => {
+          const raw = scenario.altitudes.climb.toString()
+          const fl = `FL${Math.round(scenario.altitudes.climb / 100)}`
+          return [
+            `flight level ${scenario.altitudes.climbWords}`,
+            `FL ${Math.round(scenario.altitudes.climb / 100)}`,
+            fl,
+            raw,
+            scenario.altitudes.climbWords,
+          ]
+        },
+        threshold: 0.6,
+        placeholder: 'e.g. flight level 350',
+        width: 'lg' as const
+      },
+      {
+        key: 'handoff-facility',
+        label: 'Facility',
+        expected: (scenario: Scenario) => scenario.handoff.facility,
+        alternatives: (scenario: Scenario) => [
+          scenario.handoff.facility,
+          scenario.handoff.facility.toLowerCase(),
+        ],
+        threshold: 0.7,
+        placeholder: 'e.g. London Control',
+        width: 'lg' as const
+      },
+      {
+        key: 'handoff-freq',
+        label: 'Frequency',
+        expected: (scenario: Scenario) => scenario.handoff.frequency,
+        placeholder: 'e.g. 128.050',
+        width: 'md' as const
+      },
+      {
+        key: 'atis-code',
+        label: 'ATIS code',
+        expected: (scenario: Scenario) => scenario.atisCode,
+        alternatives: (scenario: Scenario) => [
+          scenario.atisCode,
+          scenario.atisCodeWord,
+          scenario.atisCode.toLowerCase(),
+          scenario.atisCodeWord.toLowerCase(),
+        ],
+        placeholder: 'e.g. D or Delta',
+        width: 'sm' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Climb ' },
+      { type: 'field' as const, key: 'climb-alt', width: 'lg' as const },
+      { type: 'text' as const, text: ', contact ' },
+      { type: 'field' as const, key: 'handoff-facility', width: 'lg' as const },
+      { type: 'text' as const, text: ' ' },
+      { type: 'field' as const, key: 'handoff-freq', width: 'md' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall} · Initial: ... information ` },
+      { type: 'field' as const, key: 'atis-code', width: 'sm' as const },
+    ],
+    defaultFrequency: 'DEP',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, climb ${scenario.altitudes.climbWords}, contact ${scenario.handoff.facility} ${scenario.handoff.frequency}.`,
+    info: (scenario: Scenario) => [
+      `Instruction: Climb ${scenario.altitudes.climb} ft`,
+      `Handoff: ${scenario.handoff.facility} on ${scenario.handoff.frequency}`,
+      `ATIS: Information ${scenario.atisCode}`,
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'atis-update-taxi',
+    title: 'ATIS Update During Taxi',
+    desc: 'Acknowledge a new ATIS with changed QNH and runway',
+    keywords: ['ATIS', 'QNH', 'Taxi', 'Runway Change'],
+    hints: [
+      'When ATC announces a new ATIS during taxi, read back the safety-critical items: ATIS letter, QNH, and new runway.',
+      'Always set the new QNH immediately — it affects your altimeter.',
+      'The runway change may require re-briefing your departure procedure.'
+    ],
+    fields: [
+      {
+        key: 'atis-letter',
+        label: 'ATIS letter',
+        expected: (scenario: Scenario) => scenario.atisCode,
+        alternatives: (scenario: Scenario) => [
+          scenario.atisCode,
+          scenario.atisCodeWord,
+          scenario.atisCode.toLowerCase(),
+          scenario.atisCodeWord.toLowerCase(),
+        ],
+        placeholder: 'e.g. D or Delta',
+        width: 'sm' as const
+      },
+      {
+        key: 'qnh',
+        label: 'QNH',
+        expected: (scenario: Scenario) => scenario.qnh.toString(),
+        alternatives: (scenario: Scenario) => [
+          scenario.qnh.toString(),
+          scenario.qnhWords,
+        ],
+        placeholder: 'e.g. 1013',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'new-runway',
+        label: 'New runway',
+        expected: (scenario: Scenario) => scenario.runway,
+        alternatives: (scenario: Scenario) => [
+          scenario.runway,
+          scenario.runwayWords,
+        ],
+        placeholder: 'e.g. 25C',
+        width: 'sm' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Information ' },
+      { type: 'field' as const, key: 'atis-letter', width: 'sm' as const },
+      { type: 'text' as const, text: ', QNH ' },
+      { type: 'field' as const, key: 'qnh', width: 'sm' as const },
+      { type: 'text' as const, text: ', runway ' },
+      { type: 'field' as const, key: 'new-runway', width: 'sm' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` },
+    ],
+    defaultFrequency: 'GND',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, information is now ${scenario.atisCodeWord}, QNH ${scenario.qnhWords}, wind changed ${scenario.windWords}, runway changed to ${scenario.runwayWords}.`,
+    info: (scenario: Scenario) => [
+      `New ATIS: ${scenario.atisCode} (${scenario.atisCodeWord})`,
+      `QNH: ${scenario.qnh}`,
+      `New runway: ${scenario.runway}`,
+    ],
+    generate: createBaseScenario
+  }
+]
+
 export const learnModules: ModuleDef[] = [
   {
     id: 'normalize',
@@ -3298,6 +3698,20 @@ export const learnTracks: TrackDef[] = [
     title: 'Core Flight Missions',
     subtitle: 'From basics to full flight',
     modules: learnModules,
+  },
+  {
+    id: 'abnormal',
+    title: 'Abnormal & Emergency Missions',
+    subtitle: 'Non-standard situations, emergencies & VATSIM procedures',
+    modules: [
+      {
+        id: 'vatsim-essentials',
+        title: 'VATSIM · Essentials',
+        subtitle: 'Unicom, radio checks, frequency management',
+        art: gradientArt(['#1a237e', '#283593', '#3949ab']),
+        lessons: vatsimEssentialsLessons,
+      },
+    ],
   },
 ]
 
