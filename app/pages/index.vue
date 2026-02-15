@@ -1,55 +1,61 @@
 <template>
   <div class="bg-[#0b1020] text-white antialiased selection:bg-cyan-400/30">
-    <!-- NAV -->
-    <header ref="headerRef"
-            class="fixed left-0 right-0 top-0 z-50 bg-[#0b1020]/70 backdrop-blur border-b border-white/10"
-            data-aos="fade-down">
-      <nav class="container-outer flex items-center justify-between py-3">
-        <NuxtLink to="#" class="flex items-center gap-2 font-semibold tracking-tight">
-          <v-icon icon="mdi-radar" size="28" class="text-cyan-400"/>
+    <header
+      ref="headerRef"
+      class="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[#0b1020]/70 backdrop-blur"
+      data-aos="fade-down"
+    >
+      <nav class="container-outer flex items-center justify-between py-3.5 sm:py-4">
+        <NuxtLink
+          to="#"
+          class="flex items-center gap-2 font-semibold tracking-tight"
+          @click.prevent="handleAnchorNavigation('#')"
+        >
+          <v-icon icon="mdi-radar" size="28" class="text-cyan-400" />
           <span class="text-white">OpenSquawk</span>
         </NuxtLink>
+
         <div class="hidden lg:flex items-center gap-6 text-sm">
           <NuxtLink
-              v-for="item in navLinks"
-              :key="item.to"
-              :to="item.to"
-              :class="['transition-colors hover:text-cyan-300', isNavLinkActive(item.to) ? 'text-cyan-300' : 'text-white/70']"
-              @click.prevent="handleAnchorNavigation(item.to)"
+            v-for="item in navLinks"
+            :key="item.to"
+            :to="item.to"
+            :class="[
+              'transition-colors hover:text-cyan-300',
+              isNavLinkActive(item.to) ? 'text-cyan-300' : 'text-white/70'
+            ]"
+            @click.prevent="handleAnchorNavigation(item.to)"
           >
             {{ item.label }}
           </NuxtLink>
         </div>
+
         <div class="flex items-center gap-2 sm:gap-3">
+          <NuxtLink to="/roadmap" class="btn btn-ghost whitespace-nowrap btn-compact hidden sm:inline-flex">
+            <v-icon icon="mdi-map-marker-path" size="18" />
+            Roadmap
+          </NuxtLink>
           <NuxtLink
-              to="/login"
-              class="btn btn-primary whitespace-nowrap btn-compact"
-              aria-label="Login"
+            :to="GITHUB_URL"
+            external
+            target="_blank"
+            rel="noopener"
+            class="btn btn-ghost whitespace-nowrap btn-compact hidden lg:inline-flex"
           >
-            <v-icon icon="mdi-login" size="18"/>
+            <v-icon icon="mdi-github" size="18" />
+            GitHub
+          </NuxtLink>
+          <NuxtLink to="/login" class="btn btn-primary whitespace-nowrap btn-compact" aria-label="Login">
+            <v-icon icon="mdi-login" size="18" />
             <span class="hidden sm:inline">Login</span>
           </NuxtLink>
-          <span
-              class="hidden lg:inline-block text-sm text-white/70"
-              title="OpenSquawk is open-source on GitHub"
-          >
-          <NuxtLink
-              :to="GITHUB_URL"
-              external
-              target="_blank"
-              rel="noopener"
-              class="btn btn-ghost btn-compact"
-          >
-            <v-icon icon="mdi-github"/>
-            GitHub
-          </NuxtLink></span>
           <button
-              type="button"
-              class="mobile-toggle lg:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1020]"
-              :aria-expanded="isMobileNavOpen ? 'true' : 'false'"
-              aria-controls="mobile-navigation"
-              aria-label="Toggle navigation"
-              @click="toggleMobileNav"
+            type="button"
+            class="mobile-toggle lg:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1020]"
+            :aria-expanded="isMobileNavOpen ? 'true' : 'false'"
+            aria-controls="mobile-navigation"
+            aria-label="Toggle navigation"
+            @click="toggleMobileNav"
           >
             <span class="sr-only">Toggle navigation</span>
             <span class="hamburger" :class="{ 'is-open': isMobileNavOpen }">
@@ -60,1066 +66,619 @@
           </button>
         </div>
       </nav>
+
       <Transition name="mobile-nav">
         <div
-            v-if="isMobileNavOpen"
-            id="mobile-navigation"
-            class="lg:hidden border-t border-white/10 bg-[#0b1020]/95 backdrop-blur"
+          v-if="isMobileNavOpen"
+          id="mobile-navigation"
+          class="lg:hidden border-t border-white/10 bg-[#0b1020]/95 backdrop-blur"
         >
           <div class="container-outer py-4 space-y-4">
             <nav class="grid gap-2 text-sm">
               <NuxtLink
-                  v-for="item in mobileNavLinks"
-                  :key="`mobile-${item.to}`"
-                  :to="item.to"
-                  :external="item.external"
-                  :target="item.external ? '_blank' : undefined"
-                  :rel="item.external ? 'noopener' : undefined"
-                  class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 transition hover:bg-white/10"
-                  @click="handleMobileNavLinkClick($event, item)"
+                v-for="item in mobileNavLinks"
+                :key="`mobile-${item.to}`"
+                :to="item.to"
+                :external="item.external"
+                :target="item.external ? '_blank' : undefined"
+                :rel="item.external ? 'noopener' : undefined"
+                class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 transition hover:bg-white/10"
+                @click="handleMobileNavLinkClick($event, item)"
               >
                 <span class="flex items-center gap-3">
-                  <v-icon v-if="item.icon" :icon="item.icon" size="18" class="text-white/60"/>
+                  <v-icon v-if="item.icon" :icon="item.icon" size="18" class="text-white/60" />
                   <span>{{ item.label }}</span>
                 </span>
-                <v-icon icon="mdi-chevron-right" size="18" class="text-white/60"/>
+                <v-icon icon="mdi-chevron-right" size="18" class="text-white/60" />
               </NuxtLink>
             </nav>
-            <div class="grid gap-2">
-              <NuxtLink to="/login" class="btn btn-primary w-full" @click="closeMobileNav">
-                <v-icon icon="mdi-login" size="18"/>
-                Login
-              </NuxtLink>
-            </div>
           </div>
         </div>
       </Transition>
     </header>
 
-    <!-- HERO -->
     <section class="gradient-hero relative overflow-hidden">
       <div class="hero-overlay absolute inset-0 pointer-events-none">
-        <div class="absolute -top-24 right-0 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-3xl"/>
+        <div class="absolute -top-24 right-0 h-[600px] w-[600px] rounded-full bg-cyan-500/10 blur-3xl" />
       </div>
 
-      <div class="container-outer relative z-10 mt-8 pt-14 pb-10 sm:pt-20 sm:pb-16 md:pt-24 md:pb-20">
-        <div
-            class="hero-grid grid gap-10 lg:my-20 xl:gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-center">
-          <div class="hero-copy max-w-2xl" data-aos="fade-up">
-            <span class="chip mb-4">In development · Live AI ATC</span>
-            <h1 class="text-3xl sm:text-5xl md:text-6xl font-semibold leading-tight">
-              OpenSquawk<br/>
-              <span class="text-cyan-400">Live speech ATC for simulator pilots</span>
+      <div class="container-outer relative z-10 mt-10 pb-14 pt-16 sm:mt-12 sm:pb-20 sm:pt-24 md:pb-28 md:pt-32">
+        <div class="hero-stack mx-auto max-w-5xl lg:my-20">
+          <div class="hero-copy max-w-3xl" data-aos="fade-up">
+            <span class="chip mb-4">Structured Radio Training</span>
+            <h1 class="text-4xl font-semibold leading-tight sm:text-6xl md:text-7xl">
+              Train ATC before you fly VATSIM.
             </h1>
-            <p class="mt-4 sm:mt-6 text-white/80 text-base sm:text-lg">
-              Push-to-talk in your sim, get authentic instructions back. Speech-to-text, an AI-guided state machine and
-              realistic text-to-speech keep every exchange inside real-world procedures.
+            <p class="mt-4 text-base text-white/80 sm:mt-6 sm:text-lg">
+              Practice realistic radio communication in a safe environment. No pressure. No embarrassment. Just structured learning.
             </p>
-            <ul class="mt-6 space-y-2 text-white/70 text-sm sm:text-base">
+            <ul class="mt-7 grid gap-2.5 text-sm text-white/70 sm:text-base">
               <li class="flex items-start gap-2">
-                <v-icon icon="mdi-microphone" size="18" class="mt-[3px] text-cyan-300"/>
-                <span>Built for natural radio without losing procedural control.</span>
+                <v-icon icon="mdi-format-list-checks" size="18" class="mt-[3px] text-cyan-300" />
+                <span>Structured scenarios</span>
               </li>
               <li class="flex items-start gap-2">
-                <v-icon icon="mdi-microsoft" size="18" class="mt-[3px] text-cyan-300"/>
-                <span>MSFS plug-in streams flight state so the controller can react</span>
+                <v-icon icon="mdi-check-decagram-outline" size="18" class="mt-[3px] text-cyan-300" />
+                <span>Instant feedback</span>
               </li>
               <li class="flex items-start gap-2">
-                <v-icon icon="mdi-package-variant" size="18" class="mt-[3px] text-cyan-300"/>
-                <span><strong>Product lineup</strong>: Live ATC (in development) and Classroom listening drills (alpha, invite only)</span>
+                <v-icon icon="mdi-airplane-takeoff" size="18" class="mt-[3px] text-cyan-300" />
+                <span>Built for VATSIM preparation</span>
               </li>
             </ul>
-            <p class="mt-2 text-sm text-white/70">
-              We build in the open and welcome collaborators – engineers, ATC SMEs, voice nerds and sim pilots. Say hi
-              at
-              <a class="text-cyan-300 underline" href="mailto:info@opensquawk.de">info@opensquawk.de</a>.
-            </p>
-            <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
+            <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3.5">
               <NuxtLink to="#cta" class="btn btn-primary text-base">
-                <v-icon icon="mdi-account-plus" size="20"/>
-                Join the Live ATC waitlist
+                <v-icon icon="mdi-school" size="20" />
+                Start Training
               </NuxtLink>
-              <NuxtLink to="#classroom" class="btn btn-ghost text-base">
-                <v-icon icon="mdi-school" size="20"/>
-                Classroom alpha info
+              <NuxtLink to="#how-it-works" class="btn btn-ghost text-base">
+                <v-icon icon="mdi-play-circle-outline" size="20" />
+                See How It Works
               </NuxtLink>
             </div>
           </div>
-          <div
-              class="hero-form w-full max-w-lg lg:justify-self-end"
-              data-aos="fade-left"
-              data-aos-delay="140"
-          >
-            <form class="hero-form-panel rounded-3xl p-5 sm:p-6 space-y-4"
-                  @submit.prevent="submitUpdates">
-              <div class="space-y-3">
-                <h3 class="text-2xl font-semibold">
-                  Hear about new features first!
-                </h3>
-                <p class="text-sm text-white/70">
-                  Join the feature list and get updates on releases, drops & classroom content.
-                </p>
-              </div>
-              <div class="flex flex-col gap-3 py-2 sm:flex-row">
-                <input
-                    v-model.trim="updatesForm.email"
-                    type="email"
-                    required
-                    placeholder="your@email"
-                    class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
-                    aria-label="Email for product updates"
-                />
-                <button
-                    type="submit"
-                    class="btn btn-primary w-full sm:w-auto lg:w-48"
-                    :disabled="updatesSubmitting"
-                >
-                  <span v-if="updatesSubmitting" class="flex items-center gap-2">
-                    <v-progress-circular indeterminate size="16" width="2" color="white"/>
-                    Saving…
-                  </span>
-                  <span v-else class="flex items-center gap-2 w-28 justify-center">
-                    <v-icon icon="mdi-bell-ring" size="18"/>
-                    Notify me
-                  </span>
-                </button>
-              </div>
-              <textarea
-                  v-model.trim="updatesForm.notes"
-                  v-if="updatesCaptchaVisible"
-                  rows="3"
-                  placeholder="How did you hear about OpenSquawk and what excites you most?"
-                  class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-cyan-400"
-              />
-              <div
-                  v-if="updatesCaptchaVisible"
-                  class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60"
-              >
-                <p class="text-sm font-medium text-white">I am not a robot – aviation captcha</p>
-                <p>
-                  <span class="text-cyan-300">{{ updatesCaptcha.challenge.prompt }}</span>
-                </p>
-                <input
-                    v-model.trim="updatesCaptcha.answer"
-                    type="text"
-                    required
-                    aria-label="Aviation captcha answer for product updates"
-                    placeholder="Type the answer"
-                    class="w-full rounded-2xl border border-white/10 bg-[#0b1020]/40 px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-cyan-400"
-                />
-                <p v-if="updatesCaptchaReminder" class="text-xs text-amber-200">
-                  {{ updatesCaptchaReminder }}
-                </p>
-                <p v-else-if="updatesCaptcha.answer && !updatesCaptchaValid" class="text-xs text-red-300">
-                  Check the aviation answer and try again.
-                </p>
-              </div>
-              <div class="space-y-2 text-xs text-white/60">
-                <label class="flex items-start gap-3">
-                  <input type="checkbox" v-model="updatesForm.consentMarketing" class="mt-1" required/>
-                  <span>
-                    Yes, email me when new features, waitlist drops or classroom content go live.
-                  </span>
-                </label>
-                <label class="flex items-start gap-3">
-                  <input type="checkbox" v-model="updatesForm.consentTerms" class="mt-1" required/>
-                  <span>
-                    I accept the
-                    <NuxtLink to="/agb" class="text-cyan-300 underline">terms of service</NuxtLink>
-                    of OpenSquawk.
-                  </span>
-                </label>
-                <label class="flex items-start gap-3">
-                  <input type="checkbox" v-model="updatesForm.consentPrivacy" class="mt-1" required/>
-                  <span>
-                    I have read the
-                    <NuxtLink to="/datenschutz" class="text-cyan-300 underline">privacy policy</NuxtLink>.
-                  </span>
-                </label>
-              </div>
-              <p v-if="updatesSuccess" class="text-sm text-green-300">
-                Thanks! You're now on the waitlist and we will let you know when new features go live.
-              </p>
-              <p v-else-if="updatesError" class="text-sm text-red-300">{{ updatesError }}</p>
-              <p v-else class="text-xs text-white/50">
-                No spam – only relevant product updates. Unsubscribe any time.
-              </p>
-            </form>
+
+          <div class="hero-highlights mt-10 grid gap-4 sm:grid-cols-3 sm:gap-5" data-aos="fade-up" data-aos-delay="120">
+            <article class="hero-highlight glass rounded-2xl p-5">
+              <v-icon icon="mdi-headset" size="22" class="text-cyan-300" />
+              <h3 class="mt-3 text-lg font-semibold">From first calls to confident readbacks</h3>
+              <p class="mt-2 text-sm text-white/75">A calm place to train phraseology before your first busy frequency.</p>
+            </article>
+            <article class="hero-highlight glass rounded-2xl p-5">
+              <v-icon icon="mdi-school-outline" size="22" class="text-cyan-300" />
+              <h3 class="mt-3 text-lg font-semibold">Classroom in alpha, 0€ today</h3>
+              <p class="mt-2 text-sm text-white/75">Structured VFR + IFR scenario training with waitlist-based access.</p>
+            </article>
+            <article class="hero-highlight glass rounded-2xl p-5">
+              <v-icon icon="mdi-github" size="22" class="text-cyan-300" />
+              <h3 class="mt-3 text-lg font-semibold">Open source core</h3>
+              <p class="mt-2 text-sm text-white/75">Inspect, self-host and contribute to the stack any time.</p>
+            </article>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- SOCIAL PROOF / LOGOS -->
-    <section class="py-8 sm:py-10 border-t border-white/10 bg-[#0a0f1c]" data-aos="fade-up">
+    <section id="problem" ref="problemSplashRef" class="problem-splash relative overflow-hidden border-y border-white/10">
+      <NuxtImg
+        src="/img/landing/feedback.jpeg"
+        alt="Pilot preparing and reviewing notes"
+        class="problem-splash-image parallax-media"
+        :style="problemParallaxStyle"
+        format="webp"
+      />
+      <div class="problem-splash-overlay"></div>
+      <div class="problem-splash-content container-outer">
+        <div class="max-w-3xl" data-aos="fade-up">
+          <span class="chip">Common First-Flight Friction</span>
+          <h2 class="mt-4 text-4xl font-semibold leading-tight sm:text-5xl md:text-6xl">Your first VATSIM flight is stressful.</h2>
+          <p class="mt-4 text-base text-white/80 sm:text-lg">
+            That first push-to-talk moment often feels like a test. Most pilots know the procedures, but not the words and rhythm under pressure.
+          </p>
+          <ul class="mt-6 grid gap-3 text-white/85 sm:grid-cols-2">
+            <li class="glass rounded-xl px-4 py-3 text-sm sm:text-base">
+              <span class="inline-flex items-start gap-3">
+                <v-icon icon="mdi-help-circle-outline" class="mt-[2px] text-cyan-300" />
+                <span>Unsure what to say</span>
+              </span>
+            </li>
+            <li class="glass rounded-xl px-4 py-3 text-sm sm:text-base">
+              <span class="inline-flex items-start gap-3">
+                <v-icon icon="mdi-radio-off" class="mt-[2px] text-cyan-300" />
+                <span>Afraid to block frequency</span>
+              </span>
+            </li>
+            <li class="glass rounded-xl px-4 py-3 text-sm sm:col-span-2 sm:text-base">
+              <span class="inline-flex items-start gap-3">
+                <v-icon icon="mdi-script-text-outline" class="mt-[2px] text-cyan-300" />
+                <span>Don’t know IFR phraseology</span>
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="solution" class="bg-[#0b1020] py-16 sm:py-20 md:py-28">
       <div class="container-outer">
-        <div
-            class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 items-center opacity-80 text-xs sm:text-sm md:text-base">
-          <div class="flex items-center justify-center gap-2 text-white/60">
-            <v-icon icon="mdi-radar" class="opacity-70"/>
-            Live ATC · in development
-          </div>
-          <div class="flex items-center justify-center gap-2 text-white/60">
-            <v-icon icon="mdi-school" class="opacity-70"/>
-            Classroom · alpha invites running
-          </div>
-          <div class="flex items-center justify-center gap-2 text-white/60">
-            <v-icon icon="mdi-waveform" class="opacity-70"/>
-            STT → LLM → TTS Pipeline
-          </div>
-          <div class="flex items-center justify-center gap-2 text-white/60">
-            <v-icon icon="mdi-microsoft" class="opacity-70"/>
-            MSFS 2020 first · 2024+ roadmap
+        <div data-aos="fade-up">
+          <h2 class="text-4xl font-semibold sm:text-5xl md:text-6xl">OpenSquawk is your ATC practice environment.</h2>
+          <p class="mt-3 max-w-3xl text-white/80">
+            Instead of throwing you into live pressure, OpenSquawk gives you structured radio training with clear progression.
+          </p>
+          <div class="mt-8 grid gap-5 sm:grid-cols-2 sm:gap-6">
+            <div class="card">
+              <h3 class="text-lg font-semibold">Structured radio training</h3>
+              <p class="mt-2 text-sm text-white/70">
+                Learn in guided scenarios with a clear objective for each session.
+              </p>
+            </div>
+            <div class="card">
+              <h3 class="text-lg font-semibold">Safe repetition</h3>
+              <p class="mt-2 text-sm text-white/70">
+                Repeat calls until they sound natural, without blocking a real frequency.
+              </p>
+            </div>
+            <div class="card sm:col-span-2">
+              <h3 class="text-lg font-semibold">Feedback that helps</h3>
+              <p class="mt-2 text-sm text-white/70">
+                Get immediate clarity on phraseology, key information and communication quality.
+              </p>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- FEATURES -->
-    <section id="features" class="py-12 sm:py-16 md:py-24 bg-gradient-to-b from-[#0a0f1c] to-[#0b1020]">
-      <div class="container-outer">
-        <div class="max-w-2xl mb-10" data-aos="fade-up">
-          <h2 class="text-3xl md:text-4xl font-semibold">
-            Built for real-sounding, state-aware radio work
+    <section ref="arrivalSplashRef" class="arrival-splash relative overflow-hidden border-y border-white/10">
+      <NuxtImg
+        src="/img/learn/missions/full-flight/briefing-arrival.png"
+        alt="Arrival briefing board"
+        class="arrival-splash-image parallax-media"
+        :style="arrivalParallaxStyle"
+        format="webp"
+      />
+      <div class="arrival-splash-overlay"></div>
+      <div class="arrival-splash-content container-outer">
+        <div class="max-w-3xl" data-aos="fade-up">
+          <span class="chip">Confidence Before Frequency</span>
+          <h2 class="mt-4 text-4xl font-semibold leading-tight sm:text-5xl md:text-6xl">
+            Train the arrival call before the real one.
           </h2>
-          <p class="mt-3 text-white/80">
-            OpenSquawk combines open tooling with domain rules so every call feels like talking to a human controller –
-            without giving the LLM free rein.
+          <p class="mt-4 text-base text-white/80 sm:text-lg">
+            Learn the phraseology, pacing and structure on your own terms, then take that confidence to VATSIM.
           </p>
-        </div>
-
-        <div class="grid gap-4 md:grid-cols-3 md:gap-6">
-          <div class="card" data-aos="fade-up" data-aos-delay="0">
-            <div class="flex items-center gap-3">
-              <div class="p-2 rounded-lg bg-cyan-500/20 border border-cyan-400/20">
-                <v-icon icon="mdi-waveform" class="text-cyan-300"/>
-              </div>
-              <h3 class="font-semibold text-lg">
-                Speech-in, speech-out
-              </h3>
-            </div>
-            <p class="mt-3 text-white/80">
-              Whisper-class STT cleans up radio audio, the LLM matches it to our curated decision tree and Coqui/Piper
-              voices read back the exact instruction.
-            </p>
-          </div>
-          <div class="card" data-aos="fade-up" data-aos-delay="100">
-            <div class="flex items-center gap-3">
-              <div class="p-2 rounded-lg bg-cyan-500/20 border border-cyan-400/20">
-                <v-icon icon="mdi-airplane-takeoff" class="text-cyan-300"/>
-              </div>
-              <h3 class="font-semibold text-lg">
-                Flight-state aware logic
-              </h3>
-            </div>
-            <p class="mt-3 text-white/80">
-              Our MSFS plug-in mirrors heading, altitude, flight plan and traffic data into the controller so ATC can
-              vector, warn or hand off even without a pilot call.
-            </p>
-          </div>
-          <div class="card" data-aos="fade-up" data-aos-delay="200">
-            <div class="flex items-center gap-3">
-              <div class="p-2 rounded-lg bg-cyan-500/20 border border-cyan-400/20">
-                <v-icon icon="mdi-source-repository" class="text-cyan-300"/>
-              </div>
-              <h3 class="font-semibold text-lg">
-                Open and auditable
-              </h3>
-            </div>
-            <p class="mt-3 text-white/80">
-              Everything ships as open source so simmers, instructors and researchers can inspect prompts, rules and
-              voices – or self-host the full stack.
-            </p>
-          </div>
-        </div>
-
-        <div class="grid gap-4 md:grid-cols-2 md:gap-6 mt-6">
-          <div class="card" data-aos="fade-up" data-aos-delay="0">
-            <h3 class="font-semibold text-lg">
-              Simulator roadmap
-            </h3>
-            <p class="mt-3 text-white/80">
-              Live ATC launches with Microsoft Flight Simulator on Windows. We are mapping the same telemetry bridge to
-              MSFS 2024, then X-Plane and later FlightGear (Win/Linux/macOS).
-            </p>
-            <ul class="mt-3 space-y-2 text-white/70 text-sm list-disc list-inside">
-              <li>MSFS 2020: plug-in prototype streaming flight data & push-to-talk audio.</li>
-              <li>MSFS 2024: compatibility update shortly after release.</li>
-              <li>X-Plane & FlightGear: design underway, targeting Windows first, then Linux/macOS.</li>
-            </ul>
-          </div>
-          <div class="card" data-aos="fade-up" data-aos-delay="100">
-            <h3 class="font-semibold text-lg">
-              Classroom alpha today
-            </h3>
-            <p class="mt-3 text-white/80">
-              The Classroom mode already runs listening drills: play ATC clips, extract clearances, compare with the
-              answer key and repeat until it sticks.
-            </p>
-            <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
-              <div class="glass rounded-xl p-3 flex items-center gap-2">
-                <v-icon icon="mdi-headset"/>
-                Hearing exercises
-              </div>
-              <div class="glass rounded-xl p-3 flex items-center gap-2">
-                <v-icon icon="mdi-clipboard-text"/>
-                Instant answer check
-              </div>
-              <div class="glass rounded-xl p-3 flex items-center gap-2">
-                <v-icon icon="mdi-account-hard-hat"/>
-                Invite-only alpha
-              </div>
-              <div class="glass rounded-xl p-3 flex items-center gap-2">
-                <v-icon icon="mdi-source-branch"/>
-                Open source code
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </section>
 
-    <!-- NEWS -->
-    <section id="news" class="py-12 sm:py-16 md:py-24 bg-[#0b1020] border-y border-white/10">
-      <div class="container-outer space-y-8">
+    <section id="how-it-works" class="border-y border-white/10 bg-[#0a0f1c] py-16 sm:py-20 md:py-28">
+      <div class="container-outer">
         <div class="max-w-2xl" data-aos="fade-up">
-          <h2 class="text-3xl md:text-4xl font-semibold">News & Updates</h2>
-          <p class="mt-3 text-white/80">
-            Content-driven posts keep you in the loop. All articles are stored in Markdown – new stories show up here
-            automatically.
-          </p>
+          <h2 class="text-4xl font-semibold sm:text-5xl md:text-6xl">How it works</h2>
+          <p class="mt-3 text-white/80">Three simple steps to build confidence before live ops.</p>
         </div>
-        <div v-if="latestNews.length" class="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
-          <article
-              v-for="post in latestNews"
-              :key="post.slug"
-              class="card flex flex-col gap-4"
-              data-aos="fade-up"
-          >
-            <div class="space-y-2">
-              <span class="chip text-[10px] uppercase tracking-[0.3em]">{{ formatNewsDate(post.publishedAt) }}</span>
-              <h3 class="text-xl font-semibold">{{ post.title }}</h3>
-              <p class="text-sm text-white/70">{{ post.excerpt }}</p>
-            </div>
-            <div class="mt-auto flex items-center justify-between text-xs text-white/60">
-              <span>{{ post.readingTime }}</span>
-              <NuxtLink :to="`/news/${post.slug}`" class="text-cyan-300 text-sm font-medium hover:underline">
-                Read more
-              </NuxtLink>
-            </div>
+        <div class="mt-10 grid gap-5 md:grid-cols-3 md:gap-7">
+          <article class="card" data-aos="fade-up" data-aos-delay="0">
+            <span class="step-number">1</span>
+            <h3 class="mt-4 text-xl font-semibold">Choose a scenario</h3>
+            <p class="mt-2 text-white/70">Pick a session that matches your current level and training goal.</p>
+          </article>
+          <article class="card" data-aos="fade-up" data-aos-delay="100">
+            <span class="step-number">2</span>
+            <h3 class="mt-4 text-xl font-semibold">Speak like on VATSIM</h3>
+            <p class="mt-2 text-white/70">Use realistic phraseology and train the timing of your calls.</p>
+          </article>
+          <article class="card" data-aos="fade-up" data-aos-delay="200">
+            <span class="step-number">3</span>
+            <h3 class="mt-4 text-xl font-semibold">Get feedback & improve</h3>
+            <p class="mt-2 text-white/70">Review what worked, fix what didn’t, and run it again.</p>
           </article>
         </div>
-        <div v-else class="card text-sm text-white/70" data-aos="fade-up">
-          No news published yet – the first post is coming soon.
-        </div>
-        <div class="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3" data-aos="fade-up">
-          <NuxtLink to="/news" class="btn btn-ghost">
-            View all news
-          </NuxtLink>
-          <span class="text-xs text-white/50 sm:text-left text-center">
-            Tell us if you want to share your own experience.
-          </span>
-        </div>
       </div>
     </section>
 
-    <!-- ROADMAP -->
-    <section id="roadmap" class="py-12 sm:py-16 md:py-24 bg-[#0b1020] border-y border-white/10">
-      <div class="container-outer space-y-10">
-        <div class="max-w-3xl" data-aos="fade-up">
-          <h2 class="text-3xl md:text-4xl font-semibold">
-            Roadmap & community voting
-          </h2>
-          <p class="mt-3 text-white/80">
-            Vote on what should take priority next. We combine votes with timestamps to plan features for training,
-            immersion and infrastructure.
+    <section id="classroom" class="bg-[#0b1020] py-16 sm:py-20 md:py-28">
+      <div class="container-outer">
+        <div class="mx-auto max-w-3xl text-center" data-aos="fade-up">
+          <span class="chip">Core Product Today</span>
+          <h2 class="mt-5 text-4xl font-semibold leading-tight sm:text-5xl md:text-6xl">The ATC Classroom</h2>
+          <p class="mt-4 text-base text-white/80 sm:text-lg">
+            Classroom training builds phraseology, clarity and confidence with structured sessions you can repeat at your own pace.
           </p>
-          <div
-              class="mt-4 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
-            <v-icon icon="mdi-account-group" size="18" class="text-cyan-300"/>
-            <span>{{ roadmapStatsLabel }}</span>
+        </div>
+        <div class="mx-auto mt-10 grid max-w-4xl gap-3 sm:grid-cols-2 sm:gap-4" data-aos="fade-up" data-aos-delay="100">
+          <div class="glass rounded-2xl px-4 py-3 text-sm text-white/85 sm:text-base">
+            <div class="flex items-center gap-3">
+              <v-icon icon="mdi-school-outline" class="text-cyan-300" />
+              <span>Beginner to Advanced scenarios</span>
+            </div>
           </div>
-          <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <button
-                type="button"
-                class="btn btn-ghost w-full sm:w-auto"
-                @click="toggleRoadmap"
-                :aria-expanded="roadmapExpanded"
-            >
-              <span v-if="roadmapExpanded">Hide roadmap details</span>
-              <span v-else>Show roadmap details</span>
-            </button>
-            <span v-if="!roadmapExpanded" class="text-xs text-white/50 text-center sm:text-left">
-              Expand to explore priorities and submit your votes.
-            </span>
+          <div class="glass rounded-2xl px-4 py-3 text-sm text-white/85 sm:text-base">
+            <div class="flex items-center gap-3">
+              <v-icon icon="mdi-airplane" class="text-cyan-300" />
+              <span>VFR + IFR practice tracks</span>
+            </div>
+          </div>
+          <div class="glass rounded-2xl px-4 py-3 text-sm text-white/85 sm:text-base">
+            <div class="flex items-center gap-3">
+              <v-icon icon="mdi-headset" class="text-cyan-300" />
+              <span>Realistic phraseology</span>
+            </div>
+          </div>
+          <div class="glass rounded-2xl px-4 py-3 text-sm text-white/85 sm:text-base">
+            <div class="flex items-center gap-3">
+              <v-icon icon="mdi-timer-sand" class="text-cyan-300" />
+              <span>Self-paced learning</span>
+            </div>
           </div>
         </div>
+        <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row" data-aos="fade-up" data-aos-delay="150">
+          <NuxtLink to="#cta" class="btn btn-primary">Start Training</NuxtLink>
+          <NuxtLink to="/roadmap" class="btn btn-ghost">Roadmap & feature voting</NuxtLink>
+        </div>
+      </div>
 
-        <div v-if="roadmapExpanded" class="space-y-6">
-          <div v-if="roadmapLoading" class="card text-white/70" data-aos="fade-up">
-            Loading current roadmap priorities…
-          </div>
-          <template v-else>
-            <div class="grid gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-3">
-              <div
-                  v-for="item in roadmapItems"
-                  :key="item.key"
-                  class="card flex flex-col gap-4"
-                  data-aos="fade-up"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <span class="chip text-[10px] uppercase tracking-[0.3em]">{{ item.category }}</span>
-                    <h3 class="mt-2 flex items-center gap-2 text-lg font-semibold">
-                      <v-icon v-if="item.icon" :icon="item.icon" size="22" class="text-cyan-300"/>
-                      <span>{{ item.title }}</span>
-                    </h3>
-                  </div>
-                  <div class="text-right text-xs text-white/60 space-y-1">
-                    <div class="text-sm font-semibold text-white">
-                      <template v-if="item.averageImportance !== null">
-                        {{ formatAverage(item.averageImportance) }}/5
-                      </template>
-                      <template v-else>—</template>
-                    </div>
-                    <div>
-                      <span>{{ formatNumber(item.votes) }} votes</span>
-                    </div>
-                    <div v-if="item.lastVoteAt" class="text-white/40">
-                      <span>last vote {{ formatRelativeFromNow(item.lastVoteAt) }}</span>
-                    </div>
-                    <div v-else class="text-white/40">
-                      no votes yet
-                    </div>
-                  </div>
-                </div>
-                <p class="text-sm text-white/70">{{ item.description }}</p>
-                <div class="h-2 w-full overflow-hidden rounded-full bg-white/10">
-                  <div class="h-2 rounded-full bg-cyan-400 transition-all" :style="{ width: `${item.scorePercent}%` }"/>
-                </div>
-                <div class="space-y-3">
-                  <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.3em] text-white/50">
-                    <span>Choose priority</span>
-                    <span v-if="roadmapTouched[item.key]" class="text-cyan-300">
-                      marked
-                    </span>
-                  </div>
-                  <div
-                      class="roadmap-scale"
-                      role="group"
-                      :aria-label="`Priority for ${item.title}`"
-                  >
-                    <button
-                        v-for="value in ROADMAP_SCALE"
-                        :key="value"
-                        type="button"
-                        class="roadmap-pill"
-                        :class="{ 'is-active': roadmapSelections[item.key] === value }"
-                        :aria-pressed="roadmapSelections[item.key] === value"
-                        @click="selectRoadmapImportance(item.key, value)"
-                    >
-                      <span class="text-sm font-semibold">{{ value }}</span>
-                      <span class="label">{{ roadmapImportanceShortLabel(value) }}</span>
-                    </button>
-                  </div>
-                  <div class="text-sm text-white/80">
-                    {{ roadmapImportanceLabel(roadmapSelections[item.key]) }}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div
-                class="card flex flex-col gap-4 border-white/10 bg-white/5 md:flex-row md:items-center md:justify-between"
-                data-aos="fade-up">
-              <div class="space-y-2">
-                <h4 class="text-lg font-semibold">
-                  Save your selection
-                </h4>
-                <p class="text-sm text-white/70">
-                  We store every vote individually with a timestamp, so we see what matters right now. Adjust several
-                  cards and submit everything together.
-                </p>
-              </div>
-              <div class="flex w-full flex-col gap-2 md:w-auto">
-                <button
-                    type="button"
-                    class="btn btn-primary w-full md:w-auto"
-                    @click="submitRoadmapVotes"
-                    :disabled="!hasRoadmapVote || roadmapSubmitting"
-                >
-                  <span v-if="roadmapSubmitting" class="flex items-center gap-2">
-                    <v-progress-circular indeterminate size="16" width="2" color="white"/>
-                    Saving votes…
-                  </span>
-                  <span v-else>Submit votes</span>
-                </button>
-                <p v-if="roadmapSuccess" class="text-center text-sm text-green-300 md:text-left">
-                  Thanks! Your votes have been recorded.
-                </p>
-                <p v-else-if="roadmapError" class="text-center text-sm text-red-300 md:text-left">{{ roadmapError }}</p>
-                <p v-else class="text-center text-xs text-white/50 md:text-left">
-                  Tip: Only adjust priorities when you have feedback for that topic.
-                </p>
-              </div>
-            </div>
-          </template>
-          <div class="card space-y-4" data-aos="fade-up">
-            <div class="space-y-2">
-              <h4 class="text-lg font-semibold">
-                Missing something on the roadmap?
-              </h4>
-              <p class="text-sm text-white/70">
-                Share the feature you are missing or a problem we should solve. We prioritise community ideas.
-              </p>
-            </div>
-            <form class="space-y-3" @submit.prevent="submitRoadmapSuggestion">
-              <input
-                  v-model.trim="roadmapSuggestionForm.title"
-                  type="text"
-                  required
-                  placeholder="Short title – e.g. ATIS integration for EDDF"
-                  class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
-                  aria-label="Title for roadmap suggestion"
-              />
-              <textarea
-                  v-model.trim="roadmapSuggestionForm.details"
-                  rows="4"
-                  required
-                  placeholder="Describe why this matters or how it would help you."
-                  class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
-              />
-              <div class="grid gap-3 sm:grid-cols-2">
-                <input
-                    v-model.trim="roadmapSuggestionForm.email"
-                    type="email"
-                    placeholder="Email (optional)"
-                    class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm placeholder-white/40 outline-none focus:border-cyan-400"
-                />
-                <label class="flex items-start gap-3 text-xs text-white/60">
-                  <input
-                      type="checkbox"
-                      v-model="roadmapSuggestionForm.allowContact"
-                      class="mt-1"
-                      :disabled="!roadmapSuggestionForm.email"
-                  />
-                  <span>
-                    Feel free to follow up by email if questions pop up.
-                  </span>
-                </label>
-              </div>
-              <label class="flex items-start gap-3 text-xs text-white/60">
-                <input type="checkbox" v-model="roadmapSuggestionForm.consentPrivacy" class="mt-1" required/>
-                <span>
-                  I have read the <NuxtLink to="/datenschutz"
-                                            class="text-cyan-300 underline">privacy policy</NuxtLink> and consent to the processing of my suggestion.
-                </span>
-              </label>
-              <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <button
-                    type="submit"
-                    class="btn btn-primary w-full sm:w-auto"
-                    :disabled="!roadmapSuggestionFormValid || roadmapSuggestionSubmitting"
-                >
-                  <span v-if="roadmapSuggestionSubmitting" class="flex items-center gap-2">
-                    <v-progress-circular indeterminate size="16" width="2" color="white"/>
-                    Sending suggestion…
-                  </span>
-                  <span v-else>Send suggestion</span>
-                </button>
-                <p v-if="roadmapSuggestionSuccess" class="text-sm text-green-300">
-                  Thanks! We will review your suggestion and follow up if needed.
-                </p>
-                <p v-else-if="roadmapSuggestionError" class="text-sm text-red-300">{{ roadmapSuggestionError }}</p>
-                <p v-else class="text-xs text-white/50">
-                  We read every suggestion personally. The optional contact field is only used for follow-ups.
-                </p>
-              </div>
-            </form>
+      <div ref="classroomSplashRef" class="classroom-splash relative mt-14 overflow-hidden border-y border-white/10">
+        <NuxtImg
+          src="/img/landing/simulator.jpeg"
+          alt="OpenSquawk Classroom session preview"
+          class="classroom-splash-image parallax-media"
+          :style="classroomParallaxStyle"
+          format="webp"
+        />
+        <div class="classroom-splash-overlay"></div>
+        <div class="classroom-splash-content container-outer">
+          <div class="max-w-3xl" data-aos="fade-up">
+            <span class="chip">Classroom Session View</span>
+            <h3 class="mt-4 text-3xl font-semibold leading-tight sm:text-4xl md:text-5xl">
+              From first calls to confident readbacks.
+            </h3>
+            <p class="mt-4 text-base text-white/80 sm:text-lg">
+              Train in a calm environment, repeat transmissions without pressure and walk into busy frequencies prepared.
+            </p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- CLASSROOM -->
-    <section id="classroom" class="py-12 sm:py-16 md:py-24 bg-[#0b1020]">
+    <section id="lineup" class="bg-gradient-to-b from-[#0b1020] to-[#0a0f1c] py-16 sm:py-20 md:py-28">
       <div class="container-outer">
-        <div class="grid gap-6 md:grid-cols-2 md:gap-8 items-center">
-          <div data-aos="fade-right">
-            <h2 class="text-3xl md:text-4xl font-semibold">
-              Classroom
-            </h2>
-            <p class="mt-3 text-white/80">
-              Invitation-only cohorts practise listening comprehension: extract the clearance, compare with the answer
-              key and repeat until every call sticks.
-            </p>
-            <ol class="mt-5 space-y-3 text-white/80">
-              <li class="flex gap-3"><span class="chip">1</span><span><b>Basics</b> (concept): numbers, letters, standard readbacks.</span>
-              </li>
-              <li class="flex gap-3"><span class="chip">2</span><span><b>Simples</b> (alpha): taxi, takeoff, initial climb, basic vectors.</span>
-              </li>
-              <li class="flex gap-3"><span class="chip">3</span><span><b>Patterns</b> (bravo): full pattern work, touch-and-go, exit instructions.</span>
-              </li>
-              <li class="flex gap-3"><span class="chip">5</span><span><b>Full flight</b>  clearance to destination, enroute calls, approach handoff.</span>
-              </li>
-            </ol>
-            <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
-              <NuxtLink to="#cta" class="btn btn-primary">
-                Join Live ATC waitlist
-              </NuxtLink>
-              <a href="mailto:info@opensquawk.de" class="btn btn-ghost">
-                Request a Classroom invite
-              </a>
-            </div>
-          </div>
-          <NuxtImg src="/img/landing/simulator.jpeg" alt="Runway" class="rounded-lg card w-full object-cover" format="webp" />
-        </div>
-      </div>
-    </section>
-
-    <!-- PRICING -->
-    <section id="pricing" class="py-12 sm:py-16 md:py-24 bg-gradient-to-b from-[#0b1020] to-[#0a0f1c]">
-      <div class="container-outer">
-        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4" data-aos="fade-up">
-          <div class="max-w-2xl">
-            <h2 class="text-3xl md:text-4xl font-semibold">
-              Product lineup & availability
-            </h2>
-            <p class="mt-3 text-white/80">
-              Two experiences, one stack. Classroom is flying today via invitation, Live ATC is the flagship in active
-              development and the open-source core stays free to inspect or host yourself.
-            </p>
-          </div>
+        <div class="mx-auto max-w-3xl text-center" data-aos="fade-up">
+          <span class="chip">Availability</span>
+          <h2 class="mt-5 text-4xl font-semibold sm:text-5xl md:text-6xl">
+            Product lineup & availability
+          </h2>
+          <p class="mt-4 text-base text-white/80 sm:text-lg">
+            Three tracks, one mission. Classroom is free in invitation alpha, Live ATC is closed alpha, and the open-source stack stays 0€ to inspect or self-host.
+          </p>
         </div>
 
-        <div class="mt-8 grid gap-4 md:grid-cols-3 md:gap-6 items-stretch">
-          <!-- Live ATC -->
-          <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="0">
-            <div class="absolute -top-3 right-4 chip">Flagship</div>
-            <div class="flex flex-col flex-1">
-              <div class="flex flex-col flex-1">
-                <h3 class="text-xl font-semibold">
-                  Live ATC (in development)
-                </h3>
-                <p class="mt-2 text-white/80 flex-1">
-                  AI controller that listens to your PTT call, consults the state machine and answers with authentic
-                  phraseology. Perfect for solo IFR/VFR practice when networks are offline.
-                </p>
-                <div class="mt-5 text-3xl font-semibold">
-                  Closed alpha<span class="text-white/60 text-sm font-normal"> · waitlist open</span>
-                </div>
-                <ul class="mt-5 space-y-3 text-sm">
-                  <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>PTT → STT → LLM decision tree → TTS pipeline</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>MSFS 2020 plug-in streams live telemetry</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Proactive calls for spacing, altitude and handoffs</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/60">
-                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
-                    <span>Public download (planned post-alpha)</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/60">
-                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
-                    <span>X-Plane / FlightGear builds (roadmap)</span>
-                  </li>
-                </ul>
-              </div>
-              <NuxtLink to="#cta" class="btn btn-primary w-full mt-6">
-                Join the waitlist
-              </NuxtLink>
-            </div>
-          </div>
-
-          <!-- Classroom -->
-          <div
-              class="card border-2 border-cyan-400/40 relative flex flex-col h-full pricing-card shadow-[0_0_40px_rgba(34,211,238,.25)]"
-              data-aos="fade-up"
-              data-aos-delay="100"
+        <div class="mt-12 grid items-stretch gap-6 lg:grid-cols-2 xl:grid-cols-3 xl:gap-8">
+          <article
+            class="card border-2 border-cyan-400/40 relative flex h-full flex-col pricing-card shadow-[0_0_40px_rgba(34,211,238,.2)]"
+            data-aos="fade-up"
+            data-aos-delay="0"
           >
             <div class="absolute -top-3 right-4 chip bg-cyan-500/30 border-cyan-400/50">
               Live today
             </div>
             <div class="flex flex-col flex-1">
               <div class="flex flex-col flex-1">
-                <h3 class="text-xl font-semibold">Classroom (alpha invitation)</h3>
-                <p class="mt-2 text-white/80 flex-1">
-                  Listening drills that sharpen comprehension: decode clearances, practise readbacks and compare against
-                  official transcripts.
+                <h3 class="text-2xl font-semibold">
+                  Classroom (alpha)
+                </h3>
+                <p class="mt-3 flex-1 text-sm text-white/75 sm:text-base">
+                  Structured training sessions for phraseology, readbacks and confidence before live frequency.
                 </p>
-                <div class="mt-5 text-3xl font-semibold">
-                  Invitation only<span class="text-white/60 text-sm font-normal"> · alpha</span>
+                <div class="mt-6 text-2xl font-semibold sm:text-3xl">
+                  Alpha access<span class="text-white/60 text-sm font-normal"> · waitlist open</span>
                 </div>
-                <ul class="mt-5 space-y-3 text-sm">
+                <ul class="mt-6 space-y-2.5 text-sm">
                   <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Scenario packs: Ground, Departure, Approach</span>
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]" />
+                    <span>Beginner to advanced scenario packs</span>
                   </li>
                   <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Instant feedback on key details (altitude, squawk, headings)</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Invite-based cohorts for structured feedback</span>
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]" />
+                    <span>Instant feedback on key details</span>
                   </li>
                   <li class="flex items-start gap-3 text-white/60">
-                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
-                    <span>Public signup (planned)</span>
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]" />
+                    <span>Public open signup (planned)</span>
                   </li>
                   <li class="flex items-start gap-3 text-white/60">
-                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]" />
                     <span>Offline package download (researching)</span>
                   </li>
                 </ul>
               </div>
-              <NuxtLink to="#classroom" class="btn btn-primary w-full mt-6">
-                Request an invite
+              <NuxtLink to="#cta" class="btn btn-primary w-full mt-8">
+                Join classroom waitlist
               </NuxtLink>
             </div>
-          </div>
+          </article>
 
-          <div class="card relative flex flex-col h-full pricing-card" data-aos="fade-up" data-aos-delay="200">
+          <article
+            class="card relative flex h-full flex-col pricing-card"
+            data-aos="fade-up"
+            data-aos-delay="100"
+          >
+            <div class="absolute -top-3 right-4 chip">
+              In development
+            </div>
+            <div class="flex flex-col flex-1">
+              <div class="flex flex-col flex-1">
+                <h3 class="text-2xl font-semibold">Live ATC (in development)</h3>
+                <p class="mt-3 flex-1 text-sm text-white/75 sm:text-base">
+                  Real-time controller loop for solo radio practice when networks are offline.
+                </p>
+                <div class="mt-6 text-2xl font-semibold sm:text-3xl">
+                  Closed alpha<span class="text-white/60 text-sm font-normal"> · in development</span>
+                </div>
+                <ul class="mt-6 space-y-2.5 text-sm">
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]" />
+                    <span>PTT → STT → LLM → TTS pipeline</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/80">
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]" />
+                    <span>MSFS telemetry integration</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/60">
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]" />
+                    <span>Public download (post-alpha)</span>
+                  </li>
+                  <li class="flex items-start gap-3 text-white/60">
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]" />
+                    <span>X-Plane / FlightGear builds (roadmap)</span>
+                  </li>
+                </ul>
+              </div>
+              <NuxtLink to="#cta" class="btn btn-primary w-full mt-8">
+                Join Live ATC waitlist
+              </NuxtLink>
+            </div>
+          </article>
+
+          <article class="card relative flex h-full flex-col pricing-card" data-aos="fade-up" data-aos-delay="200">
             <div class="absolute -top-3 right-4 chip">Open source</div>
             <div class="flex flex-col flex-1">
               <div class="flex flex-col flex-1">
-                <h3 class="text-xl font-semibold">
+                <h3 class="text-2xl font-semibold">
                   Self-host & contribute
                 </h3>
-                <p class="mt-2 text-white/80 flex-1">
-                  Clone the repo, run Docker and modify the controller logic. Ideal for researchers, virtual airlines or
-                  devs who want a fully local stack.
+                <p class="mt-3 flex-1 text-sm text-white/75 sm:text-base">
+                  Clone the repo, run Docker and adapt the stack for your own training setup.
                 </p>
-                <div class="mt-5 text-3xl font-semibold">
+                <div class="mt-6 text-2xl font-semibold sm:text-3xl">
                   0€<span class="text-white/60 text-sm font-normal"> / always</span>
                 </div>
-                <ul class="mt-5 space-y-3 text-sm">
+                <ul class="mt-6 space-y-2.5 text-sm">
                   <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Nuxt UI, Node services, STT/LLM/TTS pipeline – all open</span>
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]" />
+                    <span>Core UI + services are fully open</span>
                   </li>
                   <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Decision tree & prompts ready for experimentation</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-white/80">
-                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]"/>
-                    <span>Plugin SDK hooks for future sims (X-Plane, FlightGear)</span>
+                    <v-icon icon="mdi-check-circle" size="18" class="text-emerald-400 mt-[2px]" />
+                    <span>Modify prompts and controller logic</span>
                   </li>
                   <li class="flex items-start gap-3 text-white/60">
-                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]" />
                     <span>Managed hosting or SLA</span>
                   </li>
                   <li class="flex items-start gap-3 text-white/60">
-                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]"/>
+                    <v-icon icon="mdi-close-circle" size="18" class="text-red-400 mt-[2px]" />
                     <span>Cloud voice/STT credits included</span>
                   </li>
                 </ul>
               </div>
               <NuxtLink
-                  :to="GITHUB_URL"
-                  external
-                  target="_blank"
-                  rel="noopener"
-                  class="btn btn-ghost w-full mt-6"
+                :to="GITHUB_URL"
+                external
+                target="_blank"
+                rel="noopener"
+                class="btn btn-ghost w-full mt-8"
               >
                 View repository
               </NuxtLink>
             </div>
-          </div>
+          </article>
         </div>
-
-        <div class="mt-8 text-sm text-white/70 space-y-2" data-aos="fade-up" data-aos-delay="300">
-          <p>
-            Live ATC alpha runs offline-first while we research licensing for networks such as VATSIM and IVAO. We will
-            only enable direct connectivity once community rules and legal reviews are satisfied.
-          </p>
-          <p>
-            Until then we double down on the state machine, simulator plug-ins and new Classroom scenarios – shaped by
-            roadmap votes and alpha feedback.
-          </p>
+        <div
+          class="mt-10 rounded-3xl border border-white/10 bg-white/[0.04] px-6 py-5 text-sm text-white/70 sm:px-7 sm:py-6"
+          data-aos="fade-up"
+          data-aos-delay="260"
+        >
+          Live ATC stays offline-first while licensing for networks such as VATSIM and IVAO is reviewed. In parallel we expand the Classroom and open-source stack based on roadmap votes.
         </div>
       </div>
     </section>
 
-    <!-- OPEN SOURCE -->
-    <section id="opensource" class="py-12 sm:py-16 md:py-24 bg-[#0a0f1c]">
+    <section id="daily-drill" class="border-y border-white/10 bg-[#0a0f1c] py-16 sm:py-20 md:py-28">
       <div class="container-outer">
-        <div class="grid gap-6 md:grid-cols-2 md:gap-8 items-center">
-          <div data-aos="fade-right">
-            <h2 class="text-3xl md:text-4xl font-semibold">
-              Open-source, community-driven
-            </h2>
+        <div class="card grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] md:gap-10" data-aos="zoom-in">
+          <div>
+            <span class="chip">Coming next</span>
+            <h2 class="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">5 Minutes a Day. Noticeable Improvement.</h2>
             <p class="mt-3 text-white/80">
-              Transparent architecture, clear roadmap, open issues. Build your own voices, integrations and workflows.
+              Small daily exercises that train your phraseology, clarity and confidence.
             </p>
-            <ul class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <li class="glass rounded-xl p-3 flex items-center gap-2">
-                <v-icon icon="mdi-license"/>
-                AGPL v3 license
-              </li>
-              <li class="glass rounded-xl p-3 flex items-center gap-2">
-                <v-icon icon="mdi-docker"/>
-                Docker‑based microservices
-              </li>
-              <li class="glass rounded-xl p-3 flex items-center gap-2">
-                <v-icon icon="mdi-console"/>
-                REST API for extensions
-              </li>
-            </ul>
-            <div class="mt-6 flex flex-col sm:flex-row gap-3">
-              <NuxtLink to="#cta" class="btn btn-primary">
-                Get involved
-              </NuxtLink>
-              <NuxtLink
-                  to="https://github.com/OpenSquawk/OpenSquawk"
-                  external
-                  target="_blank"
-                  rel="noopener"
-                  class="btn btn-ghost"
-              >
-                GitHub repository
-              </NuxtLink>
-              <NuxtLink to="/news" class="btn btn-ghost">News</NuxtLink>
+            <p class="mt-3 text-white/70">
+              Daily Drills are designed for quick wins: one prompt, one response, one feedback loop.
+            </p>
+          </div>
+          <div class="grid gap-4 text-sm text-white/80 sm:text-base">
+            <div class="glass flex items-center gap-3 rounded-xl p-4">
+              <v-icon icon="mdi-comment-processing-outline" class="text-cyan-300" />
+              1 focused ATC prompt
+            </div>
+            <div class="glass flex items-center gap-3 rounded-xl p-4">
+              <v-icon icon="mdi-radio-handheld" class="text-cyan-300" />
+              Speak your readback
+            </div>
+            <div class="glass flex items-center gap-3 rounded-xl p-4">
+              <v-icon icon="mdi-chart-line" class="text-cyan-300" />
+              Get immediate improvement feedback
             </div>
           </div>
-          <div class="card" data-aos="fade-left">
-            <pre class="text-xs md:text-sm overflow-x-auto"><code>// Example: REST route for taxi paths
-POST /api/route/taxi
-{
-  "icao": "EDDF",
-  "from": { "type": "gate", "ref": "A20" },
-  "to":   { "type": "runway", "ref": "25C" }
-}
-// → Response: list of segments, geometry, suggested readback</code></pre>
-          </div>
         </div>
       </div>
     </section>
 
-    <!-- HOW IT WORKS -->
-    <section class="py-12 sm:py-16 md:py-24 bg-[#0b1020]">
-      <div class="container-outer">
-        <div class="max-w-2xl mb-10" data-aos="fade-up">
-          <h2 class="text-3xl md:text-4xl font-semibold">
-            Radio loop in four tightly controlled stages
-          </h2>
+    <section id="community" class="bg-[#0b1020] py-16 sm:py-20 md:py-28">
+      <div class="container-outer space-y-10">
+        <div class="max-w-2xl" data-aos="fade-up">
+          <h2 class="text-4xl font-semibold sm:text-5xl md:text-6xl">Community proof, not hype</h2>
           <p class="mt-3 text-white/80">
-            Every transmission passes through deterministic checkpoints so phraseology stays believable and safe.
+            OpenSquawk is shaped by aspiring VATSIM pilots and early testers who train with us every week.
           </p>
         </div>
-        <div class="grid md:grid-cols-4 gap-4 md:gap-6">
-          <div class="card" data-aos="fade-up" data-aos-delay="0">
-            <h3 class="font-semibold flex items-center gap-2">
-              <v-icon icon="mdi-radio-handheld"/>
-              1 · Capture
-            </h3>
-            <p class="mt-2 text-white/80">Push-to-talk audio plus simulator telemetry stream into the engine.</p></div>
-          <div class="card" data-aos="fade-up" data-aos-delay="100">
-            <h3 class="font-semibold flex items-center gap-2">
-              <v-icon icon="mdi-waveform"/>
-              2 · Understand
-            </h3>
-            <p class="mt-2 text-white/80">Whisper-class STT normalises radio noise; the LLM interprets intent.</p></div>
-          <div class="card" data-aos="fade-up" data-aos-delay="200">
-            <h3 class="font-semibold flex items-center gap-2">
-              <v-icon icon="mdi-brain"/>
-              3 · Decide
-            </h3>
-            <p class="mt-2 text-white/80">A curated state machine enforces valid clearances and cross-checks flight
-              data.</p></div>
-          <div class="card" data-aos="fade-up" data-aos-delay="300">
-            <h3 class="font-semibold flex items-center gap-2">
-              <v-icon icon="mdi-microphone"/>
-              4 · Speak
-            </h3>
-            <p class="mt-2 text-white/80">Coqui/Piper TTS deliver regionalised voices with crisp numbers.</p></div>
+
+        <div class="grid gap-5 md:grid-cols-3 md:gap-7">
+          <article class="card" data-aos="fade-up" data-aos-delay="0">
+            <h3 class="text-lg font-semibold">Discord Community</h3>
+            <p class="mt-2 text-sm text-white/70">
+              Join ongoing discussions around phraseology, scenarios and upcoming training modules.
+            </p>
+            <a :href="DISCORD_INVITE_MAILTO" class="btn btn-ghost mt-4">Request Discord invite</a>
+          </article>
+          <article class="card" data-aos="fade-up" data-aos-delay="100">
+            <h3 class="text-lg font-semibold">Early feedback</h3>
+            <blockquote class="mt-3 text-sm text-white/80">
+              “I finally understood IFR readbacks without freezing on frequency.”
+            </blockquote>
+            <p class="mt-2 text-xs text-white/50">Early Classroom pilot</p>
+          </article>
+          <article class="card" data-aos="fade-up" data-aos-delay="200">
+            <h3 class="text-lg font-semibold">Used by aspiring VATSIM pilots</h3>
+            <blockquote class="mt-3 text-sm text-white/80">
+              “The structure helped me speak cleaner and calmer during my first flights.”
+            </blockquote>
+            <p class="mt-2 text-xs text-white/50">OpenSquawk community member</p>
+          </article>
         </div>
       </div>
     </section>
 
-    <!-- CONTRIBUTING -->
-    <section id="contributing" class="py-12 sm:py-16 md:py-24 bg-[#0a0f1c] border-y border-white/10">
+    <section
+      id="cta"
+      class="border-y border-white/10 bg-gradient-to-tr from-cyan-500/20 via-blue-500/10 to-transparent py-16 sm:py-20 md:py-28"
+    >
       <div class="container-outer">
-        <div class="grid gap-6 md:grid-cols-2 md:gap-8 items-start">
-          <div data-aos="fade-right">
-            <h2 class="text-3xl md:text-4xl font-semibold">
-              Contribute
-            </h2>
-            <p class="mt-3 text-white/80">
-              Issues with the label <code
-                class="text-xs bg-white/10 px-1.5 py-0.5 rounded">help-wanted</code> highlight tasks where we need
-              support. Everything happens transparently on GitHub.
-            </p>
-            <ul class="mt-5 space-y-3 text-white/80 text-sm">
-              <li class="flex gap-3">
-                <v-icon icon="mdi-nodejs" class="text-cyan-300 mt-[2px]"/>
-                <span>Node/Nuxt devs for backend & frontend.</span></li>
-              <li class="flex gap-3">
-                <v-icon icon="mdi-headset" class="text-cyan-300 mt-[2px]"/>
-                <span>ATC SMEs for phraseology, procedures and training feedback.</span></li>
-              <li class="flex gap-3">
-                <v-icon icon="mdi-test-tube" class="text-cyan-300 mt-[2px]"/>
-                <span>Testers for alpha builds & simulator integration.</span></li>
-              <li class="flex gap-3">
-                <v-icon icon="mdi-cash-multiple" class="text-cyan-300 mt-[2px]"/>
-                <span>Infra & cost benchmarking to keep hosting affordable.</span></li>
-            </ul>
-            <p class="mt-5 text-sm text-white/70">
-              Email us at <a href="mailto:info@opensquawk.de"
-                             class="text-cyan-300 underline">info@opensquawk.de</a> or leave a comment directly on the
-              issue.
-            </p>
-            <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
-              <NuxtLink to="#roadmap" class="btn btn-primary">
-                Shape the roadmap
-              </NuxtLink>
-              <NuxtLink to="/news" class="btn btn-ghost">
-                Latest updates
-              </NuxtLink>
-            </div>
-          </div>
-          <div class="card" data-aos="fade-left">
-            <h3 class="font-semibold text-lg">Current focus areas</h3>
-            <ul class="mt-3 space-y-2 text-white/70 text-sm list-disc list-inside">
-              <li>Stabilise the alpha prototype & simplify setup
-              </li>
-              <li>Verify Decision Tree logic
-              </li>
-              <li>Review & prioritise roadmap ideas
-              </li>
-              <li>Model hosting costs</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- CTA -->
-    <section id="cta"
-             class="py-12 sm:py-16 md:py-24 bg-gradient-to-tr from-cyan-500/20 via-blue-500/10 to-transparent border-y border-white/10">
-      <div class="container-outer">
-        <div class="card grid gap-6 md:grid-cols-2 md:gap-8" data-aos="zoom-in">
+        <div class="card grid gap-8 md:grid-cols-2 md:gap-10" data-aos="zoom-in">
           <div class="space-y-4">
             <div>
-              <h3 class="text-2xl md:text-3xl font-semibold">
-                Early access & waitlist
+              <h3 class="text-3xl font-semibold leading-tight sm:text-4xl">
+                Join the waitlist for early access
               </h3>
               <p class="mt-2 text-white/80">
-                Sign up to secure your spot for the alpha build. Right now (including internal tests) there are
-                <span class="font-semibold text-cyan-300">{{ waitlistCountDisplay }}</span>
-                interested pilots waiting for the next invite drop.
+                Register your interest for Classroom access and we will guide you into the next available training wave.
               </p>
             </div>
-            <div>
-              <div v-if="waitlistLoading" class="text-sm text-white/60">
-                Loading waitlist…
-              </div>
-              <template v-else>
-                <div class="text-xs text-white/60">
-                  Last signup:
-                  <span class="font-medium text-white">{{ waitlistLastJoinedFormatted }}</span>
-                  <span v-if="waitlistStats?.lastJoinedAt" class="text-white/40">
-                    ({{ formatRelativeFromNow(waitlistStats?.lastJoinedAt) }})
-                  </span>
-                </div>
-              </template>
-            </div>
+            <div v-if="waitlistLoading" class="text-sm text-white/60">Loading waitlist…</div>
+            <template v-else>
+              <p class="text-sm text-white/70">
+                <span class="font-semibold text-cyan-300">{{ waitlistCountDisplay }}</span>
+                aspiring pilots are already in the queue.
+              </p>
+              <p class="text-xs text-white/60">
+                Last signup:
+                <span class="font-medium text-white">{{ waitlistLastJoinedFormatted }}</span>
+                <span v-if="waitlistStats?.lastJoinedAt" class="text-white/40">
+                  ({{ formatRelativeFromNow(waitlistStats?.lastJoinedAt) }})
+                </span>
+              </p>
+            </template>
             <p class="text-xs text-white/60">
-              We send invites in batches, prioritise active waitlist spots and deliver invite codes via email.
+              Product and roadmap deep-dives now live on
+              <NuxtLink to="/roadmap" class="text-cyan-300 underline">the roadmap page</NuxtLink>
+              and
+              <NuxtLink to="/news" class="text-cyan-300 underline">news updates</NuxtLink>.
             </p>
           </div>
+
           <form class="space-y-4" @submit.prevent="submitWaitlist">
             <div class="grid gap-3">
               <input
-                  v-model.trim="waitlistForm.name"
-                  aria-label="Name"
-                  type="text"
-                  placeholder="First and last name (optional)"
-                  class="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
+                v-model.trim="waitlistForm.name"
+                aria-label="Name"
+                type="text"
+                placeholder="First and last name (optional)"
+                class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 placeholder-white/40 outline-none focus:border-cyan-400"
               />
               <input
-                  v-model.trim="waitlistForm.email"
-                  aria-label="Email"
-                  type="email"
-                  required
-                  placeholder="your@email"
-                  class="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
+                v-model.trim="waitlistForm.email"
+                aria-label="Email"
+                type="email"
+                required
+                placeholder="your@email"
+                class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 placeholder-white/40 outline-none focus:border-cyan-400"
               />
               <textarea
-                  v-model.trim="waitlistForm.notes"
-                  rows="3"
-                  placeholder="What do you want to learn with OpenSquawk? (optional)"
-                  class="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 placeholder-white/40 outline-none focus:border-cyan-400"
+                v-model.trim="waitlistForm.notes"
+                rows="3"
+                placeholder="What do you want to improve first? (optional)"
+                class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 placeholder-white/40 outline-none focus:border-cyan-400"
               />
             </div>
+
             <div
-                v-if="waitlistCaptchaVisible"
-                class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60"
+              v-if="waitlistCaptchaVisible"
+              class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60"
             >
               <p class="text-sm font-medium text-white">Aviation captcha</p>
               <p>
-                Answer to join the pattern:
+                Answer to continue:
                 <span class="text-cyan-300">{{ waitlistCaptcha.challenge.prompt }}</span>
               </p>
               <input
-                  v-model.trim="waitlistCaptcha.answer"
-                  type="text"
-                  required
-                  aria-label="Aviation captcha answer for waitlist"
-                  placeholder="Type the answer"
-                  class="w-full rounded-2xl border border-white/10 bg-[#0b1020]/40 px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-cyan-400"
+                v-model.trim="waitlistCaptcha.answer"
+                type="text"
+                required
+                aria-label="Aviation captcha answer for waitlist"
+                placeholder="Type the answer"
+                class="w-full rounded-2xl border border-white/10 bg-[#0b1020]/40 px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-cyan-400"
               />
-              <p v-if="waitlistCaptchaReminder" class="text-xs text-amber-200">
-                {{ waitlistCaptchaReminder }}
-              </p>
+              <p v-if="waitlistCaptchaReminder" class="text-xs text-amber-200">{{ waitlistCaptchaReminder }}</p>
               <p v-else-if="waitlistCaptcha.answer && !waitlistCaptchaValid" class="text-xs text-red-300">
                 Check the ATC question and try again.
               </p>
             </div>
+
             <div class="space-y-2 text-xs text-white/60">
               <label class="flex items-start gap-3">
-                <input type="checkbox" v-model="waitlistForm.subscribeUpdates" class="mt-1"/>
+                <input type="checkbox" v-model="waitlistForm.subscribeUpdates" class="mt-1" />
+                <span>Yes, send me product updates and invite drops.</span>
+              </label>
+              <label class="flex items-start gap-3">
+                <input type="checkbox" v-model="waitlistForm.consentTerms" class="mt-1" required />
                 <span>
-                  Yes, keep me posted when new features, drops or classroom content go live.
+                  I accept the
+                  <NuxtLink to="/agb" class="text-cyan-300 underline">terms of service</NuxtLink>
+                  of OpenSquawk.
                 </span>
               </label>
               <label class="flex items-start gap-3">
-                <input type="checkbox" v-model="waitlistForm.consentTerms" class="mt-1" required/>
+                <input type="checkbox" v-model="waitlistForm.consentPrivacy" class="mt-1" required />
                 <span>
-                  I accept the <NuxtLink to="/agb" class="text-cyan-300 underline">terms of service</NuxtLink> of OpenSquawk.
-                </span>
-              </label>
-              <label class="flex items-start gap-3">
-                <input type="checkbox" v-model="waitlistForm.consentPrivacy" class="mt-1" required/>
-                <span>
-                  I have read the <NuxtLink to="/datenschutz"
-                                            class="text-cyan-300 underline">privacy policy</NuxtLink> and consent to storing my details for contact purposes.
+                  I have read the
+                  <NuxtLink to="/datenschutz" class="text-cyan-300 underline">privacy policy</NuxtLink>
+                  and consent to storing my details for contact purposes.
                 </span>
               </label>
             </div>
-            <button
-                type="submit"
-                class="btn btn-primary w-full"
-                :disabled="waitlistSubmitting"
-            >
+
+            <button type="submit" class="btn btn-primary w-full" :disabled="waitlistSubmitting">
               <span v-if="waitlistSubmitting" class="flex items-center gap-2">
-                <v-progress-circular indeterminate size="16" width="2" color="white"/>
+                <v-progress-circular indeterminate size="16" width="2" color="white" />
                 Sending data…
               </span>
               <span v-else>Join the waitlist</span>
             </button>
+
             <p v-if="waitlistSuccess" class="text-sm text-green-300">
               Thank you! You are on the waitlist and we will reach out as soon as slots open up.
-              <span v-if="waitlistLastOptInUpdates" class="mt-1 block text-xs text-green-200/80">
-                You will also receive product updates when new features go live.
-              </span>
             </p>
             <p v-else-if="waitlistError" class="text-sm text-red-300">{{ waitlistError }}</p>
           </form>
@@ -1127,156 +686,113 @@ POST /api/route/taxi
       </div>
     </section>
 
-    <!-- FAQ -->
-    <section id="faq" class="py-12 sm:py-16 md:py-24 bg-[#0a0f1c]">
+    <section id="faq" class="border-y border-white/10 bg-[#0a0f1c] py-16 sm:py-20 md:py-28">
       <div class="container-outer">
-        <div class="max-w-2xl mb-10" data-aos="fade-up">
-          <h2 class="text-3xl md:text-4xl font-semibold">FAQ</h2>
-          <p class="mt-3 text-white/80">
-            Quick answers.
-          </p>
+        <div class="mb-10 max-w-2xl" data-aos="fade-up">
+          <h2 class="text-4xl font-semibold sm:text-5xl md:text-6xl">FAQ</h2>
+          <p class="mt-3 text-white/80">Answers to the questions that usually decide whether people start.</p>
         </div>
-        <div class="grid gap-4 md:grid-cols-2 md:gap-6">
-          <div class="card" data-aos="fade-up" data-aos-delay="0">
-            <h3 class="font-semibold">
-              Is this for real-world aviation?
-            </h3>
-            <p class="mt-2 text-white/80">
-              No, OpenSquawk is for flight simulators and training. It is not intended for real-world radio comms.
+        <div class="grid gap-5 md:grid-cols-2 md:gap-7">
+          <article class="card" data-aos="fade-up" data-aos-delay="0">
+            <h3 class="font-semibold">Is Classroom free right now?</h3>
+            <p class="mt-2 text-sm text-white/75">
+              Yes. Classroom is currently <strong>0€ during invitation alpha</strong>.
             </p>
-          </div>
-          <div class="card" data-aos="fade-up" data-aos-delay="100">
-            <h3 class="font-semibold">
-              Which simulators are supported?
-            </h3>
-            <p class="mt-2 text-white/80">
-              MSFS first (alpha focus), X-Plane next. Additional simulators will follow community demand.
+          </article>
+          <article class="card" data-aos="fade-up" data-aos-delay="100">
+            <h3 class="font-semibold">What is the difference between Classroom and Live ATC?</h3>
+            <p class="mt-2 text-sm text-white/75">
+              Classroom is structured training (listening/readback/feedback). Live ATC is the real-time simulator radio loop and is still in closed alpha.
             </p>
-          </div>
-          <div class="card" data-aos="fade-up" data-aos-delay="200">
-            <h3 class="font-semibold">
-              Can I self-host?
-            </h3>
-            <p class="mt-2 text-white/80">
-              Alpha: Docker Compose + Node services are available. Docs and installers are in progress. Hosting options
-              will follow.
+          </article>
+          <article class="card" data-aos="fade-up" data-aos-delay="200">
+            <h3 class="font-semibold">Do I need to be on VATSIM to use it?</h3>
+            <p class="mt-2 text-sm text-white/75">
+              No. OpenSquawk is built for <strong>VATSIM preparation</strong>, so you can train before flying live on network frequencies.
             </p>
-          </div>
-          <div class="card" data-aos="fade-up" data-aos-delay="300">
-            <h3 class="font-semibold">
-              How do I access the Classroom?
-            </h3>
-            <p class="mt-2 text-white/80">
-              The Classroom is invitation-only during alpha. Join the waitlist and mention “Classroom” or email
-              <a href="mailto:info@opensquawk.de" class="text-cyan-300 underline">info@opensquawk.de</a> to request an
-              invite.
+          </article>
+          <article class="card" data-aos="fade-up" data-aos-delay="300">
+            <h3 class="font-semibold">Can I self-host and inspect the stack?</h3>
+            <p class="mt-2 text-sm text-white/75">
+              Yes. The core is open source and self-hosting remains <strong>0€ / always</strong>.
             </p>
-          </div>
+          </article>
+          <article class="card" data-aos="fade-up" data-aos-delay="400">
+            <h3 class="font-semibold">How do I get access?</h3>
+            <p class="mt-2 text-sm text-white/75">
+              Join the waitlist for Classroom and Live ATC. Access is currently released in rolling batches.
+            </p>
+          </article>
+          <article class="card" data-aos="fade-up" data-aos-delay="500">
+            <h3 class="font-semibold">Is this for real-world aviation?</h3>
+            <p class="mt-2 text-sm text-white/75">
+              No. OpenSquawk is simulator training software, not intended for real-world ATC communication.
+            </p>
+          </article>
         </div>
       </div>
     </section>
 
-    <!-- FOOTER -->
-    <footer class="bg-[#070b16] border-t border-white/10 text-white" data-aos="fade-up">
+    <footer class="border-t border-white/10 bg-[#070b16] text-white" data-aos="fade-up">
       <div class="container-outer py-12 sm:py-16">
         <div class="flex flex-col gap-10">
           <div class="footer-brand">
             <div class="inline-flex items-center justify-center gap-2 sm:justify-start lg:flex-none">
-              <v-icon icon="mdi-radar" size="26" class="text-cyan-400"/>
+              <v-icon icon="mdi-radar" size="26" class="text-cyan-400" />
               <span class="text-lg font-semibold">OpenSquawk</span>
             </div>
             <p class="mx-auto max-w-2xl text-sm text-white/70 sm:mx-0 lg:flex-1 lg:max-w-3xl">
-              OpenSquawk builds Live ATC and Classroom training as open-source projects: speech-to-text, LLM-guided
-              state machine and natural TTS ready for sim pilots.
+              The place where you learn to speak before you speak on VATSIM.
             </p>
             <div class="footer-brand-actions lg:flex-none">
-              <NuxtLink
-                  :to="GITHUB_URL"
-                  external
-                  target="_blank"
-                  rel="noopener"
-                  class="footer-action"
-              >
-                <v-icon icon="mdi-github" size="18" class="text-white/70"/>
+              <NuxtLink :to="GITHUB_URL" external target="_blank" rel="noopener" class="footer-action">
+                <v-icon icon="mdi-github" size="18" class="text-white/70" />
                 <span>GitHub</span>
               </NuxtLink>
-              <NuxtLink to="/login" class="footer-action">
-                <v-icon icon="mdi-login" size="18" class="text-white/70"/>
-                <span>Login</span>
+              <NuxtLink to="/roadmap" class="footer-action">
+                <v-icon icon="mdi-map-marker-path" size="18" class="text-white/70" />
+                <span>Roadmap</span>
+              </NuxtLink>
+              <NuxtLink to="/news" class="footer-action">
+                <v-icon icon="mdi-newspaper-variant-outline" size="18" class="text-white/70" />
+                <span>News</span>
               </NuxtLink>
             </div>
           </div>
+
           <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <h4 class="mb-3 font-semibold">Product</h4>
+              <h4 class="mb-3 font-semibold">Training</h4>
               <ul class="space-y-2 text-sm text-white/70">
-                <li>
-                  <NuxtLink to="#features" class="hover:text-cyan-300">
-                    Live ATC
-                  </NuxtLink>
-                </li>
-                <li>
-                  <NuxtLink to="#classroom" class="hover:text-cyan-300">
-                    Classroom
-                  </NuxtLink>
-                </li>
-                <li>
-                  <NuxtLink to="#pricing" class="hover:text-cyan-300">
-                    Product lineup
-                  </NuxtLink>
-                </li>
-                <li>
-                  <NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink>
-                </li>
+                <li><NuxtLink to="#how-it-works" class="hover:text-cyan-300">How it works</NuxtLink></li>
+                <li><NuxtLink to="#classroom" class="hover:text-cyan-300">ATC Classroom</NuxtLink></li>
+                <li><NuxtLink to="#lineup" class="hover:text-cyan-300">Product lineup</NuxtLink></li>
+                <li><NuxtLink to="#daily-drill" class="hover:text-cyan-300">Daily Drill</NuxtLink></li>
+                <li><NuxtLink to="#cta" class="hover:text-cyan-300">Start Training</NuxtLink></li>
               </ul>
             </div>
             <div>
-              <h4 class="mb-3 font-semibold">Resources</h4>
+              <h4 class="mb-3 font-semibold">Community</h4>
               <ul class="space-y-2 text-sm text-white/70">
-
-                <li>
-                  <NuxtLink to="#news" class="hover:text-cyan-300">News</NuxtLink>
-                </li>
-                <li>
-                  <NuxtLink to="#contributing" class="hover:text-cyan-300">
-                    Get involved
-                  </NuxtLink>
-                </li>
-                <li>
-                  <NuxtLink to="/feedback" class="hover:text-cyan-300">
-                    Feedback &amp; ideas
-                  </NuxtLink>
-                </li>
+                <li><NuxtLink to="#community" class="hover:text-cyan-300">Social proof</NuxtLink></li>
+                <li><NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink></li>
+                <li><NuxtLink to="/feedback" class="hover:text-cyan-300">Feedback & ideas</NuxtLink></li>
+                <li><a :href="DISCORD_INVITE_MAILTO" class="hover:text-cyan-300">Discord invite request</a></li>
                 <li><a href="mailto:info@opensquawk.de" class="hover:text-cyan-300">info@opensquawk.de</a></li>
               </ul>
             </div>
             <div>
               <h4 class="mb-3 font-semibold">Legal</h4>
               <ul class="space-y-2 text-sm text-white/70">
-                <li>
-                  <NuxtLink to="/impressum" class="hover:text-cyan-300">
-                    Imprint
-                  </NuxtLink>
-                </li>
-                <li>
-                  <NuxtLink to="/datenschutz" class="hover:text-cyan-300">
-                    Privacy
-                  </NuxtLink>
-                </li>
-                <li>
-                  <NuxtLink to="/agb" class="hover:text-cyan-300">
-                    Terms
-                  </NuxtLink>
-                </li>
-                <li>
-                  <NuxtLink to="/api-docs" class="hover:text-cyan-300">
-                    API documentation
-                  </NuxtLink>
-                </li>
+                <li><NuxtLink to="/impressum" class="hover:text-cyan-300">Imprint</NuxtLink></li>
+                <li><NuxtLink to="/datenschutz" class="hover:text-cyan-300">Privacy</NuxtLink></li>
+                <li><NuxtLink to="/agb" class="hover:text-cyan-300">Terms</NuxtLink></li>
+                <li><NuxtLink to="/login" class="hover:text-cyan-300">Login</NuxtLink></li>
               </ul>
             </div>
           </div>
         </div>
+
         <div class="mt-10 border-t border-white/10 pt-6 text-center text-xs text-white/60 sm:text-left">
           © {{ year }} OpenSquawk. Not for real-world aviation. *VATSIM/IVAO: trademarks of their respective owners.
         </div>
@@ -1285,17 +801,15 @@ POST /api/route/taxi
   </div>
 </template>
 
-
 <script setup lang="ts">
-import {ref, reactive, computed, onMounted, watch, onBeforeUnmount, nextTick} from 'vue'
-import {useHead, useRoute, useRouter} from '#imports'
-import {useApi} from '~/composables/useApi'
-import {getAllNews} from '~~/shared/utils/news'
-import type {NewsPost} from '~~/shared/utils/news'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useHead, useRoute, useRouter } from '#imports'
+import { useApi } from '~/composables/useApi'
 
 const api = useApi()
 
 const GITHUB_URL = 'https://github.com/OpenSquawk/OpenSquawk'
+const DISCORD_INVITE_MAILTO = 'mailto:info@opensquawk.de?subject=Discord%20Community%20Invite%20Request'
 
 interface NavLink {
   label: string
@@ -1308,27 +822,35 @@ interface ExtendedNavLink extends NavLink {
 }
 
 const navLinks: NavLink[] = [
-  {label: 'Live ATC', to: '#features'},
-  {label: 'Roadmap', to: '#roadmap'},
-  {label: 'Classroom', to: '#classroom'},
-  {label: 'Lineup', to: '#pricing'},
-  {label: 'Get involved', to: '#contributing'},
-  {label: 'FAQ', to: '#faq'},
+  { label: 'How it works', to: '#how-it-works' },
+  { label: 'Classroom', to: '#classroom' },
+  { label: 'Lineup', to: '#lineup' },
+  { label: 'FAQ', to: '#faq' },
+  { label: 'Start', to: '#cta' },
 ]
 
 const mobileNavLinks = computed<ExtendedNavLink[]>(() => [
   ...navLinks,
-  {label: 'GitHub', to: GITHUB_URL, external: true, icon: 'mdi-github'},
+  { label: 'Roadmap', to: '/roadmap', icon: 'mdi-map-marker-path' },
+  { label: 'News', to: '/news', icon: 'mdi-newspaper-variant-outline' },
+  { label: 'GitHub', to: GITHUB_URL, external: true, icon: 'mdi-github' },
 ])
 
 const router = useRouter()
+const route = useRoute()
 
 const headerRef = ref<HTMLElement | null>(null)
+const problemSplashRef = ref<HTMLElement | null>(null)
+const arrivalSplashRef = ref<HTMLElement | null>(null)
+const classroomSplashRef = ref<HTMLElement | null>(null)
 const headerHeight = ref(0)
 const activeSection = ref<string>('')
+const problemParallaxOffset = ref(0)
+const arrivalParallaxOffset = ref(0)
+const classroomParallaxOffset = ref(0)
 
 const SCROLL_MARGIN = 24
-
+const PARALLAX_LIMIT = 52
 const isNavLinkActive = (hash: string) => activeSection.value === hash
 
 interface ScrollOptions {
@@ -1337,6 +859,47 @@ interface ScrollOptions {
 
 let sectionElements: { hash: string; element: HTMLElement }[] = []
 let isInternalNavigation = false
+let parallaxAnimationFrame: number | null = null
+
+const clampParallax = (value: number) => Math.max(-PARALLAX_LIMIT, Math.min(PARALLAX_LIMIT, value))
+
+const calculateParallaxOffset = (element: HTMLElement | null, strength: number) => {
+  if (!import.meta.client || !element) return 0
+  const rect = element.getBoundingClientRect()
+  if (!rect.height) return 0
+  const viewportCenter = window.innerHeight * 0.5
+  const sectionCenter = rect.top + rect.height * 0.5
+  const normalized = (viewportCenter - sectionCenter) / window.innerHeight
+  return clampParallax(normalized * strength)
+}
+
+const updateParallaxOffsets = () => {
+  if (!import.meta.client) return
+  problemParallaxOffset.value = calculateParallaxOffset(problemSplashRef.value, 84)
+  arrivalParallaxOffset.value = calculateParallaxOffset(arrivalSplashRef.value, 92)
+  classroomParallaxOffset.value = calculateParallaxOffset(classroomSplashRef.value, 98)
+}
+
+const scheduleParallaxUpdate = () => {
+  if (!import.meta.client) return
+  if (parallaxAnimationFrame !== null) return
+  parallaxAnimationFrame = window.requestAnimationFrame(() => {
+    parallaxAnimationFrame = null
+    updateParallaxOffsets()
+  })
+}
+
+const problemParallaxStyle = computed(() => ({
+  transform: `translate3d(0, ${problemParallaxOffset.value}px, 0) scale(1.08)`,
+}))
+
+const arrivalParallaxStyle = computed(() => ({
+  transform: `translate3d(0, ${arrivalParallaxOffset.value}px, 0) scale(1.08)`,
+}))
+
+const classroomParallaxStyle = computed(() => ({
+  transform: `translate3d(0, ${classroomParallaxOffset.value}px, 0) scale(1.1)`,
+}))
 
 const updateHeaderHeight = () => {
   if (!import.meta.client) return
@@ -1346,12 +909,12 @@ const updateHeaderHeight = () => {
 const updateSectionElements = () => {
   if (!import.meta.client) return
   sectionElements = navLinks
-      .map((link) => {
-        if (!link.to.startsWith('#')) return null
-        const element = document.querySelector<HTMLElement>(link.to)
-        return element ? {hash: link.to, element} : null
-      })
-      .filter((value): value is { hash: string; element: HTMLElement } => value !== null)
+    .map((link) => {
+      if (!link.to.startsWith('#')) return null
+      const element = document.querySelector<HTMLElement>(link.to)
+      return element ? { hash: link.to, element } : null
+    })
+    .filter((value): value is { hash: string; element: HTMLElement } => value !== null)
 }
 
 const updateActiveSection = () => {
@@ -1363,7 +926,7 @@ const updateActiveSection = () => {
 
   const scrollPosition = window.scrollY + headerHeight.value + SCROLL_MARGIN + 1
   for (let index = sectionElements.length - 1; index >= 0; index -= 1) {
-    const {hash, element} = sectionElements[index]
+    const { hash, element } = sectionElements[index]
     if (scrollPosition >= element.offsetTop) {
       activeSection.value = hash
       return
@@ -1375,16 +938,33 @@ const updateActiveSection = () => {
 
 const handleScroll = () => {
   updateActiveSection()
+  scheduleParallaxUpdate()
 }
 
 const handleResize = () => {
   updateHeaderHeight()
   updateSectionElements()
   updateActiveSection()
+  scheduleParallaxUpdate()
 }
 
 const scrollToSection = (hash: string, behavior: ScrollBehavior = 'smooth', options: ScrollOptions = {}) => {
   if (!import.meta.client || !hash.startsWith('#')) return
+
+  if (hash === '#') {
+    window.scrollTo({ top: 0, behavior })
+    activeSection.value = ''
+    if (options.updateUrl !== false && route.hash) {
+      isInternalNavigation = true
+      router
+        .replace({ hash: '' })
+        .catch(() => {})
+        .finally(() => {
+          isInternalNavigation = false
+        })
+    }
+    return
+  }
 
   const target = document.querySelector<HTMLElement>(hash)
   if (!target) return
@@ -1398,10 +978,12 @@ const scrollToSection = (hash: string, behavior: ScrollBehavior = 'smooth', opti
 
   if (options.updateUrl !== false && route.hash !== hash) {
     isInternalNavigation = true
-    router.replace({hash}).catch(() => {
-    }).finally(() => {
-      isInternalNavigation = false
-    })
+    router
+      .replace({ hash })
+      .catch(() => {})
+      .finally(() => {
+        isInternalNavigation = false
+      })
   }
 }
 
@@ -1409,8 +991,7 @@ const handleAnchorNavigation = (hash: string, behavior: ScrollBehavior = 'smooth
   if (!import.meta.client) return
 
   if (!hash || hash === '#') {
-    window.scrollTo({top: 0, behavior})
-    updateActiveSection()
+    scrollToSection('#', behavior, options)
     return
   }
 
@@ -1446,19 +1027,21 @@ const handleDocumentClick = (event: MouseEvent) => {
 const handleHashChange = () => {
   if (!import.meta.client || isInternalNavigation) return
 
-  const {hash} = window.location
+  const { hash } = window.location
   if (!hash) {
     updateActiveSection()
     return
   }
 
-  handleAnchorNavigation(hash, 'auto', {updateUrl: false})
+  handleAnchorNavigation(hash, 'auto', { updateUrl: false })
 }
 
 const isMobileNavOpen = ref(false)
+
 const toggleMobileNav = () => {
   isMobileNavOpen.value = !isMobileNavOpen.value
 }
+
 const closeMobileNav = () => {
   isMobileNavOpen.value = false
 }
@@ -1479,41 +1062,12 @@ const handleMobileNavLinkClick = (event: MouseEvent, item: ExtendedNavLink) => {
   closeMobileNav()
 }
 
-const route = useRoute()
 watch(
-    () => route.fullPath,
-    () => {
-      closeMobileNav()
-    },
+  () => route.fullPath,
+  () => {
+    closeMobileNav()
+  },
 )
-
-onMounted(() => {
-  if (!import.meta.client) return
-
-  rotateCaptchaChallenge(updatesCaptcha)
-  rotateCaptchaChallenge(waitlistCaptcha)
-
-  nextTick(() => {
-    updateHeaderHeight()
-    updateSectionElements()
-    updateActiveSection()
-
-    if (route.hash) {
-      handleAnchorNavigation(route.hash, 'auto', {updateUrl: false})
-    }
-
-    window.addEventListener('scroll', handleScroll, {passive: true})
-    window.addEventListener('resize', handleResize)
-    window.addEventListener('hashchange', handleHashChange)
-    document.addEventListener('click', handleDocumentClick)
-
-    window.setTimeout(() => {
-      updateHeaderHeight()
-      updateSectionElements()
-      updateActiveSection()
-    }, 300)
-  })
-})
 
 if (import.meta.client) {
   watch(isMobileNavOpen, (open) => {
@@ -1521,6 +1075,7 @@ if (import.meta.client) {
     nextTick(() => {
       updateHeaderHeight()
       updateActiveSection()
+      scheduleParallaxUpdate()
     })
   })
 
@@ -1530,15 +1085,12 @@ if (import.meta.client) {
     window.removeEventListener('resize', handleResize)
     window.removeEventListener('hashchange', handleHashChange)
     document.removeEventListener('click', handleDocumentClick)
+    if (parallaxAnimationFrame !== null) {
+      window.cancelAnimationFrame(parallaxAnimationFrame)
+      parallaxAnimationFrame = null
+    }
   })
 }
-
-const numberFormatter = computed(() => new Intl.NumberFormat('en-US'))
-const formatNumber = (value: number | null | undefined) => numberFormatter.value.format(Math.max(0, Math.round(value ?? 0)))
-const ROADMAP_SCALE = [1, 2, 3, 4, 5] as const
-
-const dateLocale = 'en-US'
-const shortDateOptions: Intl.DateTimeFormatOptions = {day: '2-digit', month: 'short', year: 'numeric'}
 
 interface WaitlistStats {
   count: number
@@ -1548,24 +1100,6 @@ interface WaitlistStats {
   recent30Days: number
   lastJoinedAt: string | null
   generatedAt: string
-}
-
-interface RoadmapItemWithStats {
-  key: string
-  title: string
-  description: string
-  category: string
-  icon: string
-  votes: number
-  averageImportance: number | null
-  scorePercent: number
-  lastVoteAt: string | null
-}
-
-interface RoadmapResponse {
-  items: RoadmapItemWithStats[]
-  totalVotes: number
-  recentVotes7Days: number
 }
 
 interface CaptchaChallenge {
@@ -1603,7 +1137,7 @@ const CAPTCHA_CHALLENGES: CaptchaChallenge[] = [
   {
     id: 'roger-copy',
     prompt: 'Which word means “I received your transmission” on the radio?',
-    answers: ['roger', 'roger that', 'roger copy','copy' ],
+    answers: ['roger', 'roger that', 'roger copy', 'copy'],
   },
   {
     id: 'wilco',
@@ -1613,7 +1147,7 @@ const CAPTCHA_CHALLENGES: CaptchaChallenge[] = [
   {
     id: 'niner',
     prompt: 'How do pilots say the number 9 on the radio?',
-    answers: ['niner','nine'],
+    answers: ['niner', 'nine'],
   },
   {
     id: 'phonetic-alpha',
@@ -1629,17 +1163,18 @@ const CAPTCHA_CHALLENGES: CaptchaChallenge[] = [
 
 const DEFAULT_CAPTCHA = CAPTCHA_CHALLENGES[0]
 
-const createCaptchaState = () => reactive({
-  challenge: DEFAULT_CAPTCHA,
-  answer: '',
-}) as CaptchaState
+const createCaptchaState = () =>
+  reactive({
+    challenge: DEFAULT_CAPTCHA,
+    answer: '',
+  }) as CaptchaState
 
 const normaliseCaptchaValue = (value: string) =>
   value
-      .normalize('NFKD')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, ' ')
-      .trim()
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
 
 const isCaptchaAnswerValid = (state: CaptchaState) => {
   const response = normaliseCaptchaValue(state.answer)
@@ -1648,9 +1183,7 @@ const isCaptchaAnswerValid = (state: CaptchaState) => {
 }
 
 const pickRandomChallenge = (excludeId?: string) => {
-  const pool = excludeId
-      ? CAPTCHA_CHALLENGES.filter((challenge) => challenge.id !== excludeId)
-      : CAPTCHA_CHALLENGES
+  const pool = excludeId ? CAPTCHA_CHALLENGES.filter((challenge) => challenge.id !== excludeId) : CAPTCHA_CHALLENGES
   const available = pool.length ? pool : CAPTCHA_CHALLENGES
   const index = Math.floor(Math.random() * available.length)
   return available[index]
@@ -1661,6 +1194,12 @@ const rotateCaptchaChallenge = (state: CaptchaState) => {
   state.challenge = nextChallenge
   state.answer = ''
 }
+
+const numberFormatter = computed(() => new Intl.NumberFormat('en-US'))
+const formatNumber = (value: number | null | undefined) => numberFormatter.value.format(Math.max(0, Math.round(value ?? 0)))
+
+const dateLocale = 'en-US'
+const shortDateOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' }
 
 const year = new Date().getFullYear()
 
@@ -1680,38 +1219,8 @@ const waitlistCaptchaReminder = ref('')
 const waitlistSubmitting = ref(false)
 const waitlistSuccess = ref(false)
 const waitlistError = ref('')
-const waitlistLastOptInUpdates = ref(false)
 const waitlistStats = ref<WaitlistStats | null>(null)
 const waitlistLoading = ref(false)
-
-const updatesForm = reactive({
-  email: '',
-  notes: '',
-  consentPrivacy: false,
-  consentTerms: false,
-  consentMarketing: false,
-})
-
-const updatesCaptcha = createCaptchaState()
-const updatesCaptchaVisible = ref(false)
-const updatesCaptchaReminder = ref('')
-const updatesSubmitting = ref(false)
-const updatesSuccess = ref(false)
-const updatesError = ref('')
-
-const roadmapSuggestionForm = reactive({
-  title: '',
-  details: '',
-  email: '',
-  allowContact: false,
-  consentPrivacy: false,
-})
-const roadmapSuggestionSubmitting = ref(false)
-const roadmapSuggestionSuccess = ref(false)
-const roadmapSuggestionError = ref('')
-
-const allNewsEntries = computed<NewsPost[]>(() => getAllNews())
-const latestNews = computed<NewsPost[]>(() => allNewsEntries.value.slice(0, 3))
 
 const waitlistCountDisplay = computed(() => formatNumber(waitlistStats.value?.displayCount ?? 0))
 const waitlistLastJoinedFormatted = computed(() => {
@@ -1720,80 +1229,34 @@ const waitlistLastJoinedFormatted = computed(() => {
   return formatWaitlistDate(iso)
 })
 const waitlistCaptchaValid = computed(() => isCaptchaAnswerValid(waitlistCaptcha))
-const updatesCaptchaValid = computed(() => isCaptchaAnswerValid(updatesCaptcha))
 
 watch(
-    () => updatesForm.email,
-    (value) => {
-      const hasValue = value?.trim().length > 0
-      if (hasValue) {
-        updatesCaptchaVisible.value = true
-      } else {
-        updatesCaptchaVisible.value = false
-        updatesCaptcha.answer = ''
-        updatesCaptchaReminder.value = ''
-      }
-    },
+  () => waitlistForm.email,
+  (value) => {
+    const hasValue = value?.trim().length > 0
+    if (hasValue) {
+      waitlistCaptchaVisible.value = true
+    } else {
+      waitlistCaptchaVisible.value = false
+      waitlistCaptcha.answer = ''
+      waitlistCaptchaReminder.value = ''
+    }
+  },
 )
 
 watch(
-    () => updatesCaptcha.answer,
-    (value) => {
-      if (updatesCaptchaReminder.value && value?.trim().length) {
-        updatesCaptchaReminder.value = ''
-      }
-    },
-)
-
-watch(
-    () => waitlistForm.email,
-    (value) => {
-      const hasValue = value?.trim().length > 0
-      if (hasValue) {
-        waitlistCaptchaVisible.value = true
-      } else {
-        waitlistCaptchaVisible.value = false
-        waitlistCaptcha.answer = ''
-        waitlistCaptchaReminder.value = ''
-      }
-    },
-)
-
-watch(
-    () => waitlistCaptcha.answer,
-    (value) => {
-      if (waitlistCaptchaReminder.value && value?.trim().length) {
-        waitlistCaptchaReminder.value = ''
-      }
-    },
-)
-const roadmapSuggestionFormValid = computed(() => {
-  const title = roadmapSuggestionForm.title.trim()
-  const details = roadmapSuggestionForm.details.trim()
-  const email = roadmapSuggestionForm.email.trim()
-  const wantsContact = roadmapSuggestionForm.allowContact
-
-  return (
-      title.length >= 4 &&
-      details.length >= 20 &&
-      roadmapSuggestionForm.consentPrivacy &&
-      (!wantsContact || email.length > 0)
-  )
-})
-
-watch(
-    () => roadmapSuggestionForm.email,
-    (value) => {
-      if (!value) {
-        roadmapSuggestionForm.allowContact = false
-      }
-    },
+  () => waitlistCaptcha.answer,
+  (value) => {
+    if (waitlistCaptchaReminder.value && value?.trim().length) {
+      waitlistCaptchaReminder.value = ''
+    }
+  },
 )
 
 async function loadWaitlistStats() {
   try {
     waitlistLoading.value = true
-    const data = (await api.get('/api/service/waitlist', {auth: false})) as WaitlistStats
+    const data = (await api.get('/api/service/waitlist', { auth: false })) as WaitlistStats
     waitlistStats.value = data
   } catch (err) {
     console.warn('Waitlist stats unavailable', err)
@@ -1808,7 +1271,6 @@ async function submitWaitlist() {
   waitlistError.value = ''
   waitlistSuccess.value = false
   waitlistCaptchaReminder.value = ''
-  waitlistLastOptInUpdates.value = false
 
   const email = waitlistForm.email.trim()
   if (!email) {
@@ -1828,7 +1290,7 @@ async function submitWaitlist() {
   const hasCaptchaAnswer = waitlistCaptcha.answer.trim().length > 0
   if (!waitlistCaptchaValid.value) {
     if (!hasCaptchaAnswer) {
-      waitlistCaptchaReminder.value = 'Wir erhalten gerade viel Spam – bitte beantworte kurz die kleine ATC-Frage.'
+      waitlistCaptchaReminder.value = 'We currently get lots of spam. Please answer the short ATC question.'
     }
     return
   }
@@ -1836,29 +1298,30 @@ async function submitWaitlist() {
   waitlistSubmitting.value = true
 
   try {
-    const wantsProductUpdates = waitlistForm.subscribeUpdates
     await api.post(
-        '/api/service/waitlist',
-        {
-          name: waitlistForm.name,
-          email,
-          notes: waitlistForm.notes,
-          consentPrivacy: waitlistForm.consentPrivacy,
-          consentTerms: waitlistForm.consentTerms,
-          wantsProductUpdates,
-          source: 'landing-cta',
-        },
-        {auth: false},
+      '/api/service/waitlist',
+      {
+        name: waitlistForm.name,
+        email,
+        notes: waitlistForm.notes,
+        consentPrivacy: waitlistForm.consentPrivacy,
+        consentTerms: waitlistForm.consentTerms,
+        wantsProductUpdates: waitlistForm.subscribeUpdates,
+        source: 'landing-phase1-cta',
+      },
+      { auth: false },
     )
-    waitlistLastOptInUpdates.value = wantsProductUpdates
+
     waitlistSuccess.value = true
     await loadWaitlistStats()
+
     waitlistForm.name = ''
     waitlistForm.email = ''
     waitlistForm.notes = ''
     waitlistForm.consentPrivacy = false
     waitlistForm.consentTerms = false
     waitlistForm.subscribeUpdates = false
+
     waitlistCaptchaReminder.value = ''
     rotateCaptchaChallenge(waitlistCaptcha)
   } catch (err: any) {
@@ -1867,69 +1330,6 @@ async function submitWaitlist() {
     waitlistError.value = message
   } finally {
     waitlistSubmitting.value = false
-  }
-}
-
-async function submitUpdates() {
-  if (updatesSubmitting.value) return
-
-  updatesError.value = ''
-  updatesSuccess.value = false
-  updatesCaptchaReminder.value = ''
-
-  const email = updatesForm.email.trim()
-  const notes = updatesForm.notes.trim()
-  if (!email) {
-    updatesError.value = 'Please add your email so we can reach you.'
-    return
-  }
-
-  if (!updatesForm.consentPrivacy || !updatesForm.consentMarketing || !updatesForm.consentTerms) {
-    updatesError.value = 'Please confirm the required checkboxes.'
-    return
-  }
-
-  if (!updatesCaptchaVisible.value) {
-    updatesCaptchaVisible.value = true
-  }
-
-  const hasCaptchaAnswer = updatesCaptcha.answer.trim().length > 0
-  if (!updatesCaptchaValid.value) {
-    if (!hasCaptchaAnswer) {
-      updatesCaptchaReminder.value = 'Wir erhalten gerade viel Spam – bitte beantworte kurz die kleine ATC-Frage.'
-    }
-    return
-  }
-
-  updatesSubmitting.value = true
-
-  try {
-    await api.post(
-        '/api/service/waitlist',
-        {
-          email,
-          notes,
-          consentPrivacy: updatesForm.consentPrivacy,
-          consentTerms: updatesForm.consentTerms,
-          wantsProductUpdates: updatesForm.consentMarketing,
-          source: 'landing-hero',
-        },
-        {auth: false},
-    )
-    updatesSuccess.value = true
-    updatesForm.email = ''
-    updatesForm.notes = ''
-    updatesForm.consentPrivacy = false
-    updatesForm.consentMarketing = false
-    updatesForm.consentTerms = false
-    updatesCaptchaReminder.value = ''
-    rotateCaptchaChallenge(updatesCaptcha)
-  } catch (err: any) {
-    const fallback = 'Could not save sign-up'
-    const message = err?.data?.statusMessage || err?.message || fallback
-    updatesError.value = message
-  } finally {
-    updatesSubmitting.value = false
   }
 }
 
@@ -1946,10 +1346,12 @@ const formatRelativeFromNow = (iso?: string | null) => {
   if (!iso) return '–'
   const target = new Date(iso)
   if (Number.isNaN(target.getTime())) return '–'
+
   const diff = Date.now() - target.getTime()
   const minute = 1000 * 60
   const hour = minute * 60
   const day = hour * 24
+
   if (diff < minute) return 'just now'
   if (diff < hour) {
     const mins = Math.round(diff / minute)
@@ -1963,207 +1365,84 @@ const formatRelativeFromNow = (iso?: string | null) => {
     const days = Math.round(diff / day)
     return `${days} day${days === 1 ? '' : 's'} ago`
   }
+
   const weeks = Math.round(diff / (day * 7))
   if (weeks < 9) {
     return `${weeks} wk${weeks === 1 ? '' : 's'} ago`
   }
+
   const months = Math.round(diff / (day * 30))
   return `${months} mo${months === 1 ? '' : 's'} ago`
 }
 
-const formatAverage = (value: number) => value.toFixed(1)
-
-const formatNewsDate = (iso: string) => {
-  if (!iso) return 'tbd'
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return 'tbd'
-  return date.toLocaleDateString(dateLocale, shortDateOptions)
+const initAosIfNeeded = async () => {
+  if (!import.meta.client) return
+  // @ts-ignore optional runtime global from module
+  if ('AOS' in window) return
+  const [{ default: AOS }] = await Promise.all([import('aos'), import('aos/dist/aos.css')])
+  AOS.init({ once: true, duration: 600, easing: 'ease-out' })
 }
 
-const roadmapExpanded = ref(false)
-const roadmapItems = ref<RoadmapItemWithStats[]>([])
-const roadmapLoading = ref(false)
-const roadmapTotals = ref(0)
-const roadmapRecent7Days = ref(0)
-const roadmapSelections = reactive<Record<string, number>>({})
-const roadmapTouched = reactive<Record<string, boolean>>({})
-const roadmapSubmitting = ref(false)
-const roadmapSuccess = ref(false)
-const roadmapError = ref('')
+onMounted(() => {
+  if (!import.meta.client) return
 
-const hasRoadmapVote = computed(() => Object.values(roadmapTouched).some(Boolean))
-const roadmapStatsLabel = computed(() => {
-  const total = formatNumber(roadmapTotals.value)
-  const recent = formatNumber(roadmapRecent7Days.value)
-  return `${total} votes submitted`
+  rotateCaptchaChallenge(waitlistCaptcha)
+
+  nextTick(() => {
+    updateHeaderHeight()
+    updateSectionElements()
+    updateActiveSection()
+    updateParallaxOffsets()
+
+    if (route.hash) {
+      handleAnchorNavigation(route.hash, 'auto', { updateUrl: false })
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('hashchange', handleHashChange)
+    document.addEventListener('click', handleDocumentClick)
+
+    window.setTimeout(() => {
+      updateHeaderHeight()
+      updateSectionElements()
+      updateActiveSection()
+      updateParallaxOffsets()
+    }, 300)
+  })
+
+  void loadWaitlistStats()
+  void initAosIfNeeded()
 })
 
-const roadmapImportanceLabel = (value?: number) => {
-  const labels: Record<number, string> = {
-    1: 'Nice to have, not urgent',
-    2: 'Can wait',
-    3: 'Important for me',
-    4: 'Very important',
-    5: 'Top priority',
-  }
-  return labels[value ?? 0] || 'Not rated yet'
-}
-const roadmapImportanceShortLabel = (value: number) => {
-  const labels: Record<number, string> = {
-    1: 'No',
-    2: 'Meh',
-    3: 'Later',
-    4: 'Now',
-    5: 'Top',
-  }
-  return labels[value] || ''
-}
-
-const selectRoadmapImportance = (key: string, value: number) => {
-  if (!ROADMAP_SCALE.includes(value as (typeof ROADMAP_SCALE)[number])) {
-    return
-  }
-  roadmapSelections[key] = value
-  roadmapTouched[key] = true
-  roadmapSuccess.value = false
-}
-
-const toggleRoadmap = () => {
-  roadmapExpanded.value = !roadmapExpanded.value
-}
-
-async function loadRoadmap() {
-  try {
-    roadmapLoading.value = true
-    const data = (await api.get('/api/service/roadmap', {auth: false})) as RoadmapResponse
-    roadmapItems.value = data.items ?? []
-    roadmapTotals.value = data.totalVotes ?? 0
-    roadmapRecent7Days.value = data.recentVotes7Days ?? 0
-
-    const activeKeys = new Set<string>()
-    for (const item of roadmapItems.value) {
-      activeKeys.add(item.key)
-      if (typeof roadmapSelections[item.key] !== 'number') {
-        roadmapSelections[item.key] = 3
-      }
-      if (roadmapTouched[item.key] === undefined) {
-        roadmapTouched[item.key] = false
-      }
-    }
-    for (const key of Object.keys(roadmapSelections)) {
-      if (!activeKeys.has(key)) {
-        delete roadmapSelections[key]
-        delete roadmapTouched[key]
-      }
-    }
-  } catch (err) {
-    console.warn('Roadmap stats unavailable', err)
-  } finally {
-    roadmapLoading.value = false
-  }
-}
-
-async function submitRoadmapVotes() {
-  if (!hasRoadmapVote.value || roadmapSubmitting.value) return
-
-  const votes = Object.entries(roadmapSelections)
-      .filter(([key]) => roadmapTouched[key])
-      .map(([key, importance]) => ({key, importance}))
-
-  if (!votes.length) {
-    return
-  }
-
-  roadmapSubmitting.value = true
-  roadmapError.value = ''
-  roadmapSuccess.value = false
-
-  try {
-    await api.post('/api/service/roadmap', {votes}, {auth: false})
-    roadmapSuccess.value = true
-    Object.keys(roadmapTouched).forEach((key) => {
-      roadmapTouched[key] = false
-    })
-    await loadRoadmap()
-  } catch (err: any) {
-    const fallback = 'Could not submit votes'
-    const message = err?.data?.statusMessage || err?.message || fallback
-    roadmapError.value = message
-  } finally {
-    roadmapSubmitting.value = false
-  }
-}
-
-async function submitRoadmapSuggestion() {
-  if (!roadmapSuggestionFormValid.value || roadmapSuggestionSubmitting.value) return
-
-  roadmapSuggestionSubmitting.value = true
-  roadmapSuggestionError.value = ''
-  roadmapSuggestionSuccess.value = false
-
-  try {
-    await api.post(
-        '/api/service/roadmap-suggestions',
-        {
-          title: roadmapSuggestionForm.title,
-          details: roadmapSuggestionForm.details,
-          email: roadmapSuggestionForm.email || undefined,
-          allowContact: roadmapSuggestionForm.allowContact,
-          consentPrivacy: roadmapSuggestionForm.consentPrivacy,
-        },
-        {auth: false},
-    )
-    roadmapSuggestionSuccess.value = true
-    roadmapSuggestionForm.title = ''
-    roadmapSuggestionForm.details = ''
-    roadmapSuggestionForm.email = ''
-    roadmapSuggestionForm.allowContact = false
-    roadmapSuggestionForm.consentPrivacy = false
-  } catch (err: any) {
-    const fallback = 'Could not save suggestion'
-    const message = err?.data?.statusMessage || err?.message || fallback
-    roadmapSuggestionError.value = message
-  } finally {
-    roadmapSuggestionSubmitting.value = false
-  }
-}
-
 useHead(() => ({
-  htmlAttrs: {lang: 'en'},
-  title: 'OpenSquawk – Open-source, low-cost AI ATC for flight simulation',
+  htmlAttrs: { lang: 'en' },
+  title: 'Train ATC before you fly VATSIM | OpenSquawk',
   meta: [
     {
       name: 'description',
-      content: 'We are building OpenSquawk: open-source, low-cost AI ATC for flight sim pilots. Community roadmap, self-host today, hosted options in planning.'
+      content:
+        'OpenSquawk helps aspiring VATSIM pilots train realistic radio communication with structured scenarios, instant feedback and clear progression.',
     },
-    {name: 'theme-color', content: '#0ea5e9'},
-    {property: 'og:title', content: 'OpenSquawk – Open-source, low-cost AI ATC'},
+    { name: 'theme-color', content: '#0ea5e9' },
+    { property: 'og:title', content: 'Train ATC before you fly VATSIM | OpenSquawk' },
     {
       property: 'og:description',
-      content: 'Alpha prototype for sim pilots. Community-driven features, self-host today, hosted options tomorrow.'
+      content:
+        'Practice realistic ATC phraseology in a safe, structured environment. Build confidence before your first VATSIM flight.',
     },
-    {property: 'og:type', content: 'website'},
-    {property: 'og:image', content: 'https://opensquawk.example.com/cover.png'},
-    {name: 'twitter:card', content: 'summary_large_image'},
-    {name: 'twitter:title', content: 'OpenSquawk – Open-source, low-cost AI ATC'},
-    {name: 'twitter:description', content: 'Alpha prototype with community roadmap. Self-host today, hosted later.'},
-    {name: 'twitter:image', content: 'https://opensquawk.example.com/cover.png'},
+    { property: 'og:type', content: 'website' },
+    { property: 'og:image', content: 'https://opensquawk.example.com/cover.png' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: 'Train ATC before you fly VATSIM | OpenSquawk' },
+    {
+      name: 'twitter:description',
+      content: 'Structured ATC radio training for aspiring VATSIM pilots.',
+    },
+    { name: 'twitter:image', content: 'https://opensquawk.example.com/cover.png' },
   ],
 }))
-
-onMounted(async () => {
-  await Promise.all([loadWaitlistStats(), loadRoadmap()])
-  // @ts-ignore – optional fallback
-  if (!('AOS' in window)) {
-    const [{default: AOS}] = await Promise.all([
-      import('aos'),
-      import('aos/dist/aos.css')
-    ])
-    AOS.init({once: true, duration: 600, easing: 'ease-out'})
-  }
-})
 </script>
-
 
 <style scoped>
 .container-outer {
@@ -2171,17 +1450,19 @@ onMounted(async () => {
 }
 
 .gradient-hero {
-  background: radial-gradient(1200px 600px at 12% -20%, rgba(6, 182, 212, .32), transparent),
-  radial-gradient(900px 520px at 100% 5%, rgba(59, 130, 246, .22), transparent),
-  linear-gradient(180deg, rgba(11, 16, 32, 0.92) 0%, rgba(11, 16, 32, 0.94) 42%, rgba(11, 16, 32, 0.98) 68%, #0a0f1c 100%);
+  background:
+    radial-gradient(1200px 600px at 12% -20%, rgba(6, 182, 212, 0.32), transparent),
+    radial-gradient(900px 520px at 100% 5%, rgba(59, 130, 246, 0.22), transparent),
+    linear-gradient(180deg, rgba(11, 16, 32, 0.92) 0%, rgba(11, 16, 32, 0.94) 42%, rgba(11, 16, 32, 0.98) 68%, #0a0f1c 100%);
 }
 
 .gradient-hero::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(7, 11, 24, 0.05) 0%, rgba(9, 14, 28, 0.1) 55%, rgba(11, 16, 32, 0.5) 100%),
-  url('/img/learn/missions/full-flight/briefing-weather.png') center/cover no-repeat;
+  background:
+    linear-gradient(180deg, rgba(7, 11, 24, 0.05) 0%, rgba(9, 14, 28, 0.1) 55%, rgba(11, 16, 32, 0.5) 100%),
+    url('/img/learn/missions/full-flight/briefing-weather.png') center / cover no-repeat;
   opacity: 1;
   pointer-events: none;
   z-index: 0;
@@ -2192,30 +1473,139 @@ onMounted(async () => {
   z-index: 1;
 }
 
-.hero-form {
-  position: relative;
-  z-index: 2;
+.hero-highlight {
+  height: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 20px 44px rgba(6, 15, 35, 0.28);
 }
 
-.hero-form-panel {
-  background: linear-gradient(140deg, rgba(15, 23, 42, 0.72), rgba(12, 20, 38, 0.48));
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(24px);
-  box-shadow: 0 42px 120px rgba(5, 12, 32, 0.45);
+.hero-highlight h3 {
+  text-wrap: balance;
+}
+
+.hero-highlight p {
+  text-wrap: pretty;
+}
+
+.problem-splash {
+  min-height: clamp(500px, 72vh, 830px);
+  position: relative;
+  background: #0a0f1c;
+}
+
+.problem-splash-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 35%;
+}
+
+.problem-splash-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(7, 12, 24, 0.2) 10%, rgba(7, 12, 24, 0.44) 54%, rgba(7, 12, 24, 0.9) 100%),
+    radial-gradient(100% 85% at 50% 100%, rgba(34, 211, 238, 0.18), rgba(34, 211, 238, 0));
+}
+
+.problem-splash-content {
+  position: relative;
+  z-index: 2;
+  min-height: inherit;
+  display: flex;
+  align-items: flex-end;
+  padding-top: 4.5rem;
+  padding-bottom: 3.75rem;
+}
+
+.arrival-splash {
+  min-height: clamp(480px, 72vh, 820px);
+  position: relative;
+  background: #0a0f1c;
+}
+
+.arrival-splash-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 45%;
+}
+
+.classroom-splash {
+  min-height: clamp(470px, 70vh, 790px);
+  position: relative;
+  background: #0a0f1c;
+}
+
+.classroom-splash-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+}
+
+.parallax-media {
+  transform-origin: center center;
+  will-change: transform;
+  transition: transform 260ms ease-out;
+}
+
+.arrival-splash-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(7, 12, 24, 0.16) 10%, rgba(7, 12, 24, 0.42) 54%, rgba(7, 12, 24, 0.88) 100%),
+    radial-gradient(90% 80% at 50% 100%, rgba(34, 211, 238, 0.16), rgba(34, 211, 238, 0));
+}
+
+.arrival-splash-content {
+  position: relative;
+  z-index: 2;
+  min-height: inherit;
+  display: flex;
+  align-items: flex-end;
+  padding-top: 4.5rem;
+  padding-bottom: 3.75rem;
+}
+
+.classroom-splash-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(7, 12, 24, 0.2) 8%, rgba(7, 12, 24, 0.4) 52%, rgba(7, 12, 24, 0.9) 100%),
+    radial-gradient(120% 90% at 50% 100%, rgba(34, 211, 238, 0.2), rgba(34, 211, 238, 0));
+}
+
+.classroom-splash-content {
+  position: relative;
+  z-index: 2;
+  min-height: inherit;
+  display: flex;
+  align-items: flex-end;
+  padding-top: 4.5rem;
+  padding-bottom: 3.75rem;
 }
 
 .glass {
-  background: rgba(255, 255, 255, .06);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(255, 255, 255, 0.065);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-2xl font-medium transition px-4 py-2.5 sm:px-5 sm:py-3;
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-medium transition sm:px-6;
 }
 
 .btn-primary {
-  @apply bg-cyan-500 text-white hover:bg-cyan-400 shadow-[0_0_40px_rgba(34,211,238,.25)];
+  @apply border border-cyan-300/40 bg-cyan-500 text-white hover:bg-cyan-400 shadow-[0_0_48px_rgba(34,211,238,.3)];
 }
 
 .btn-ghost {
@@ -2235,59 +1625,27 @@ onMounted(async () => {
 }
 
 .card {
-  @apply glass rounded-2xl p-4 sm:p-5 md:p-6;
+  @apply rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6 md:p-7;
+  backdrop-filter: blur(14px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 22px 52px rgba(5, 12, 28, 0.3);
 }
 
 .pricing-card {
   overflow: visible;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.035)),
+    rgba(11, 16, 32, 0.72);
+  min-height: 100%;
 }
 
 .chip {
-  @apply inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 text-white px-3 py-1 text-xs;
+  @apply inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1 text-xs tracking-[0.08em] text-white;
 }
 
-.roadmap-scale {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.roadmap-pill {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-  padding: 0.55rem 0.65rem;
-  border-radius: 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.75);
-  font-size: 0.875rem;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.roadmap-pill:hover {
-  background: rgba(34, 211, 238, 0.18);
-  border-color: rgba(34, 211, 238, 0.4);
-  color: #fff;
-}
-
-.roadmap-pill.is-active {
-  background: rgba(34, 211, 238, 0.28);
-  border-color: rgba(34, 211, 238, 0.65);
-  color: #fff;
-  box-shadow: 0 0 24px rgba(34, 211, 238, 0.25);
-}
-
-.roadmap-pill .label {
-  font-size: 0.6rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.roadmap-pill.is-active .label {
-  color: rgba(224, 242, 254, 0.85);
+.step-number {
+  @apply inline-flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/50 bg-cyan-400/10 text-lg font-semibold text-cyan-200;
 }
 
 .mobile-nav-enter-active,
@@ -2357,6 +1715,11 @@ onMounted(async () => {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .parallax-media {
+    transition: none;
+    transform: none !important;
+  }
+
   .hamburger-bar {
     transition: none;
   }
@@ -2367,28 +1730,10 @@ onMounted(async () => {
 }
 
 .footer-brand-actions {
-  @apply flex flex-wrap items-center justify-center gap-3 sm:justify-start lg:justify-end lg:ml-auto;
+  @apply flex flex-wrap items-center justify-center gap-3 sm:justify-start lg:ml-auto lg:justify-end;
 }
 
 .footer-action {
   @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-cyan-400/60 hover:bg-white/10;
-}
-
-@media (max-width: 480px) {
-  .roadmap-scale {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .roadmap-pill {
-    padding: 0.5rem 0.6rem;
-  }
-}
-
-.chip.absolute {
-  background: #434752;
-}
-
-img.card {
-  padding: 0
 }
 </style>
