@@ -11,6 +11,7 @@
     "preview": "nuxt preview",
     "start": "node .output/server/index.mjs",
     "postinstall": "nuxt prepare",
+    "sharp:rebuild": "SHARP_IGNORE_GLOBAL_LIBVIPS=1 yarn rebuild sharp",
     "import:decision": "tsx --tsconfig tsconfig.scripts.json scripts/import-decision-tree.ts",
     "test": "tsx --tsconfig tsconfig.tests.json --test server/utils/openai.test.ts"
   },
