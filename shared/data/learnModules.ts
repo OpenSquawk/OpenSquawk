@@ -3765,6 +3765,552 @@ const abnormalCommsLessons = [
 ]
 
 /* ────────────────────────────────────────────────────────────
+ *  ABNORMAL COMMS
+ * ──────────────────────────────────────────────────────────── */
+
+const abnormalCommsLessons = [
+  {
+    id: 'conditional-crossing',
+    title: 'Conditional Runway Crossing',
+    desc: 'Read back a conditional clearance with the condition included',
+    keywords: ['Conditional', 'Runway', 'Crossing', 'Safety'],
+    hints: [
+      'Conditional clearances MUST be read back with the condition. ROGER/WILCO is NOT enough.',
+      'The word "behind" must appear at the END of your readback as confirmation.',
+      'Never cross until the traffic has passed — you must visually identify the traffic first.'
+    ],
+    fields: [
+      {
+        key: 'traffic',
+        label: 'Traffic',
+        expected: () => 'departing 737',
+        alternatives: () => ['departing 737', 'departing Boeing 737', 'the departing 737'],
+        threshold: 0.7,
+        placeholder: 'e.g. departing 737',
+        width: 'md' as const
+      },
+      {
+        key: 'runway',
+        label: 'Runway',
+        expected: (scenario: Scenario) => scenario.runway,
+        alternatives: (scenario: Scenario) => [scenario.runway, scenario.runwayWords],
+        placeholder: 'e.g. 09',
+        width: 'sm' as const
+      },
+      {
+        key: 'intersection',
+        label: 'Taxiway',
+        expected: (scenario: Scenario) => scenario.taxiRoute.split(' ')[0],
+        placeholder: 'e.g. E3',
+        width: 'sm' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Behind ' },
+      { type: 'field' as const, key: 'traffic', width: 'md' as const },
+      { type: 'text' as const, text: ', cross runway ' },
+      { type: 'field' as const, key: 'runway', width: 'sm' as const },
+      { type: 'text' as const, text: ' at ' },
+      { type: 'field' as const, key: 'intersection', width: 'sm' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, behind, ${scenario.radioCall}` },
+    ],
+    defaultFrequency: 'GND',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, behind the departing 737, cross runway ${scenario.runwayWords} at ${scenario.taxiRoute.split(' ')[0]}, behind.`,
+    info: (scenario: Scenario) => [
+      `Runway: ${scenario.runway}`,
+      `Taxiway: ${scenario.taxiRoute.split(' ')[0]}`,
+      'ICAO: Conditional clearances MUST include the condition in readback.',
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'complex-holding',
+    title: 'Complex Holding Pattern',
+    desc: 'Read back a full holding clearance with 6 elements',
+    keywords: ['Holding', 'Pattern', 'Enroute'],
+    hints: [
+      'Holding clearances are the most information-dense single ATC transmission.',
+      '6 elements: direction from fix, fix name, inbound course, turn direction, leg time, EFC time.',
+      'If you miss any element, request "say again" — never guess at a holding clearance.'
+    ],
+    fields: [
+      {
+        key: 'direction',
+        label: 'Direction',
+        expected: () => 'east',
+        alternatives: () => ['east', 'west', 'north', 'south'],
+        threshold: 0.8,
+        placeholder: 'e.g. east',
+        width: 'sm' as const
+      },
+      {
+        key: 'fix',
+        label: 'Fix',
+        expected: (scenario: Scenario) => scenario.holdingFix,
+        placeholder: 'e.g. BARDI',
+        width: 'md' as const
+      },
+      {
+        key: 'inbound',
+        label: 'Inbound course',
+        expected: (scenario: Scenario) => scenario.holdingInbound,
+        placeholder: 'e.g. 270',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'turn',
+        label: 'Turn direction',
+        expected: (scenario: Scenario) => scenario.holdingTurn,
+        alternatives: (scenario: Scenario) => [scenario.holdingTurn],
+        placeholder: 'right or left',
+        width: 'sm' as const
+      },
+      {
+        key: 'leg-time',
+        label: 'Leg time (min)',
+        expected: (scenario: Scenario) => scenario.holdingLegTime,
+        placeholder: 'e.g. 1',
+        width: 'xs' as const
+      },
+      {
+        key: 'efc',
+        label: 'EFC time',
+        expected: (scenario: Scenario) => scenario.holdingEfc,
+        placeholder: 'e.g. 1745',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Hold ' },
+      { type: 'field' as const, key: 'direction', width: 'sm' as const },
+      { type: 'text' as const, text: ' of ' },
+      { type: 'field' as const, key: 'fix', width: 'md' as const },
+      { type: 'text' as const, text: ', inbound ' },
+      { type: 'field' as const, key: 'inbound', width: 'sm' as const },
+      { type: 'text' as const, text: ', ' },
+      { type: 'field' as const, key: 'turn', width: 'sm' as const },
+      { type: 'text' as const, text: ' turns, ' },
+      { type: 'field' as const, key: 'leg-time', width: 'xs' as const },
+      { type: 'text' as const, text: ' minute legs, expect further clearance ' },
+      { type: 'field' as const, key: 'efc', width: 'sm' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` },
+    ],
+    defaultFrequency: 'CTR',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, hold east of ${scenario.holdingFix}, inbound course ${scenario.holdingInbound}, ${scenario.holdingTurn} turns, ${scenario.holdingLegTime} minute legs, expect further clearance ${scenario.holdingEfc}.`,
+    info: (scenario: Scenario) => [
+      `Fix: ${scenario.holdingFix}, Direction: east`,
+      `Inbound: ${scenario.holdingInbound}, Turns: ${scenario.holdingTurn}`,
+      `Legs: ${scenario.holdingLegTime} min, EFC: ${scenario.holdingEfc}Z`,
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'amended-departure',
+    title: 'Amended Departure Clearance',
+    desc: 'Read back an amended clearance with 6 changed elements',
+    keywords: ['Amended', 'Clearance', 'Departure'],
+    hints: [
+      'Amended clearances replace parts of your original clearance — read back ALL elements.',
+      'Key items: destination, SID, altitude restriction, expected altitude, departure frequency, squawk.',
+      'If unsure about any element, request "say again" before reading back.'
+    ],
+    fields: [
+      {
+        key: 'destination',
+        label: 'Destination',
+        expected: (scenario: Scenario) => scenario.destination.name,
+        alternatives: (scenario: Scenario) => [
+          scenario.destination.name,
+          scenario.destination.icao,
+          scenario.destination.city,
+        ],
+        threshold: 0.7,
+        placeholder: 'e.g. Amsterdam Schiphol',
+        width: 'lg' as const
+      },
+      {
+        key: 'sid',
+        label: 'SID',
+        expected: (scenario: Scenario) => scenario.sid,
+        placeholder: 'e.g. TOBAK 5Q',
+        width: 'md' as const
+      },
+      {
+        key: 'altitude',
+        label: 'Maintain altitude',
+        expected: (scenario: Scenario) => scenario.altitudes.initial.toString(),
+        alternatives: (scenario: Scenario) => [
+          scenario.altitudes.initial.toString(),
+          scenario.altitudes.initialWords,
+        ],
+        placeholder: 'e.g. 5000',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'expect-alt',
+        label: 'Expect altitude',
+        expected: (scenario: Scenario) => scenario.altitudes.climb.toString(),
+        alternatives: (scenario: Scenario) => [
+          scenario.altitudes.climb.toString(),
+          scenario.altitudes.climbWords,
+        ],
+        placeholder: 'e.g. 7000',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'dep-freq',
+        label: 'Departure freq',
+        expected: (scenario: Scenario) => scenario.departureFreq,
+        placeholder: 'e.g. 125.350',
+        width: 'md' as const
+      },
+      {
+        key: 'squawk',
+        label: 'Squawk',
+        expected: (scenario: Scenario) => scenario.squawk,
+        placeholder: 'e.g. 4521',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Cleared to ' },
+      { type: 'field' as const, key: 'destination', width: 'lg' as const },
+      { type: 'text' as const, text: ' via ' },
+      { type: 'field' as const, key: 'sid', width: 'md' as const },
+      { type: 'text' as const, text: ' departure, climb via SID except maintain ' },
+      { type: 'field' as const, key: 'altitude', width: 'sm' as const },
+      { type: 'text' as const, text: ', expect ' },
+      { type: 'field' as const, key: 'expect-alt', width: 'sm' as const },
+      { type: 'text' as const, text: ' ten minutes after departure, departure ' },
+      { type: 'field' as const, key: 'dep-freq', width: 'md' as const },
+      { type: 'text' as const, text: ', squawk ' },
+      { type: 'field' as const, key: 'squawk', width: 'sm' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` },
+    ],
+    defaultFrequency: 'DEL',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, amended clearance: cleared to ${scenario.destination.name} via ${scenario.sid} departure, climb via SID except maintain ${scenario.altitudes.initialWords}, expect ${scenario.altitudes.climbWords} ten minutes after departure, departure frequency ${scenario.departureFreq}, squawk ${scenario.squawkWords}.`,
+    info: (scenario: Scenario) => [
+      `Destination: ${scenario.destination.name}`,
+      `SID: ${scenario.sid}, Maintain: ${scenario.altitudes.initial}, Expect: ${scenario.altitudes.climb}`,
+      `Departure: ${scenario.departureFreq}, Squawk: ${scenario.squawk}`,
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'speed-then-altitude',
+    title: 'Speed Then Altitude',
+    desc: 'Execute sequential instructions in the correct order',
+    keywords: ['Speed', 'Descent', 'Sequential'],
+    hints: [
+      'The word "then" means SEQUENTIAL — do the first instruction FIRST.',
+      'Here: reduce speed first, THEN begin descent. Not simultaneously.',
+      'Common mistake on VATSIM: starting descent immediately while still fast.'
+    ],
+    fields: [
+      {
+        key: 'speed',
+        label: 'Speed',
+        expected: (scenario: Scenario) => scenario.speedRestriction.toString(),
+        alternatives: (scenario: Scenario) => [
+          scenario.speedRestriction.toString(),
+          scenario.speedRestrictionWords,
+        ],
+        placeholder: 'e.g. 210',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'level',
+        label: 'Flight level / Altitude',
+        expected: (scenario: Scenario) => scenario.approachAltitude.toString(),
+        alternatives: (scenario: Scenario) => [
+          scenario.approachAltitude.toString(),
+          scenario.approachAltitudeWords,
+        ],
+        placeholder: 'e.g. 5000',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Reduce speed ' },
+      { type: 'field' as const, key: 'speed', width: 'sm' as const },
+      { type: 'text' as const, text: ', then descend ' },
+      { type: 'field' as const, key: 'level', width: 'sm' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` },
+    ],
+    defaultFrequency: 'APP',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, reduce speed ${scenario.speedRestrictionWords}, then descend and maintain ${scenario.approachAltitudeWords}.`,
+    info: (scenario: Scenario) => [
+      `Speed: ${scenario.speedRestriction} knots FIRST`,
+      `Then descend to: ${scenario.approachAltitude} ft`,
+      '"Then" = sequential. Speed reduction must be completed before descent.',
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'immediate-traffic',
+    title: 'Immediate Traffic Avoidance',
+    desc: 'Respond to an urgent traffic avoidance instruction',
+    keywords: ['Traffic', 'Immediate', 'Avoidance', 'Urgent'],
+    hints: [
+      '"IMMEDIATELY" means execute the turn WHILE reading back — don\'t wait.',
+      'The traffic information (clock position, distance, direction) is advisory only.',
+      'The mandatory part is the turn direction and heading — get that right.'
+    ],
+    fields: [
+      {
+        key: 'turn',
+        label: 'Turn direction',
+        expected: () => 'left',
+        alternatives: () => ['left', 'Left'],
+        placeholder: 'left or right',
+        width: 'sm' as const
+      },
+      {
+        key: 'heading',
+        label: 'Heading',
+        expected: (scenario: Scenario) => scenario.vectorHeading,
+        alternatives: (scenario: Scenario) => [
+          scenario.vectorHeading,
+          scenario.vectorHeadingWords,
+        ],
+        placeholder: 'e.g. 270',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Turn ' },
+      { type: 'field' as const, key: 'turn', width: 'sm' as const },
+      { type: 'text' as const, text: ' immediately heading ' },
+      { type: 'field' as const, key: 'heading', width: 'sm' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` },
+    ],
+    defaultFrequency: 'APP',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, turn left IMMEDIATELY heading ${scenario.vectorHeadingWords}, traffic 12 o'clock, 3 miles, opposite direction, same level.`,
+    info: (scenario: Scenario) => [
+      `Turn: LEFT, Heading: ${scenario.vectorHeading}`,
+      'IMMEDIATELY = execute while reading back, do not delay.',
+      'Traffic info is situational awareness only — the heading is the instruction.',
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'multiple-crossing-restrictions',
+    title: 'Multiple STAR Crossing Restrictions',
+    desc: 'Read back different restriction types at different fixes',
+    keywords: ['STAR', 'Crossing', 'Restrictions', 'Descent'],
+    hints: [
+      'Pay attention to the restriction TYPE: "at or above" vs "at" vs "at or below".',
+      'Different fixes can have different restriction types — read back each correctly.',
+      'Common error: saying "at" when ATC said "at or above" — changes the constraint entirely.'
+    ],
+    fields: [
+      {
+        key: 'fix1',
+        label: 'Fix 1',
+        expected: (scenario: Scenario) => scenario.crossingFix1,
+        placeholder: 'e.g. LIPSO',
+        width: 'md' as const
+      },
+      {
+        key: 'restriction1',
+        label: 'Restriction type',
+        expected: (scenario: Scenario) => scenario.crossingRestriction1,
+        alternatives: (scenario: Scenario) => [scenario.crossingRestriction1],
+        threshold: 0.8,
+        placeholder: 'at or above / at / at or below',
+        width: 'lg' as const
+      },
+      {
+        key: 'alt1',
+        label: 'Altitude 1',
+        expected: (scenario: Scenario) => scenario.crossingAlt1,
+        alternatives: (scenario: Scenario) => [scenario.crossingAlt1, scenario.crossingAlt1Words],
+        placeholder: 'e.g. 10000',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'fix2',
+        label: 'Fix 2',
+        expected: (scenario: Scenario) => scenario.crossingFix2,
+        placeholder: 'e.g. VAMPS',
+        width: 'md' as const
+      },
+      {
+        key: 'alt2',
+        label: 'Altitude 2',
+        expected: (scenario: Scenario) => scenario.crossingAlt2,
+        alternatives: (scenario: Scenario) => [scenario.crossingAlt2, scenario.crossingAlt2Words],
+        placeholder: 'e.g. 6000',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Descend via STAR, cross ' },
+      { type: 'field' as const, key: 'fix1', width: 'md' as const },
+      { type: 'text' as const, text: ' ' },
+      { type: 'field' as const, key: 'restriction1', width: 'lg' as const },
+      { type: 'text' as const, text: ' ' },
+      { type: 'field' as const, key: 'alt1', width: 'sm' as const },
+      { type: 'text' as const, text: ', cross ' },
+      { type: 'field' as const, key: 'fix2', width: 'md' as const },
+      { type: 'text' as const, text: ' at ' },
+      { type: 'field' as const, key: 'alt2', width: 'sm' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` },
+    ],
+    defaultFrequency: 'CTR',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, descend via the STAR, cross ${scenario.crossingFix1} ${scenario.crossingRestriction1} ${scenario.crossingAlt1Words}, cross ${scenario.crossingFix2} at ${scenario.crossingAlt2Words}.`,
+    info: (scenario: Scenario) => [
+      `Fix 1: ${scenario.crossingFix1} — ${scenario.crossingRestriction1} ${scenario.crossingAlt1}`,
+      `Fix 2: ${scenario.crossingFix2} — at ${scenario.crossingAlt2}`,
+      'Different restriction types: "at or above" ≠ "at" ≠ "at or below"',
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'tcas-ra-override',
+    title: 'TCAS RA Override',
+    desc: 'Reject an ATC instruction due to TCAS Resolution Advisory',
+    keywords: ['TCAS', 'RA', 'Conflict', 'Override'],
+    hints: [
+      'When TCAS RA conflicts with ATC, you MUST follow TCAS. Reject ATC with "Unable, TCAS RA".',
+      'After the RA resolves: report "Clear of conflict, returning to [altitude]".',
+      'This is mandatory — ATC understands and will re-sequence. Never follow ATC over TCAS.'
+    ],
+    fields: [
+      {
+        key: 'rejection',
+        label: 'Reject ATC instruction',
+        expected: () => 'Unable, TCAS RA',
+        alternatives: () => [
+          'Unable, TCAS RA',
+          'Unable TCAS RA',
+          'unable, TCAS RA',
+          'Unable, TCAS resolution advisory',
+        ],
+        threshold: 0.7,
+        placeholder: 'e.g. Unable, TCAS RA',
+        width: 'lg' as const
+      },
+      {
+        key: 'resolution',
+        label: 'After RA clears',
+        expected: (scenario: Scenario) => `Clear of conflict, returning to ${scenario.altitudes.climb}`,
+        alternatives: (scenario: Scenario) => [
+          `Clear of conflict, returning to ${scenario.altitudes.climb}`,
+          `Clear of conflict, returning to flight level ${Math.round(scenario.altitudes.climb / 100)}`,
+          `Clear of conflict returning to ${scenario.altitudes.climb}`,
+          `Clear of conflict, returning ${scenario.altitudes.climb}`,
+        ],
+        threshold: 0.6,
+        placeholder: 'e.g. Clear of conflict, returning to FL350',
+        width: 'xl' as const
+      }
+    ],
+    readback: [
+      { type: 'field' as const, key: 'rejection', width: 'lg' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall} · ` },
+      { type: 'field' as const, key: 'resolution', width: 'xl' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` },
+    ],
+    defaultFrequency: 'CTR',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, descend and maintain ${scenario.altitudes.initialWords}. [TCAS says: CLIMB, CLIMB]`,
+    info: (scenario: Scenario) => [
+      'ATC says descend but TCAS says CLIMB — TCAS wins, always.',
+      `Your assigned level: ${scenario.altitudes.climb}`,
+      'Part 1: "Unable, TCAS RA" · Part 2 (after clear): "Clear of conflict, returning to [level]"',
+    ],
+    generate: createBaseScenario
+  },
+  {
+    id: 'late-runway-change',
+    title: 'Late Runway Change on Approach',
+    desc: 'Read back a runway change with new vectors during approach',
+    keywords: ['Runway Change', 'Approach', 'Vectors'],
+    hints: [
+      'Late runway changes require immediate mental reconfiguration.',
+      'Read back ALL elements: cancelled runway, new heading, new runway, new altitude.',
+      'Verify your approach is aligned with the new runway before continuing.'
+    ],
+    fields: [
+      {
+        key: 'old-runway',
+        label: 'Cancelled runway',
+        expected: (scenario: Scenario) => scenario.arrivalRunway,
+        alternatives: (scenario: Scenario) => [scenario.arrivalRunway, scenario.arrivalRunwayWords],
+        placeholder: 'e.g. 27R',
+        width: 'sm' as const
+      },
+      {
+        key: 'heading',
+        label: 'New heading',
+        expected: (scenario: Scenario) => scenario.vectorHeading,
+        alternatives: (scenario: Scenario) => [scenario.vectorHeading, scenario.vectorHeadingWords],
+        placeholder: 'e.g. 360',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      },
+      {
+        key: 'new-runway',
+        label: 'New runway',
+        expected: (scenario: Scenario) => scenario.runway,
+        alternatives: (scenario: Scenario) => [scenario.runway, scenario.runwayWords],
+        placeholder: 'e.g. 09L',
+        width: 'sm' as const
+      },
+      {
+        key: 'altitude',
+        label: 'Descend to',
+        expected: (scenario: Scenario) => scenario.approachAltitude.toString(),
+        alternatives: (scenario: Scenario) => [
+          scenario.approachAltitude.toString(),
+          scenario.approachAltitudeWords,
+        ],
+        placeholder: 'e.g. 3000',
+        width: 'sm' as const,
+        inputmode: 'numeric' as const
+      }
+    ],
+    readback: [
+      { type: 'text' as const, text: 'Cancel approach runway ' },
+      { type: 'field' as const, key: 'old-runway', width: 'sm' as const },
+      { type: 'text' as const, text: ', right heading ' },
+      { type: 'field' as const, key: 'heading', width: 'sm' as const },
+      { type: 'text' as const, text: ', vectors runway ' },
+      { type: 'field' as const, key: 'new-runway', width: 'sm' as const },
+      { type: 'text' as const, text: ', descend ' },
+      { type: 'field' as const, key: 'altitude', width: 'sm' as const },
+      { type: 'text' as const, text: (scenario: Scenario) => `, ${scenario.radioCall}` },
+    ],
+    defaultFrequency: 'APP',
+    phrase: (scenario: Scenario) =>
+      `${scenario.radioCall}, cancel approach runway ${scenario.arrivalRunwayWords}, turn right heading ${scenario.vectorHeadingWords}, vectors runway ${scenario.runwayWords}, descend ${scenario.approachAltitudeWords}.`,
+    info: (scenario: Scenario) => [
+      `Cancelled: Runway ${scenario.arrivalRunway}`,
+      `New: Heading ${scenario.vectorHeading}, Runway ${scenario.runway}, Descend ${scenario.approachAltitude}`,
+      'Late changes are stressful — take a breath, read back carefully.',
+    ],
+    generate: createBaseScenario
+  }
+]
+
+/* ────────────────────────────────────────────────────────────
  *  VATSIM ESSENTIALS
  * ──────────────────────────────────────────────────────────── */
 
@@ -4198,6 +4744,13 @@ export const learnTracks: TrackDef[] = [
         subtitle: 'Unicom, radio checks, frequency management',
         art: gradientArt(['#1a237e', '#283593', '#3949ab']),
         lessons: vatsimEssentialsLessons,
+      },
+      {
+        id: 'abnormal-comms',
+        title: 'Abnormal · Communications',
+        subtitle: 'Holding, re-clearances, TCAS & conditional clearances',
+        art: gradientArt(['#b71c1c', '#c62828', '#d32f2f']),
+        lessons: abnormalCommsLessons,
       },
     ],
   },
