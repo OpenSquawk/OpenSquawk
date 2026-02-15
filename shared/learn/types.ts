@@ -184,3 +184,10 @@ export type ModuleDef = {
   lessons: Lesson[]
   meta?: ModuleMeta
 }
+
+export type TrackDef = {
+  id: string
+  title: string
+  subtitle: string
+  modules: ModuleDef[]
+}

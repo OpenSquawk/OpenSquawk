@@ -1,5 +1,5 @@
 import { createBaseScenario, createScenarioSeries, digitsToWords, formatTemp, lettersToNato } from '~~/shared/learn/scenario'
-import type { ModuleDef, Scenario } from '~~/shared/learn/types'
+import type { ModuleDef, Scenario, TrackDef } from '~~/shared/learn/types'
 
 function gradientArt(colors: string[]): string {
   const stops = colors
@@ -3290,6 +3290,15 @@ export const learnModules: ModuleDef[] = [
       briefingArt: '/img/learn/missions/full-flight/briefing-hero.png'
     }
   }
+]
+
+export const learnTracks: TrackDef[] = [
+  {
+    id: 'core',
+    title: 'Core Flight Missions',
+    subtitle: 'From basics to full flight',
+    modules: learnModules,
+  },
 ]
 
 export default learnModules
