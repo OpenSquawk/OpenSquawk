@@ -156,66 +156,76 @@
     <main v-if="panel==='hub'" class="container" role="main">
       <div class="hub-head">
         <h2 class="h2">Training Mission Hub</h2>
-        <div class="muted">Start with the ICAO alphabet & numbers, then basics, ground, and more.</div>
+        <div class="muted">Master radio communications from basics to emergencies.</div>
       </div>
 
-      <div class="tiles">
-        <div
-            v-for="m in modules"
-            :key="m.id"
-            class="tile"
-            :class="tileClass(m.id)"
-            @click="isModuleUnlocked(m.id) && handleModulePrimary(m.id)"
-        >
-          <div class="tile-media"
-               :style="{ backgroundImage: `url(${m.art})` }">
-            <span v-if="isFreshModule(m.id)" class="tile-badge">
-              <v-icon size="16">mdi-star</v-icon>
-              New briefing
-            </span>
-          </div>
-          <div class="tile-body">
-            <div class="tile-top">
-              <div class="tile-title">
-                <v-icon size="18">mdi-flag-checkered</v-icon>
-                {{ m.title }}
-              </div>
-
-            </div>
-            <div class="muted small">{{ m.subtitle }}</div>
+      <div v-for="track in tracks" :key="track.id" class="track-section">
+        <div class="track-header">
+          <h3 class="track-title">{{ track.title }}</h3>
+          <div class="track-subtitle muted">{{ track.subtitle }}</div>
+          <div class="track-progress">
             <div class="line">
-              <div class="line-fill" :style="{ width: pct(m.id)+'%' }"></div>
-            </div>
-            <div class="tile-progress-meta">
-              <span>{{ doneCount(m.id) }}/{{ m.lessons.length }} lessons</span>
-              <span>{{ moduleHasProgress(m.id) ? avgScore(m.id) + '%' : '—' }} avg</span>
-            </div>
-            <div class="tile-actions">
-              <button
-                  class="btn primary"
-                  :disabled="!isModuleUnlocked(m.id)"
-                  @click="handleModulePrimary(m.id)"
-              >
-                <v-icon size="18">{{ modulePrimaryIcon(m.id) }}</v-icon>
-                {{ modulePrimaryLabel(m.id) }}
-              </button>
-
+              <div class="line-fill" :style="{ width: trackPct(track.id) + '%' }"></div>
             </div>
           </div>
-          <div v-if="!isModuleUnlocked(m.id)" class="tile-overlay">
-            <div class="tile-overlay-inner">
-              <v-icon size="26">mdi-lock-alert</v-icon>
-              <div class="tile-overlay-text">
-                <div class="tile-overlay-title">Clearance pending</div>
-                <div class="tile-overlay-sub">
-                  Complete earlier missions to
-                  <button
-                      type="button"
-                      class="tile-overlay-link"
-                      @click.stop.prevent="attemptUnlockModule(m.id)"
-                  >unlock
-                  </button>
-                  this briefing.
+        </div>
+
+        <div class="tiles">
+          <div
+              v-for="m in track.modules"
+              :key="m.id"
+              class="tile"
+              :class="tileClass(m.id)"
+              @click="isModuleUnlocked(m.id) && handleModulePrimary(m.id)"
+          >
+            <div class="tile-media"
+                 :style="{ backgroundImage: `url(${m.art})` }">
+              <span v-if="isFreshModule(m.id)" class="tile-badge">
+                <v-icon size="16">mdi-star</v-icon>
+                New briefing
+              </span>
+            </div>
+            <div class="tile-body">
+              <div class="tile-top">
+                <div class="tile-title">
+                  <v-icon size="18">mdi-flag-checkered</v-icon>
+                  {{ m.title }}
+                </div>
+              </div>
+              <div class="muted small">{{ m.subtitle }}</div>
+              <div class="line">
+                <div class="line-fill" :style="{ width: pct(m.id)+'%' }"></div>
+              </div>
+              <div class="tile-progress-meta">
+                <span>{{ doneCount(m.id) }}/{{ m.lessons.length }} lessons</span>
+                <span>{{ moduleHasProgress(m.id) ? avgScore(m.id) + '%' : '—' }} avg</span>
+              </div>
+              <div class="tile-actions">
+                <button
+                    class="btn primary"
+                    :disabled="!isModuleUnlocked(m.id)"
+                    @click="handleModulePrimary(m.id)"
+                >
+                  <v-icon size="18">{{ modulePrimaryIcon(m.id) }}</v-icon>
+                  {{ modulePrimaryLabel(m.id) }}
+                </button>
+              </div>
+            </div>
+            <div v-if="!isModuleUnlocked(m.id)" class="tile-overlay">
+              <div class="tile-overlay-inner">
+                <v-icon size="26">mdi-lock-alert</v-icon>
+                <div class="tile-overlay-text">
+                  <div class="tile-overlay-title">Clearance pending</div>
+                  <div class="tile-overlay-sub">
+                    Complete earlier missions to
+                    <button
+                        type="button"
+                        class="tile-overlay-link"
+                        @click.stop.prevent="attemptUnlockModule(m.id)"
+                    >unlock
+                    </button>
+                    this briefing.
+                  </div>
                 </div>
               </div>
             </div>
@@ -1318,7 +1328,7 @@ import {useApi} from '~/composables/useApi'
 import {useAuthStore} from '~/stores/auth'
 import {createDefaultLearnConfig} from '~~/shared/learn/config'
 import type {LearnConfig, LearnProgress, LearnState} from '~~/shared/learn/config'
-import {learnModules, seedFullFlightScenario} from '~~/shared/data/learnModules'
+import {learnModules, learnTracks, seedFullFlightScenario} from '~~/shared/data/learnModules'
 import {
   createBaseScenario,
   digitsToWords,
@@ -1327,7 +1337,7 @@ import {
   altitudeToWords,
   minutesToWords
 } from '~~/shared/learn/scenario'
-import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, Scenario} from '~~/shared/learn/types'
+import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, Scenario, TrackDef} from '~~/shared/learn/types'
 import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
@@ -1422,7 +1432,8 @@ function tightenedThreshold(length: number, base: number): number {
   return Math.max(base, 0.97)
 }
 
-const modules = shallowRef<ModuleDef[]>(learnModules)
+const tracks = shallowRef<TrackDef[]>(learnTracks)
+const modules = computed<ModuleDef[]>(() => tracks.value.flatMap(t => t.modules))
 
 type LessonSearchHit = {
   module: ModuleDef
@@ -3766,6 +3777,15 @@ function pct(modId: string) {
   return Math.round((doneCount(modId) / module.lessons.length) * 100)
 }
 
+function trackPct(trackId: string): number {
+  const track = tracks.value.find(t => t.id === trackId)
+  if (!track) return 0
+  const total = track.modules.reduce((sum, m) => sum + m.lessons.length, 0)
+  if (total === 0) return 0
+  const done = track.modules.reduce((sum, m) => sum + doneCount(m.id), 0)
+  return Math.round((done / total) * 100)
+}
+
 function moduleNumber(modId: string): number {
   const index = modules.value.findIndex(module => module.id === modId)
   return index >= 0 ? index + 1 : 0
@@ -5328,6 +5348,35 @@ onMounted(() => {
 /* HUB tiles */
 .hub-head {
   margin: 6px 0 10px
+}
+
+.track-section {
+  margin-bottom: 2.5rem;
+}
+
+.track-header {
+  margin-bottom: 1rem;
+}
+
+.track-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-primary, #e0e0e0);
+}
+
+.track-subtitle {
+  font-size: 0.85rem;
+  margin-top: 0.15rem;
+}
+
+.track-progress {
+  margin-top: 0.5rem;
+  max-width: 300px;
+}
+
+.track-progress .line {
+  height: 3px;
 }
 
 .tiles {
