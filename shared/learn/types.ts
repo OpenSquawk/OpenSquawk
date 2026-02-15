@@ -140,6 +140,24 @@ export type Scenario = {
   remarks: string
   emergencyProblem: string
   emergencyIntent: string
+  // Emergency / abnormal extensions
+  soulsOnBoard: number
+  soulsOnBoardWords: string
+  fuelMinutes: number
+  fuelMinutesWords: string
+  positionDescription: string
+  holdingFix: string
+  holdingInbound: string
+  holdingTurn: string
+  holdingLegTime: string
+  holdingEfc: string
+  crossingFix1: string
+  crossingAlt1: string
+  crossingAlt1Words: string
+  crossingRestriction1: string
+  crossingFix2: string
+  crossingAlt2: string
+  crossingAlt2Words: string
 }
 
 export type LessonField = {

@@ -373,6 +373,36 @@ export function createBaseScenario(): Scenario {
   ]
   const emergencyProblem = choice(emergencyProblems)
   const emergencyIntent = choice(emergencyIntentOptions)
+
+  // Emergency / abnormal extensions
+  const soulsOnBoard = randInt(87, 224)
+  const soulsOnBoardWords = digitsToWords(soulsOnBoard.toString())
+  const fuelMinutes = randInt(25, 180)
+  const fuelMinutesWords = minutesToWords(fuelMinutes)
+  const positionDistance = randInt(10, 60)
+  const positionDirection = choice(['north', 'south', 'east', 'west', 'northeast', 'northwest', 'southeast', 'southwest'])
+  const positionFix = choice([...airport.transitions, ...(destination.arrivalTransitions ?? destination.transitions)])
+  const positionDescription = `${positionDistance} miles ${positionDirection} of ${positionFix}`
+
+  const holdingFixOptions = [...airport.transitions, ...(destination.arrivalTransitions ?? destination.transitions)]
+  const holdingFix = choice(holdingFixOptions)
+  const holdingInbound = (randInt(0, 35) * 10).toString().padStart(3, '0')
+  const holdingTurn = choice(['right', 'left'] as const)
+  const holdingLegTime = choice(['1', '1.5', '2'])
+  const holdingEfcNow = new Date()
+  const holdingEfcMinutes = randInt(10, 45)
+  const efcTime = new Date(holdingEfcNow.getTime() + holdingEfcMinutes * 60000)
+  const holdingEfc = `${efcTime.getUTCHours().toString().padStart(2, '0')}${efcTime.getUTCMinutes().toString().padStart(2, '0')}`
+
+  const crossingFixOptions = [...(destination.arrivalTransitions ?? destination.transitions)]
+  const crossingFix1 = crossingFixOptions[0] ?? 'LIPSO'
+  const crossingFix2 = crossingFixOptions.length > 1 ? crossingFixOptions[1] : 'VAMPS'
+  const crossingAlt1Raw = choice([8000, 9000, 10000, 11000])
+  const crossingAlt2Raw = choice([5000, 6000, 7000])
+  const crossingAlt1 = crossingAlt1Raw.toString()
+  const crossingAlt2 = crossingAlt2Raw.toString()
+  const crossingRestriction1 = choice(['at or above', 'at', 'at or below'] as const)
+
   const now = new Date()
   const minute = Math.floor(now.getUTCMinutes() / 5) * 5
   const timestamp = `${now.getUTCDate().toString().padStart(2, '0')}${now
@@ -523,7 +553,24 @@ export function createBaseScenario(): Scenario {
     transLevel: airport.transLevel,
     remarks,
     emergencyProblem,
-    emergencyIntent
+    emergencyIntent,
+    soulsOnBoard,
+    soulsOnBoardWords,
+    fuelMinutes,
+    fuelMinutesWords,
+    positionDescription,
+    holdingFix,
+    holdingInbound,
+    holdingTurn,
+    holdingLegTime,
+    holdingEfc,
+    crossingFix1,
+    crossingAlt1,
+    crossingAlt1Words: altitudeToWords(crossingAlt1Raw),
+    crossingRestriction1,
+    crossingFix2,
+    crossingAlt2,
+    crossingAlt2Words: altitudeToWords(crossingAlt2Raw),
   }
 }
 
