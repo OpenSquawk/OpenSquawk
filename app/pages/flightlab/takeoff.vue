@@ -90,7 +90,7 @@
 
         <!-- SimBridge Conditions Panel -->
         <div
-          v-if="engine.autoAdvanceEnabled.value && currentPhase?.simConditions"
+          v-if="currentPhase?.simConditions"
           class="border-t border-white/5 p-4 shrink-0"
         >
           <div class="flex items-center gap-2 mb-3">
@@ -451,6 +451,40 @@ const showRestartConfirm = ref(false)
 const showDetails = ref(false)
 const sidebarOpen = ref(false)
 
+// --- Direct Bridge Telemetry Polling (solo mode, no WS session) ---
+let telemetryPollInterval: ReturnType<typeof setInterval> | null = null
+
+function startTelemetryPolling() {
+  stopTelemetryPolling()
+  if (!authStore.accessToken || sync.isConnected.value) return
+  telemetryPollInterval = setInterval(async () => {
+    try {
+      const res = await $fetch<{ telemetry: FlightLabTelemetryState | null }>('/api/flightlab/telemetry', {
+        headers: { Authorization: `Bearer ${authStore.accessToken}` },
+      })
+      if (res.telemetry) {
+        engine.updateTelemetry(res.telemetry)
+      }
+    } catch {}
+  }, 500)
+}
+
+function stopTelemetryPolling() {
+  if (telemetryPollInterval) {
+    clearInterval(telemetryPollInterval)
+    telemetryPollInterval = null
+  }
+}
+
+// Start polling when phase has simConditions (solo mode only)
+watch(() => engine.currentPhase.value, (phase) => {
+  if (phase?.simConditions && !sync.isConnected.value) {
+    startTelemetryPolling()
+  } else {
+    stopTelemetryPolling()
+  }
+}, { immediate: true })
+
 const currentPhase = computed(() => engine.currentPhase.value)
 
 // Main phase IDs for sidebar stepper
@@ -663,7 +697,8 @@ async function handleJoin() {
   if (joinCode.value.length !== 4) return
   try {
     await sync.joinSession(joinCode.value)
-    // Subscribe to telemetry after joining
+    // Switch to WS-based telemetry
+    stopTelemetryPolling()
     if (authStore.user?.id) {
       sync.subscribeTelemetry(authStore.user.id)
     }
@@ -736,6 +771,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  stopTelemetryPolling()
   engine.cleanup()
   audio.dispose()
   sync.disconnect()
