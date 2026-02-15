@@ -8,20 +8,13 @@
       />
     </div>
 
-    <!-- ═══════ Sidebar Toggle Button ═══════ -->
-    <button
-      class="fixed left-0 top-1/2 -translate-y-1/2 z-40 flex h-12 w-6 items-center justify-center rounded-r-lg border border-l-0 border-white/10 bg-[#0b1328]/95 backdrop-blur text-white/40 hover:text-white/80 hover:bg-[#0b1328] transition-all duration-300"
-      :class="{ 'left-[300px]': sidebarOpen }"
-      @click="sidebarOpen = !sidebarOpen"
+    <!-- ═══════ Sidebar + Attached Toggle ═══════ -->
+    <div
+      class="fixed left-0 top-0 bottom-0 z-40 flex transition-transform duration-300"
+      :class="sidebarOpen ? 'translate-x-0' : '-translate-x-[300px]'"
     >
-      <v-icon :icon="sidebarOpen ? 'mdi-chevron-left' : 'mdi-chevron-right'" size="16" />
-    </button>
-
-    <!-- ═══════ Sidebar ═══════ -->
-    <Transition name="sidebar">
       <aside
-        v-show="sidebarOpen"
-        class="fixed left-0 top-0 bottom-0 z-30 w-[300px] border-r border-white/5 bg-[#070d1a]/98 backdrop-blur-xl flex flex-col pt-6"
+        class="w-[300px] border-r border-white/5 bg-[#070d1a]/98 backdrop-blur-xl flex flex-col pt-6"
       >
         <!-- Sidebar Header -->
         <div class="px-4 mb-4">
@@ -148,7 +141,13 @@
           </p>
         </div>
       </aside>
-    </Transition>
+      <button
+        class="flex h-12 w-6 self-center items-center justify-center rounded-r-lg border border-l-0 border-white/10 bg-[#0b1328]/95 backdrop-blur text-white/40 hover:text-white/80 hover:bg-[#0b1328] transition-colors duration-300"
+        @click="sidebarOpen = !sidebarOpen"
+      >
+        <v-icon :icon="sidebarOpen ? 'mdi-chevron-left' : 'mdi-chevron-right'" size="16" />
+      </button>
+    </div>
 
     <!-- ═══════ Header Bar ═══════ -->
     <header class="shrink-0 border-b border-white/5 bg-[#070d1a]/90 backdrop-blur px-4 py-3 mt-1 relative z-20">
@@ -164,10 +163,10 @@
           </div>
         </div>
 
-        <!-- Right: Auto-Advance Toggle + Session + Controls -->
+        <!-- Right: Auto-Advance Toggle -->
         <div class="flex items-center gap-2">
           <!-- Auto-Advance Toggle -->
-          <div class="flex items-center gap-1.5">
+          <div class="flex items-center gap-1.5" title="Wechselt automatisch erst weiter, wenn die Sim-Bedingungen erfüllt sind.">
             <v-switch
               :model-value="engine.autoAdvanceEnabled.value"
               density="compact"
@@ -176,58 +175,8 @@
               class="auto-advance-toggle"
               @update:model-value="engine.toggleAutoAdvance()"
             />
-            <span class="text-xs text-white/40 hidden sm:inline">Sim Auto</span>
+            <span class="text-xs text-white/40 hidden sm:inline">Auto bei Sim-Bedingungen</span>
           </div>
-
-          <!-- Session indicator -->
-          <div v-if="sync.isConnected.value" class="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-400/30 px-3 py-1">
-            <div class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span class="text-xs text-emerald-300">{{ sync.sessionCode.value }}</span>
-          </div>
-
-          <!-- Session input (when not connected) -->
-          <div v-else class="flex items-center gap-1">
-            <input
-              v-model="joinCode"
-              type="text"
-              maxlength="4"
-              placeholder="CODE"
-              class="w-16 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-center text-xs font-mono uppercase text-white/80 placeholder:text-white/30 focus:border-cyan-400/50 focus:outline-none"
-              @keyup.enter="handleJoin"
-            />
-            <v-btn
-              v-if="joinCode.length === 4"
-              size="x-small"
-              variant="flat"
-              color="primary"
-              class="rounded-lg"
-              @click="handleJoin"
-            >
-              Join
-            </v-btn>
-          </div>
-
-          <!-- Sidebar toggle (mobile) -->
-          <v-btn
-            icon
-            size="x-small"
-            variant="text"
-            class="text-white/30 hover:text-white/70 sm:hidden"
-            @click="sidebarOpen = !sidebarOpen"
-          >
-            <v-icon icon="mdi-menu" size="18" />
-          </v-btn>
-
-          <!-- Restart -->
-          <v-btn
-            icon
-            size="x-small"
-            variant="text"
-            class="text-white/30 hover:text-white/70"
-            @click="showRestartConfirm = true"
-          >
-            <v-icon icon="mdi-refresh" size="18" />
-          </v-btn>
         </div>
       </div>
     </header>
@@ -235,14 +184,6 @@
     <!-- ═══════ Main Content ═══════ -->
     <main class="flex-1 flex flex-col justify-center px-4 py-6 sm:py-10 transition-all duration-300" :class="{ 'sm:ml-[300px]': sidebarOpen }">
       <div class="mx-auto w-full max-w-screen-sm space-y-6">
-        <!-- Paused overlay -->
-        <Transition name="fade-slide">
-          <div v-if="engine.isPaused.value" class="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-center">
-            <v-icon icon="mdi-pause-circle" size="24" class="text-amber-300 mb-1" />
-            <p class="text-sm text-amber-200">Pausiert - der Instructor setzt gleich fort</p>
-          </div>
-        </Transition>
-
         <!-- Help Message Banner -->
         <Transition name="fade-slide">
           <div
@@ -321,7 +262,7 @@
 
               <!-- More details button -->
               <v-btn
-                v-if="currentPhase.explanation || currentPhase.simConditions || currentPhase.instructorNote"
+                v-if="currentPhase.explanation || currentPhase.simConditions"
                 size="small"
                 variant="text"
                 class="text-white/40 -mr-2"
@@ -399,11 +340,6 @@
             </div>
           </div>
 
-          <!-- Instructor Note -->
-          <div v-if="currentPhase?.instructorNote">
-            <p class="text-xs text-white/40 uppercase tracking-wider mb-1">Instructor-Hinweis</p>
-            <p class="text-sm text-white/60 leading-relaxed italic">{{ currentPhase.instructorNote }}</p>
-          </div>
         </v-card-text>
         <v-card-actions class="px-5 pb-5">
           <v-spacer />
@@ -412,20 +348,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- ═══════ Restart confirmation dialog ═══════ -->
-    <v-dialog v-model="showRestartConfirm" max-width="340">
-      <v-card class="rounded-2xl bg-[#0b1328] border border-white/10">
-        <v-card-title class="text-base font-semibold pt-5 px-5">Nochmal von vorne?</v-card-title>
-        <v-card-text class="text-sm text-white/60 px-5">
-          Der aktuelle Fortschritt geht verloren.
-        </v-card-text>
-        <v-card-actions class="px-5 pb-5">
-          <v-spacer />
-          <v-btn variant="text" class="text-white/50" @click="showRestartConfirm = false">Abbrechen</v-btn>
-          <v-btn color="primary" variant="flat" class="rounded-xl" @click="handleRestart">Neustart</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </div>
 </template>
 
@@ -434,7 +356,6 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { takeoffEddf } from '~~/shared/data/flightlab/takeoff-eddf'
 import { useFlightLabEngine } from '~~/shared/composables/flightlab/useFlightLabEngine'
 import { useFlightLabAudio } from '~~/shared/composables/flightlab/useFlightLabAudio'
-import { useFlightLabSync } from '~~/shared/composables/flightlab/useFlightLabSync'
 import type { FlightLabButton, SimCondition, FlightLabTelemetryState } from '~~/shared/data/flightlab/types'
 import { useAuthStore } from '~/stores/auth'
 
@@ -443,20 +364,17 @@ useHead({ title: 'FlightLab - Dein erster Start' })
 
 const engine = useFlightLabEngine(takeoffEddf)
 const audio = useFlightLabAudio()
-const sync = useFlightLabSync()
 const authStore = useAuthStore()
 
-const joinCode = ref('')
-const showRestartConfirm = ref(false)
 const showDetails = ref(false)
-const sidebarOpen = ref(false)
+const sidebarOpen = ref(true)
 
 // --- Direct Bridge Telemetry Polling (solo mode, no WS session) ---
 let telemetryPollInterval: ReturnType<typeof setInterval> | null = null
 
 function startTelemetryPolling() {
   stopTelemetryPolling()
-  if (!authStore.accessToken || sync.isConnected.value) return
+  if (!authStore.accessToken) return
   telemetryPollInterval = setInterval(async () => {
     try {
       const res = await $fetch<{ telemetry: FlightLabTelemetryState | null }>('/api/flightlab/telemetry', {
@@ -478,7 +396,7 @@ function stopTelemetryPolling() {
 
 // Start polling when phase has simConditions (solo mode only)
 watch(() => engine.currentPhase.value, (phase) => {
-  if (phase?.simConditions && !sync.isConnected.value) {
+  if (phase?.simConditions) {
     startTelemetryPolling()
   } else {
     stopTelemetryPolling()
@@ -563,9 +481,6 @@ function getPhaseStepClass(phaseId: string, idx: number): string {
 
 function handlePhaseJump(phaseId: string) {
   engine.goToPhase(phaseId)
-  if (sync.isConnected.value) {
-    sync.sendParticipantAction(engine.currentPhaseId.value, 'jump', phaseId)
-  }
 }
 
 // --- SimBridge Condition Helpers ---
@@ -688,33 +603,6 @@ function getButtonColor(type?: string) {
 function handleButtonPress(btn: FlightLabButton) {
   if (engine.isPaused.value || audio.isSpeaking.value) return
   engine.selectOption(btn)
-  if (sync.isConnected.value) {
-    sync.sendParticipantAction(engine.currentPhaseId.value, btn.id, btn.next)
-  }
-}
-
-async function handleJoin() {
-  if (joinCode.value.length !== 4) return
-  try {
-    await sync.joinSession(joinCode.value)
-    // Switch to WS-based telemetry
-    stopTelemetryPolling()
-    if (authStore.user?.id) {
-      sync.subscribeTelemetry(authStore.user.id)
-    }
-  } catch (e) {
-    console.error('[FlightLab] Join failed:', e)
-  }
-}
-
-function handleRestart() {
-  showRestartConfirm.value = false
-  audio.stopAllSounds()
-  audio.clearReplayCache()
-  engine.restart()
-  if (sync.isConnected.value) {
-    sync.sendParticipantAction('restart', 'restart', 'welcome')
-  }
 }
 
 // --- Help message TTS callback ---
@@ -735,29 +623,6 @@ watch(() => engine.currentPhaseId.value, async (newId, oldId) => {
   }
 })
 
-// Listen for telemetry from WebSocket (bridge → server → here)
-sync.onTelemetry((data: any) => {
-  engine.updateTelemetry(data as FlightLabTelemetryState)
-})
-
-// Listen for instructor commands via WebSocket
-sync.onStateChange((state) => {
-  if (state.currentPhaseId !== engine.currentPhaseId.value) {
-    engine.goToPhase(state.currentPhaseId)
-  }
-  engine.isPaused.value = state.isPaused
-})
-
-sync.onInstructorMessage(async (text, withRadioEffect) => {
-  if (withRadioEffect) {
-    await audio.speakAtcMessage(text, { speed: 0.9, readability: 5 })
-  }
-})
-
-sync.onError((msg) => {
-  console.warn('[FlightLab] WS error:', msg)
-})
-
 onMounted(async () => {
   await audio.preloadSounds(allSoundIds.value)
 
@@ -774,7 +639,6 @@ onBeforeUnmount(() => {
   stopTelemetryPolling()
   engine.cleanup()
   audio.dispose()
-  sync.disconnect()
 })
 </script>
 
@@ -782,16 +646,6 @@ onBeforeUnmount(() => {
 /* ═══════ Global progress glow ═══════ */
 .global-progress-glow {
   box-shadow: 0 0 12px rgba(34, 211, 238, 0.4), 0 0 4px rgba(34, 211, 238, 0.2);
-}
-
-/* ═══════ Sidebar transition ═══════ */
-.sidebar-enter-active,
-.sidebar-leave-active {
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.sidebar-enter-from,
-.sidebar-leave-to {
-  transform: translateX(-100%);
 }
 
 .sidebar-scroll::-webkit-scrollbar {

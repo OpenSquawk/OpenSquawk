@@ -9,7 +9,7 @@ export function useFlightLabEngine(scenario: FlightLabScenario) {
   const startedAt = ref(Date.now())
 
   // --- Auto-Advance / SimConnect ---
-  const autoAdvanceEnabled = ref(false)
+  const autoAdvanceEnabled = ref(true)
   const currentTelemetry = ref<FlightLabTelemetryState | null>(null)
   const showingHelpMessage = ref(false)
   const helpMessageText = ref<string | null>(null)

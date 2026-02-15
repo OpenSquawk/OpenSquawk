@@ -99,10 +99,6 @@
                     Starten
                   </v-btn>
                 </NuxtLink>
-                <NuxtLink to="/flightlab/takeoff/instructor" class="text-center text-xs text-white/40 transition hover:text-cyan-300">
-                  <v-icon icon="mdi-account-tie" size="14" class="mr-1" />
-                  Instructor Panel
-                </NuxtLink>
               </div>
             </div>
           </div>
