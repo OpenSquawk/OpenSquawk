@@ -466,7 +466,7 @@ function startTelemetryPolling() {
         engine.updateTelemetry(res.telemetry)
       }
     } catch {}
-  }, 500)
+  }, 2000)
 }
 
 function stopTelemetryPolling() {

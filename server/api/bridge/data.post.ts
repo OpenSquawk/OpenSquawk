@@ -24,11 +24,11 @@ function mapBridgeTelemetry(raw: Record<string, any>): FlightLabTelemetryState {
     PLANE_PITCH_DEGREES: raw.pitch_deg ?? raw.PLANE_PITCH_DEGREES ?? 0,
     TURB_ENG_N1_1: raw.n1_pct ?? raw.TURB_ENG_N1_1 ?? 0,
     TURB_ENG_N1_2: raw.n1_pct_2 ?? raw.TURB_ENG_N1_2 ?? 0,
-    SIM_ON_GROUND: raw.on_ground ?? raw.SIM_ON_GROUND ?? false,
-    GEAR_HANDLE_POSITION: raw.gear_handle ?? raw.GEAR_HANDLE_POSITION ?? false,
+    SIM_ON_GROUND: !!(raw.on_ground ?? raw.SIM_ON_GROUND ?? false),
+    GEAR_HANDLE_POSITION: !!(raw.gear_handle ?? raw.GEAR_HANDLE_POSITION ?? false),
     FLAPS_HANDLE_INDEX: raw.flaps_index ?? raw.FLAPS_HANDLE_INDEX ?? 0,
-    BRAKE_PARKING_POSITION: raw.parking_brake ?? raw.BRAKE_PARKING_POSITION ?? false,
-    AUTOPILOT_MASTER: raw.autopilot_master ?? raw.AUTOPILOT_MASTER ?? false,
+    BRAKE_PARKING_POSITION: !!(raw.parking_brake ?? raw.BRAKE_PARKING_POSITION ?? false),
+    AUTOPILOT_MASTER: !!(raw.autopilot_master ?? raw.AUTOPILOT_MASTER ?? false),
   }
 }
 
