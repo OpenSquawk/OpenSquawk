@@ -371,6 +371,7 @@ const sidebarOpen = ref(true)
 
 // --- Direct Bridge Telemetry Polling (solo mode, no WS session) ---
 let telemetryPollInterval: ReturnType<typeof setInterval> | null = null
+let initialSpeechTimeout: ReturnType<typeof setTimeout> | null = null
 
 function startTelemetryPolling() {
   stopTelemetryPolling()
@@ -613,6 +614,11 @@ engine.setOnHelpMessage(async (text: string) => {
 // Watch phase changes to trigger TTS + sounds
 watch(() => engine.currentPhaseId.value, async (newId, oldId) => {
   if (!newId || newId === oldId) return
+  if (initialSpeechTimeout) {
+    clearTimeout(initialSpeechTimeout)
+    initialSpeechTimeout = null
+  }
+  audio.skipSpeech()
   const phase = engine.currentPhase.value
   if (!phase) return
   audio.handlePhaseSounds(phase.sounds ?? [])
@@ -627,13 +633,18 @@ onMounted(async () => {
   // Speak initial welcome
   const phase = engine.currentPhase.value
   if (phase?.atcMessage) {
-    setTimeout(() => {
+    initialSpeechTimeout = setTimeout(() => {
       audio.speakAtcMessage(phase.atcMessage, { speed: 0.9, readability: 5 })
+      initialSpeechTimeout = null
     }, 500)
   }
 })
 
 onBeforeUnmount(() => {
+  if (initialSpeechTimeout) {
+    clearTimeout(initialSpeechTimeout)
+    initialSpeechTimeout = null
+  }
   stopTelemetryPolling()
   engine.cleanup()
   audio.dispose()

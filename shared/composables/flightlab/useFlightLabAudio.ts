@@ -11,6 +11,7 @@ export function useFlightLabAudio() {
   const masterGain = ref<GainNode | null>(null)
   const soundBuffers = ref<Map<string, AudioBuffer>>(new Map())
   let speechQueue: Promise<void> = Promise.resolve()
+  let speechQueueVersion = 0
   let pizzicato: PizzicatoLiteType | null = null
   let currentSpeechReject: (() => void) | null = null
 
@@ -124,8 +125,13 @@ export function useFlightLabAudio() {
   }
 
   async function speakAtcMessage(text: string, options?: { speed?: number; readability?: number }): Promise<void> {
+    const callVersion = speechQueueVersion
     return new Promise((resolve) => {
       speechQueue = speechQueue.then(async () => {
+        if (callVersion !== speechQueueVersion) {
+          resolve()
+          return
+        }
         isSpeaking.value = true
         try {
           // Call the existing TTS API
@@ -138,6 +144,8 @@ export function useFlightLabAudio() {
               tag: 'flightlab',
             },
           })
+
+          if (callVersion !== speechQueueVersion) return
 
           if (res.success && res.audio?.base64) {
             // Cache for replay
@@ -152,11 +160,15 @@ export function useFlightLabAudio() {
         } catch (e) {
           console.error('[FlightLabAudio] TTS error:', e)
         } finally {
-          isSpeaking.value = false
+          if (callVersion === speechQueueVersion) {
+            isSpeaking.value = false
+          }
           resolve()
         }
       }).catch(() => {
-        isSpeaking.value = false
+        if (callVersion === speechQueueVersion) {
+          isSpeaking.value = false
+        }
         resolve()
       })
     })
@@ -208,9 +220,7 @@ export function useFlightLabAudio() {
     currentNoiseStoppers = []
   }
 
-  /** Skip currently playing TTS speech immediately */
-  function skipSpeech() {
-    if (!isSpeaking.value) return
+  function stopCurrentSpeechPlayback() {
     // Stop the pizzicato sound
     if (currentPizzicatoSound) {
       try { currentPizzicatoSound.stop() } catch {}
@@ -219,27 +229,42 @@ export function useFlightLabAudio() {
     // Stop noise generators
     currentNoiseStoppers.forEach((fn) => { try { fn() } catch {} })
     currentNoiseStoppers = []
-    isSpeaking.value = false
+  }
+
+  /** Skip currently playing TTS speech and drop queued speech jobs */
+  function skipSpeech() {
+    speechQueueVersion += 1
+    stopCurrentSpeechPlayback()
     // Reset the speech queue so next speech can start fresh
     speechQueue = Promise.resolve()
+    isSpeaking.value = false
   }
 
   async function replayLastMessage(): Promise<void> {
     if (!lastSpokenAudio.value || isSpeaking.value) return
     const { base64, mime, readability } = lastSpokenAudio.value
+    const callVersion = speechQueueVersion
     return new Promise((resolve) => {
       speechQueue = speechQueue.then(async () => {
+        if (callVersion !== speechQueueVersion) {
+          resolve()
+          return
+        }
         isSpeaking.value = true
         try {
           await playWithRadioEffects(base64, mime, readability)
         } catch (e) {
           console.error('[FlightLabAudio] Replay error:', e)
         } finally {
-          isSpeaking.value = false
+          if (callVersion === speechQueueVersion) {
+            isSpeaking.value = false
+          }
           resolve()
         }
       }).catch(() => {
-        isSpeaking.value = false
+        if (callVersion === speechQueueVersion) {
+          isSpeaking.value = false
+        }
         resolve()
       })
     })
@@ -250,10 +275,10 @@ export function useFlightLabAudio() {
   }
 
   function stopAllSounds() {
+    skipSpeech()
     for (const [id] of activeSounds.value) {
       stopAmbientSound(id)
     }
-    isSpeaking.value = false
   }
 
   function setMasterVolume(vol: number) {
