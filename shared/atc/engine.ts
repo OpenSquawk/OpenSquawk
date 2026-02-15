@@ -1,6 +1,6 @@
 import { reactive, computed } from 'vue'
 import type { EngineState, FlightPlan, FlightVars, TelemetryState, Transmission,
-  TransmissionDebug, RouteRequest, RouteCandidate, RouteResponse, Phase } from './types'
+  TransmissionDebug, RouteRequest, RouteCandidate, RouteResponse, Phase, Interaction } from './types'
 import { getPhase } from './phases'
 import { renderTemplate } from './templateRenderer'
 import { evaluateTelemetry } from './telemetryWatcher'
@@ -45,6 +45,16 @@ function makeDefaultState(): EngineState {
 export interface AtcEngineOptions {
   /** Custom fetch function (e.g. with auth headers). Defaults to $fetch. */
   apiFetch?: typeof $fetch
+}
+
+/** Info about an interaction for the UI — includes availability status */
+export interface InteractionSuggestion {
+  id: string
+  type: Interaction['type']
+  intent: string
+  example: string | undefined
+  available: boolean
+  whenKey?: string
 }
 
 export function useAtcEngine(options: AtcEngineOptions = {}) {
@@ -92,19 +102,35 @@ export function useAtcEngine(options: AtcEngineOptions = {}) {
     }
   }
 
+  function isWhenSatisfied(when: string | undefined): boolean {
+    if (!when) return true
+    return !!state.vars[when]
+  }
+
   function getCandidates(): RouteCandidate[] {
     const phase = currentPhase.value
     if (!phase) return []
     return phase.interactions
-      .filter((i) => {
-        if (!i.when) return true
-        return !!state.vars[i.when]
-      })
+      .filter((i) => isWhenSatisfied(i.when))
       .map((i) => ({
         id: i.id,
         intent: i.pilotIntent,
         example: i.pilotExample ? renderTemplate(i.pilotExample, state.vars) : undefined,
       }))
+  }
+
+  /** Get ALL interactions of current phase with availability info for UI buttons */
+  function getInteractionSuggestions(): InteractionSuggestion[] {
+    const phase = currentPhase.value
+    if (!phase) return []
+    return phase.interactions.map((i) => ({
+      id: i.id,
+      type: i.type,
+      intent: i.pilotIntent,
+      example: i.pilotExample ? renderTemplate(i.pilotExample, state.vars) : undefined,
+      available: isWhenSatisfied(i.when),
+      whenKey: i.when,
+    }))
   }
 
   function checkReadback(
@@ -150,6 +176,45 @@ export function useAtcEngine(options: AtcEngineOptions = {}) {
     return null
   }
 
+  /**
+   * Process an atc_initiates interaction directly (no LLM routing needed).
+   * Returns the ATC response text.
+   */
+  function processAtcInitiated(interactionId: string): string | null {
+    const phase = currentPhase.value
+    if (!phase) return null
+    const interaction = phase.interactions.find(i => i.id === interactionId)
+    if (!interaction) return null
+
+    let variablesUpdated: Record<string, any> = {}
+    if (interaction.updates) {
+      variablesUpdated = applyUpdates(interaction.updates)
+    }
+
+    const atcText = renderTemplate(interaction.atcResponse, state.vars)
+    state.currentInteraction = interaction.id
+
+    if (interaction.readback) {
+      state.waitingFor = 'readback'
+    } else {
+      state.waitingFor = 'pilot'
+    }
+
+    logTransmission('atc', atcText, {
+      engineAction: {
+        templateUsed: interaction.atcResponse,
+        variablesUpdated,
+      },
+    })
+
+    if (interaction.handoff) {
+      const handoffMsg = handleHandoff(interaction.handoff, state.vars)
+      if (handoffMsg) return `${atcText}\n${handoffMsg}`
+    }
+
+    return atcText
+  }
+
   // --- Public API ---
 
   function initFlight(plan: FlightPlan): void {
@@ -193,8 +258,37 @@ export function useAtcEngine(options: AtcEngineOptions = {}) {
     const phase = currentPhase.value
     if (!phase) throw new Error(`Phase not found: ${state.currentPhase}`)
 
+    // Handle off_schema gracefully
+    if (res.chosen === 'off_schema') {
+      const sayAgain = `${state.vars.callsign}, say again.`
+      logTransmission('atc', sayAgain, {
+        llmResponse: {
+          chosenInteraction: 'off_schema',
+          confidence: res.confidence,
+          reason: res.reason,
+          tokensUsed: res.tokensUsed,
+          durationMs: res.durationMs,
+          model: res.model,
+        },
+      })
+      return sayAgain
+    }
+
     const interaction = phase.interactions.find(i => i.id === res.chosen)
-    if (!interaction) throw new Error(`Interaction not found: ${res.chosen}`)
+    if (!interaction) {
+      const sayAgain = `${state.vars.callsign}, say again.`
+      logTransmission('atc', sayAgain, {
+        llmResponse: {
+          chosenInteraction: res.chosen,
+          confidence: res.confidence,
+          reason: `Interaction not found: ${res.chosen}`,
+          tokensUsed: res.tokensUsed,
+          durationMs: res.durationMs,
+          model: res.model,
+        },
+      })
+      return sayAgain
+    }
 
     // 4b. Fetch taxi route if needed (before rendering template)
     if (
@@ -307,6 +401,8 @@ export function useAtcEngine(options: AtcEngineOptions = {}) {
     currentPhase,
     initFlight,
     handlePilotInput,
+    processAtcInitiated,
+    getInteractionSuggestions,
     updateTelemetry,
     declareEmergency,
     reset,

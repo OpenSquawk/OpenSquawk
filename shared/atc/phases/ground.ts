@@ -23,7 +23,7 @@ export const groundPhase: Phase = {
     {
       id: 'request_taxi',
       type: 'pilot_initiates',
-      when: 'vars.pushback_approved',
+      when: 'pushback_approved',
       pilotIntent: 'Pilot requests taxi clearance to the runway',
       pilotExample: '{callsign}, request taxi',
       atcResponse: '{callsign}, taxi to holding point {runway} via {taxi_route}.',
@@ -37,7 +37,7 @@ export const groundPhase: Phase = {
     {
       id: 'report_holding_short',
       type: 'pilot_initiates',
-      when: 'vars.taxi_clearance_received',
+      when: 'taxi_clearance_received',
       pilotIntent: 'Pilot reports holding short of the runway',
       pilotExample: '{callsign}, holding short runway {runway}',
       atcResponse: '{callsign}, contact tower on {tower_freq}.',
