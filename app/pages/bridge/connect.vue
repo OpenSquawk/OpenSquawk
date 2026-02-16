@@ -2,6 +2,33 @@
   <div class="relative min-h-screen bg-[#0B1020] text-white">
     <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(22,187,215,0.14),transparent_55%)]"/>
     <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(79,70,229,0.12),transparent_60%)]"/>
+    <div
+      v-if="successBlastVisible"
+      :key="successBlastKey"
+      class="bridge-success-overlay"
+      aria-hidden="true"
+    >
+      <div class="bridge-success-blast">
+        <div class="bridge-success-ring bridge-success-ring--one"/>
+        <div class="bridge-success-ring bridge-success-ring--two"/>
+        <div class="bridge-success-ring bridge-success-ring--three"/>
+
+        <span
+          v-for="spark in successSparks"
+          :key="spark"
+          class="bridge-success-spark"
+          :style="{
+            '--spark-angle': `${(spark / successSparks.length) * 360}deg`,
+            '--spark-delay': `${spark * 0.028}s`,
+          }"
+        />
+
+        <div class="bridge-success-core">
+          <span class="bridge-success-check">✓</span>
+        </div>
+        <p class="bridge-success-label">Bridge linked</p>
+      </div>
+    </div>
 
     <main class="relative mx-auto w-full max-w-3xl px-5 py-12 sm:px-6 lg:px-8">
       <nav class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -51,19 +78,9 @@
             <p class="mt-3 text-xs uppercase tracking-[0.26em] text-white/55">A-Z and 0-9 only</p>
           </div>
 
-          <div class="grid grid-cols-6 gap-2">
-            <div
-              v-for="(char, index) in manualTokenSlots"
-              :key="`manual-token-slot-${index}`"
-              class="flex h-11 items-center justify-center rounded-xl border border-white/15 bg-[#0B132A]/75 font-mono text-base font-semibold text-white/85"
-            >
-              {{ char || '•' }}
-            </div>
-          </div>
 
-          <p class="text-xs uppercase tracking-[0.32em]" :class="manualTokenReady ? 'text-emerald-200/90' : 'text-white/60'">
-            {{ manualTokenReady ? 'Code complete' : `${manualTokenRemaining} characters missing` }}
-          </p>
+
+
 
           <button
             type="submit"
@@ -75,7 +92,6 @@
           <p v-if="manualTokenError" class="text-sm text-amber-200">{{ manualTokenError }}</p>
         </form>
 
-        <p class="mt-6 text-center text-xs uppercase tracking-[0.38em] text-white/45">Waiting for desktop link</p>
       </div>
 
       <template v-else>
@@ -122,22 +138,45 @@
               <h2 class="text-lg font-semibold">Confirm the code</h2>
             </div>
           </div>
-          <p class="mt-4 text-sm text-white/70">This secure code comes straight from the desktop Bridge.</p>
+          <p class="mt-4 text-sm text-white/70">
+            The code in your desktop Bridge app should match the one shown below. Click &ldquo;Link Bridge&rdquo; to confirm and link your account.
+          </p>
 
-          <div class="mt-4 flex flex-wrap items-center gap-3">
-            <code class="rounded-2xl bg-[#0B132A]/80 px-4 py-2 font-mono text-sm text-[#72d9ea] shadow-inner">{{ token }}</code>
-            <button
-              type="button"
-              class="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-medium text-white/70 transition hover:border-white/30 hover:text-white"
-              @click="copyToken"
-            >
-              <span aria-hidden="true">⧉</span>
-              <span>{{ copiedToken ? 'Copied' : 'Copy code' }}</span>
-            </button>
+          <div
+            class="mt-5 flex items-center justify-center rounded-2xl border border-[#16BBD7]/40 bg-[#081129]/80 px-4 py-4 text-center font-mono text-3xl font-semibold uppercase tracking-[0.45em] text-[#9be6f2]"
+            @click="copyToken"
+            :title="hasToken ? 'Click to copy token' : ''"
+          >
+            {{ token }}
           </div>
 
+
+
+
+
           <div class="mt-6 space-y-4">
+            <div v-if="alreadyLinked" class="space-y-3">
+              <div
+                class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-400/45 bg-emerald-400/15 px-5 py-3 text-sm font-semibold text-emerald-100 shadow-[0_0_35px_rgba(16,185,129,0.22)]"
+              >
+                <span aria-hidden="true" class="text-base leading-none">✓</span>
+                <span>Already linked</span>
+              </div>
+              <button
+                type="button"
+                class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-300/30 bg-rose-500/10 px-5 py-3 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-200/60 disabled:cursor-not-allowed disabled:opacity-60"
+                :disabled="!isAuthenticated || disconnectLoading"
+                @click="disconnectBridge"
+              >
+                <span v-if="disconnectLoading" class="flex items-center gap-2">
+                  <span class="h-4 w-4 animate-spin rounded-full border-2 border-rose-100/40 border-t-rose-100"/>
+                  Unlinking …
+                </span>
+                <span v-else>Unlink Bridge</span>
+              </button>
+            </div>
             <button
+              v-else
               type="button"
               class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea] disabled:cursor-not-allowed disabled:bg-[#16BBD7]/60"
               :disabled="!isAuthenticated || connectLoading"
@@ -150,12 +189,13 @@
               <span v-else>Link Bridge</span>
             </button>
 
+            <p v-if="disconnectError" class="text-sm text-red-300">{{ disconnectError }}</p>
             <p v-if="connectError" class="text-sm text-red-300">{{ connectError }}</p>
             <p v-if="!isAuthenticated" class="text-sm text-white/60">Sign in first to enable bridge linking.</p>
 
             <div
               v-if="successBannerVisible"
-              class="rounded-2xl border border-emerald-400/40 bg-emerald-400/10 px-5 py-4 text-sm text-emerald-100 shadow-[0_0_35px_rgba(16,185,129,0.25)]"
+              class="bridge-success-banner rounded-2xl border border-emerald-400/40 bg-emerald-400/10 px-5 py-4 text-sm text-emerald-100 shadow-[0_0_35px_rgba(16,185,129,0.25)]"
             >
               <p class="text-base font-semibold text-emerald-200">Bridge linked</p>
               <p class="mt-1 text-emerald-100/80">You can close this page and head back to the Bridge app.</p>
@@ -316,6 +356,8 @@ const { user, accessToken, isAuthenticated, initialized } = storeToRefs(auth)
 const connectLoading = ref(false)
 const connectError = ref('')
 const connectSuccess = ref(false)
+const disconnectLoading = ref(false)
+const disconnectError = ref('')
 
 const connectionStatus = ref<BridgeStatusPayload | null>(null)
 const statusInitialized = ref(false)
@@ -331,6 +373,9 @@ const liveTelemetryRequestActive = ref(false)
 const copiedToken = ref(false)
 const manualTokenInput = ref('')
 const manualTokenError = ref('')
+const successBlastVisible = ref(false)
+const successBlastKey = ref(0)
+const autoConnectAttemptKey = ref('')
 
 const token = computed(() => {
   const value = route.query.token
@@ -379,9 +424,25 @@ const liveTelemetryJson = computed(() => {
 })
 
 const successBannerVisible = computed(() => connectSuccess.value || Boolean(connectionStatus.value?.connected))
+const alreadyLinked = computed(() => Boolean(connectionStatus.value?.connected))
+const successSparks = Array.from({ length: 14 }, (_unused, index) => index)
 
 function sanitizePairingCode(input: string) {
   return input.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
+}
+
+let successBlastTimer: ReturnType<typeof setTimeout> | null = null
+
+function triggerSuccessBlast() {
+  successBlastKey.value += 1
+  successBlastVisible.value = true
+  if (successBlastTimer) {
+    clearTimeout(successBlastTimer)
+  }
+  successBlastTimer = setTimeout(() => {
+    successBlastVisible.value = false
+    successBlastTimer = null
+  }, 2200)
 }
 
 function onManualTokenInput() {
@@ -429,6 +490,7 @@ async function connectBridge() {
 
   connectLoading.value = true
   connectError.value = ''
+  disconnectError.value = ''
   try {
     await $fetch('/api/bridge/connect', {
       method: 'POST',
@@ -448,6 +510,53 @@ async function connectBridge() {
   } finally {
     connectLoading.value = false
   }
+}
+
+async function disconnectBridge() {
+  if (!hasToken.value || !accessToken.value) {
+    return
+  }
+
+  disconnectLoading.value = true
+  disconnectError.value = ''
+  connectError.value = ''
+
+  try {
+    await $fetch('/api/bridge/disconnect', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken.value}`,
+        'x-bridge-token': token.value,
+      },
+    })
+    connectSuccess.value = false
+    autoConnectAttemptKey.value = `${token.value}:${accessToken.value}`
+    await fetchStatus(true)
+  } catch (err: any) {
+    disconnectError.value =
+      err?.data?.statusMessage ||
+      err?.response?._data?.statusMessage ||
+      err?.message ||
+      'Could not unlink the token.'
+  } finally {
+    disconnectLoading.value = false
+  }
+}
+
+async function maybeAutoConnect() {
+  if (!hasToken.value || !initialized.value || !isAuthenticated.value || !accessToken.value || connectLoading.value) {
+    return
+  }
+  const attemptKey = `${token.value}:${accessToken.value}`
+  if (autoConnectAttemptKey.value === attemptKey) {
+    return
+  }
+  if (connectionStatus.value?.connected) {
+    autoConnectAttemptKey.value = attemptKey
+    return
+  }
+  autoConnectAttemptKey.value = attemptKey
+  await connectBridge()
 }
 
 async function fetchStatus(force = false) {
@@ -557,13 +666,20 @@ function startPolling() {
 
 watch(token, () => {
   connectError.value = ''
+  disconnectError.value = ''
   connectSuccess.value = false
+  autoConnectAttemptKey.value = ''
   connectionStatus.value = null
   statusInitialized.value = false
   statusError.value = ''
   liveTelemetry.value = null
   liveTelemetryError.value = ''
   liveTelemetryOpen.value = false
+  if (successBlastTimer) {
+    clearTimeout(successBlastTimer)
+    successBlastTimer = null
+  }
+  successBlastVisible.value = false
   startPolling()
 })
 
@@ -572,6 +688,23 @@ watch(
   (value) => {
     if (value && hasToken.value) {
       fetchStatus(true)
+    }
+  },
+)
+
+watch(
+  [hasToken, initialized, isAuthenticated, accessToken, () => connectionStatus.value?.connected ?? false],
+  () => {
+    void maybeAutoConnect()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => successBannerVisible.value,
+  (visible, wasVisible) => {
+    if (visible && !wasVisible) {
+      triggerSuccessBlast()
     }
   },
 )
@@ -585,11 +718,214 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopPolling()
+  if (successBlastTimer) {
+    clearTimeout(successBlastTimer)
+    successBlastTimer = null
+  }
 })
 </script>
 
 <style scoped>
 code {
   word-break: break-all;
+}
+
+.bridge-success-banner {
+  position: relative;
+  overflow: hidden;
+  animation: bridge-success-card-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.bridge-success-banner::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(112deg, transparent 12%, rgba(167, 243, 208, 0.82) 48%, transparent 82%);
+  transform: translateX(-120%);
+  animation: bridge-success-sheen 1200ms ease-out forwards;
+  pointer-events: none;
+}
+
+.bridge-success-overlay {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.bridge-success-blast {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(74vmin, 440px);
+  aspect-ratio: 1;
+  animation: bridge-success-fade 2200ms ease-out forwards;
+}
+
+.bridge-success-core {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 6.25rem;
+  height: 6.25rem;
+  border-radius: 999px;
+  border: 2px solid rgba(74, 222, 128, 0.78);
+  background: radial-gradient(circle at 30% 30%, rgba(167, 243, 208, 0.92), rgba(16, 185, 129, 0.72) 62%, rgba(5, 150, 105, 0.84));
+  box-shadow:
+    0 0 60px rgba(16, 185, 129, 0.85),
+    inset 0 0 28px rgba(220, 252, 231, 0.55);
+  animation: bridge-success-core 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.bridge-success-check {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: rgba(4, 32, 18, 0.8);
+  text-shadow: 0 2px 8px rgba(220, 252, 231, 0.45);
+}
+
+.bridge-success-label {
+  position: absolute;
+  bottom: 14%;
+  z-index: 3;
+  margin: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(167, 243, 208, 0.52);
+  background: rgba(6, 95, 70, 0.72);
+  padding: 0.55rem 1rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(236, 253, 245, 0.96);
+  animation: bridge-success-label 820ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bridge-success-ring {
+  position: absolute;
+  inset: auto;
+  border-radius: 999px;
+  border: 2px solid rgba(110, 231, 183, 0.62);
+  opacity: 0;
+}
+
+.bridge-success-ring--one {
+  width: 38%;
+  aspect-ratio: 1;
+  animation: bridge-success-ring 980ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bridge-success-ring--two {
+  width: 54%;
+  aspect-ratio: 1;
+  animation: bridge-success-ring 980ms 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bridge-success-ring--three {
+  width: 72%;
+  aspect-ratio: 1;
+  animation: bridge-success-ring 980ms 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bridge-success-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.33rem;
+  height: 3.6rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(236, 253, 245, 1), rgba(16, 185, 129, 0));
+  opacity: 0;
+  transform-origin: 50% 0%;
+  animation: bridge-success-spark 920ms var(--spark-delay) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes bridge-success-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bridge-success-sheen {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes bridge-success-fade {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  76% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes bridge-success-core {
+  0% {
+    transform: scale(0.45);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bridge-success-label {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bridge-success-ring {
+  0% {
+    opacity: 0.62;
+    transform: scale(0.25);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.72);
+  }
+}
+
+@keyframes bridge-success-spark {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--spark-angle)) translateY(-0.5rem) scaleY(0.4);
+  }
+  24% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--spark-angle)) translateY(-11.25rem) scaleY(1);
+  }
 }
 </style>
