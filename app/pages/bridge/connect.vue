@@ -22,11 +22,60 @@
 
       <div
         v-if="!hasToken"
-        class="mt-10 rounded-3xl border border-red-500/30 bg-red-500/10 px-6 py-10 text-center shadow-[0_25px_80px_rgba(64,18,18,0.35)] sm:px-8"
+        class="mt-10 rounded-3xl border border-[#16BBD7]/35 bg-gradient-to-b from-[#122145]/95 to-[#0B132A]/95 px-6 py-10 text-center shadow-[0_25px_80px_rgba(8,25,60,0.55)] sm:px-8"
       >
-        <h2 class="text-2xl font-semibold">Open from the Bridge app</h2>
-        <p class="mt-4 text-sm text-red-100/80">Launch the desktop Bridge and tap the &ldquo;Link account&rdquo; button so we can pass the code over automatically.</p>
-        <p class="mt-6 text-xs uppercase tracking-[0.38em] text-red-200/60">Waiting for desktop link</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.38em] text-[#72d9ea]/85">Manual pairing</p>
+        <h2 class="mt-3 text-2xl font-semibold sm:text-3xl">Enter your pairing code</h2>
+        <p class="mt-4 text-sm text-white/75">
+          No auto-link available? Enter the 6-character code shown in the Bridge app.
+        </p>
+
+        <form class="mx-auto mt-8 max-w-xl space-y-5 text-left" @submit.prevent="applyPairingCode">
+          <div class="rounded-3xl border border-[#16BBD7]/40 bg-[#081129]/80 p-4 shadow-inner shadow-[#16BBD7]/15">
+            <label for="pairing-code" class="block text-xs font-semibold uppercase tracking-[0.28em] text-[#9be6f2]/80">
+              Pairing code
+            </label>
+            <input
+              id="pairing-code"
+              v-model="manualTokenInput"
+              type="text"
+              inputmode="text"
+              autocapitalize="characters"
+              autocomplete="one-time-code"
+              spellcheck="false"
+              maxlength="6"
+              placeholder="A1B2C3"
+              class="mt-3 w-full rounded-2xl border border-[#16BBD7]/55 bg-[#050c1f] px-4 py-4 text-center font-mono text-3xl font-semibold uppercase tracking-[0.45em] text-[#9be6f2] placeholder:text-[#9be6f2]/35 focus:border-[#72d9ea] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea]/45"
+              @input="onManualTokenInput"
+            >
+            <p class="mt-3 text-xs uppercase tracking-[0.26em] text-white/55">A-Z and 0-9 only</p>
+          </div>
+
+          <div class="grid grid-cols-6 gap-2">
+            <div
+              v-for="(char, index) in manualTokenSlots"
+              :key="`manual-token-slot-${index}`"
+              class="flex h-11 items-center justify-center rounded-xl border border-white/15 bg-[#0B132A]/75 font-mono text-base font-semibold text-white/85"
+            >
+              {{ char || '•' }}
+            </div>
+          </div>
+
+          <p class="text-xs uppercase tracking-[0.32em]" :class="manualTokenReady ? 'text-emerald-200/90' : 'text-white/60'">
+            {{ manualTokenReady ? 'Code complete' : `${manualTokenRemaining} characters missing` }}
+          </p>
+
+          <button
+            type="submit"
+            class="inline-flex w-full items-center justify-center rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea] disabled:cursor-not-allowed disabled:bg-[#16BBD7]/55"
+            :disabled="!manualTokenReady"
+          >
+            Continue with pairing code
+          </button>
+          <p v-if="manualTokenError" class="text-sm text-amber-200">{{ manualTokenError }}</p>
+        </form>
+
+        <p class="mt-6 text-center text-xs uppercase tracking-[0.38em] text-white/45">Waiting for desktop link</p>
       </div>
 
       <template v-else>
@@ -234,7 +283,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useHead, useRoute } from '#imports'
+import { useHead, useRoute, useRouter } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 
 interface BridgeStatusPayload {
@@ -260,6 +309,7 @@ interface BridgeLivePayload {
 useHead({ title: 'Link Bridge · OpenSquawk' })
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const { user, accessToken, isAuthenticated, initialized } = storeToRefs(auth)
 
@@ -279,16 +329,23 @@ const liveTelemetryError = ref('')
 const liveTelemetryRequestActive = ref(false)
 
 const copiedToken = ref(false)
+const manualTokenInput = ref('')
+const manualTokenError = ref('')
 
 const token = computed(() => {
   const value = route.query.token
-  if (Array.isArray(value)) {
-    return value[0] || ''
-  }
-  return typeof value === 'string' ? value : ''
+  const rawToken = Array.isArray(value)
+    ? value[0] || ''
+    : typeof value === 'string'
+      ? value
+      : ''
+  return rawToken.trim()
 })
 
-const hasToken = computed(() => token.value.length > 0)
+const hasToken = computed(() => token.value.length >= 6)
+const manualTokenSlots = computed(() => Array.from({ length: 6 }, (_unused, index) => manualTokenInput.value[index] || ''))
+const manualTokenRemaining = computed(() => Math.max(0, 6 - manualTokenInput.value.length))
+const manualTokenReady = computed(() => manualTokenRemaining.value === 0)
 const loginTarget = computed(() => `/login?redirect=${encodeURIComponent(route.fullPath || '/bridge')}`)
 
 const authDisplayName = computed(() => {
@@ -322,6 +379,34 @@ const liveTelemetryJson = computed(() => {
 })
 
 const successBannerVisible = computed(() => connectSuccess.value || Boolean(connectionStatus.value?.connected))
+
+function sanitizePairingCode(input: string) {
+  return input.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
+}
+
+function onManualTokenInput() {
+  manualTokenInput.value = sanitizePairingCode(manualTokenInput.value)
+  if (manualTokenError.value && manualTokenReady.value) {
+    manualTokenError.value = ''
+  }
+}
+
+async function applyPairingCode() {
+  manualTokenInput.value = sanitizePairingCode(manualTokenInput.value)
+  if (!manualTokenReady.value) {
+    manualTokenError.value = 'Please enter a valid 6-character pairing code.'
+    return
+  }
+
+  manualTokenError.value = ''
+  connectError.value = ''
+  await router.replace({
+    query: {
+      ...route.query,
+      token: manualTokenInput.value,
+    },
+  })
+}
 
 function formatTimestamp(value: string | null) {
   if (!value) {
