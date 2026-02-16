@@ -43,9 +43,7 @@
           <span aria-hidden="true">←</span>
           Bridge overview
         </NuxtLink>
-        <div class="inline-flex items-center justify-center rounded-full border border-white/[0.12] bg-white/5 px-4 py-2 text-[11px] uppercase tracking-[0.28em] text-white/[0.65]">
-          Connect Console
-        </div>
+
       </nav>
 
       <header class="mx-auto mt-9 max-w-3xl space-y-4 text-center sm:text-left">
@@ -149,9 +147,9 @@
             </div>
             <span
               class="rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.26em]"
-              :class="isAuthenticated ? 'border-emerald-300/[0.45] bg-emerald-400/[0.12] text-emerald-100' : 'border-white/[0.15] bg-white/[0.06] text-white/60'"
+              :class="hasAuthenticatedUser ? 'border-emerald-300/[0.45] bg-emerald-400/[0.12] text-emerald-100' : 'border-white/[0.15] bg-white/[0.06] text-white/60'"
             >
-              {{ isAuthenticated ? 'Signed in' : 'Login needed' }}
+              {{ hasAuthenticatedUser ? 'Signed in' : 'Login needed' }}
             </span>
           </div>
 
@@ -159,7 +157,7 @@
             <div class="rounded-2xl border border-white/[0.12] bg-[#0B132A]/[0.78] px-4 py-4">
               <p class="text-xs uppercase tracking-[0.24em] text-white/[0.52]">Signed in account</p>
 
-              <template v-if="isAuthenticated">
+              <template v-if="hasAuthenticatedUser">
                 <p class="mt-2 text-base font-semibold text-white">{{ authDisplayName }}</p>
                 <p class="mt-2 text-xs text-white/60">
                   Wrong user?
@@ -199,7 +197,7 @@
                   <button
                     type="button"
                     class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-300/30 bg-rose-500/10 px-5 py-3 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-60"
-                    :disabled="!isAuthenticated || disconnectLoading"
+                    :disabled="!hasAuthenticatedUser || disconnectLoading"
                     @click="disconnectBridge"
                   >
                     <span v-if="disconnectLoading" class="flex items-center gap-2">
@@ -214,7 +212,7 @@
                   v-else
                   type="button"
                   class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#081226] transition hover:bg-[#13aac5] disabled:cursor-not-allowed disabled:bg-[#16BBD7]/[0.55]"
-                  :disabled="!isAuthenticated || !hasToken || connectLoading"
+                  :disabled="!hasAuthenticatedUser || !hasToken || connectLoading"
                   @click="connectBridge"
                 >
                   <span v-if="connectLoading" class="flex items-center gap-2">
@@ -227,8 +225,10 @@
 
               <p v-if="disconnectError" class="mt-3 text-sm text-red-300">{{ disconnectError }}</p>
               <p v-if="connectError" class="mt-3 text-sm text-red-300">{{ connectError }}</p>
+              <p v-if="tokenLinkedWithoutAuth" class="mt-3 text-sm text-amber-100/90">This code is already linked. Sign in to manage it.</p>
+              <p v-else-if="tokenLinkedToOtherUser" class="mt-3 text-sm text-amber-100/90">This code is linked to another account.</p>
               <p v-if="!hasToken" class="mt-3 text-sm text-white/60">Enter or load a pairing code first.</p>
-              <p v-else-if="!isAuthenticated" class="mt-3 text-sm text-white/60">Sign in first to enable linking.</p>
+              <p v-else-if="!hasAuthenticatedUser" class="mt-3 text-sm text-white/60">Sign in first to enable linking.</p>
 
               <div
                 v-if="successBannerVisible"
@@ -249,7 +249,7 @@
         </article>
         <article class="bridge-mini-card">
           <p class="bridge-mini-card__label">Auth</p>
-          <p class="bridge-mini-card__value">{{ isAuthenticated ? 'Ready' : 'Missing' }}</p>
+          <p class="bridge-mini-card__value">{{ hasAuthenticatedUser ? 'Ready' : 'Missing' }}</p>
         </article>
         <article class="bridge-mini-card">
           <p class="bridge-mini-card__label">Bridge</p>
@@ -336,6 +336,21 @@ const authDisplayName = computed(() => {
   return user.value.name || user.value.email
 })
 
+const hasAuthenticatedUser = computed(() => Boolean(isAuthenticated.value && user.value))
+const isLinkedToAuthenticatedUser = computed(() => {
+  if (!hasAuthenticatedUser.value || !connectionStatus.value?.connected) {
+    return false
+  }
+  return connectionStatus.value.user?.id === user.value?.id
+})
+const tokenLinkedWithoutAuth = computed(() => Boolean(connectionStatus.value?.connected && !hasAuthenticatedUser.value))
+const tokenLinkedToOtherUser = computed(() => {
+  if (!connectionStatus.value?.connected || !hasAuthenticatedUser.value) {
+    return false
+  }
+  return connectionStatus.value.user?.id !== user.value?.id
+})
+
 const connectionLabel = computed(() => {
   if (!hasToken.value) {
     return 'Pairing code missing'
@@ -343,13 +358,19 @@ const connectionLabel = computed(() => {
   if (!connectionStatus.value?.connected) {
     return 'Waiting for confirmation'
   }
+  if (tokenLinkedWithoutAuth.value) {
+    return 'Code already linked'
+  }
+  if (tokenLinkedToOtherUser.value) {
+    return 'Linked to a different account'
+  }
   const name = connectionStatus.value.user?.name || connectionStatus.value.user?.email
   return name ? `Linked as ${name}` : 'Linked successfully'
 })
 
 const formattedConnectedAt = computed(() => formatTimestamp(connectionStatus.value?.connectedAt ?? null))
-const successBannerVisible = computed(() => connectSuccess.value || Boolean(connectionStatus.value?.connected))
-const alreadyLinked = computed(() => Boolean(connectionStatus.value?.connected))
+const successBannerVisible = computed(() => hasAuthenticatedUser.value && (connectSuccess.value || isLinkedToAuthenticatedUser.value))
+const alreadyLinked = computed(() => isLinkedToAuthenticatedUser.value)
 const successSparks = Array.from({ length: 14 }, (_unused, index) => index)
 
 function sanitizePairingCode(input: string) {
@@ -421,7 +442,7 @@ function formatTimestamp(value: string | null) {
 }
 
 async function connectBridge() {
-  if (!hasToken.value || !accessToken.value) {
+  if (!hasToken.value || !accessToken.value || !hasAuthenticatedUser.value) {
     return
   }
 
@@ -452,7 +473,7 @@ async function connectBridge() {
 }
 
 async function disconnectBridge() {
-  if (!hasToken.value || !accessToken.value) {
+  if (!hasToken.value || !accessToken.value || !hasAuthenticatedUser.value) {
     return
   }
 
@@ -484,7 +505,7 @@ async function disconnectBridge() {
 }
 
 async function maybeAutoConnect() {
-  if (!hasToken.value || !initialized.value || !isAuthenticated.value || !accessToken.value || connectLoading.value) {
+  if (!hasToken.value || !initialized.value || !hasAuthenticatedUser.value || !accessToken.value || connectLoading.value) {
     return
   }
 
@@ -526,8 +547,10 @@ async function fetchStatus(force = false) {
     statusError.value = ''
     statusInitialized.value = true
 
-    if (response.connected) {
+    if (response.connected && hasAuthenticatedUser.value && response.user?.id === user.value?.id) {
       connectSuccess.value = true
+    } else {
+      connectSuccess.value = false
     }
   } catch (err: any) {
     statusError.value =
@@ -597,16 +620,18 @@ watch(token, () => {
 })
 
 watch(
-  () => isAuthenticated.value,
+  () => hasAuthenticatedUser.value,
   (value) => {
     if (value && hasToken.value) {
       fetchStatus(true)
+      return
     }
+    connectSuccess.value = false
   },
 )
 
 watch(
-  [hasToken, initialized, isAuthenticated, accessToken, () => connectionStatus.value?.connected ?? false],
+  [hasToken, initialized, hasAuthenticatedUser, accessToken, () => connectionStatus.value?.connected ?? false],
   () => {
     void maybeAutoConnect()
   },
