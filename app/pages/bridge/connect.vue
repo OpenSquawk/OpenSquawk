@@ -1,7 +1,11 @@
 <template>
-  <div class="relative min-h-screen bg-[#0B1020] text-white">
-    <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(22,187,215,0.14),transparent_55%)]"/>
-    <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(79,70,229,0.12),transparent_60%)]"/>
+  <div class="bridge-connect-page">
+    <div class="bridge-connect-background" aria-hidden="true">
+      <div class="bridge-connect-background__aurora"/>
+      <div class="bridge-connect-background__photo"/>
+      <div class="bridge-connect-background__noise"/>
+    </div>
+
     <div
       v-if="successBlastVisible"
       :key="successBlastKey"
@@ -30,292 +34,231 @@
       </div>
     </div>
 
-    <main class="relative mx-auto w-full max-w-3xl px-5 py-12 sm:px-6 lg:px-8">
+    <main class="relative mx-auto w-full max-w-6xl px-5 pb-14 pt-10 sm:px-7 lg:px-10">
       <nav class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <NuxtLink
           to="/bridge"
-          class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:border-white/20 hover:bg-white/10 sm:w-auto"
+          class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.15] bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:border-white/[0.3] hover:bg-white/10 sm:w-auto"
         >
           <span aria-hidden="true">←</span>
-          Download the Bridge
+          Bridge overview
         </NuxtLink>
+        <div class="inline-flex items-center justify-center rounded-full border border-white/[0.12] bg-white/5 px-4 py-2 text-[11px] uppercase tracking-[0.28em] text-white/[0.65]">
+          Connect Console
+        </div>
       </nav>
 
-      <header class="mt-10 space-y-4 text-center sm:text-left">
-        <p class="text-xs font-semibold uppercase tracking-[0.45em] text-[#16BBD7]">OpenSquawk Bridge</p>
-        <h1 class="text-3xl font-semibold sm:text-4xl">Link your Bridge in seconds</h1>
-        <p class="mx-auto max-w-2xl text-sm text-white/70 sm:mx-0">Follow the prompt from the desktop Bridge app and you&rsquo;ll be ready to fly.</p>
+      <header class="mx-auto mt-9 max-w-3xl space-y-4 text-center sm:text-left">
+        <p class="text-xs font-semibold uppercase tracking-[0.42em] text-[#16BBD7]">OpenSquawk Bridge</p>
+        <h1 class="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl">
+          Link your simulator in one clean flow
+        </h1>
+        <p class="text-sm text-white/[0.72] sm:text-base">
+          Just two things matter: signed in account + a pairing code. If your Bridge app opened this page with a URL token, you can link instantly.
+        </p>
       </header>
 
-      <div
-        v-if="!hasToken"
-        class="mt-10 rounded-3xl border border-[#16BBD7]/35 bg-gradient-to-b from-[#122145]/95 to-[#0B132A]/95 px-6 py-10 text-center shadow-[0_25px_80px_rgba(8,25,60,0.55)] sm:px-8"
-      >
-        <p class="text-xs font-semibold uppercase tracking-[0.38em] text-[#72d9ea]/85">Manual pairing</p>
-        <h2 class="mt-3 text-2xl font-semibold sm:text-3xl">Enter your pairing code</h2>
-        <p class="mt-4 text-sm text-white/75">
-          No auto-link available? Enter the 6-character code shown in the Bridge app.
-        </p>
-
-        <form class="mx-auto mt-8 max-w-xl space-y-5 text-left" @submit.prevent="applyPairingCode">
-          <div class="rounded-3xl border border-[#16BBD7]/40 bg-[#081129]/80 p-4 shadow-inner shadow-[#16BBD7]/15">
-            <label for="pairing-code" class="block text-xs font-semibold uppercase tracking-[0.28em] text-[#9be6f2]/80">
-              Pairing code
-            </label>
-            <input
-              id="pairing-code"
-              v-model="manualTokenInput"
-              type="text"
-              inputmode="text"
-              autocapitalize="characters"
-              autocomplete="one-time-code"
-              spellcheck="false"
-              maxlength="6"
-              placeholder="A1B2C3"
-              class="mt-3 w-full rounded-2xl border border-[#16BBD7]/55 bg-[#050c1f] px-4 py-4 text-center font-mono text-3xl font-semibold uppercase tracking-[0.45em] text-[#9be6f2] placeholder:text-[#9be6f2]/35 focus:border-[#72d9ea] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea]/45"
-              @input="onManualTokenInput"
+      <section class="mt-10 grid gap-5 lg:grid-cols-[1.08fr_1fr]">
+        <article class="bridge-surface bridge-surface--warm p-5 sm:p-6 lg:p-7">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p class="text-xs uppercase tracking-[0.26em] text-[#7edeee]/85">Step 1</p>
+              <h2 class="mt-2 text-2xl font-semibold">Pairing code</h2>
+            </div>
+            <span
+              class="rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.26em]"
+              :class="hasToken ? 'border-[#16BBD7]/[0.55] bg-[#16BBD7]/[0.14] text-[#9ae8f4]' : 'border-white/[0.15] bg-white/[0.06] text-white/60'"
             >
-            <p class="mt-3 text-xs uppercase tracking-[0.26em] text-white/55">A-Z and 0-9 only</p>
+              {{ hasToken ? 'Code ready' : 'Waiting for code' }}
+            </span>
           </div>
 
+          <div v-if="!hasToken" class="mt-6 space-y-5">
+            <p class="text-sm text-white/[0.72]">
+              Paste the 6-character pairing code from your desktop Bridge app.
+            </p>
 
-
-
-
-          <button
-            type="submit"
-            class="inline-flex w-full items-center justify-center rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea] disabled:cursor-not-allowed disabled:bg-[#16BBD7]/55"
-            :disabled="!manualTokenReady"
-          >
-            Continue with pairing code
-          </button>
-          <p v-if="manualTokenError" class="text-sm text-amber-200">{{ manualTokenError }}</p>
-        </form>
-
-      </div>
-
-      <template v-else>
-        <section class="mt-10 rounded-3xl border border-white/10 bg-[#111832]/85 p-6 shadow-[0_24px_70px_rgba(5,10,30,0.55)] sm:p-8">
-          <div class="flex items-center gap-3">
-            <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#16BBD7]/15 text-sm font-semibold text-[#16BBD7]">1</span>
-            <div>
-              <p class="text-xs uppercase tracking-[0.32em] text-white/55">Step 1</p>
-              <h2 class="text-lg font-semibold">{{ isAuthenticated ? 'Signed in' : 'Sign in required' }}</h2>
-            </div>
-          </div>
-          <p class="mt-4 text-sm text-white/70">
-            {{ isAuthenticated ? 'You are authenticated with your OpenSquawk account.' : 'Please sign in once to link your Bridge token.' }}
-          </p>
-
-          <template v-if="isAuthenticated">
-            <div class="mt-6 rounded-2xl border border-[#16BBD7]/40 bg-[#16BBD7]/10 px-5 py-4 text-sm">
-              <p class="font-medium text-[#16BBD7]">You&rsquo;re signed in</p>
-              <p class="mt-1 text-white/70">Logged in as <span class="font-semibold text-white">{{ authDisplayName }}</span>.</p>
-              <p class="mt-3 text-xs text-white/60">
-                Wrong account?
-                <NuxtLink to="/logout" class="font-semibold text-[#72d9ea] transition hover:text-[#9be6f2]">Log out</NuxtLink>
-                and sign in again.
-              </p>
-            </div>
-          </template>
-          <template v-else>
-            <div class="mt-6">
-              <NuxtLink
-                :to="loginTarget"
-                class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea]"
-              >
-                Go to login
-              </NuxtLink>
-            </div>
-          </template>
-        </section>
-
-        <section class="mt-6 rounded-3xl border border-white/10 bg-[#111832]/85 p-6 shadow-[0_24px_70px_rgba(5,10,30,0.55)] sm:p-8">
-          <div class="flex items-center gap-3">
-            <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#16BBD7]/15 text-sm font-semibold text-[#16BBD7]">2</span>
-            <div>
-              <p class="text-xs uppercase tracking-[0.32em] text-white/55">Step 2</p>
-              <h2 class="text-lg font-semibold">Confirm the code</h2>
-            </div>
-          </div>
-          <p class="mt-4 text-sm text-white/70">
-            The code in your desktop Bridge app should match the one shown below. Click &ldquo;Link Bridge&rdquo; to confirm and link your account.
-          </p>
-
-          <div
-            class="mt-5 flex items-center justify-center rounded-2xl border border-[#16BBD7]/40 bg-[#081129]/80 px-4 py-4 text-center font-mono text-3xl font-semibold uppercase tracking-[0.45em] text-[#9be6f2]"
-            @click="copyToken"
-            :title="hasToken ? 'Click to copy token' : ''"
-          >
-            {{ token }}
-          </div>
-
-
-
-
-
-          <div class="mt-6 space-y-4">
-            <div v-if="alreadyLinked" class="space-y-3">
-              <div
-                class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-400/45 bg-emerald-400/15 px-5 py-3 text-sm font-semibold text-emerald-100 shadow-[0_0_35px_rgba(16,185,129,0.22)]"
-              >
-                <span aria-hidden="true" class="text-base leading-none">✓</span>
-                <span>Already linked</span>
+            <form class="space-y-4" @submit.prevent="applyPairingCode">
+              <div class="rounded-3xl border border-[#16BBD7]/[0.35] bg-[#081129]/[0.72] p-4">
+                <label for="pairing-code" class="block text-xs font-semibold uppercase tracking-[0.28em] text-[#9be6f2]/[0.86]">
+                  Pairing code
+                </label>
+                <input
+                  id="pairing-code"
+                  v-model="manualTokenInput"
+                  type="text"
+                  inputmode="text"
+                  autocapitalize="characters"
+                  autocomplete="one-time-code"
+                  spellcheck="false"
+                  maxlength="6"
+                  placeholder="A1B2C3"
+                  class="mt-3 w-full rounded-2xl border border-[#16BBD7]/[0.5] bg-[#050c1f] px-4 py-4 text-center font-mono text-3xl font-semibold uppercase tracking-[0.44em] text-[#9be6f2] placeholder:text-[#9be6f2]/[0.35] focus:border-[#72d9ea] focus:outline-none"
+                  @input="onManualTokenInput"
+                >
+                <p class="mt-3 text-xs uppercase tracking-[0.24em] text-white/[0.52]">A-Z and 0-9 only</p>
               </div>
+
               <button
-                type="button"
-                class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-300/30 bg-rose-500/10 px-5 py-3 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-200/60 disabled:cursor-not-allowed disabled:opacity-60"
-                :disabled="!isAuthenticated || disconnectLoading"
-                @click="disconnectBridge"
+                type="submit"
+                class="inline-flex w-full items-center justify-center rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#081226] transition hover:bg-[#13aac5] disabled:cursor-not-allowed disabled:bg-[#16BBD7]/[0.55]"
+                :disabled="!manualTokenReady"
               >
-                <span v-if="disconnectLoading" class="flex items-center gap-2">
-                  <span class="h-4 w-4 animate-spin rounded-full border-2 border-rose-100/40 border-t-rose-100"/>
-                  Unlinking …
-                </span>
-                <span v-else>Unlink Bridge</span>
+                Continue with this code
               </button>
-            </div>
+
+              <p v-if="manualTokenError" class="text-sm text-amber-200">{{ manualTokenError }}</p>
+            </form>
+          </div>
+
+          <div v-else class="mt-6 space-y-5">
+            <p class="text-sm text-white/[0.72]">
+              Confirmed pairing code. Tap it to copy if you need to paste it back into the Bridge app.
+            </p>
+
             <button
-              v-else
               type="button"
-              class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea] disabled:cursor-not-allowed disabled:bg-[#16BBD7]/60"
-              :disabled="!isAuthenticated || connectLoading"
-              @click="connectBridge"
+              class="bridge-token-btn"
+              :title="'Click to copy code'"
+              @click="copyToken"
             >
-              <span v-if="connectLoading" class="flex items-center gap-2">
-                <span class="h-4 w-4 animate-spin rounded-full border-2 border-[#0B1020]/30 border-t-[#0B1020]"/>
-                Linking …
-              </span>
-              <span v-else>Link Bridge</span>
+              <span class="bridge-token-btn__code">{{ token }}</span>
+              <span class="bridge-token-btn__hint">{{ copiedToken ? 'Copied' : '' }}</span>
             </button>
 
-            <p v-if="disconnectError" class="text-sm text-red-300">{{ disconnectError }}</p>
-            <p v-if="connectError" class="text-sm text-red-300">{{ connectError }}</p>
-            <p v-if="!isAuthenticated" class="text-sm text-white/60">Sign in first to enable bridge linking.</p>
-
-            <div
-              v-if="successBannerVisible"
-              class="bridge-success-banner rounded-2xl border border-emerald-400/40 bg-emerald-400/10 px-5 py-4 text-sm text-emerald-100 shadow-[0_0_35px_rgba(16,185,129,0.25)]"
-            >
-              <p class="text-base font-semibold text-emerald-200">Bridge linked</p>
-              <p class="mt-1 text-emerald-100/80">You can close this page and head back to the Bridge app.</p>
-            </div>
-          </div>
-        </section>
-
-        <section class="mt-6 rounded-3xl border border-white/10 bg-[#111832]/85 p-6 shadow-[0_24px_70px_rgba(5,10,30,0.55)] sm:p-8">
-          <div class="flex items-center gap-3">
-            <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#16BBD7]/15 text-sm font-semibold text-[#16BBD7]">3</span>
-            <div>
-              <p class="text-xs uppercase tracking-[0.32em] text-white/55">Step 3</p>
-              <h2 class="text-lg font-semibold">Watch the Bridge</h2>
-            </div>
-          </div>
-          <p class="mt-4 text-sm text-white/70">The desktop app pings us every few seconds while it&rsquo;s running.</p>
-
-          <div class="mt-5 space-y-4">
-            <div
-              class="rounded-2xl border px-4 py-4"
-              :class="connectionStatus?.connected
-                ? 'border-emerald-400/45 bg-emerald-400/10 shadow-[0_0_35px_rgba(16,185,129,0.25)]'
-                : 'border-white/10 bg-[#0B132A]/75'"
-            >
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <p class="text-sm font-semibold">Bridge status</p>
-                <span
-                  class="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.32em]"
-                  :class="connectionStatus?.connected ? 'bg-emerald-400/20 text-emerald-200' : 'bg-white/10 text-white/60'"
-                >
-                  {{ connectionStatus?.connected ? 'Linked' : 'Waiting' }}
-                </span>
-              </div>
-              <p
-                class="mt-3 text-base font-medium"
-                :class="connectionStatus?.connected ? 'text-emerald-200' : 'text-white/60'"
-              >
-                {{ connectionLabel }}
-              </p>
-              <p v-if="connectionSubLabel" class="text-xs text-white/45">{{ connectionSubLabel }}</p>
-            </div>
-
-            <div class="grid gap-3 sm:grid-cols-2">
-              <div
-                class="flex items-center gap-3 rounded-2xl border px-4 py-3"
-                :class="connectionStatus?.simConnected
-                  ? 'border-emerald-400/45 bg-emerald-400/10 shadow-[0_0_30px_rgba(16,185,129,0.25)]'
-                  : 'border-white/10 bg-[#0B132A]/75'"
-              >
-                <span
-                  class="flex h-3 w-3 items-center justify-center rounded-full"
-                  :class="connectionStatus?.simConnected
-                    ? 'bg-emerald-400 shadow-[0_0_18px_rgba(16,185,129,0.85)]'
-                    : 'bg-white/30'"
-                />
-                <div>
-                  <p class="text-sm font-semibold">Simulator</p>
-                  <p class="text-xs text-white/60">{{ connectionStatus?.simConnected ? 'Simulator detected' : 'Waiting for simulator' }}</p>
-                </div>
-              </div>
-              <div
-                class="flex items-center gap-3 rounded-2xl border px-4 py-3"
-                :class="connectionStatus?.flightActive
-                  ? 'border-emerald-400/45 bg-emerald-400/10 shadow-[0_0_30px_rgba(16,185,129,0.25)]'
-                  : 'border-white/10 bg-[#0B132A]/75'"
-              >
-                <span
-                  class="flex h-3 w-3 items-center justify-center rounded-full"
-                  :class="connectionStatus?.flightActive
-                    ? 'bg-emerald-400 shadow-[0_0_18px_rgba(16,185,129,0.85)]'
-                    : 'bg-white/30'"
-                />
-                <div>
-                  <p class="text-sm font-semibold">Flight</p>
-                  <p class="text-xs text-white/60">{{ connectionStatus?.flightActive ? 'Flight in progress' : 'No flight detected' }}</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="grid gap-3 sm:grid-cols-2">
-              <div class="rounded-2xl border border-white/10 bg-[#0B132A]/75 px-4 py-3 text-sm text-white/65">
-                <p class="text-xs uppercase tracking-[0.28em] text-white/45">Connected since</p>
-                <p class="mt-1 font-medium text-white">{{ formattedConnectedAt }}</p>
-              </div>
-              <div class="rounded-2xl border border-white/10 bg-[#0B132A]/75 px-4 py-3 text-sm text-white/65">
-                <p class="text-xs uppercase tracking-[0.28em] text-white/45">Last update</p>
-                <p class="mt-1 font-medium text-white">{{ formattedLastStatusAt }}</p>
-              </div>
-            </div>
-
-            <div class="rounded-2xl border border-white/10 bg-[#0B132A]/75">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="rounded-full border border-[#16BBD7]/[0.4] bg-[#16BBD7]/[0.12] px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-[#9be6f2]">
+                {{ hasQueryToken ? 'Loaded from URL' : 'Set manually' }}
+              </span>
               <button
                 type="button"
-                class="flex w-full items-center justify-between px-4 py-3 text-left"
-                @click="liveTelemetryOpen = !liveTelemetryOpen"
+                class="text-xs uppercase tracking-[0.24em] text-white/[0.68] transition hover:text-white"
+                @click="clearPairingCode"
               >
-                <div>
-                  <p class="text-sm font-semibold text-white">Live telemetry details</p>
-                  <p class="text-xs text-white/50">Last telemetry: {{ formattedLastTelemetryAt }}</p>
-                </div>
-                <span class="text-xs uppercase tracking-[0.24em] text-white/55">
-                  {{ liveTelemetryOpen ? 'Hide' : 'Show' }}
-                </span>
+                Use another code
               </button>
-              <div v-if="liveTelemetryOpen" class="border-t border-white/10 px-4 py-3">
-                <p v-if="liveTelemetryLoading" class="text-xs uppercase tracking-[0.24em] text-white/45">Loading telemetry …</p>
-                <p v-else-if="liveTelemetryError" class="text-sm text-red-300">{{ liveTelemetryError }}</p>
-                <p v-else-if="!liveTelemetry?.telemetry" class="text-sm text-white/60">No telemetry received yet.</p>
-                <pre
+            </div>
+          </div>
+        </article>
+
+        <article class="bridge-surface p-5 sm:p-6 lg:p-7">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p class="text-xs uppercase tracking-[0.26em] text-[#7edeee]/85">Step 2</p>
+              <h2 class="mt-2 text-2xl font-semibold">Account + link</h2>
+            </div>
+            <span
+              class="rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.26em]"
+              :class="isAuthenticated ? 'border-emerald-300/[0.45] bg-emerald-400/[0.12] text-emerald-100' : 'border-white/[0.15] bg-white/[0.06] text-white/60'"
+            >
+              {{ isAuthenticated ? 'Signed in' : 'Login needed' }}
+            </span>
+          </div>
+
+          <div class="mt-6 space-y-4">
+            <div class="rounded-2xl border border-white/[0.12] bg-[#0B132A]/[0.78] px-4 py-4">
+              <p class="text-xs uppercase tracking-[0.24em] text-white/[0.52]">Signed in account</p>
+
+              <template v-if="isAuthenticated">
+                <p class="mt-2 text-base font-semibold text-white">{{ authDisplayName }}</p>
+                <p class="mt-2 text-xs text-white/60">
+                  Wrong user?
+                  <NuxtLink to="/logout" class="font-semibold text-[#86e8f7] transition hover:text-[#b4f3fb]">Logout and switch</NuxtLink>
+                </p>
+              </template>
+
+              <template v-else>
+                <p class="mt-2 text-sm text-white/[0.68]">Sign in once, then link this pairing code to your account.</p>
+                <NuxtLink
+                  :to="loginTarget"
+                  class="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-[#16BBD7] px-4 py-3 text-sm font-semibold text-[#081226] transition hover:bg-[#13aac5]"
+                >
+                  Go to login
+                </NuxtLink>
+              </template>
+            </div>
+
+            <div class="rounded-2xl border border-white/[0.12] bg-[#0B132A]/[0.78] px-4 py-4">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-semibold">Bridge link status</p>
+                <span
+                  class="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.24em]"
+                  :class="alreadyLinked ? 'bg-emerald-400/[0.18] text-emerald-100' : 'bg-white/10 text-white/[0.62]'"
+                >
+                  {{ alreadyLinked ? 'Linked' : 'Not linked' }}
+                </span>
+              </div>
+
+              <p class="mt-3 text-sm" :class="alreadyLinked ? 'text-emerald-100/[0.9]' : 'text-white/[0.68]'">
+                {{ connectionLabel }}
+              </p>
+              <p class="mt-1 text-xs text-white/[0.44]">Connected since {{ formattedConnectedAt }}</p>
+
+              <div class="mt-5 space-y-3">
+                <div v-if="alreadyLinked" class="space-y-3">
+                  <button
+                    type="button"
+                    class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-300/30 bg-rose-500/10 px-5 py-3 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                    :disabled="!isAuthenticated || disconnectLoading"
+                    @click="disconnectBridge"
+                  >
+                    <span v-if="disconnectLoading" class="flex items-center gap-2">
+                      <span class="h-4 w-4 animate-spin rounded-full border-2 border-rose-100/35 border-t-rose-100"/>
+                      Unlinking …
+                    </span>
+                    <span v-else>Unlink Bridge</span>
+                  </button>
+                </div>
+
+                <button
                   v-else
-                  class="max-h-72 overflow-auto rounded-xl border border-white/10 bg-black/40 p-3 text-xs leading-5 text-[#9be6f2]"
-                ><code>{{ liveTelemetryJson }}</code></pre>
+                  type="button"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-5 py-3 text-sm font-semibold text-[#081226] transition hover:bg-[#13aac5] disabled:cursor-not-allowed disabled:bg-[#16BBD7]/[0.55]"
+                  :disabled="!isAuthenticated || !hasToken || connectLoading"
+                  @click="connectBridge"
+                >
+                  <span v-if="connectLoading" class="flex items-center gap-2">
+                    <span class="h-4 w-4 animate-spin rounded-full border-2 border-[#081226]/[0.35] border-t-[#081226]"/>
+                    Linking …
+                  </span>
+                  <span v-else>Link Bridge now</span>
+                </button>
+              </div>
+
+              <p v-if="disconnectError" class="mt-3 text-sm text-red-300">{{ disconnectError }}</p>
+              <p v-if="connectError" class="mt-3 text-sm text-red-300">{{ connectError }}</p>
+              <p v-if="!hasToken" class="mt-3 text-sm text-white/60">Enter or load a pairing code first.</p>
+              <p v-else-if="!isAuthenticated" class="mt-3 text-sm text-white/60">Sign in first to enable linking.</p>
+
+              <div
+                v-if="successBannerVisible"
+                class="bridge-success-banner mt-4 rounded-2xl border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100"
+              >
+                <p class="font-semibold text-emerald-200">Bridge linked</p>
+                <p class="mt-1 text-emerald-100/80">You can close this page and return to the desktop app.</p>
               </div>
             </div>
           </div>
+        </article>
+      </section>
 
-          <p v-if="statusLoading" class="mt-6 text-xs uppercase tracking-[0.38em] text-white/45">Refreshing …</p>
-          <p v-if="statusError" class="mt-2 text-sm text-red-300">{{ statusError }}</p>
-        </section>
-      </template>
+      <section class="mt-5 grid gap-3 sm:grid-cols-3">
+        <article class="bridge-mini-card">
+          <p class="bridge-mini-card__label">Code</p>
+          <p class="bridge-mini-card__value">{{ hasToken ? 'Ready' : 'Missing' }}</p>
+        </article>
+        <article class="bridge-mini-card">
+          <p class="bridge-mini-card__label">Auth</p>
+          <p class="bridge-mini-card__value">{{ isAuthenticated ? 'Ready' : 'Missing' }}</p>
+        </article>
+        <article class="bridge-mini-card">
+          <p class="bridge-mini-card__label">Bridge</p>
+          <p class="bridge-mini-card__value">{{ alreadyLinked ? 'Linked' : 'Waiting' }}</p>
+        </article>
+      </section>
+
+      <p v-if="statusLoading" class="mt-4 text-xs uppercase tracking-[0.34em] text-white/[0.42]">Refreshing status …</p>
+      <p v-if="statusError" class="mt-2 text-sm text-red-300">{{ statusError }}</p>
     </main>
   </div>
 </template>
@@ -340,12 +283,6 @@ interface BridgeStatusPayload {
   lastStatusAt: string | null
 }
 
-interface BridgeLivePayload {
-  connected: boolean
-  lastTelemetryAt: string | null
-  telemetry: Record<string, any> | null
-}
-
 useHead({ title: 'Link Bridge · OpenSquawk' })
 
 const route = useRoute()
@@ -364,11 +301,6 @@ const statusInitialized = ref(false)
 const statusError = ref('')
 const statusLoading = ref(false)
 const statusRequestActive = ref(false)
-const liveTelemetry = ref<BridgeLivePayload | null>(null)
-const liveTelemetryOpen = ref(false)
-const liveTelemetryLoading = ref(false)
-const liveTelemetryError = ref('')
-const liveTelemetryRequestActive = ref(false)
 
 const copiedToken = ref(false)
 const manualTokenInput = ref('')
@@ -388,7 +320,13 @@ const token = computed(() => {
 })
 
 const hasToken = computed(() => token.value.length >= 6)
-const manualTokenSlots = computed(() => Array.from({ length: 6 }, (_unused, index) => manualTokenInput.value[index] || ''))
+const hasQueryToken = computed(() => {
+  const value = route.query.token
+  if (Array.isArray(value)) {
+    return Boolean(value[0])
+  }
+  return typeof value === 'string' && value.trim().length > 0
+})
 const manualTokenRemaining = computed(() => Math.max(0, 6 - manualTokenInput.value.length))
 const manualTokenReady = computed(() => manualTokenRemaining.value === 0)
 const loginTarget = computed(() => `/login?redirect=${encodeURIComponent(route.fullPath || '/bridge')}`)
@@ -399,30 +337,17 @@ const authDisplayName = computed(() => {
 })
 
 const connectionLabel = computed(() => {
+  if (!hasToken.value) {
+    return 'Pairing code missing'
+  }
   if (!connectionStatus.value?.connected) {
-    return 'Waiting for the desktop app'
+    return 'Waiting for confirmation'
   }
   const name = connectionStatus.value.user?.name || connectionStatus.value.user?.email
-  return name ? `Linked as ${name}` : 'Linked'
-})
-
-const connectionSubLabel = computed(() => {
-  if (!connectionStatus.value?.connected) return null
-  return connectionStatus.value.user?.email && connectionStatus.value.user.email !== connectionStatus.value.user?.name
-    ? connectionStatus.value.user.email
-    : null
+  return name ? `Linked as ${name}` : 'Linked successfully'
 })
 
 const formattedConnectedAt = computed(() => formatTimestamp(connectionStatus.value?.connectedAt ?? null))
-const formattedLastStatusAt = computed(() => formatTimestamp(connectionStatus.value?.lastStatusAt ?? null))
-const formattedLastTelemetryAt = computed(() => formatTimestamp(liveTelemetry.value?.lastTelemetryAt ?? null))
-const liveTelemetryJson = computed(() => {
-  if (!liveTelemetry.value?.telemetry) {
-    return null
-  }
-  return JSON.stringify(liveTelemetry.value.telemetry, null, 2)
-})
-
 const successBannerVisible = computed(() => connectSuccess.value || Boolean(connectionStatus.value?.connected))
 const alreadyLinked = computed(() => Boolean(connectionStatus.value?.connected))
 const successSparks = Array.from({ length: 14 }, (_unused, index) => index)
@@ -469,6 +394,18 @@ async function applyPairingCode() {
   })
 }
 
+async function clearPairingCode() {
+  manualTokenInput.value = ''
+  manualTokenError.value = ''
+  connectError.value = ''
+  disconnectError.value = ''
+
+  const query = { ...route.query }
+  delete query.token
+
+  await router.replace({ query })
+}
+
 function formatTimestamp(value: string | null) {
   if (!value) {
     return '—'
@@ -491,6 +428,7 @@ async function connectBridge() {
   connectLoading.value = true
   connectError.value = ''
   disconnectError.value = ''
+
   try {
     await $fetch('/api/bridge/connect', {
       method: 'POST',
@@ -499,6 +437,7 @@ async function connectBridge() {
         'x-bridge-token': token.value,
       },
     })
+
     connectSuccess.value = true
     await fetchStatus(true)
   } catch (err: any) {
@@ -529,6 +468,7 @@ async function disconnectBridge() {
         'x-bridge-token': token.value,
       },
     })
+
     connectSuccess.value = false
     autoConnectAttemptKey.value = `${token.value}:${accessToken.value}`
     await fetchStatus(true)
@@ -547,14 +487,17 @@ async function maybeAutoConnect() {
   if (!hasToken.value || !initialized.value || !isAuthenticated.value || !accessToken.value || connectLoading.value) {
     return
   }
+
   const attemptKey = `${token.value}:${accessToken.value}`
   if (autoConnectAttemptKey.value === attemptKey) {
     return
   }
+
   if (connectionStatus.value?.connected) {
     autoConnectAttemptKey.value = attemptKey
     return
   }
+
   autoConnectAttemptKey.value = attemptKey
   await connectBridge()
 }
@@ -578,13 +521,14 @@ async function fetchStatus(force = false) {
         'x-bridge-token': token.value,
       },
     })
+
     connectionStatus.value = response
     statusError.value = ''
     statusInitialized.value = true
+
     if (response.connected) {
       connectSuccess.value = true
     }
-    await fetchLiveTelemetry(force)
   } catch (err: any) {
     statusError.value =
       err?.data?.statusMessage ||
@@ -597,50 +541,18 @@ async function fetchStatus(force = false) {
   }
 }
 
-async function fetchLiveTelemetry(force = false) {
-  if (!hasToken.value) {
-    return
-  }
-  if (liveTelemetryRequestActive.value) {
-    return
-  }
-
-  liveTelemetryRequestActive.value = true
-  if (force || !liveTelemetry.value) {
-    liveTelemetryLoading.value = true
-  }
-
-  try {
-    const response = await $fetch<BridgeLivePayload>('/api/bridge/live', {
-      headers: {
-        'x-bridge-token': token.value,
-      },
-    })
-    liveTelemetry.value = response
-    liveTelemetryError.value = ''
-  } catch (err: any) {
-    liveTelemetryError.value =
-      err?.data?.statusMessage ||
-      err?.response?._data?.statusMessage ||
-      err?.message ||
-      'We could not fetch live telemetry.'
-  } finally {
-    liveTelemetryRequestActive.value = false
-    liveTelemetryLoading.value = false
-  }
-}
-
 async function copyToken() {
   if (!hasToken.value) return
   if (typeof navigator === 'undefined' || !navigator.clipboard) return
+
   try {
     await navigator.clipboard.writeText(token.value)
     copiedToken.value = true
     setTimeout(() => {
       copiedToken.value = false
-    }, 2000)
+    }, 1800)
   } catch {
-    // Ignore copy errors – clipboard access is optional
+    // Ignore clipboard errors.
   }
 }
 
@@ -655,9 +567,11 @@ function stopPolling() {
 
 function startPolling() {
   stopPolling()
+
   if (!hasToken.value) {
     return
   }
+
   fetchStatus(!statusInitialized.value)
   poller = setInterval(() => {
     fetchStatus()
@@ -672,14 +586,13 @@ watch(token, () => {
   connectionStatus.value = null
   statusInitialized.value = false
   statusError.value = ''
-  liveTelemetry.value = null
-  liveTelemetryError.value = ''
-  liveTelemetryOpen.value = false
+
   if (successBlastTimer) {
     clearTimeout(successBlastTimer)
     successBlastTimer = null
   }
   successBlastVisible.value = false
+
   startPolling()
 })
 
@@ -718,6 +631,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopPolling()
+
   if (successBlastTimer) {
     clearTimeout(successBlastTimer)
     successBlastTimer = null
@@ -726,8 +640,131 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-code {
-  word-break: break-all;
+.bridge-connect-page {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(130% 80% at 14% -8%, rgba(22, 187, 215, 0.18), transparent 65%),
+    radial-gradient(110% 72% at 86% -12%, rgba(70, 98, 255, 0.22), transparent 70%),
+    linear-gradient(180deg, #070d1d 0%, #070b1a 48%, #050816 100%);
+}
+
+.bridge-connect-background {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.bridge-connect-background__aurora {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 28% 14%, rgba(113, 242, 255, 0.12), transparent 48%),
+    radial-gradient(circle at 75% 9%, rgba(22, 187, 215, 0.12), transparent 44%),
+    radial-gradient(circle at 52% 86%, rgba(6, 182, 212, 0.1), transparent 56%);
+}
+
+.bridge-connect-background__photo {
+  position: absolute;
+  inset: -8%;
+  background-image: url('/img/bridge/goldengate_angle.jpeg');
+  background-position: center 30%;
+  background-size: cover;
+  opacity: 0.34;
+  filter: saturate(1.08) contrast(1.06) brightness(0.82);
+  transform: scale(1.06);
+  -webkit-mask-image: radial-gradient(circle at 50% 30%, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.86) 26%, rgba(0, 0, 0, 0.34) 58%, transparent 79%);
+  mask-image: radial-gradient(circle at 50% 30%, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.86) 26%, rgba(0, 0, 0, 0.34) 58%, transparent 79%);
+}
+
+.bridge-connect-background__noise {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(6, 11, 24, 0.12), rgba(6, 11, 24, 0.72));
+}
+
+.bridge-surface {
+  position: relative;
+  border-radius: 1.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background:
+    linear-gradient(150deg, rgba(13, 23, 46, 0.82), rgba(7, 14, 32, 0.84));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 26px 70px rgba(2, 7, 22, 0.5);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: bridge-surface-in 580ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.bridge-surface--warm {
+  background:
+    linear-gradient(165deg, rgba(16, 32, 64, 0.86), rgba(8, 16, 36, 0.86));
+}
+
+.bridge-token-btn {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 1.3rem;
+  border: 1px solid rgba(22, 187, 215, 0.55);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(22, 187, 215, 0.24), transparent 45%),
+    rgba(5, 12, 31, 0.84);
+  padding: 1.05rem 1rem;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.bridge-token-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(122, 224, 241, 0.8);
+  box-shadow: 0 14px 34px rgba(5, 35, 55, 0.45);
+}
+
+.bridge-token-btn__code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: clamp(1.6rem, 4.8vw, 2.4rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(165, 240, 250, 0.98);
+}
+
+.bridge-token-btn__hint {
+  font-size: 0.69rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.bridge-mini-card {
+  border-radius: 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: rgba(10, 18, 39, 0.68);
+  padding: 0.85rem 0.9rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.bridge-mini-card__label {
+  font-size: 0.62rem;
+  letter-spacing: 0.23em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.bridge-mini-card__value {
+  margin-top: 0.35rem;
+  font-size: 0.94rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .bridge-success-banner {
@@ -843,6 +880,17 @@ code {
   animation: bridge-success-spark 920ms var(--spark-delay) cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+@keyframes bridge-surface-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes bridge-success-card-in {
   from {
     opacity: 0;
@@ -926,6 +974,31 @@ code {
   100% {
     opacity: 0;
     transform: rotate(var(--spark-angle)) translateY(-11.25rem) scaleY(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .bridge-connect-background__photo {
+    opacity: 0.28;
+    -webkit-mask-image: radial-gradient(circle at 50% 18%, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.78) 30%, rgba(0, 0, 0, 0.25) 62%, transparent 88%);
+    mask-image: radial-gradient(circle at 50% 18%, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.78) 30%, rgba(0, 0, 0, 0.25) 62%, transparent 88%);
+  }
+
+  .bridge-token-btn__code {
+    letter-spacing: 0.3em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bridge-surface,
+  .bridge-success-banner,
+  .bridge-success-banner::before,
+  .bridge-success-blast,
+  .bridge-success-core,
+  .bridge-success-label,
+  .bridge-success-ring,
+  .bridge-success-spark {
+    animation: none !important;
   }
 }
 </style>
