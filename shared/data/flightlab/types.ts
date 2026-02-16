@@ -20,18 +20,23 @@ export interface FlightLabButton {
 
 /** MSFS2020 SimConnect variable state — keys match SimConnect naming */
 export interface FlightLabTelemetryState {
-  AIRSPEED_INDICATED: number        // knots
+  AIRSPEED_INDICATED: number        // knots (IAS)
+  AIRSPEED_TRUE: number             // knots (TAS)
   GROUND_VELOCITY: number           // knots
   VERTICAL_SPEED: number            // feet per minute
   PLANE_ALTITUDE: number            // feet MSL
   PLANE_PITCH_DEGREES: number       // degrees
   TURB_ENG_N1_1: number             // percent (0-100), engine 1
   TURB_ENG_N1_2: number             // percent (0-100), engine 2
+  ENG_COMBUSTION: boolean           // true = at least one engine running
   SIM_ON_GROUND: boolean
   GEAR_HANDLE_POSITION: boolean     // true = down, false = up
   FLAPS_HANDLE_INDEX: number        // 0-4 for A320
   BRAKE_PARKING_POSITION: boolean   // true = set, false = released
   AUTOPILOT_MASTER: boolean
+  TRANSPONDER_CODE: number          // squawk code (0-7777 octal)
+  ADF_ACTIVE_FREQUENCY: number      // Hz
+  ADF_STANDBY_FREQUENCY: number     // Hz
   timestamp?: number
 }
 

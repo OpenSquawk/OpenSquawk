@@ -8,7 +8,7 @@ export function normalizeBridgeToken(input: unknown) {
   if (!token) {
     return null
   }
-  if (token.length < 8 || token.length > 256) {
+  if (token.length < 6 || token.length > 256) {
     return null
   }
   return token

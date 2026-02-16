@@ -18,17 +18,22 @@ import type { FlightLabTelemetryState } from '../../../shared/data/flightlab/typ
 function mapBridgeTelemetry(raw: Record<string, any>): FlightLabTelemetryState {
   return {
     AIRSPEED_INDICATED: raw.ias_kt ?? raw.AIRSPEED_INDICATED ?? 0,
+    AIRSPEED_TRUE: raw.tas_kt ?? raw.AIRSPEED_TRUE ?? 0,
     GROUND_VELOCITY: raw.groundspeed_kt ?? raw.GROUND_VELOCITY ?? 0,
     VERTICAL_SPEED: raw.vertical_speed_fpm ?? raw.VERTICAL_SPEED ?? 0,
     PLANE_ALTITUDE: raw.altitude_ft_indicated ?? raw.altitude_ft_true ?? raw.PLANE_ALTITUDE ?? 0,
     PLANE_PITCH_DEGREES: raw.pitch_deg ?? raw.PLANE_PITCH_DEGREES ?? 0,
     TURB_ENG_N1_1: raw.n1_pct ?? raw.TURB_ENG_N1_1 ?? 0,
     TURB_ENG_N1_2: raw.n1_pct_2 ?? raw.TURB_ENG_N1_2 ?? 0,
+    ENG_COMBUSTION: !!(raw.eng_on ?? raw.ENG_COMBUSTION ?? false),
     SIM_ON_GROUND: !!(raw.on_ground ?? raw.SIM_ON_GROUND ?? false),
     GEAR_HANDLE_POSITION: !!(raw.gear_handle ?? raw.GEAR_HANDLE_POSITION ?? false),
     FLAPS_HANDLE_INDEX: raw.flaps_index ?? raw.FLAPS_HANDLE_INDEX ?? 0,
     BRAKE_PARKING_POSITION: !!(raw.parking_brake ?? raw.BRAKE_PARKING_POSITION ?? false),
     AUTOPILOT_MASTER: !!(raw.autopilot_master ?? raw.AUTOPILOT_MASTER ?? false),
+    TRANSPONDER_CODE: raw.transponder_code ?? raw.TRANSPONDER_CODE ?? 0,
+    ADF_ACTIVE_FREQUENCY: raw.adf_active_freq ?? raw.ADF_ACTIVE_FREQUENCY ?? 0,
+    ADF_STANDBY_FREQUENCY: raw.adf_standby_freq_hz ?? raw.ADF_STANDBY_FREQUENCY ?? 0,
   }
 }
 
@@ -54,5 +59,11 @@ export default defineEventHandler(async (event) => {
   const mapped = mapBridgeTelemetry(body)
   flightlabTelemetryStore.update(userId, mapped)
 
-  event.node.res.statusCode = 204
+  return {
+    // n1_pct: (mapped.TURB_ENG_N1_1 ?? 0) + 10,
+    // n1_pct_2: (mapped.TURB_ENG_N1_2 ?? 0) + 10,
+    // gear und parking break togglen
+    // gear_handle: !mapped.GEAR_HANDLE_POSITION,
+    parking_brake: !mapped.BRAKE_PARKING_POSITION,
+  }
 })
