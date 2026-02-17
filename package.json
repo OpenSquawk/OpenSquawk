@@ -13,7 +13,7 @@
     "postinstall": "nuxt prepare",
     "sharp:rebuild": "SHARP_IGNORE_GLOBAL_LIBVIPS=1 yarn rebuild sharp",
     "import:decision": "tsx --tsconfig tsconfig.scripts.json scripts/import-decision-tree.ts",
-    "test": "tsx --tsconfig tsconfig.tests.json --test server/utils/openai.test.ts"
+    "test": "tsx --tsconfig tsconfig.tests.json --test \"tests/**/*.test.ts\" \"server/**/*.test.ts\" \"shared/**/*.test.ts\""
   },
   "dependencies": {
     "@nuxt/image": "^2.0.0",
