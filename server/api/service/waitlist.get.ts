@@ -24,15 +24,18 @@ export default defineEventHandler(async () => {
   const weekAgo = new Date(now.getTime() - 7 * DAY_MS)
   const monthAgo = new Date(now.getTime() - 30 * DAY_MS)
 
-  const [count, latestEntry, recent7Days, recent30Days] = await Promise.all([
+  const [count, latestEntry, recent7Days, recent30Days, referralJoins, referralShareClicksResult] = await Promise.all([
     WaitlistEntry.countDocuments(),
     WaitlistEntry.findOne().sort({ joinedAt: -1 }).select({ joinedAt: 1 }).lean(),
     WaitlistEntry.countDocuments({ joinedAt: { $gte: weekAgo } }),
     WaitlistEntry.countDocuments({ joinedAt: { $gte: monthAgo } }),
+    WaitlistEntry.countDocuments({ referredBy: { $exists: true, $ne: null } }),
+    WaitlistEntry.aggregate([{ $group: { _id: null, total: { $sum: '$referralShareClicks' } } }]),
   ])
 
   const displayCount = computeDisplayCount(count, now)
   const boost = Math.max(0, displayCount - count)
+  const referralShareClicks = Number(referralShareClicksResult?.[0]?.total || 0)
 
   return {
     count,
@@ -40,8 +43,9 @@ export default defineEventHandler(async () => {
     syntheticBoost: boost,
     recent7Days,
     recent30Days,
+    referralJoins,
+    referralShareClicks,
     lastJoinedAt: latestEntry?.joinedAt ? latestEntry.joinedAt.toISOString() : null,
     generatedAt: now.toISOString(),
   }
 })
-

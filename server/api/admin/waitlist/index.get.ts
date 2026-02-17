@@ -15,6 +15,8 @@ type WaitlistListItem = {
   wantsProductUpdates: boolean
   updatesOptedInAt?: string
   invitationSentAt?: string
+  referralJoins: number
+  referredBy?: string
   invitation?: {
     id: string
     code: string
@@ -53,6 +55,8 @@ function mapWaitlistEntry(doc: any): WaitlistListItem {
     wantsProductUpdates: Boolean(doc.wantsProductUpdates),
     updatesOptedInAt: normalizeDate(doc.updatesOptedInAt),
     invitationSentAt: sentAt,
+    referralJoins: Number(doc.referralJoins || 0),
+    referredBy: doc.referredBy ? String(doc.referredBy) : undefined,
     invitation:
       invitationDoc && invitationDoc.code
         ? {
@@ -150,4 +154,3 @@ export default defineEventHandler(async (event) => {
     },
   }
 })
-

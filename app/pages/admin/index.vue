@@ -597,6 +597,7 @@
                       <div v-if="entry.notes" class="text-xs text-white/50">{{ entry.notes }}</div>
                       <div class="flex flex-wrap gap-2 text-[11px] text-white/40">
                         <span>Source: {{ entry.source || 'landing' }}</span>
+                        <span>Referrals: {{ entry.referralJoins }}</span>
                       </div>
                     </td>
                     <td>
@@ -1246,6 +1247,8 @@ interface WaitlistEntryItem {
   wantsProductUpdates: boolean
   updatesOptedInAt?: string
   invitationSentAt?: string
+  referralJoins: number
+  referredBy?: string
   invitation?: WaitlistInvitationInfo
 }
 

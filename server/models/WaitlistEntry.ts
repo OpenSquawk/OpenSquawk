@@ -16,6 +16,11 @@ export interface WaitlistEntryDocument extends mongoose.Document {
   invitationCode?: mongoose.Types.ObjectId
   invitationSentAt?: Date
   feedbackRequestedAt?: Date
+  referralToken?: string
+  referredBy?: mongoose.Types.ObjectId
+  referralJoins: number
+  referralShareClicks: number
+  lastReferralShareAt?: Date
 }
 
 const waitlistSchema = new mongoose.Schema<WaitlistEntryDocument>({
@@ -32,9 +37,13 @@ const waitlistSchema = new mongoose.Schema<WaitlistEntryDocument>({
   invitationCode: { type: Schema.Types.ObjectId, ref: 'InvitationCode' },
   invitationSentAt: { type: Date },
   feedbackRequestedAt: { type: Date },
+  referralToken: { type: String, uppercase: true, trim: true, unique: true, sparse: true, index: true },
+  referredBy: { type: Schema.Types.ObjectId, ref: 'WaitlistEntry' },
+  referralJoins: { type: Number, default: 0 },
+  referralShareClicks: { type: Number, default: 0 },
+  lastReferralShareAt: { type: Date },
 })
 
 export const WaitlistEntry =
   (mongoose.models.WaitlistEntry as mongoose.Model<WaitlistEntryDocument> | undefined) ||
   mongoose.model<WaitlistEntryDocument>('WaitlistEntry', waitlistSchema)
-

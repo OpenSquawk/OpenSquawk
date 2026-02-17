@@ -43,7 +43,6 @@ export default defineEventHandler(async () => {
     }
 
     const sentAt = new Date()
-
     if (!invitation) {
       const code = generateInvitationCode()
       invitation = await InvitationCode.create({

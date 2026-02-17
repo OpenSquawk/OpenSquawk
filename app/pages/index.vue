@@ -589,6 +589,11 @@
                   ({{ formatRelativeFromNow(waitlistStats?.lastJoinedAt) }})
                 </span>
               </p>
+              <p class="text-xs text-white/60">
+                Friend referrals:
+                <span class="font-medium text-white">{{ waitlistReferralJoinsDisplay }}</span>
+                joined via shared waitlist links.
+              </p>
             </template>
             <p class="text-xs text-white/60">
               Product and roadmap deep-dives now live on
@@ -622,6 +627,13 @@
                 class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 placeholder-white/40 outline-none focus:border-cyan-400"
               />
             </div>
+
+            <p
+              v-if="activeReferralToken"
+              class="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-xs text-cyan-100"
+            >
+              You are joining through a shared OpenSquawk link.
+            </p>
 
             <div
               v-if="waitlistCaptchaVisible"
@@ -680,7 +692,32 @@
             <p v-if="waitlistSuccess" class="text-sm text-green-300">
               Thank you! You are on the waitlist and we will reach out as soon as slots open up.
             </p>
-            <p v-else-if="waitlistError" class="text-sm text-red-300">{{ waitlistError }}</p>
+            <div
+              v-if="waitlistSuccess && waitlistReferralUrl"
+              class="space-y-3 rounded-2xl border border-cyan-300/35 bg-cyan-400/10 p-4"
+            >
+              <p class="text-sm font-medium text-cyan-100">Share your personal waitlist link</p>
+              <div class="rounded-xl border border-white/15 bg-[#0b1020]/70 px-3 py-2 text-xs text-cyan-100 break-all">
+                {{ waitlistReferralUrl }}
+              </div>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <button type="button" class="btn btn-ghost w-full" @click="copyWaitlistReferralLink">
+                  <v-icon icon="mdi-content-copy" size="18" />
+                  Copy link
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-ghost w-full"
+                  :disabled="!supportsNativeShare"
+                  @click="shareWaitlistReferralLink"
+                >
+                  <v-icon icon="mdi-share-variant" size="18" />
+                  Share
+                </button>
+              </div>
+              <p v-if="waitlistShareNotice" class="text-xs text-cyan-100/90">{{ waitlistShareNotice }}</p>
+            </div>
+            <p v-if="!waitlistSuccess && waitlistError" class="text-sm text-red-300">{{ waitlistError }}</p>
           </form>
         </div>
       </div>
@@ -1098,8 +1135,20 @@ interface WaitlistStats {
   syntheticBoost: number
   recent7Days: number
   recent30Days: number
+  referralJoins: number
+  referralShareClicks: number
   lastJoinedAt: string | null
   generatedAt: string
+}
+
+interface WaitlistJoinResponse {
+  success: boolean
+  alreadyJoined: boolean
+  joinedAt: string
+  referralToken?: string
+  referralUrl?: string
+  referralAttributed?: boolean
+  referralJoins?: number
 }
 
 interface CaptchaChallenge {
@@ -1176,6 +1225,12 @@ const normaliseCaptchaValue = (value: string) =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
 
+const normalizeReferralToken = (value: unknown) => {
+  if (typeof value !== 'string') return ''
+  const token = value.trim().toUpperCase()
+  return /^[A-F0-9]{8}$/.test(token) ? token : ''
+}
+
 const isCaptchaAnswerValid = (state: CaptchaState) => {
   const response = normaliseCaptchaValue(state.answer)
   if (!response) return false
@@ -1219,10 +1274,20 @@ const waitlistCaptchaReminder = ref('')
 const waitlistSubmitting = ref(false)
 const waitlistSuccess = ref(false)
 const waitlistError = ref('')
+const waitlistShareNotice = ref('')
+const waitlistReferralToken = ref('')
+const waitlistReferralUrl = ref('')
 const waitlistStats = ref<WaitlistStats | null>(null)
 const waitlistLoading = ref(false)
+const activeReferralToken = computed(() => {
+  const queryValue = route.query.ref
+  const firstValue = Array.isArray(queryValue) ? queryValue[0] : queryValue
+  return normalizeReferralToken(firstValue)
+})
+const supportsNativeShare = computed(() => import.meta.client && typeof navigator !== 'undefined' && typeof navigator.share === 'function')
 
 const waitlistCountDisplay = computed(() => formatNumber(waitlistStats.value?.displayCount ?? 0))
+const waitlistReferralJoinsDisplay = computed(() => formatNumber(waitlistStats.value?.referralJoins ?? 0))
 const waitlistLastJoinedFormatted = computed(() => {
   const iso = waitlistStats.value?.lastJoinedAt
   if (!iso) return '–'
@@ -1270,6 +1335,9 @@ async function submitWaitlist() {
 
   waitlistError.value = ''
   waitlistSuccess.value = false
+  waitlistShareNotice.value = ''
+  waitlistReferralToken.value = ''
+  waitlistReferralUrl.value = ''
   waitlistCaptchaReminder.value = ''
 
   const email = waitlistForm.email.trim()
@@ -1298,7 +1366,7 @@ async function submitWaitlist() {
   waitlistSubmitting.value = true
 
   try {
-    await api.post(
+    const response = await api.post<WaitlistJoinResponse>(
       '/api/service/waitlist',
       {
         name: waitlistForm.name,
@@ -1308,11 +1376,14 @@ async function submitWaitlist() {
         consentTerms: waitlistForm.consentTerms,
         wantsProductUpdates: waitlistForm.subscribeUpdates,
         source: 'landing-phase1-cta',
+        referralToken: activeReferralToken.value || undefined,
       },
       { auth: false },
     )
 
     waitlistSuccess.value = true
+    waitlistReferralToken.value = response.referralToken || ''
+    waitlistReferralUrl.value = response.referralUrl || ''
     await loadWaitlistStats()
 
     waitlistForm.name = ''
@@ -1330,6 +1401,55 @@ async function submitWaitlist() {
     waitlistError.value = message
   } finally {
     waitlistSubmitting.value = false
+  }
+}
+
+async function trackWaitlistShare(method: 'copy' | 'native-share') {
+  if (!waitlistReferralToken.value) return
+
+  try {
+    await api.post(
+      '/api/service/waitlist/referral-event',
+      {
+        event: 'share_clicked',
+        referralToken: waitlistReferralToken.value,
+        method,
+      },
+      { auth: false },
+    )
+    await loadWaitlistStats()
+  } catch (error) {
+    console.warn('Could not track referral share event', error)
+  }
+}
+
+async function copyWaitlistReferralLink() {
+  if (!waitlistReferralUrl.value || !import.meta.client || !navigator.clipboard?.writeText) return
+
+  try {
+    await navigator.clipboard.writeText(waitlistReferralUrl.value)
+    waitlistShareNotice.value = 'Share link copied.'
+    await trackWaitlistShare('copy')
+  } catch (error) {
+    waitlistShareNotice.value = 'Copy failed. You can copy the link manually.'
+  }
+}
+
+async function shareWaitlistReferralLink() {
+  if (!waitlistReferralUrl.value || !supportsNativeShare.value || !import.meta.client) return
+
+  try {
+    await navigator.share({
+      title: 'OpenSquawk waitlist',
+      text: 'Train ATC with me before flying VATSIM.',
+      url: waitlistReferralUrl.value,
+    })
+    waitlistShareNotice.value = 'Thanks for sharing.'
+    await trackWaitlistShare('native-share')
+  } catch (error: any) {
+    if (error?.name !== 'AbortError') {
+      waitlistShareNotice.value = 'Share failed. You can still copy the link.'
+    }
   }
 }
 
