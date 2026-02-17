@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, readBody } from 'h3'
 import { BridgeToken } from '../../models/BridgeToken'
 import { getBridgeTokenFromHeader } from '../../utils/bridge'
+import { logBridgeEvent } from '../../utils/bridgeLog'
 import { flightlabTelemetryStore } from '../../utils/flightlabTelemetry'
 import type { FlightLabTelemetryState } from '../../../shared/data/flightlab/types'
 
@@ -58,6 +59,15 @@ export default defineEventHandler(async (event) => {
   // Map raw bridge fields to FlightLab format and store
   const mapped = mapBridgeTelemetry(body)
   flightlabTelemetryStore.update(userId, mapped)
+
+  logBridgeEvent(bridgeToken, {
+    endpoint: '/api/bridge/data',
+    method: 'POST',
+    statusCode: 200,
+    color: '#d946ef',
+    summary: `Telemetry ${telemetryKeys.length} keys — IAS ${mapped.AIRSPEED_INDICATED.toFixed(0)}kt ALT ${mapped.PLANE_ALTITUDE.toFixed(0)}ft`,
+    data: mapped as unknown as Record<string, unknown>,
+  })
 
   return {
     // n1_pct: (mapped.TURB_ENG_N1_1 ?? 0) + 10,

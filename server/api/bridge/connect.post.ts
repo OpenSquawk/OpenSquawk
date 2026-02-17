@@ -1,6 +1,7 @@
 import { createError } from 'h3'
 import { requireUserSession } from '../../utils/auth'
 import { getBridgeTokenFromHeader } from '../../utils/bridge'
+import { logBridgeEvent } from '../../utils/bridgeLog'
 import { BridgeToken } from '../../models/BridgeToken'
 
 export default defineEventHandler(async (event) => {
@@ -35,7 +36,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Token konnte nicht gespeichert werden.' })
   }
 
-  return {
+  const result = {
     success: true,
     token: document.token,
     connectedAt: document.connectedAt?.toISOString() ?? now.toISOString(),
@@ -45,4 +46,15 @@ export default defineEventHandler(async (event) => {
       name: user.name,
     },
   }
+
+  logBridgeEvent(token, {
+    endpoint: '/api/bridge/connect',
+    method: 'POST',
+    statusCode: 200,
+    color: '#22c55e',
+    summary: `Linked to ${user.name || user.email}`,
+    data: result as unknown as Record<string, unknown>,
+  })
+
+  return result
 })
