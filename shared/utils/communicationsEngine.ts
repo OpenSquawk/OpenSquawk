@@ -190,6 +190,7 @@ export default function useCommunicationsEngine() {
         stack: [],
         off_schema_count: 0,
         radio_checks_done: 0,
+        session_id: '',
     })
     const currentStateId = ref<string>('')
     const communicationLog = ref<EngineLog[]>([])
@@ -421,7 +422,7 @@ export default function useCommunicationsEngine() {
             new Set(
                 entries
                     .map(entry => entry?.to)
-                    .filter((id): id is string => typeof id === 'string' && id.length)
+                    .filter((id): id is string => typeof id === 'string' && id.length > 0)
             )
         )
     })
@@ -546,7 +547,7 @@ export default function useCommunicationsEngine() {
     const mainFlowSlug = computed(() => runtimeSystem.value?.main || '')
 
     const availableFlows = computed(() => {
-        if (!runtimeSystem.value) return [] as Array<{ slug: string; name: string; description?: string; start: string }>
+        if (!runtimeSystem.value) return [] as Array<{ slug: string; name: string; description?: string; start: string; mode: string }>
         return flowOrder.value
             .filter((slug) => Boolean(runtimeSystem.value!.flows[slug]))
             .map((slug) => {
@@ -567,7 +568,7 @@ export default function useCommunicationsEngine() {
         if (typeof fetcher !== 'function') {
             throw new Error('Universal fetch is not available in this context')
         }
-        const data = await fetcher<RuntimeDecisionSystem>('/api/decision-flows/runtime')
+        const data = (await fetcher('/api/decision-flows/runtime')) as RuntimeDecisionSystem
         const activeSlug = slug && data.flows[slug] ? slug : data.main
         resetEngineFromSystem(data, { activeSlug })
     }

@@ -403,7 +403,7 @@ class TremoloEffect implements EffectNode {
         const frequency = Math.max(0.0001, this.oscillator.frequency.value)
         offset = Math.random() * (1 / frequency)
       }
-      this.oscillator.start(0, offset)
+      this.oscillator.start(this.context.currentTime + offset)
       this.started = true
     } catch {
       // oscillator already started
