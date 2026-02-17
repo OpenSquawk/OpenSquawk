@@ -1,6 +1,7 @@
 import { createError, readBody } from 'h3'
 import { BridgeToken } from '../../models/BridgeToken'
 import { getBridgeTokenFromHeader } from '../../utils/bridge'
+import { logBridgeEvent } from '../../utils/bridgeLog'
 import type { UserDocument } from '../../models/User'
 
 interface StatusBody {
@@ -46,7 +47,7 @@ export default defineEventHandler(async (event) => {
 
   const user = document.user as UserDocument | undefined
 
-  return {
+  const result = {
     token: document.token,
     connected: Boolean(user),
     user: user
@@ -61,4 +62,15 @@ export default defineEventHandler(async (event) => {
     connectedAt: document.connectedAt ? document.connectedAt.toISOString() : null,
     lastStatusAt: document.lastStatusAt ? document.lastStatusAt.toISOString() : null,
   }
+
+  logBridgeEvent(token, {
+    endpoint: '/api/bridge/status',
+    method: 'POST',
+    statusCode: 200,
+    color: '#eab308',
+    summary: `sim=${String(body.simConnected)} flight=${String(body.flightActive)}`,
+    data: body as Record<string, unknown>,
+  })
+
+  return result
 })

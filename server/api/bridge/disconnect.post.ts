@@ -1,6 +1,7 @@
 import { createError } from 'h3'
 import { requireUserSession } from '../../utils/auth'
 import { getBridgeTokenFromHeader } from '../../utils/bridge'
+import { logBridgeEvent } from '../../utils/bridgeLog'
 import { BridgeToken } from '../../models/BridgeToken'
 
 export default defineEventHandler(async (event) => {
@@ -45,6 +46,14 @@ export default defineEventHandler(async (event) => {
       },
     },
   )
+
+  logBridgeEvent(token, {
+    endpoint: '/api/bridge/disconnect',
+    method: 'POST',
+    statusCode: 200,
+    color: '#ef4444',
+    summary: `Unlinked from ${user.name || user.email}`,
+  })
 
   return {
     success: true,

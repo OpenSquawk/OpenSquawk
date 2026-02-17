@@ -259,12 +259,106 @@
 
       <p v-if="statusLoading" class="mt-4 text-xs uppercase tracking-[0.34em] text-white/[0.42]">Refreshing status …</p>
       <p v-if="statusError" class="mt-2 text-sm text-red-300">{{ statusError }}</p>
+
+      <!-- Live Log Panel -->
+      <section v-if="alreadyLinked" class="mt-6">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between rounded-t-2xl border border-white/[0.13] bg-[#0a1229]/90 px-5 py-3 text-left transition hover:bg-[#0d1633]"
+          :class="{ 'rounded-b-2xl': !logPanelOpen }"
+          @click="logPanelOpen = !logPanelOpen"
+        >
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-xs text-white/50">{{ logPanelOpen ? '▼' : '▶' }}</span>
+            <span class="text-sm font-semibold text-white/80">Server Log</span>
+            <span v-if="logEntries.length" class="rounded-full bg-white/10 px-2 py-0.5 text-[10px] tabular-nums text-white/50">
+              {{ logEntries.length }}
+            </span>
+          </span>
+          <span v-if="logPolling" class="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]"/>
+        </button>
+
+        <div
+          v-if="logPanelOpen"
+          class="rounded-b-2xl border border-t-0 border-white/[0.13] bg-[#060c1e]/95"
+        >
+          <!-- Telemetry summary -->
+          <div
+            v-if="latestTelemetry"
+            class="border-b border-white/[0.08] px-5 py-3"
+          >
+            <p class="mb-2 text-[10px] uppercase tracking-[0.24em] text-white/40">Latest Telemetry</p>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs">
+              <span class="text-white/70">IAS <span class="text-[#d946ef]">{{ latestTelemetry.AIRSPEED_INDICATED?.toFixed(0) ?? '—' }}</span>kt</span>
+              <span class="text-white/70">ALT <span class="text-[#d946ef]">{{ latestTelemetry.PLANE_ALTITUDE?.toFixed(0) ?? '—' }}</span>ft</span>
+              <span class="text-white/70">VS <span class="text-[#d946ef]">{{ latestTelemetry.VERTICAL_SPEED?.toFixed(0) ?? '—' }}</span>fpm</span>
+              <span class="text-white/70">GS <span class="text-[#d946ef]">{{ latestTelemetry.GROUND_VELOCITY?.toFixed(0) ?? '—' }}</span>kt</span>
+              <span class="text-white/70">HDG <span class="text-[#d946ef]">{{ latestTelemetry.PLANE_PITCH_DEGREES?.toFixed(1) ?? '—' }}</span>&deg;</span>
+              <span class="text-white/70">N1 <span class="text-[#d946ef]">{{ latestTelemetry.TURB_ENG_N1_1?.toFixed(1) ?? '—' }}</span>%</span>
+              <span class="text-white/70">XPDR <span class="text-[#d946ef]">{{ formatSquawk(latestTelemetry.TRANSPONDER_CODE) }}</span></span>
+              <span class="text-white/70">GND <span :class="latestTelemetry.SIM_ON_GROUND ? 'text-emerald-400' : 'text-amber-400'">{{ latestTelemetry.SIM_ON_GROUND ? 'YES' : 'NO' }}</span></span>
+              <span class="text-white/70">GEAR <span :class="latestTelemetry.GEAR_HANDLE_POSITION ? 'text-emerald-400' : 'text-amber-400'">{{ latestTelemetry.GEAR_HANDLE_POSITION ? 'DN' : 'UP' }}</span></span>
+              <span class="text-white/70">BRK <span :class="latestTelemetry.BRAKE_PARKING_POSITION ? 'text-rose-400' : 'text-emerald-400'">{{ latestTelemetry.BRAKE_PARKING_POSITION ? 'SET' : 'OFF' }}</span></span>
+            </div>
+          </div>
+
+          <!-- Log entries -->
+          <div
+            ref="logScrollContainer"
+            class="max-h-[420px] overflow-y-auto"
+          >
+            <div v-if="!logEntries.length" class="px-5 py-8 text-center text-xs text-white/30">
+              No log entries yet. Waiting for bridge activity …
+            </div>
+
+            <div
+              v-for="entry in logEntries"
+              :key="entry.id"
+              class="bridge-log-entry border-b border-white/[0.05] last:border-b-0"
+            >
+              <button
+                type="button"
+                class="flex w-full items-center gap-3 px-5 py-2.5 text-left transition hover:bg-white/[0.03]"
+                :class="{ 'bg-white/[0.02]': expandedLogIds.has(entry.id) }"
+                @click="toggleLogEntry(entry.id)"
+              >
+                <span
+                  class="h-2 w-2 shrink-0 rounded-full"
+                  :style="{ backgroundColor: entry.color }"
+                />
+                <span class="shrink-0 font-mono text-[10px] tabular-nums text-white/35">
+                  {{ formatLogTime(entry.timestamp) }}
+                </span>
+                <span class="font-mono text-xs font-medium" :style="{ color: entry.color }">
+                  {{ entry.method }}
+                </span>
+                <span class="truncate font-mono text-xs text-white/50">
+                  {{ entry.endpoint }}
+                </span>
+                <span class="ml-auto shrink-0 text-xs text-white/40">
+                  {{ entry.summary }}
+                </span>
+                <span v-if="entry.data" class="shrink-0 font-mono text-[10px] text-white/25">
+                  {{ expandedLogIds.has(entry.id) ? '▼' : '▶' }}
+                </span>
+              </button>
+
+              <div
+                v-if="entry.data && expandedLogIds.has(entry.id)"
+                class="border-t border-white/[0.04] bg-[#040812] px-5 py-3"
+              >
+                <pre class="max-h-[240px] overflow-auto font-mono text-[11px] leading-relaxed text-white/55">{{ JSON.stringify(entry.data, null, 2) }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useHead, useRoute, useRouter } from '#imports'
 import { useAuthStore } from '~/stores/auth'
@@ -308,6 +402,45 @@ const manualTokenError = ref('')
 const successBlastVisible = ref(false)
 const successBlastKey = ref(0)
 const autoConnectAttemptKey = ref('')
+
+// Log panel state
+interface LogEntry {
+  id: number
+  timestamp: number
+  endpoint: string
+  method: string
+  statusCode: number
+  color: string
+  summary: string
+  data?: Record<string, unknown>
+}
+
+const logPanelOpen = ref(false)
+const logEntries = ref<LogEntry[]>([])
+const logPolling = ref(false)
+const expandedLogIds = ref(new Set<number>())
+const logScrollContainer = ref<HTMLElement | null>(null)
+interface TelemetrySummary {
+  AIRSPEED_INDICATED: number
+  AIRSPEED_TRUE: number
+  GROUND_VELOCITY: number
+  VERTICAL_SPEED: number
+  PLANE_ALTITUDE: number
+  PLANE_PITCH_DEGREES: number
+  TURB_ENG_N1_1: number
+  TURB_ENG_N1_2: number
+  ENG_COMBUSTION: boolean
+  SIM_ON_GROUND: boolean
+  GEAR_HANDLE_POSITION: boolean
+  FLAPS_HANDLE_INDEX: number
+  BRAKE_PARKING_POSITION: boolean
+  AUTOPILOT_MASTER: boolean
+  TRANSPONDER_CODE: number
+  ADF_ACTIVE_FREQUENCY: number
+  ADF_STANDBY_FREQUENCY: number
+}
+
+const latestTelemetry = ref<TelemetrySummary | null>(null)
 
 const token = computed(() => {
   const value = route.query.token
@@ -579,6 +712,79 @@ async function copyToken() {
   }
 }
 
+function formatLogTime(ts: number) {
+  const d = new Date(ts)
+  return d.toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    + '.' + String(d.getMilliseconds()).padStart(3, '0')
+}
+
+function formatSquawk(code: unknown) {
+  if (typeof code !== 'number') return '----'
+  return String(code).padStart(4, '0')
+}
+
+function toggleLogEntry(id: number) {
+  const set = new Set(expandedLogIds.value)
+  if (set.has(id)) {
+    set.delete(id)
+  } else {
+    set.add(id)
+  }
+  expandedLogIds.value = set
+}
+
+let logPoller: ReturnType<typeof setInterval> | null = null
+let lastLogId = 0
+
+async function fetchLog() {
+  if (!hasToken.value) return
+  try {
+    const entries = await $fetch<LogEntry[]>('/api/bridge/log', {
+      headers: { 'x-bridge-token': token.value },
+      params: { since: lastLogId },
+    })
+    if (entries.length) {
+      logEntries.value.push(...entries)
+      const lastEntry = entries[entries.length - 1]!
+      lastLogId = lastEntry.id
+
+      // Extract latest telemetry from data endpoint entries
+      for (let i = entries.length - 1; i >= 0; i--) {
+        const entry = entries[i]!
+        if (entry.endpoint === '/api/bridge/data' && entry.data) {
+          latestTelemetry.value = entry.data as unknown as TelemetrySummary
+          break
+        }
+      }
+
+      // Auto-scroll to bottom
+      nextTick(() => {
+        if (logScrollContainer.value) {
+          logScrollContainer.value.scrollTop = logScrollContainer.value.scrollHeight
+        }
+      })
+    }
+  } catch {
+    // Ignore log fetch errors
+  }
+}
+
+function startLogPolling() {
+  stopLogPolling()
+  if (!hasToken.value) return
+  logPolling.value = true
+  fetchLog()
+  logPoller = setInterval(fetchLog, 2000)
+}
+
+function stopLogPolling() {
+  logPolling.value = false
+  if (logPoller) {
+    clearInterval(logPoller)
+    logPoller = null
+  }
+}
+
 let poller: ReturnType<typeof setInterval> | null = null
 
 function stopPolling() {
@@ -616,6 +822,15 @@ watch(token, () => {
   }
   successBlastVisible.value = false
 
+  // Reset log state
+  logEntries.value = []
+  lastLogId = 0
+  expandedLogIds.value = new Set()
+  latestTelemetry.value = null
+  if (logPanelOpen.value) {
+    startLogPolling()
+  }
+
   startPolling()
 })
 
@@ -647,6 +862,15 @@ watch(
   },
 )
 
+watch(logPanelOpen, (open) => {
+  if (open) {
+    startLogPolling()
+  } else {
+    stopLogPolling()
+  }
+})
+
+
 onMounted(() => {
   if (!initialized.value) {
     auth.fetchUser().catch(() => {})
@@ -656,6 +880,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopPolling()
+  stopLogPolling()
 
   if (successBlastTimer) {
     clearTimeout(successBlastTimer)
@@ -1012,6 +1237,21 @@ onBeforeUnmount(() => {
   .bridge-token-btn__code {
     letter-spacing: 0.3em;
   }
+}
+
+.bridge-log-entry pre {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.bridge-log-entry pre::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.bridge-log-entry pre::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
 }
 
 @media (prefers-reduced-motion: reduce) {

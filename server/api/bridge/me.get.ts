@@ -1,6 +1,7 @@
 import { createError } from 'h3'
 import { BridgeToken } from '../../models/BridgeToken'
 import { getBridgeTokenFromHeader } from '../../utils/bridge'
+import { logBridgeEvent } from '../../utils/bridgeLog'
 import type { UserDocument } from '../../models/User'
 
 export default defineEventHandler(async (event) => {
@@ -15,7 +16,7 @@ export default defineEventHandler(async (event) => {
   const document = await BridgeToken.findOne({ token }).populate('user', 'name email')
 
   if (!document || !document.user) {
-    return {
+    const result = {
       token,
       connected: false,
       user: null,
@@ -24,11 +25,21 @@ export default defineEventHandler(async (event) => {
       connectedAt: document?.connectedAt ? document.connectedAt.toISOString() : null,
       lastStatusAt: document?.lastStatusAt ? document.lastStatusAt.toISOString() : null,
     }
+
+    logBridgeEvent(token, {
+      endpoint: '/api/bridge/me',
+      method: 'GET',
+      statusCode: 200,
+      color: '#06b6d4',
+      summary: 'Status check — not connected',
+    })
+
+    return result
   }
 
   const bridgeUser = document.user as UserDocument
 
-  return {
+  const result = {
     token: document.token,
     connected: true,
     user: {
@@ -41,4 +52,14 @@ export default defineEventHandler(async (event) => {
     connectedAt: document.connectedAt?.toISOString() ?? document.updatedAt.toISOString(),
     lastStatusAt: document.lastStatusAt ? document.lastStatusAt.toISOString() : null,
   }
+
+  logBridgeEvent(token, {
+    endpoint: '/api/bridge/me',
+    method: 'GET',
+    statusCode: 200,
+    color: '#06b6d4',
+    summary: `Status check — connected as ${bridgeUser.name || bridgeUser.email}`,
+  })
+
+  return result
 })
