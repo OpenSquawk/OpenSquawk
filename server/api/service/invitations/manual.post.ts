@@ -23,7 +23,7 @@ function safeComparePassword(provided: string, expected: string) {
   return timingSafeEqual(providedDigest, expectedDigest)
 }
 
-export default defineEventHandler<ManualInviteResponse>(async (event) => {
+export default defineEventHandler(async (event): Promise<ManualInviteResponse> => {
   const config = useRuntimeConfig()
   const expectedPassword = (config.manualInvitePassword as string | undefined)?.trim() || ''
 

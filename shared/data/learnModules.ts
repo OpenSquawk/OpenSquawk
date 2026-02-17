@@ -1,5 +1,5 @@
 import { createBaseScenario, createScenarioSeries, digitsToWords, formatTemp, lettersToNato } from '~~/shared/learn/scenario'
-import type { ModuleDef, Scenario } from '~~/shared/learn/types'
+import type { Lesson, ModuleDef, Scenario } from '~~/shared/learn/types'
 
 function gradientArt(colors: string[]): string {
   const stops = colors
@@ -14,7 +14,7 @@ function randInt(min: number, max: number): number {
 }
 
 function sample<T>(values: readonly T[]): T {
-  return values[randInt(0, values.length - 1)]
+  return values[randInt(0, values.length - 1)]!
 }
 
 const identifierCharacters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -75,7 +75,7 @@ function createComplexTaxiScenario(): Scenario {
   return scenario
 }
 
-const fundamentalsLessons = [
+const fundamentalsLessons: Lesson[] = [
   {
     id: 'icao-alphabet',
     title: 'Decode ICAO Letters & Numbers',
@@ -564,7 +564,7 @@ const fundamentalsLessons = [
   }
 ]
 
-const readbackLessons = [
+const readbackLessons: Lesson[] = [
   {
     id: 'clearance-readback',
     title: 'Clearance Readback',
@@ -1810,7 +1810,7 @@ const readbackLessons = [
   }
 ]
 
-const decisionTreeLessons = [
+const decisionTreeLessons: Lesson[] = [
   {
     id: 'clearance-contact',
     title: 'Delivery: Initial contact',
@@ -2534,7 +2534,7 @@ const makeFullFlightGenerator = (reset = false) => () => {
   return fullFlightScenario()
 }
 
-const fullFlightLessons = [
+const fullFlightLessons: Lesson[] = [
   {
     id: 'full-clearance-contact',
     title: 'Delivery Contact',

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import { defineEventHandler } from 'h3'
 import { InvitationCode } from '../../../models/InvitationCode'
 import { WaitlistEntry } from '../../../models/WaitlistEntry'
@@ -51,7 +52,7 @@ export default defineEventHandler(async () => {
         channel: 'admin',
         label: `Waitlist: ${email}`,
       })
-      entry.invitationCode = invitation._id
+      entry.invitationCode = invitation._id as mongoose.Types.ObjectId
     }
 
     entry.invitationSentAt = sentAt

@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Missing user ID' })
   }
 
-  const body = await readBody<UpdateNotesBody>(event).catch(() => ({}))
+  const body = await readBody<UpdateNotesBody>(event).catch(() => ({}) as UpdateNotesBody)
   const rawNotes = typeof body.notes === 'string' ? body.notes.replace(/\r\n/g, '\n') : ''
   const notes = rawNotes.trim()
 

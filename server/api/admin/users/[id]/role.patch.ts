@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Missing user ID' })
   }
 
-  const body = await readBody<UpdateRoleBody>(event).catch(() => ({}))
+  const body = await readBody<UpdateRoleBody>(event).catch(() => ({}) as UpdateRoleBody)
   const role = body.role?.trim()
 
   if (!role || !['user', 'admin', 'dev'].includes(role)) {

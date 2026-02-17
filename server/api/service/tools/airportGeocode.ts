@@ -214,8 +214,9 @@ function createFeature(element: OsmElement): AirportFeature | null {
 
   if (lat === undefined || lon === undefined) return null
 
-  const { aliases, primaryAlias } = buildAliases(tags, featureType)
-  if (aliases.length === 0 || !primaryAlias) return null
+  const aliasResult = buildAliases(tags, featureType)
+  if (aliasResult.aliases.length === 0 || !aliasResult.primaryAlias) return null
+  const { aliases, primaryAlias } = aliasResult as { aliases: string[]; primaryAlias: string }
 
   const normalizedAliases = new Map<string, string>()
   for (const alias of aliases) {

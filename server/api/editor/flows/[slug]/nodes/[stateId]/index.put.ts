@@ -13,6 +13,7 @@ import {
 import { serializeNodeDocument } from '../../../../../../services/decisionFlowService'
 import type {
   DecisionNodeCondition,
+  DecisionNodeRole,
   DecisionNodeTrigger,
   DecisionNodeTransition,
 } from '~~/shared/types/decision'
@@ -58,7 +59,7 @@ export default defineEventHandler(async (event) => {
     if (!ROLE_SET.has(role)) {
       throw createError({ statusCode: 400, statusMessage: 'role must be pilot, atc or system' })
     }
-    node.role = role
+    node.role = role as DecisionNodeRole
   }
 
   if (typeof body.phase === 'string' && body.phase.trim()) {
@@ -84,7 +85,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (typeof body.autoBehavior === 'string') {
-    node.autoBehavior = body.autoBehavior.trim() || undefined
+    node.autoBehavior = (body.autoBehavior.trim() || undefined) as typeof node.autoBehavior
   }
 
   if (Array.isArray(body.actions)) {

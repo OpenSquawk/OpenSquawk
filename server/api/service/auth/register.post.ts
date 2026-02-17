@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import { createError, readBody } from 'h3'
 import { hashPassword, issueAuthTokens } from '../../../utils/auth'
 import { User } from '../../../models/User'
@@ -70,7 +71,7 @@ export default defineEventHandler(async (event) => {
     ...(waitlistNotes ? { adminNotes: waitlistNotes } : {}),
   })
 
-  invitation.usedBy = user._id
+  invitation.usedBy = user._id as mongoose.Types.ObjectId
   invitation.usedAt = now
   await invitation.save()
 

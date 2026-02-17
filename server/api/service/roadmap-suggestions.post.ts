@@ -45,10 +45,10 @@ export default defineEventHandler(async (event) => {
   })
 
   const dataEntries = [
-    ['Title', title],
-    ['Description', details],
-    ['Email', email || null],
-    ['Contact allowed', allowContact],
+    ['Title', title] as const,
+    ['Description', details] as const,
+    ['Email', email || null] as const,
+    ['Contact allowed', allowContact] as const,
   ]
 
   await sendAdminNotification({
@@ -59,6 +59,6 @@ export default defineEventHandler(async (event) => {
 
   return {
     success: true,
-    suggestionId: suggestion._id.toString(),
+    suggestionId: String(suggestion._id),
   }
 })

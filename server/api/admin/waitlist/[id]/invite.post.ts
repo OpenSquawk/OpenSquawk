@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import { createError, defineEventHandler, readBody } from 'h3'
 import { requireAdmin } from '../../../../utils/auth'
 import { WaitlistEntry } from '../../../../models/WaitlistEntry'
@@ -48,7 +49,7 @@ export default defineEventHandler(async (event) => {
       createdBy: admin._id,
     })
 
-    entry.invitationCode = invitation._id
+    entry.invitationCode = invitation._id as mongoose.Types.ObjectId
   }
 
   entry.invitationSentAt = now

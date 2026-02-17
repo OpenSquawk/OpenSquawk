@@ -99,10 +99,14 @@ export default defineEventHandler(async (event) => {
       const panY = body.layout.pan.y
       const parsedX = typeof panX === 'number' ? panX : Number(panX)
       const parsedY = typeof panY === 'number' ? panY : Number(panY)
-      if (Number.isFinite(parsedX)) layout.pan = layout.pan || { x: 0, y: 0 }
-      if (Number.isFinite(parsedX)) layout.pan.x = parsedX
-      if (Number.isFinite(parsedY)) layout.pan = layout.pan || { x: 0, y: 0 }
-      if (Number.isFinite(parsedY)) layout.pan.y = parsedY
+      if (Number.isFinite(parsedX)) {
+        layout.pan = layout.pan || { x: 0, y: 0 }
+        layout.pan.x = parsedX
+      }
+      if (Number.isFinite(parsedY)) {
+        layout.pan = layout.pan || { x: 0, y: 0 }
+        layout.pan.y = parsedY
+      }
     }
     if (Array.isArray(body.layout.groups)) {
       layout.groups = body.layout.groups
@@ -125,7 +129,7 @@ export default defineEventHandler(async (event) => {
             bounds,
           }
         })
-        .filter((group): group is NonNullable<typeof group> => Boolean(group))
+        .filter((group: any): group is NonNullable<typeof group> => Boolean(group))
     }
     flow.layout = layout
     flow.markModified('layout')

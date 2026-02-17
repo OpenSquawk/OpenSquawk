@@ -70,8 +70,8 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const startedAt = toISO(items[0].createdAt)
-  const updatedAt = toISO(items[items.length - 1].createdAt)
+  const startedAt = toISO(items[0]?.createdAt)
+  const updatedAt = toISO(items[items.length - 1]?.createdAt)
   const callsign = extractCallsign(items)
 
   return {
