@@ -13,6 +13,8 @@ interface WaitlistRequestBody {
   wantsProductUpdates?: boolean
 }
 
+type NotificationDataEntry = [string, ...unknown[]]
+
 export default defineEventHandler(async (event) => {
   const body = await readBody<WaitlistRequestBody>(event)
   const email = body.email?.trim().toLowerCase()
@@ -57,7 +59,7 @@ export default defineEventHandler(async (event) => {
       })
 
       if (!previouslyWantedUpdates && updateResult.created) {
-        const dataEntries = [
+        const dataEntries: NotificationDataEntry[] = [
           ['Email', email],
         ]
         if (name) {
@@ -107,7 +109,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const dataEntries = [
+  const dataEntries: NotificationDataEntry[] = [
     ['Email', email],
   ]
   if (name) {
@@ -132,4 +134,3 @@ export default defineEventHandler(async (event) => {
     joinedAt: entry.joinedAt,
   }
 })
-

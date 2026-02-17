@@ -5,12 +5,17 @@ import type {
   DecisionFlowModel,
   DecisionFlowSummary,
   DecisionNodeModel,
+  DecisionNodeRole,
   DecisionNodeTransition,
   RuntimeDecisionAutoTransition,
   RuntimeDecisionState,
   RuntimeDecisionTree,
   RuntimeDecisionSystem,
 } from '~~/shared/types/decision'
+
+const DECISION_NODE_ROLES: DecisionNodeRole[] = ['pilot', 'atc', 'system']
+const isDecisionNodeRole = (value: unknown): value is DecisionNodeRole =>
+  typeof value === 'string' && DECISION_NODE_ROLES.includes(value as DecisionNodeRole)
 
 export function serializeFlowDocument(doc: DecisionFlowDocument, nodeCount = 0): DecisionFlowModel {
   return {
@@ -25,7 +30,7 @@ export function serializeFlowDocument(doc: DecisionFlowDocument, nodeCount = 0):
     flags: doc.flags || {},
     policies: doc.policies || {},
     hooks: doc.hooks || {},
-    roles: Array.isArray(doc.roles) ? doc.roles : [],
+    roles: Array.isArray(doc.roles) ? doc.roles.filter(isDecisionNodeRole) : [],
     phases: Array.isArray(doc.phases) ? doc.phases : [],
     layout: doc.layout || undefined,
     metadata: doc.metadata || undefined,
@@ -206,7 +211,7 @@ async function buildRuntimeTreeForDoc(
     flags: flowDoc.flags || {},
     policies: flowDoc.policies || {},
     hooks: flowDoc.hooks || {},
-    roles: Array.isArray(flowDoc.roles) ? flowDoc.roles : [],
+    roles: Array.isArray(flowDoc.roles) ? flowDoc.roles.filter(isDecisionNodeRole) : [],
     phases: Array.isArray(flowDoc.phases) ? flowDoc.phases : [],
     states,
     entry_mode: flowDoc.isMain ? 'main' : flowDoc.entryMode || 'parallel',

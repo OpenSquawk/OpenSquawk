@@ -13,7 +13,7 @@ import type {
 
 export interface DecisionNodeDocument
   extends mongoose.Document,
-    Omit<DecisionNodeModel, 'stateId' | 'transitions'> {
+    Omit<DecisionNodeModel, 'stateId' | 'transitions' | 'createdAt' | 'updatedAt'> {
   flow: mongoose.Types.ObjectId
   stateId: string
   transitions: DecisionNodeTransition[]
@@ -175,7 +175,7 @@ const decisionNodeSchema = new mongoose.Schema<DecisionNodeDocument>(
     elseSayTemplate: { type: String },
     readbackRequired: { type: [String], default: () => [] },
     autoBehavior: { type: String },
-    actions: { type: [mongoose.Schema.Types.Mixed], default: () => [] },
+    actions: { type: [mongoose.Schema.Types.Mixed], default: () => [] } as any,
     handoff: {
       type: new mongoose.Schema(
         {

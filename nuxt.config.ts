@@ -3,6 +3,21 @@ export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
     devtools: {enabled: false},
     ssr: false,
+    typescript: {
+        strict: false,
+        typeCheck: true,
+        tsConfig: {
+            compilerOptions: {
+                noUncheckedIndexedAccess: false,
+                noImplicitOverride: false,
+                lib: ['ESNext', 'dom', 'dom.iterable', 'webworker'],
+                types: ['vite/client'],
+            },
+            vueCompilerOptions: {
+                strictTemplates: false,
+            },
+        },
+    },
     modules: [
       'vuetify-nuxt-module',
       '@nuxtjs/tailwindcss',
@@ -76,6 +91,17 @@ export default defineNuxtConfig({
     nitro: {
         experimental: {
             websocket: true,
+        },
+        typescript: {
+            strict: false,
+            tsConfig: {
+                compilerOptions: {
+                    noUncheckedIndexedAccess: false,
+                    noImplicitOverride: false,
+                    lib: ['ESNext', 'dom', 'dom.iterable', 'webworker'],
+                    types: ['node', 'vite/client'],
+                },
+            },
         },
     },
     image: {

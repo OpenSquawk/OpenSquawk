@@ -1156,10 +1156,11 @@ import type {
   DecisionFlowSummary,
   DecisionNodeCondition,
   DecisionNodeModel,
+  DecisionNodeRole,
   DecisionNodeTrigger,
   DecisionNodeTransition,
   DecisionNodeLayout,
-} from '~/shared/types/decision'
+} from '~~/shared/types/decision'
 
 definePageMeta({ middleware: 'require-admin' })
 
@@ -1230,7 +1231,9 @@ const telemetryParameters = [
 const comparisonOperators = ['>', '>=', '<', '<=', '==', '!=']
 const transitionTypes: DecisionNodeTransition['type'][] = ['next', 'ok', 'bad', 'timer', 'auto', 'interrupt', 'return']
 const autoTriggerTypes = ['telemetry', 'variable', 'expression']
-const roleOptions = ['pilot', 'atc', 'system']
+const roleOptions: DecisionNodeRole[] = ['pilot', 'atc', 'system']
+const isDecisionNodeRole = (value: string): value is DecisionNodeRole =>
+  roleOptions.includes(value as DecisionNodeRole)
 
 const nodeTriggerTypeOptions = [
   { value: 'auto_time', title: 'Auto (Zeit)', subtitle: 'Nach einer Verzögerung automatisch aktivieren' },
@@ -1393,7 +1396,7 @@ let lastNodeAutosaveError = ''
 const filteredFlows = computed(() => {
   const query = String(flowSearch.value ?? '').trim().toLowerCase()
   if (!query) return flows.value
-  return flows.value.filter((flow) =>
+  return flows.value.filter((flow: DecisionFlowSummary) =>
     [flow.name, flow.slug, flow.description].some((entry) => entry?.toLowerCase().includes(query))
   )
 })
@@ -1408,7 +1411,7 @@ const roleFilterOptions = computed(() => {
 const phaseFilterOptions = computed(() => {
   const phases = new Set<string>(['all'])
   flowForm.phases.forEach((phase) => phases.add(phase))
-  flowDetail.value?.nodes.forEach((node) => phases.add(node.phase))
+  flowDetail.value?.nodes.forEach((node: DecisionNodeModel) => phases.add(node.phase))
   return Array.from(phases)
 })
 
@@ -1420,9 +1423,9 @@ const nodeSelectorItems = computed(() => {
   const autopOnly = nodeFilter.autopOnly
   return flowDetail.value.nodes
     .slice()
-    .sort((a, b) => a.stateId.localeCompare(b.stateId))
-    .map((node) => {
-      const autopCount = (node.transitions || []).filter((t) => t.autoTrigger).length
+    .sort((a: DecisionNodeModel, b: DecisionNodeModel) => a.stateId.localeCompare(b.stateId))
+    .map((node: DecisionNodeModel) => {
+      const autopCount = (node.transitions || []).filter((t: DecisionNodeTransition) => t.autoTrigger).length
       return {
         id: node.stateId,
         title: node.title,
@@ -1441,8 +1444,8 @@ const nodeSelectorItems = computed(() => {
         matchesAuto: !autopOnly || autopCount > 0,
       }
     })
-    .filter((node) => node.matchesSearch && node.matchesRole && node.matchesPhase && node.matchesAuto)
-    .map(({ matchesSearch, matchesRole, matchesPhase, matchesAuto, ...rest }) => rest)
+    .filter((node: any) => node.matchesSearch && node.matchesRole && node.matchesPhase && node.matchesAuto)
+    .map(({ matchesSearch, matchesRole, matchesPhase, matchesAuto, ...rest }: { matchesSearch: boolean; matchesRole: boolean; matchesPhase: boolean; matchesAuto: boolean; [key: string]: any }) => rest)
 })
 
 const flowModeOptions: Array<{ value: DecisionFlowEntryMode; title: string; subtitle: string }> = [
@@ -1454,13 +1457,13 @@ const flowNodeOptions = computed(() => {
   if (!flowDetail.value) return []
   const items = flowDetail.value.nodes
     .slice()
-    .sort((a, b) => a.stateId.localeCompare(b.stateId))
-    .map((node) => ({
+    .sort((a: DecisionNodeModel, b: DecisionNodeModel) => a.stateId.localeCompare(b.stateId))
+    .map((node: DecisionNodeModel) => ({
       value: node.stateId,
       title: node.title ? `${node.stateId} — ${node.title}` : node.stateId,
     }))
 
-  const known = new Set(items.map((item) => item.value))
+  const known = new Set(items.map((item: { value: string }) => item.value))
   const extras = [flowForm.startState, ...flowForm.endStates]
     .map((state) => (typeof state === 'string' ? state.trim() : ''))
     .filter((state): state is string => Boolean(state && !known.has(state)))
@@ -1703,8 +1706,8 @@ watch(
     if (!flowDetail.value || flowInitializing) return
     const sanitized = roles
       .map((role) => (typeof role === 'string' ? role.trim() : ''))
-      .filter((role): role is string => Boolean(role))
-    flowDetail.value.flow.roles = Array.from(new Set(sanitized))
+      .filter((role): role is DecisionNodeRole => isDecisionNodeRole(role))
+    flowDetail.value.flow.roles = Array.from(new Set<DecisionNodeRole>(sanitized))
   },
   { deep: true }
 )

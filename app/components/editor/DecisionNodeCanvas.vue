@@ -214,7 +214,7 @@ import type {
   DecisionNodeModel,
   DecisionNodeTransition,
   DecisionNodeLayout,
-} from '~/shared/types/decision'
+} from '~~/shared/types/decision'
 
 const NODE_WIDTH = 280
 const NODE_HEIGHT = 160
@@ -403,14 +403,22 @@ const preparedNodes = computed(() => {
     const width = node.layout?.width ?? NODE_WIDTH
     const height = node.layout?.height ?? NODE_HEIGHT
     const accent = node.layout?.color || props.roleColors[node.role] || '#22d3ee'
-    const transitions = (node.model.transitions || []).slice(0, 3).map((transition) => ({
+    const transitions = (node.model.transitions || []).slice(0, 3).map((transition: DecisionNodeTransition) => ({
       key: transition.key || `${node.id}_${transition.target}_${transition.type}`,
       target: transition.target,
       type: transition.type,
       class: transitionClass(transition),
     }))
 
-    const baseLayout: DecisionNodeLayout = { ...(node.layout || {}) }
+    const baseLayout: DecisionNodeLayout = {
+      x: node.layout?.x ?? 0,
+      y: node.layout?.y ?? 0,
+      width: node.layout?.width,
+      height: node.layout?.height,
+      color: node.layout?.color,
+      icon: node.layout?.icon,
+      locked: node.layout?.locked,
+    }
     const displayLayout: DecisionNodeLayout = {
       ...baseLayout,
       x: (baseLayout.x ?? 0) + offset.x,
@@ -429,6 +437,8 @@ const preparedNodes = computed(() => {
     }
   })
 })
+
+type PreparedNode = typeof preparedNodes.value[number]
 
 const canvasBounds = computed(() => {
   const defaultWidth = MIN_WORKSPACE_WIDTH - WORKSPACE_PADDING
@@ -533,7 +543,7 @@ const edges = computed<EdgeDefinition[]>(() => {
       })
       const color = transitionColor(transition)
       const dashed = Boolean(transition.autoTrigger || transition.type === 'auto')
-      const highlighted = node.selected || source.highlighted
+      const highlighted = Boolean(node.selected || source.highlighted)
       const key = transition.key || `${node.id}_${transition.target}_${transition.type}`
 
       lines.push({
@@ -715,11 +725,12 @@ function buildSmoothPath(points: PathPoint[], radius = 32) {
     return ''
   }
 
-  const commands: string[] = [`M ${points[0].x} ${points[0].y}`]
+  const first = points[0]!
+  const commands: string[] = [`M ${first.x} ${first.y}`]
 
   for (let i = 1; i < points.length; i += 1) {
-    const prev = points[i - 1]
-    const curr = points[i]
+    const prev = points[i - 1]!
+    const curr = points[i]!
     const next = points[i + 1]
 
     if (!next) {
@@ -799,7 +810,7 @@ interface DragState {
 
 let dragState: DragState | null = null
 
-function onNodePointerDown(event: PointerEvent, node: ReturnType<typeof preparedNodes.value[number]>) {
+function onNodePointerDown(event: PointerEvent, node: PreparedNode) {
   if (event.button !== 0) return
   emit('select', node.id)
   emit('node-drag-start', node.id)
@@ -926,7 +937,7 @@ function onWheel(event: WheelEvent) {
   emit('update:pan', { x: nextPanX, y: nextPanY })
 }
 
-function nodeStyle(node: ReturnType<typeof preparedNodes.value[number]>) {
+function nodeStyle(node: PreparedNode) {
   return {
     width: `${node.width}px`,
     height: `${node.height}px`,

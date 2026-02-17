@@ -1095,7 +1095,7 @@ const timelineSteps = computed(() => decisionTrace.value?.candidateTimeline?.ste
 const timelineUsedFallback = computed(() => Boolean(decisionTrace.value?.candidateTimeline?.fallbackUsed))
 const traceAutoSelection = computed(() => decisionTrace.value?.autoSelection ?? null)
 const traceFallback = computed(() => decisionTrace.value?.fallback ?? null)
-const sessionLabel = computed(() => engineSessionId.value || flags.session_id || '-')
+const sessionLabel = computed(() => engineSessionId.value || flags.value.session_id || '-')
 
 const VALID_TRACE_STAGES: ReadonlySet<CandidateTraceStage> = new Set(
   [
@@ -1130,7 +1130,22 @@ const ensureTraceCalls = (calls: unknown): LLMDecisionTrace['calls'] => {
   }
   return calls
     .filter((entry): entry is Record<string, any> => isPlainObject(entry))
-    .map((entry) => cloneForTrace(entry))
+    .map((entry) => {
+      const normalized: LLMDecisionTrace['calls'][number] = {
+        stage: entry.stage === 'readback-check' ? 'readback-check' : 'decision',
+        request: isPlainObject(entry.request) ? cloneForTrace(entry.request) : {},
+      }
+      if ('response' in entry) {
+        normalized.response = cloneForTrace(entry.response)
+      }
+      if (typeof entry.rawResponseText === 'string') {
+        normalized.rawResponseText = entry.rawResponseText
+      }
+      if (typeof entry.error === 'string') {
+        normalized.error = entry.error
+      }
+      return normalized
+    })
 }
 
 const normalizeTraceFallback = (raw: unknown): LLMDecisionTrace['fallback'] | undefined => {
@@ -1799,7 +1814,7 @@ const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = 
       moduleId: 'pilot-monitoring',
       lessonId: currentState.value?.id || 'general',
       tag: options.tag || 'controller-reply',
-      sessionId: engineSessionId.value || flags.session_id || undefined,
+      sessionId: engineSessionId.value || flags.value.session_id || undefined,
     })
 
     if (response.success && response.audio) {
@@ -1843,7 +1858,7 @@ const speakPlainText = (text: string, options: SpeechOptions = {}) => {
         moduleId: 'pilot-monitoring',
         lessonId,
         tag: options.tag || 'announcement',
-        sessionId: engineSessionId.value || flags.session_id || undefined,
+        sessionId: engineSessionId.value || flags.value.session_id || undefined,
       })
 
       if (response.success && response.audio) {

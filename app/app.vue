@@ -72,7 +72,7 @@ const scheduleHotjarInitialization = () => {
   hotjarInitialized.value = true;
 
   window.setTimeout(() => {
-    initialize(HOTJAR_ID, HOTJAR_SCRIPT_VERSION);
+    initialize();
   }, HOTJAR_INIT_DELAY);
 };
 

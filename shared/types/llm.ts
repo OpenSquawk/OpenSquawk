@@ -46,6 +46,7 @@ export type CandidateTraceStage =
 export interface CandidateTraceEliminationContext {
     patterns?: Array<{ id?: string; pattern?: string; flags?: string }>
     transcript?: string
+    operator?: string
     condition?: {
         id?: string
         type: DecisionNodeCondition['type']

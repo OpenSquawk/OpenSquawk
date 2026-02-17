@@ -1045,7 +1045,7 @@
                               :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
                       <span v-if="segment.type === 'text'" class="cloze-chunk cloze-text">
                         {{
-                          displayCallsign(typeof segment.text === 'function' && scenario ? segment.text(scenario) : segment.text)
+                          displayCallsign(typeof segment.text === 'function' ? (scenario ? segment.text(scenario) : '') : segment.text)
                         }}
                       </span>
                       <label
@@ -1704,6 +1704,7 @@ type ExperienceOption = {
   description: string
   icon: string
   to: string
+  target?: '_self' | '_blank'
   matches: (path: string) => boolean
 }
 

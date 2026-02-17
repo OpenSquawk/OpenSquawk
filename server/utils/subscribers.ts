@@ -1,4 +1,5 @@
-import { UpdateSubscriber, UpdateSubscriberDocument } from '../models/UpdateSubscriber'
+import { UpdateSubscriber } from '../models/UpdateSubscriber'
+import type { UpdateSubscriberDocument } from '../models/UpdateSubscriber'
 
 interface RegisterSubscriberOptions {
   email: string

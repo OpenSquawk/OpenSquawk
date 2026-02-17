@@ -17,15 +17,6 @@ import {getServerRuntimeConfig} from './runtimeConfig'
 let openaiClient: OpenAI | null = null
 let cachedModel: string | null = null
 
-import https from 'node:https'
-
-const httpsAgent = new https.Agent({
-    keepAlive: true,
-    maxSockets: 50,        // bei Bedarf anpassen
-    maxFreeSockets: 10,
-    timeout: 0             // keine Socket-Idle-Timeouts durch Node
-})
-
 function ensureOpenAI(): OpenAI {
     if (!openaiClient) {
         const {openaiKey, openaiProject, openaiBaseUrl, llmModel} = getServerRuntimeConfig()
@@ -34,7 +25,6 @@ function ensureOpenAI(): OpenAI {
         }
         const clientOptions: ConstructorParameters<typeof OpenAI>[0] = {apiKey: openaiKey,
             defaultHeaders: { 'Connection': 'keep-alive' },
-            defaultHttpAgent: httpsAgent
         }
         if (openaiProject) {
             clientOptions.project = openaiProject
@@ -1055,7 +1045,7 @@ export async function routeDecision(input: LLMDecisionInput): Promise<LLMDecisio
         JSON.stringify(optimizedInput, null, 2),
     ].join('\n')
 
-    const callEntry = {
+    const callEntry: LLMDecisionTrace['calls'][number] = {
         stage: 'decision' as const,
         request: {
             systemPrompt,

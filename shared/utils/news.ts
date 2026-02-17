@@ -17,7 +17,18 @@ interface FrontMatter {
   readingTime?: string
 }
 
-const rawNewsModules = import.meta.glob('~~/content/news/*.md', {
+type ImportMetaWithGlob = ImportMeta & {
+  glob: (
+    pattern: string,
+    options?: {
+      query?: string
+      import?: string
+      eager?: boolean
+    }
+  ) => Record<string, unknown>
+}
+
+const rawNewsModules = (import.meta as ImportMetaWithGlob).glob('~~/content/news/*.md', {
   query: '?raw',
   import: 'default',
   eager: true,

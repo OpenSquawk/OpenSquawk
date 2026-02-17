@@ -42,7 +42,7 @@ const ACK = createState({
     name: 'Acknowledge',
     summary: 'Acknowledge pilot readback',
     triggers: [
-        { type: 'regex', pattern: 'roger', patternFlags: 'i' },
+        { id: 'ack-regex', type: 'regex', pattern: 'roger', patternFlags: 'i' },
     ],
 })
 
@@ -50,7 +50,7 @@ const TAXI = createState({
     name: 'Taxi clearance',
     summary: 'Pilot requesting taxi clearance',
     triggers: [
-        { type: 'regex', pattern: 'request', patternFlags: 'i' },
+        { id: 'taxi-regex', type: 'regex', pattern: 'request', patternFlags: 'i' },
     ],
 })
 
@@ -58,7 +58,7 @@ const HOLD = createState({
     name: 'Hold position',
     summary: 'Pilot requesting hold position',
     triggers: [
-        { type: 'regex', pattern: 'request', patternFlags: 'i' },
+        { id: 'hold-regex', type: 'regex', pattern: 'request', patternFlags: 'i' },
     ],
 })
 
@@ -74,7 +74,16 @@ const runtimeSystem: RuntimeDecisionSystem = {
     flows: {
         main: {
             slug: 'main',
+            schema_version: '1.0',
+            name: 'Main Flow',
             start_state: 'START',
+            end_states: [],
+            variables: {},
+            flags: {},
+            policies: {},
+            hooks: {},
+            roles: ['pilot', 'atc', 'system'],
+            phases: ['ground'],
             entry_mode: 'main',
             states: {
                 START,
@@ -126,7 +135,18 @@ describe('routeDecision', () => {
             ],
         }
 
-        const result = await routeDecision(input)
+        const previousApiKey = process.env.OPENAI_API_KEY
+        process.env.OPENAI_API_KEY = ''
+        let result: Awaited<ReturnType<typeof routeDecision>>
+        try {
+            result = await routeDecision(input)
+        } finally {
+            if (previousApiKey === undefined) {
+                delete process.env.OPENAI_API_KEY
+            } else {
+                process.env.OPENAI_API_KEY = previousApiKey
+            }
+        }
 
         assert.equal(result.trace?.calls.length, 1)
         assert.ok(result.trace?.calls[0]?.error)
@@ -135,4 +155,3 @@ describe('routeDecision', () => {
         assert.equal(result.pilot_intent ?? null, null)
     })
 })
-

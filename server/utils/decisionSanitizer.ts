@@ -203,7 +203,8 @@ export function sanitizeAutoTrigger(raw: any): DecisionNodeAutoTrigger | undefin
   } else if (normalizedType === 'variable') {
     trigger.variable = asTrimmedString(payload.variable) ?? ''
     trigger.operator = asComparisonOperatorValue(payload.operator)
-    trigger.value = asVariableValue(payload.value, '')
+    const variableValue = asVariableValue(payload.value, '')
+    trigger.value = typeof variableValue === 'boolean' ? String(variableValue) : variableValue
   }
 
   trigger.once = asBoolean(payload.once, true)

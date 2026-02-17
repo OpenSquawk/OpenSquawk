@@ -10,6 +10,8 @@ interface UpdatesRequestBody {
   source?: string
 }
 
+type NotificationDataEntry = [string, ...unknown[]]
+
 export default defineEventHandler(async (event) => {
   const body = await readBody<UpdatesRequestBody>(event)
   const email = body.email?.trim().toLowerCase()
@@ -38,7 +40,7 @@ export default defineEventHandler(async (event) => {
   })
 
   if (result.created) {
-    const dataEntries = [
+    const dataEntries: NotificationDataEntry[] = [
       ['Email', email],
       ['Name', name || null],
       ['Source', source],

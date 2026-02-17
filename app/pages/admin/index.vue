@@ -1085,9 +1085,51 @@ interface DecisionTraceCall {
   error?: string
 }
 
+interface DecisionTraceCandidate {
+  id: string
+  flow?: string
+  summary?: string
+}
+
+interface DecisionTraceEliminationContext {
+  patterns?: Array<{ id?: string; pattern?: string; flags?: string }>
+  condition?: {
+    id?: string
+    type: 'variable_value' | 'regex' | 'regex_not'
+    variable?: string
+    operator?: string
+    value?: unknown
+    pattern?: string
+    patternFlags?: string
+  }
+  actualValue?: unknown
+  expectedValue?: unknown
+}
+
+interface DecisionTraceElimination {
+  candidate: DecisionTraceCandidate
+  kind: 'regex' | 'condition'
+  reason: string
+  context?: DecisionTraceEliminationContext
+}
+
+interface DecisionTraceStep {
+  stage: string
+  label: string
+  candidates: DecisionTraceCandidate[]
+  eliminated?: DecisionTraceElimination[]
+  note?: string
+}
+
 interface DecisionTraceMetadata {
   calls?: DecisionTraceCall[]
   fallback?: { used?: boolean; reason?: string; selected?: string }
+  candidateTimeline?: {
+    steps: DecisionTraceStep[]
+    fallbackUsed?: boolean
+    autoSelected?: DecisionTraceCandidate | null
+  }
+  autoSelection?: { id: string; flow: string; reason?: string }
 }
 
 interface CandidateSnapshot {
@@ -1122,6 +1164,7 @@ interface TransmissionMetadata {
     controller_say_tpl?: string
     off_schema?: boolean
     radio_check?: boolean
+    activate_flow?: string | { slug: string; mode?: string }
   }
   decisionTrace?: DecisionTraceMetadata
   context?: TransmissionContextSnapshot
@@ -1408,6 +1451,32 @@ function describeTransition(transition: any) {
   if (transition.condition) details.push(`cond: ${transition.condition}`)
 
   return details.length ? `${destination} (${details.join(', ')})` : destination
+}
+
+function describeElimination(entry: DecisionTraceElimination | null | undefined): string {
+  if (!entry || typeof entry !== 'object') {
+    return ''
+  }
+  if (entry.kind === 'regex' && entry.context?.patterns?.length) {
+    const patterns = entry.context.patterns
+      .map((pattern) => pattern?.pattern)
+      .filter((value): value is string => Boolean(value))
+      .join(', ')
+    return patterns ? `Patterns: ${patterns}` : entry.reason
+  }
+  if (entry.kind === 'condition' && entry.context?.condition) {
+    const condition = entry.context.condition
+    if (condition.type === 'regex' || condition.type === 'regex_not') {
+      const flag = condition.pattern ? `/${condition.pattern}/${condition.patternFlags || 'i'}` : ''
+      return flag ? `Condition: ${condition.type} ${flag}` : entry.reason
+    }
+    const variable = condition.variable || 'value'
+    const operator = condition.operator || '=='
+    const expected = entry.context?.expectedValue ?? condition.value ?? '—'
+    const actual = entry.context?.actualValue ?? '—'
+    return `${variable} ${operator} ${expected} (actual: ${actual})`
+  }
+  return entry.reason
 }
 
 function isExpired(expiresAt?: string) {
