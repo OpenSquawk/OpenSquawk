@@ -193,7 +193,6 @@ export default defineEventHandler(async (event) => {
             const tts = await normalize.audio.speech.create({
                 model: TTS_MODEL,
                 voice,
-                format: "wav",
                 input: normalized,
                 speed
             });
