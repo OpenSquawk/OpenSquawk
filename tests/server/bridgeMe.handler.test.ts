@@ -21,7 +21,10 @@ describe('/api/bridge/me handler', () => {
 
     await assert.rejects(
       () => handler(createEvent()),
-      (error: any) => error?.statusCode === 401
+      (error: any) =>
+        error?.statusCode === 401 &&
+        error?.statusMessage === 'Unauthorized' &&
+        error?.message === 'x-bridge-token header fehlt oder ist ungültig.'
     )
   })
 

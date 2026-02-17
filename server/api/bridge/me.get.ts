@@ -8,7 +8,11 @@ export default defineEventHandler(async (event) => {
   const token = getBridgeTokenFromHeader(event)
 
   if (!token) {
-    throw createError({ statusCode: 401, statusMessage: 'x-bridge-token header fehlt oder ist ungültig.' })
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Unauthorized',
+      message: 'x-bridge-token header fehlt oder ist ungültig.',
+    })
   }
 
   console.info(`\x1b[36m[bridge:me]\x1b[0m token=\x1b[96m${token.slice(0, 6)}...\x1b[0m request received`)
