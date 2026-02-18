@@ -4,7 +4,7 @@ import type {FlightLabScenario} from './types'
 export const takeoffEddf: FlightLabScenario = {
     id: 'takeoff-eddf',
     title: 'Dein erster Start',
-    description: 'Gemeinsam vom Rollfeld in Frankfurt bis auf 10.000 Fuß - Schritt für Schritt, in deinem Tempo.',
+    description: 'Gemeinsam von der Startbahn in Frankfurt auf 10.000 Fuß - Schritt für Schritt in deinem Tempo.',
     icon: 'mdi-airplane-takeoff',
     aircraft: 'Airbus A320',
     airport: 'Frankfurt (EDDF)',
@@ -14,8 +14,8 @@ export const takeoffEddf: FlightLabScenario = {
         // --- Phase 0: Welcome ---
         {
             id: 'welcome',
-            atcMessage: 'Hey! Willkommen im Cockpit. Ich bin dein Co-Pilot heute und führe dich durch deinen ersten Start. Schau dich ruhig erstmal um. Sieht nach vielen Knöpfen aus, oder? Keine Sorge, ich sag dir genau welche du wann anfassen musst. Den Rest ignorieren wir einfach.',
-            explanation: 'Du sitzt auf dem linken Sitz - dem Captain-Sitz. Rechts neben dir wäre normalerweise der Co-Pilot.',
+            atcMessage: 'Willkommen im Flugdeck. Ich begleite dich heute bei deinem ersten Start. Schau dich kurz um. Es gibt viele Knöpfe, aber ich sage dir genau, was wann wichtig ist. Alles andere lassen wir weg.',
+            explanation: 'Du sitzt links auf dem Sitz des Kapitäns. Rechts sitzt sonst der Kopilot.',
             instructorNote: 'Teilnehmer ist gerade angekommen. Kurz orientieren lassen.',
             buttons: [
                 {
@@ -45,8 +45,8 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'welcome_comfort',
-            atcMessage: 'Klar, nimm dir einen Moment. Direkt vor dir hast du zwei große Bildschirme. Der linke zeigt Geschwindigkeit und Höhe, der rechte zeigt die Navigation. In der Mitte zwischen den Sitzen sind die Schubhebel, mit denen steuerst du die Triebwerke. Und links neben deinem Sitz ist der Sidestick, das ist quasi das Lenkrad. Wenn du soweit bist, gehts los.',
-            explanation: 'PFD links, ND rechts, Schubhebel in der Mitte, Sidestick links.',
+            atcMessage: 'Klar, nimm dir kurz Zeit. Vor dir sind zwei große Anzeigen: links Geschwindigkeit und Höhe, rechts die Strecke. In der Mitte zwischen den Sitzen sind die Schubhebel für die Triebwerke. Links neben deinem Sitz ist der Steuerknüppel. Wenn du bereit bist, starten wir.',
+            explanation: 'Hauptanzeige links, Streckenanzeige rechts, Schubhebel in der Mitte, Steuerknüppel links.',
             instructorNote: 'Teilnehmer orientiert sich. Zeit lassen.',
             buttons: [
                 {
@@ -58,7 +58,7 @@ export const takeoffEddf: FlightLabScenario = {
                 },
                 {
                     id: 'still_nervous',
-                    label: 'Was ist der Sidestick?',
+                    label: 'Was ist der Steuerknüppel?',
                     icon: 'mdi-timer-sand',
                     next: 'welcome_comfort_2',
                     type: 'comfort'
@@ -68,9 +68,9 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'welcome_comfort_2',
-            atcMessage: 'Der Sidestick ist der kleine Steuerknüppel links neben deinem Sitz. Damit steuerst du das Flugzeug - nach hinten ziehen heißt Nase hoch, nach vorne drücken Nase runter, und seitlich für Kurven. Im Gegensatz zu Boeing hat Airbus kein großes Steuerhorn vor dir, sondern diesen kompakten Stick. Fass ihn ruhig mal an, du merkst dass er sich in alle Richtungen bewegen lässt.',
-            explanation: 'Sidestick = Steuerknüppel links. Hinten = Nase hoch, vorne = Nase runter.',
-            instructorNote: 'Sidestick-Erklärung. Teilnehmer soll ihn mal anfassen.',
+            atcMessage: 'Der Steuerknüppel sitzt links neben deinem Sitz. Ziehst du ihn nach hinten, geht die Nase hoch. Drückst du ihn nach vorn, geht sie runter. Seitlich steuerst du Kurven. Beim Airbus gibt es statt Steuerhorn diesen kleinen Knüppel. Fass ihn kurz an und bewege ihn leicht.',
+            explanation: 'Steuerknüppel links. Hinten = Nase hoch, vorne = Nase runter.',
+            instructorNote: 'Erklärung zum Steuerknüppel. Teilnehmer soll ihn kurz anfassen.',
             buttons: [
                 {
                     id: 'ready_after_comfort_2',
@@ -84,8 +84,8 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'welcome_detail',
-            atcMessage: 'Ganz kurz von links nach rechts: Links die großen Displays sind deine Fluginstrumente - Geschwindigkeit, Höhe, Lage. In der Mitte oben das ist das Overhead Panel mit Schaltern für Systeme wie Klimaanlage und Hydraulik, das lassen wir heute in Ruhe. Zwischen den Sitzen die zwei Hebel sind die Schubhebel für die Triebwerke. Und das Pedestal darunter hat Funk und Transponder. Für den Start brauchst du eigentlich nur Schubhebel, Sidestick und den Fahrwerk-Hebel.',
-            explanation: 'Für den Start relevant: Schubhebel, Sidestick, Fahrwerk-Hebel.',
+            atcMessage: 'Kurz von links nach rechts: Links sind die Fluginstrumente für Geschwindigkeit, Höhe und Lage. Oben in der Mitte ist das Deckenfeld mit Schaltern für Systeme, das lassen wir heute in Ruhe. Zwischen den Sitzen sind die Schubhebel. Darunter sind Funk und Transponder. Für den Start brauchen wir nur Schubhebel, Steuerknüppel und Fahrwerkshebel.',
+            explanation: 'Für den Start wichtig: Schubhebel, Steuerknüppel, Fahrwerkshebel.',
             buttons: [
                 {
                     id: 'ready_after_detail',
@@ -106,7 +106,7 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'welcome_questions',
-            atcMessage: 'Der Fahrwerk-Hebel ist rechts vorne, direkt neben dem unteren Bildschirm in der Mitte. Der sieht aus wie ein kleines Rad. Den brauchst du nachher erst wenn wir in der Luft sind. Aber keine Sorge, ich sag dir genau wann.',
+            atcMessage: 'Der Fahrwerkshebel ist vorn rechts neben dem unteren Mittelschirm. Er sieht wie ein kleines Rad aus. Du brauchst ihn erst nach dem Abheben. Ich sage dir genau wann.',
             buttons: [
                 {
                     id: 'ready_after_questions',
@@ -120,13 +120,13 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'seatbelt_on',
-            atcMessage: 'Bevor wir loslegen, schalten wir ganz am Anfang die Seat Belt Signs ein. Schau oben aufs Overhead-Panel und stell den Schalter auf ON. Das ist unser Start-Setup, damit alle angeschnallt bleiben.',
-            explanation: 'Seat Belt Signs vor dem Start auf ON setzen.',
-            instructorNote: 'Seat Belt Signs vor dem Briefing einschalten lassen.',
+            atcMessage: 'Bevor wir loslegen, schalten wir die Anschnallzeichen ein. Schau oben auf das Deckenfeld und stell den Schalter auf EIN. So bleiben alle angeschnallt.',
+            explanation: 'Anschnallzeichen vor dem Start auf EIN setzen.',
+            instructorNote: 'Anschnallzeichen vor der Einweisung einschalten lassen.',
             buttons: [
                 {
                     id: 'seatbelt_on_done',
-                    label: 'Seat Belt Signs sind EIN (warte auf Bestätigung)',
+                    label: 'Anschnallzeichen sind EIN (warte auf Bestätigung)',
                     icon: 'mdi-seatbelt',
                     next: 'seatbelt_on',
                     type: 'primary'
@@ -142,16 +142,16 @@ export const takeoffEddf: FlightLabScenario = {
                 logic: 'AND',
             },
             simConditionTimeoutMs: 15000,
-            simConditionHelpMessage: 'Seat Belt Signs am Overhead-Panel auf ON stellen.',
+            simConditionHelpMessage: 'Anschnallzeichen am Deckenfeld auf EIN stellen.',
             simConditionNextPhase: 'briefing',
         },
 
         // --- Phase 1: Briefing ---
         {
             id: 'briefing',
-            atcMessage: 'Okay, kurzes Briefing. Wir stehen auf der Startbahn 25 Center in Frankfurt, einer der längsten Bahnen Europas. Unser Plan: Du schiebst die Schubhebel nach vorne, wir beschleunigen, bei 140 Knoten ziehst du den Sidestick nach hinten und wir heben ab. Dann Fahrwerk einfahren und auf 10.000 Fuß steigen. Ich sag dir jeden Handgriff vorher an, du musst dir nichts merken.',
+            atcMessage: 'Kurze Einweisung: Ich erkläre dir erstmal nur den Plan, wir machen noch nichts. Wir stehen auf Bahn 25 Mitte in Frankfurt. Du schiebst die Schubhebel vor, wir beschleunigen, bei 140 Knoten ziehst du den Steuerknüppel sanft nach hinten. Dann Fahrwerk einfahren und auf 10.000 Fuß steigen. Ich kündige jeden Schritt an.',
             explanation: 'Startbahn 25C, Frankfurt. Ziel: 10.000 Fuß (ca. 3 km Höhe).',
-            instructorNote: 'Briefing Phase. Zusammenfassung der Schritte.',
+            instructorNote: 'Einweisungsphase. Schritte zusammenfassen.',
             buttons: [
                 {
                     id: 'lets_go',
@@ -179,7 +179,7 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'briefing_duration',
-            atcMessage: 'Der Start selbst dauert nur ein paar Minuten. Mit Erklärungen rechne so mit 10 bis 15 Minuten insgesamt. Wir gehen in deinem Tempo, kein Stress.',
+            atcMessage: 'Der Start dauert nur wenige Minuten. Mit Erklärungen sind es etwa 10 bis 15 Minuten. Wir gehen in deinem Tempo.',
             buttons: [
                 {
                     id: 'go_after_duration',
@@ -193,7 +193,7 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'briefing_safety',
-            atcMessage: 'Gar kein Problem! Wir sind im Simulator, hier kann nichts kaputtgehen. Wenn du was falsch machst, korrigieren wir es einfach. Im schlimmsten Fall starten wir die Situation nochmal. Das ist ja genau der Sinn vom Simulator, üben ohne Risiko.',
+            atcMessage: 'Kein Problem. Wir sind im Flugsimulator, hier geht nichts kaputt. Fehler korrigieren wir sofort, notfalls starten wir neu. Genau dafür üben wir hier.',
             buttons: [
                 {
                     id: 'go_after_safety',
@@ -209,15 +209,15 @@ export const takeoffEddf: FlightLabScenario = {
         // --- Phase 2: On the Runway ---
         {
             id: 'runway',
-            atcMessage: 'So, wir stehen auf der Startbahn. Schau mal auf den linken Bildschirm vor dir, das ist dein Primary Flight Display. Die gelbe Bandanzeige links zeigt die Geschwindigkeit in Knoten, rechts die Höhe in Fuß. In der Mitte siehst du den künstlichen Horizont, der zeigt dir die Fluglage. Gerade steht alles auf Null, logisch, wir stehen ja noch. Jetzt leg mal deine rechte Hand auf die Schubhebel in der Mitte.',
-            explanation: 'PFD: Speed-Tape links, Altitude rechts, Fluglage in der Mitte. Hand an die Schubhebel.',
+            atcMessage: 'Wir stehen auf der Startbahn. Schau auf die linke Hauptanzeige vor dir. Links siehst du die Geschwindigkeit in Knoten, rechts die Höhe in Fuß. In der Mitte ist der künstliche Horizont für die Lage. Jetzt leg die rechte Hand auf die Schubhebel.',
+            explanation: 'Hauptanzeige: Geschwindigkeit links, Höhe rechts, Lage in der Mitte. Hand an die Schubhebel.',
             instructorNote: 'Teilnehmer soll die Instrumente lesen und die Schubhebel finden.',
             buttons: [
                 {
                     id: 'see_runway',
                     label: 'Hand liegt auf den Hebeln',
                     icon: 'mdi-hand-pointing-right',
-                    next: 'engines_pre',
+                    next: 'engines_spool',
                     type: 'primary'
                 },
                 {
@@ -234,60 +234,23 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'runway_help',
-            atcMessage: 'Die Schubhebel sind die zwei Hebel zwischen den Sitzen, auf dem Mittelpedestal. Sie stehen gerade auf Leerlauf, also ganz hinten. Gleich schiebst du sie nach vorne. Leg mal eine Hand drauf, damit du weißt wie sie sich anfühlen.',
+            atcMessage: 'Die Schubhebel sind die zwei Hebel zwischen den Sitzen auf der Mittelkonsole. Sie stehen im Leerlauf ganz hinten. Gleich schiebst du sie nach vorn. Leg eine Hand darauf.',
             buttons: [
                 {
                     id: 'see_now',
                     label: 'Hab sie, weiter!',
                     icon: 'mdi-hand-pointing-right',
-                    next: 'engines_pre',
+                    next: 'engines_spool',
                     type: 'primary'
                 },
             ],
             sounds: [],
         },
 
-        // --- Phase 3: Engine Spool Up ---
-        {
-            id: 'engines_pre',
-            atcMessage: 'Gut. Jetzt zum Schub setzen. Du schiebst gleich die Schubhebel zügig nach vorne bis etwa zur Hälfte des Wegs. Schau dabei auf den Bildschirm oben in der Mitte, da siehst du die N1-Anzeige. Das ist die Drehzahl der Triebwerke in Prozent. Wir brauchen ungefähr 65 Prozent für den Start. Bereit?',
-            explanation: 'Schubhebel nach vorne schieben. Ziel: N1 ca. 65%.',
-            instructorNote: 'Vor Schub-Erhöhung. Erklären wo N1 abzulesen ist.',
-            buttons: [
-                {
-                    id: 'engines_ready',
-                    label: 'Bereit, Schub setzen!',
-                    icon: 'mdi-engine',
-                    next: 'engines_spool',
-                    type: 'primary'
-                },
-                {
-                    id: 'engines_nervous',
-                    label: 'Was ist N1?',
-                    icon: 'mdi-help-circle',
-                    next: 'engines_loud_info',
-                    type: 'info'
-                },
-            ],
-            sounds: [],
-        },
-        {
-            id: 'engines_loud_info',
-            atcMessage: 'N1 ist die Drehzahl des vorderen Fans im Triebwerk, angegeben in Prozent der maximalen Drehzahl. Bei 85 Prozent haben wir genug Schub für den Start. Du siehst die Anzeige auf dem oberen mittleren Display, zwei runde Anzeigen für das linke und rechte Triebwerk. Wenn du die Hebel nach vorne schiebst, steigen die Werte.',
-            buttons: [
-                {
-                    id: 'engines_ok',
-                    label: 'Verstanden, Schub setzen!',
-                    icon: 'mdi-engine',
-                    next: 'engines_spool',
-                    type: 'primary'
-                },
-            ],
-            sounds: [],
-        },
+        // --- Phase 3: Schub setzen ---
         {
             id: 'engines_spool',
-            atcMessage: 'Los, schieb die Hebel jetzt nach vorne! Schön zügig. Schau auf die N1-Anzeige oben... die Werte steigen. Wir wollen so auf 85 Prozent kommen. Wenn der Schub steht, lösen wir die Parkbremse. Die Parkbremse ist der Hebel mit dem P unten am Pedestal, den ziehst du raus.',
+            atcMessage: 'Los, schieb die Hebel jetzt zügig nach vorn. Die N1-Werte steigen, Ziel sind etwa 65 Prozent. Wenn der Schub steht, löse die Parkbremse. Das ist der Hebel mit dem P unten an der Mittelkonsole.',
             explanation: 'Schubhebel nach vorne auf 85% N1. Dann Parkbremse lösen.',
             instructorNote: 'Schub wird gesetzt. Teilnehmer bedient die Hebel selbst.',
             buttons: [
@@ -328,12 +291,12 @@ export const takeoffEddf: FlightLabScenario = {
                 logic: 'AND',
             },
             simConditionTimeoutMs: 20000,
-            simConditionHelpMessage: 'Schub-Hebel nach vorne schieben bis N1 bei etwa 65 Prozent. Dann die Parkbremse lösen.',
+            simConditionHelpMessage: 'Schubhebel nach vorn schieben bis N1 bei etwa 85 Prozent. Dann die Parkbremse lösen.',
             simConditionNextPhase: 'takeoff_roll',
         },
         {
             id: 'engines_loud_comfort',
-            atcMessage: 'Die Parkbremse ist unten am Pedestal, zwischen den Sitzen, etwas weiter vorne. Ein kleiner Hebel mit einem P drauf. Den ziehst du einfach raus oder drückst ihn, je nach Sim-Modell. Sobald die Bremse gelöst ist, rollt das Flugzeug los.',
+            atcMessage: 'Die Parkbremse ist unten an der Mittelkonsole zwischen den Sitzen, etwas weiter vorn. Zieh oder drück ihn, je nach Simulationsmodell. Sobald die Bremse gelöst ist, rollt das Flugzeug los.',
             buttons: [
                 {
                     id: 'continue_after_loud',
@@ -347,7 +310,7 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'engines_pause_phase',
-            atcMessage: 'Kein Stress, machen wir Schritt für Schritt. Erstens: Schubhebel nach vorne bis die N1 auf etwa 85 steht. Zweitens: Parkbremse lösen. Mehr ist es nicht. Probier es in Ruhe.',
+            atcMessage: 'Kein Stress, Schritt für Schritt: Erst Schubhebel nach vorn bis N1 etwa 65. Dann Parkbremse lösen. Mehr ist es nicht. Probier es in Ruhe.',
             instructorNote: 'Teilnehmer braucht Hilfe. Ggf. mündlich die Hebel zeigen.',
             buttons: [
                 {
@@ -364,13 +327,13 @@ export const takeoffEddf: FlightLabScenario = {
         // --- Phase 4: Takeoff Roll ---
         {
             id: 'takeoff_roll',
-            atcMessage: 'Wir rollen! Das Flugzeug beschleunigt jetzt auf der Bahn. Schau auf das Speed-Tape links auf deinem Display, die Geschwindigkeit steigt. Halte das Flugzeug mit den Ruderpedalen auf der Mittellinie. Die Pedale unten an deinen Füßen, links und rechts. Leichte Korrekturen reichen. Bei 140 Knoten sage ich dir Bescheid, dann ziehst du den Sidestick.',
-            explanation: 'Ruderpedal für Richtung halten. Bei 140 Knoten rotieren.',
-            instructorNote: 'Startlauf. Teilnehmer hält Richtung mit Pedalen. Speed-Tape beobachten.',
+            atcMessage: 'Wir rollen. Das Flugzeug beschleunigt auf der Bahn. Schau links auf das Geschwindigkeitsband, die Zahl steigt. Halte mit den Ruderpedalen die Mittellinie. Kleine Korrekturen reichen. Bei 140 Knoten ziehst du den Steuerknüppel.',
+            explanation: 'Ruderpedale halten die Richtung. Bei 140 Knoten abheben.',
+            instructorNote: 'Startlauf. Teilnehmer hält Richtung mit Pedalen. Geschwindigkeitsband beobachten.',
             buttons: [
                 {
                     id: 'roll_continue',
-                    label: 'Speed steigt!',
+                    label: 'Geschwindigkeit steigt!',
                     icon: 'mdi-arrow-right-circle',
                     next: 'rotation',
                     type: 'primary'
@@ -403,12 +366,12 @@ export const takeoffEddf: FlightLabScenario = {
                 logic: 'AND',
             },
             simConditionTimeoutMs: 45000,
-            simConditionHelpMessage: 'Warte bis die Geschwindigkeit 140 Knoten erreicht. Schau auf den Speed-Tape links am Display.',
+            simConditionHelpMessage: 'Warte bis die Geschwindigkeit 140 Knoten erreicht. Schau links auf das Geschwindigkeitsband.',
             simConditionNextPhase: 'rotation',
         },
         {
             id: 'roll_rumble_explain',
-            atcMessage: 'Die Ruderpedal sind die zwei Pedale unten am Boden bei deinen Füßen. Die funktionieren wie beim Auto-Lenken, nur mit den Füßen. Linkes Pedal drücken lenkt nach links, rechtes nach rechts. Beim Rollen auf der Bahn halten die das Bugrad gerade. Nur sanfte Korrekturen, nicht treten!',
+            atcMessage: 'Die Ruderpedale sind unten bei deinen Füßen. Mit ihnen lenkst du am Boden. Linkes Pedal lenkt nach links, rechtes nach rechts. Beim Startlauf hältst du damit das Bugrad auf der Linie. Nur sanft drücken.',
             buttons: [
                 {
                     id: 'rumble_ok',
@@ -422,7 +385,7 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'roll_afraid_comfort',
-            atcMessage: 'Das ist normal am Anfang. Nur ganz leicht gegentreten, kleine Bewegungen reichen. Nicht ruckartig, sondern sanft. Das Flugzeug reagiert mit etwas Verzögerung. Schau geradeaus auf die Mittellinie der Bahn und halte die Pedale ruhig. Überkorrekturen sind der typische Anfängerfehler.',
+            atcMessage: 'Das ist am Anfang normal. Drück nur leicht gegen, kleine Bewegungen reichen. Das Flugzeug reagiert etwas verzögert. Schau auf die Mittellinie und halte die Pedale ruhig. Zu starke Gegenbewegungen machen es unruhig.',
             instructorNote: 'Richtungsprobleme beim Startlauf. Ggf. mündlich korrigieren.',
             buttons: [
                 {
@@ -444,7 +407,7 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'roll_pause',
-            atcMessage: 'Okay, ganz einfach: Füße locker auf die Pedale, Blick geradeaus auf die Mittelmarkierung der Bahn. Wenn die Nase nach links zieht, rechtes Pedal ein klein bisschen drücken. Und umgekehrt. So hältst du die Richtung auf der Bahn.',
+            atcMessage: 'Ganz einfach: Füße locker auf die Pedale, Blick auf die Mittelmarkierung. Zieht die Nase nach links, drückst du leicht rechts. Und umgekehrt. So hältst du die Richtung.',
             buttons: [
                 {
                     id: 'pause_continue',
@@ -460,14 +423,14 @@ export const takeoffEddf: FlightLabScenario = {
         // --- Phase 5: Rotation ---
         {
             id: 'rotation',
-            atcMessage: 'Rotate! Jetzt den Sidestick sanft nach hinten ziehen! Nicht ruckartig, sondern gleichmäßig. Schau auf den Horizont auf deinem Display, die Nase geht hoch. Wir wollen etwa 15 Grad Pitch, das siehst du an der gelben Markierung über dem Horizont. Gut so, wir heben ab!',
-            explanation: 'Sidestick nach hinten ziehen. Ziel: ca. 15° Pitch (Nase hoch).',
-            instructorNote: 'Rotation. Teilnehmer zieht Sidestick. Pitch-Guidance beachten.',
+            atcMessage: 'Jetzt ziehst du den Steuerknüppel sanft an dich ran, bis der künstliche Horizont zwischen 10 und 20 steht.',
+            explanation: 'Steuerknüppel nach hinten ziehen. Ziel: etwa 15 Grad Nicklage.',
+            instructorNote: 'Abheben. Teilnehmer zieht den Steuerknüppel. Auf die Nicklage achten.',
             buttons: [
                 {id: 'rotation_wow', label: 'Wir fliegen!', icon: 'mdi-star', next: 'gear_retract', type: 'primary'},
                 {
                     id: 'rotation_belly',
-                    label: 'Wie viel Pitch?',
+                    label: 'Wie viel Nicklage?',
                     icon: 'mdi-angle-acute',
                     next: 'rotation_belly_explain',
                     type: 'info'
@@ -489,18 +452,18 @@ export const takeoffEddf: FlightLabScenario = {
                 conditions: [
                     {variable: 'SIM_ON_GROUND', operator: '==', value: false},
                     {variable: 'PLANE_PITCH_DEGREES', operator: '>', value: 5},
-                    // und auf 1500ft sein einfach um mehr zeit zu haben
-                    {variable: 'PLANE_ALTITUDE', operator: '>', value: 1500},
+                    // Höhe als Zusatzkriterium für stabilen Übergang
+                    {variable: 'PLANE_ALTITUDE', operator: '>', value: 2000},
                 ],
                 logic: 'AND',
             },
             simConditionTimeoutMs: 15000,
-            simConditionHelpMessage: 'Sidestick sanft nach hinten ziehen bis die Nase hochgeht.',
+            simConditionHelpMessage: 'Steuerknüppel sanft nach hinten ziehen, bis die Nase hochgeht.',
             simConditionNextPhase: 'gear_retract',
         },
         {
             id: 'rotation_belly_explain',
-            atcMessage: 'Auf deinem PFD siehst du den künstlichen Horizont in der Mitte. Da sind Linien mit Zahlen dran, die zeigen den Pitch-Winkel. 15 Grad heißt die Flugzeugmarkierung steht zwei Striche über dem Horizont. Zu viel Pitch und wir werden zu langsam, zu wenig und wir steigen kaum. 15 Grad ist der Sweet Spot für den A320.',
+            atcMessage: 'In der Hauptanzeige siehst du den künstlichen Horizont mit Linien und Zahlen. Daran liest du die Nicklage ab. 15 Grad heißt: die Flugzeugmarke steht etwa zwei Striche über dem Horizont. Zu viel macht uns zu langsam, zu wenig lässt uns kaum steigen. 15 Grad passt für den A320.',
             buttons: [
                 {
                     id: 'belly_ok',
@@ -516,9 +479,9 @@ export const takeoffEddf: FlightLabScenario = {
         // --- Phase 6: Gear Retraction ---
         {
             id: 'gear_retract',
-            atcMessage: 'Sehr gut, wir sind in der Luft! Jetzt brauchen wir die Räder nicht mehr. Siehst du den Fahrwerk-Hebel rechts neben dem unteren Display in der Mitte? Der mit dem kleinen Rad-Symbol? Den schiebst du jetzt nach oben auf UP. Damit fahren die Räder in den Rumpf ein und wir haben weniger Luftwiderstand.',
-            explanation: 'Fahrwerk-Hebel auf UP. Reduziert Luftwiderstand im Steigflug.',
-            instructorNote: 'Fahrwerk einfahren. Teilnehmer betätigt Gear-Lever.',
+            atcMessage: 'Sehr gut, wir sind in der Luft. Jetzt brauchen wir die Räder nicht mehr. Rechts neben dem unteren Mittelschirm ist der Fahrwerkshebel mit kleinem Radsymbol. Schieb ihn nach vorne. So fahren die Räder in den Rumpf und der Luftwiderstand sinkt.',
+            explanation: 'Fahrwerkshebel auf OBEN. Verringert den Luftwiderstand im Steigflug.',
+            instructorNote: 'Fahrwerk einfahren. Teilnehmer betätigt den Fahrwerkshebel.',
             buttons: [
                 {
                     id: 'gear_know',
@@ -533,7 +496,7 @@ export const takeoffEddf: FlightLabScenario = {
                     icon: 'mdi-help-circle',
                     next: 'gear_explain',
                     type: 'comfort',
-                    instructorAlert: 'Teilnehmer findet Gear-Lever nicht'
+                    instructorAlert: 'Teilnehmer findet den Fahrwerkshebel nicht'
                 },
                 {
                     id: 'gear_continue',
@@ -553,12 +516,12 @@ export const takeoffEddf: FlightLabScenario = {
                 logic: 'AND',
             },
             simConditionTimeoutMs: 10000,
-            simConditionHelpMessage: 'Fahrwerk-Hebel nach oben schieben. Der Hebel ist links neben dem Mitteldisplay.',
+            simConditionHelpMessage: 'Fahrwerkshebel nach oben schieben. Der Hebel ist rechts neben dem unteren Mittelschirm.',
             simConditionNextPhase: 'climb',
         },
         {
             id: 'gear_explain',
-            atcMessage: 'Der Fahrwerk-Hebel ist am Instrumentenpanel in der Mitte, rechts neben dem unteren Bildschirm. Sieht aus wie ein kleines Rad an einem Hebel. Drei Positionen: DOWN unten, OFF Mitte, UP oben. Schieb ihn ganz nach oben auf UP. Du hörst dann ein Rumpeln, das sind die Räder die einfahren und die Klappen die sich schließen.',
+            atcMessage: 'Der Fahrwerkshebel ist vorn an der Mittelkonsole, rechts neben dem unteren Schirm. Er sieht wie ein kleines Rad aus. Drei Stellungen: UNTEN, MITTE, OBEN. Schieb ihn ganz nach OBEN. Dann hörst du ein Rumpeln, weil Räder und Klappen einfahren.',
             buttons: [
                 {
                     id: 'gear_explained',
@@ -574,9 +537,9 @@ export const takeoffEddf: FlightLabScenario = {
         // --- Phase 7: Climb ---
         {
             id: 'climb',
-            atcMessage: 'Perfekt, Fahrwerk ist drin. Jetzt steigen wir weiter. Halte den Sidestick so, dass der Pitch bei etwa 15 Grad bleibt. Schau auf dein Speed-Tape links, wir wollen die Geschwindigkeit bei etwa 200 Knoten halten. Wenn die Speed zu hoch wird, Nase etwas höher. Wenn sie zu niedrig wird, Nase etwas senken. Das ist das Grundprinzip vom Fliegen: Pitch kontrolliert die Geschwindigkeit.',
-            explanation: 'Pitch halten für ca. 200 Knoten. Pitch hoch = langsamer, Pitch runter = schneller.',
-            instructorNote: 'Steigflug. Teilnehmer lernt Pitch-Speed-Zusammenhang.',
+            atcMessage: 'Perfekt, Fahrwerk ist drin. Jetzt steigen wir weiter. Halte die Nicklage bei etwa 15 Grad. Links auf dem Geschwindigkeitsband wollen wir rund 200 Knoten. Wird die Geschwindigkeit zu hoch, nimm die Nase etwas höher. Wird sie zu niedrig, senke die Nase leicht. So steuerst du den Steigflug.',
+            explanation: 'Nicklage halten für etwa 200 Knoten. Nase hoch = langsamer, Nase runter = schneller.',
+            instructorNote: 'Steigflug. Teilnehmer lernt den Zusammenhang von Nicklage und Geschwindigkeit.',
             buttons: [
                 {
                     id: 'climb_height',
@@ -594,11 +557,11 @@ export const takeoffEddf: FlightLabScenario = {
                 },
                 {
                     id: 'climb_queasy',
-                    label: 'Die Speed schwankt stark',
+                    label: 'Die Geschwindigkeit schwankt stark',
                     icon: 'mdi-swap-vertical',
                     next: 'climb_queasy_comfort',
                     type: 'comfort',
-                    instructorAlert: 'Teilnehmer hat Probleme mit Speed-Kontrolle'
+                    instructorAlert: 'Teilnehmer hat Probleme mit der Geschwindigkeitskontrolle'
                 },
             ],
             sounds: [
@@ -607,18 +570,18 @@ export const takeoffEddf: FlightLabScenario = {
             ],
             simConditions: {
                 conditions: [
-                    {variable: 'PLANE_ALTITUDE', operator: '>', value: 5000},
+                    {variable: 'PLANE_ALTITUDE', operator: '>', value: 7000},
                     {variable: 'VERTICAL_SPEED', operator: '>', value: 1000},
                 ],
                 logic: 'AND',
             },
             simConditionTimeoutMs: 30000,
-            simConditionHelpMessage: 'Steigrate erhöhen auf etwa 2000 Fuß pro Minute. Sidestick leicht nach hinten halten.',
+            simConditionHelpMessage: 'Steigrate auf etwa 2000 Fuß pro Minute erhöhen. Steuerknüppel leicht nach hinten halten.',
             simConditionNextPhase: 'climb_high',
         },
         {
             id: 'climb_height_info',
-            atcMessage: 'Schau auf das Altitude-Tape rechts auf deinem PFD. Da siehst du die aktuelle Höhe in Fuß. Wir wollen auf 10.000 Fuß, also noch ein Stück. Oben rechts siehst du auch den vorgewählten Zielwert. Einfach weiter steigen!',
+            atcMessage: 'Schau rechts auf das Höhenband der Hauptanzeige. Dort steht die aktuelle Höhe in Fuß. Ziel sind 10.000 Fuß, also noch ein Stück. Oben rechts siehst du auch den eingestellten Zielwert.',
             buttons: [
                 {
                     id: 'height_continue',
@@ -632,8 +595,8 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'climb_queasy_comfort',
-            atcMessage: 'Das ist völlig normal am Anfang. Der Trick ist: Nicht ständig am Sidestick korrigieren. Stell den Pitch ein und lass ihn stehen. Kleine Schwankungen gleicht das Flugzeug selbst aus. Wenn die Speed 10 Knoten daneben liegt, dann eine kleine Korrektur. Weniger ist mehr beim Fliegen.',
-            instructorNote: 'Speed-Kontrolle Probleme. Auf Over-Controlling hinweisen.',
+            atcMessage: 'Das ist am Anfang normal. Korrigiere nicht ständig am Steuerknüppel. Stell die Nicklage ein und lass sie kurz stehen. Kleine Schwankungen gleicht das Flugzeug selbst aus. Erst bei etwa 10 Knoten Abweichung leicht nachsteuern.',
+            instructorNote: 'Probleme mit der Geschwindigkeitskontrolle. Auf zu häufiges Korrigieren hinweisen.',
             buttons: [
                 {
                     id: 'queasy_continue',
@@ -654,7 +617,7 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'climb_pause',
-            atcMessage: 'Also, das Grundprinzip: Der Schub ist fest eingestellt und bleibt wo er ist. Mit dem Sidestick steuerst du den Pitch, also wie steil die Nase nach oben zeigt. Mehr Pitch bedeutet mehr Steigrate, aber die Geschwindigkeit sinkt. Weniger Pitch bedeutet weniger Steigrate, dafür wird die Geschwindigkeit höher. Deine Aufgabe ist den Pitch so zu halten, dass die Speed bei ungefähr 200 Knoten bleibt.',
+            atcMessage: 'Grundprinzip: Der Schub bleibt eingestellt. Mit dem Steuerknüppel regelst du die Nicklage, also wie steil die Nase steigt. Mehr Nicklage heißt mehr Steigen, aber weniger Geschwindigkeit. Weniger Nicklage heißt weniger Steigen, dafür mehr Geschwindigkeit. Halte so ungefähr 200 Knoten.',
             buttons: [
                 {
                     id: 'pause_done',
@@ -668,9 +631,9 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'climb_high',
-            atcMessage: 'Sehr gut, wir kommen unserem Ziel näher! Schau auf den Höhenmesser rechts. Noch ein paar Tausend Fuß. Halte den Pitch stabil, die Speed passt. Gleich bei 10.000 Fuß drückst du die Nase langsam nach vorne in den Geradeausflug.',
+            atcMessage: 'Sehr gut, wir kommen dem Ziel näher. Schau auf den Höhenmesser rechts. Noch ein paar Tausend Fuß. Halte die Nicklage stabil, die Geschwindigkeit passt. Bei 10.000 Fuß drückst du die Nase langsam nach vorn in den Geradeausflug.',
             explanation: 'Weiter steigen bis 10.000 Fuß. Dann Nase senken für Reiseflug.',
-            instructorNote: 'Kurz vor Level-off. Nächste Aktion ankündigen.',
+            instructorNote: 'Kurz vor dem Geradeausflug. Nächste Aktion ankündigen.',
             buttons: [
                 {
                     id: 'almost_there',
@@ -695,13 +658,13 @@ export const takeoffEddf: FlightLabScenario = {
         // --- Phase 8: Level-off & Debrief ---
         {
             id: 'leveloff',
-            atcMessage: '10.000 Fuß! Jetzt drückst du den Sidestick langsam nach vorne bis die Steigrate auf dem Variometer auf Null steht. Das Variometer ist die vertikale Geschwindigkeitsanzeige rechts neben dem Altitude-Tape. Wir wollen jetzt geradeaus fliegen, nicht mehr steigen. Gut so! Du fliegst jetzt einen Airbus A320 auf 10.000 Fuß. Sobald wir stabil sind, schalten wir gleich die Seat Belt Signs wieder aus.',
-            explanation: 'Level-off: Sidestick nach vorne bis Vertical Speed nahe Null.',
-            instructorNote: 'Level-off erreicht. Teilnehmer bringt V/S auf Null.',
+            atcMessage: '10.000 Fuß. Drück den Steuerknüppel langsam nach vorn, bis die Steigrate am Variometer nahe null ist. Das Variometer ist rechts neben dem Höhenband. Jetzt gehen wir in den Geradeausflug. Sehr gut, du fliegst einen A320 auf 10.000 Fuß. Wenn wir stabil sind, schalten wir die Anschnallzeichen aus.',
+            explanation: 'Geradeausflug: Steuerknüppel leicht nach vorn bis Steigrate nahe null.',
+            instructorNote: 'Geradeausflug erreicht. Teilnehmer bringt die Steigrate nahe null.',
             buttons: [
                 {
                     id: 'debrief_cool',
-                    label: 'Das war genial!',
+                    label: 'Das war stark!',
                     icon: 'mdi-party-popper',
                     next: 'seatbelt_off',
                     type: 'primary'
@@ -713,7 +676,7 @@ export const takeoffEddf: FlightLabScenario = {
                     next: 'seatbelt_off',
                     type: 'primary'
                 },
-                {id: 'debrief_again', label: 'Nochmal!', icon: 'mdi-refresh', next: 'seatbelt_off', type: 'info'},
+                {id: 'debrief_again', label: 'Noch einmal!', icon: 'mdi-refresh', next: 'seatbelt_off', type: 'info'},
                 {
                     id: 'debrief_pause',
                     label: 'Kurz durchatmen',
@@ -740,13 +703,13 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'seatbelt_off',
-            atcMessage: 'Perfekt, wir cruisen stabil auf 10.000 Fuß. Jetzt kannst du die Seat Belt Signs wieder ausschalten. Schalter auf OFF, dann geht es in die Nachbesprechung.',
-            explanation: 'Nach stabilem Cruise auf 10.000 Fuß Seat Belt Signs auf OFF setzen.',
-            instructorNote: 'Nach erfolgreichem 10.000-Fuß-Level-off Seat Belt Signs ausschalten lassen.',
+            atcMessage: 'Perfekt, wir fliegen stabil auf 10.000 Fuß. Jetzt kannst du die Anschnallzeichen ausschalten. Schalter auf AUS, dann geht es in die Nachbesprechung.',
+            explanation: 'Nach stabilem Reiseflug auf 10.000 Fuß Anschnallzeichen auf AUS setzen.',
+            instructorNote: 'Nach stabilem Flug auf 10.000 Fuß die Anschnallzeichen ausschalten lassen.',
             buttons: [
                 {
                     id: 'seatbelt_off_done',
-                    label: 'Seat Belt Signs sind AUS (warte auf Bestätigung)',
+                    label: 'Anschnallzeichen sind AUS (warte auf Bestätigung)',
                     icon: 'mdi-seatbelt',
                     next: 'seatbelt_off',
                     type: 'primary'
@@ -762,25 +725,25 @@ export const takeoffEddf: FlightLabScenario = {
                 logic: 'AND',
             },
             simConditionTimeoutMs: 20000,
-            simConditionHelpMessage: 'Seat Belt Signs am Overhead-Panel wieder auf OFF stellen.',
+            simConditionHelpMessage: 'Anschnallzeichen am Deckenfeld wieder auf AUS stellen.',
             simConditionNextPhase: 'debrief',
         },
         {
             id: 'debrief',
-            atcMessage: 'Stark! Du hast gerade einen kompletten Takeoff im A320 geflogen. Schub gesetzt, beschleunigt, rotiert, abgehoben, Fahrwerk eingefahren und auf 10.000 Fuß gestiegen. Das ist genau die Prozedur die echte Piloten bei jedem Start durchführen. Jetzt weißt du was vorne im Cockpit passiert wenn du als Passagier einsteigst.',
-            explanation: 'Takeoff-Prozedur abgeschlossen. Schub, Rotation, Gear, Climb, Level-off.',
-            instructorNote: 'Debriefing. Zusammenfassung der Schritte. Nachbesprechung im Raum.',
+            atcMessage: 'Stark. Du bist gerade einen kompletten Start im A320 geflogen: Schub gesetzt, beschleunigt, abgehoben, Fahrwerk eingefahren und auf 10.000 Fuß gestiegen. Genau so läuft die Abfolge auch im echten Betrieb. Jetzt weißt du, was vorne auf dem Flugdeck passiert.',
+            explanation: 'Startablauf abgeschlossen: Schub, Abheben, Fahrwerk, Steigflug, Geradeausflug.',
+            instructorNote: 'Nachbesprechung. Schritte zusammenfassen. Besprechung im Raum.',
             buttons: [
-                {id: 'restart', label: 'Nochmal von vorne', icon: 'mdi-refresh', next: 'welcome', type: 'info'},
+                {id: 'restart', label: 'Noch einmal von vorn', icon: 'mdi-refresh', next: 'welcome', type: 'info'},
                 {id: 'finish', label: 'Fertig - danke!', icon: 'mdi-check-circle', next: 'end', type: 'primary'},
             ],
             sounds: [],
         },
         {
             id: 'debrief_restart',
-            atcMessage: 'Sehr gerne! Beim zweiten Mal achtest du schon viel mehr auf die Details. Viele Profis sagen: Beim ersten Mal verstehst du was du tust, beim zweiten Mal lernst du es richtig.',
+            atcMessage: 'Sehr gerne. Beim zweiten Durchgang fallen dir schon viel mehr Details auf. Erst versteht man die Schritte, dann sitzt der Ablauf.',
             buttons: [
-                {id: 'yes_restart', label: 'Ja, nochmal!', icon: 'mdi-refresh', next: 'welcome', type: 'primary'},
+                {id: 'yes_restart', label: 'Ja, noch einmal!', icon: 'mdi-refresh', next: 'welcome', type: 'primary'},
                 {
                     id: 'no_finish',
                     label: 'Reicht für heute',
@@ -793,7 +756,7 @@ export const takeoffEddf: FlightLabScenario = {
         },
         {
             id: 'debrief_pause',
-            atcMessage: 'Klar, gönn dir ne Minute. War viel auf einmal. Das Flugzeug fliegt jetzt von alleine geradeaus, du kannst loslassen.',
+            atcMessage: 'Klar, gönn dir eine Minute. Das war viel auf einmal. Das Flugzeug fliegt jetzt stabil geradeaus, du kannst loslassen.',
             buttons: [
                 {
                     id: 'end_after_pause',
@@ -804,7 +767,7 @@ export const takeoffEddf: FlightLabScenario = {
                 },
                 {
                     id: 'continue_after_pause',
-                    label: 'Nochmal starten',
+                    label: 'Noch einmal starten',
                     icon: 'mdi-refresh',
                     next: 'welcome',
                     type: 'info'
@@ -816,11 +779,11 @@ export const takeoffEddf: FlightLabScenario = {
         // --- End ---
         {
             id: 'end',
-            atcMessage: 'Super Session! Du hast heute gelernt wie ein Startvorgang im A320 funktioniert: Schub setzen, auf der Bahn halten, bei 140 Knoten rotieren, Fahrwerk einfahren, steigen, und auf Reiseflughöhe leveln. Genau so machen es die Profis. Bis zum nächsten Mal!',
+            atcMessage: 'Starke Übung. Du hast heute den Start im A320 gelernt: Schub setzen, auf der Bahn bleiben, bei 140 Knoten abheben, Fahrwerk einfahren, steigen und in den Geradeausflug gehen. Genau so arbeiten auch die Profis. Bis zum nächsten Mal.',
             explanation: 'Szenario beendet. Du kannst jederzeit nochmal üben.',
             instructorNote: 'Szenario beendet. Nachbesprechung im Raum.',
             buttons: [
-                {id: 'restart_final', label: 'Nochmal starten', icon: 'mdi-refresh', next: 'welcome', type: 'info'},
+                {id: 'restart_final', label: 'Noch einmal starten', icon: 'mdi-refresh', next: 'welcome', type: 'info'},
             ],
             sounds: [
                 {id: 'engine-cruise', action: 'stop'},

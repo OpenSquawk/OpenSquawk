@@ -21,6 +21,7 @@ export function useFlightLabEngine(scenario: FlightLabScenario) {
 
   // Callback for TTS when help message triggers
   let onHelpMessage: ((text: string) => void) | null = null
+  let isAutoAdvanceBlocked: (() => boolean) | null = null
 
   const phasesMap = computed(() => {
     const map = new Map<string, FlightLabPhase>()
@@ -33,7 +34,7 @@ export function useFlightLabEngine(scenario: FlightLabScenario) {
   const currentPhase = computed(() => phasesMap.value.get(currentPhaseId.value) ?? null)
 
   // Count only main phases (not comfort/info branches) for progress
-  const mainPhaseIds = ['welcome', 'seatbelt_on', 'briefing', 'runway', 'engines_pre', 'engines_spool', 'takeoff_roll', 'rotation', 'gear_retract', 'climb', 'climb_high', 'leveloff', 'seatbelt_off', 'debrief', 'end']
+  const mainPhaseIds = ['welcome', 'seatbelt_on', 'briefing', 'runway', 'engines_spool', 'takeoff_roll', 'rotation', 'gear_retract', 'climb', 'climb_high', 'leveloff', 'seatbelt_off', 'debrief', 'end']
 
   const progress = computed(() => {
     const idx = mainPhaseIds.indexOf(currentPhaseId.value)
@@ -105,6 +106,7 @@ export function useFlightLabEngine(scenario: FlightLabScenario) {
       conditionsMet.value = met
 
       if (met && phase.simConditionNextPhase) {
+        if (isAutoAdvanceBlocked?.()) return
         stopConditionMonitoring()
         goToPhase(phase.simConditionNextPhase)
       }
@@ -162,6 +164,10 @@ export function useFlightLabEngine(scenario: FlightLabScenario) {
 
   function setOnHelpMessage(fn: (text: string) => void) {
     onHelpMessage = fn
+  }
+
+  function setAutoAdvanceBlocker(fn: () => boolean) {
+    isAutoAdvanceBlocked = fn
   }
 
   // --- Phase navigation ---
@@ -260,6 +266,7 @@ export function useFlightLabEngine(scenario: FlightLabScenario) {
     dismissHelpMessage,
     evaluateConditions,
     setOnHelpMessage,
+    setAutoAdvanceBlocker,
     cleanup,
   }
 }

@@ -464,7 +464,7 @@ watch(() => engine.currentPhase.value, (phase) => {
 const currentPhase = computed(() => engine.currentPhase.value)
 
 // Main phase IDs for sidebar stepper
-const mainPhaseIds = ['welcome', 'seatbelt_on', 'briefing', 'runway', 'engines_pre', 'engines_spool', 'takeoff_roll', 'rotation', 'gear_retract', 'climb', 'climb_high', 'leveloff', 'seatbelt_off', 'debrief', 'end']
+const mainPhaseIds = ['welcome', 'seatbelt_on', 'briefing', 'runway', 'engines_spool', 'takeoff_roll', 'rotation', 'gear_retract', 'climb', 'climb_high', 'leveloff', 'seatbelt_off', 'debrief', 'end']
 
 // Collect all unique sound IDs for preloading
 const allSoundIds = computed(() => {
@@ -485,7 +485,6 @@ function getPhaseLabel(id: string): string {
     seatbelt_on: 'Seatbelts EIN',
     briefing: 'Briefing',
     runway: 'Startbahn',
-    engines_pre: 'Triebwerke (Vorb.)',
     engines_spool: 'Triebwerke (Schub)',
     takeoff_roll: 'Startlauf',
     rotation: 'Abheben',
@@ -672,6 +671,7 @@ function handleButtonPress(btn: FlightLabButton) {
 engine.setOnHelpMessage(async (text: string) => {
   await audio.speakAtcMessage(text, { speed: 0.85, readability: 5 })
 })
+engine.setAutoAdvanceBlocker(() => audio.isSpeaking.value)
 
 // Watch phase changes to trigger TTS + sounds
 watch(() => engine.currentPhaseId.value, async (newId, oldId) => {
