@@ -209,7 +209,7 @@ export const takeoffEddf: FlightLabScenario = {
         // --- Phase 2: On the Runway ---
         {
             id: 'runway',
-            atcMessage: 'So, wir stehen auf der Startbahn. Schau mal auf den linken Bildschirm vor dir, das ist dein Primary Flight Display. Die gelbe Bandanzeige links zeigt die Geschwindigkeit in Knoten, rechts die Höhe in Fuß. In der Mitte siehst du den künstlichen Horizont, der zeigt dir die Fluglage. Gerade steht alles auf Null, logisch, wir stehen ja noch. Jetzt leg mal deine linke Hand auf die Schubhebel in der Mitte.',
+            atcMessage: 'So, wir stehen auf der Startbahn. Schau mal auf den linken Bildschirm vor dir, das ist dein Primary Flight Display. Die gelbe Bandanzeige links zeigt die Geschwindigkeit in Knoten, rechts die Höhe in Fuß. In der Mitte siehst du den künstlichen Horizont, der zeigt dir die Fluglage. Gerade steht alles auf Null, logisch, wir stehen ja noch. Jetzt leg mal deine rechte Hand auf die Schubhebel in der Mitte.',
             explanation: 'PFD: Speed-Tape links, Altitude rechts, Fluglage in der Mitte. Hand an die Schubhebel.',
             instructorNote: 'Teilnehmer soll die Instrumente lesen und die Schubhebel finden.',
             buttons: [
@@ -607,10 +607,8 @@ export const takeoffEddf: FlightLabScenario = {
             ],
             simConditions: {
                 conditions: [
-                    {variable: 'PLANE_ALTITUDE', operator: '>', value: 2000},
+                    {variable: 'PLANE_ALTITUDE', operator: '>', value: 5000},
                     {variable: 'VERTICAL_SPEED', operator: '>', value: 1000},
-                    // höhe von 5000ft
-                    {variable: 'PLANE_ALTITUDE', operator: '<', value: 5000},
                 ],
                 logic: 'AND',
             },
