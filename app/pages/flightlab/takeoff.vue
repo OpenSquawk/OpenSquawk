@@ -534,6 +534,7 @@ const conditionLabels: Record<string, string> = {
   GEAR_HANDLE_POSITION: 'Fahrwerk',
   FLAPS_HANDLE_INDEX: 'Klappen',
   BRAKE_PARKING_POSITION: 'Parkbremse',
+  SEAT_BELT_SIGNS: 'Seat Belt Signs',
   AUTOPILOT_MASTER: 'Autopilot',
 }
 
@@ -565,6 +566,7 @@ function formatCondition(cond: SimCondition): string {
     if (cond.variable === 'SIM_ON_GROUND') return cond.value ? `${label}: Ja` : `${label}: Nein (in der Luft)`
     if (cond.variable === 'GEAR_HANDLE_POSITION') return cond.value ? `${label}: Ausgefahren` : `${label}: Eingefahren`
     if (cond.variable === 'BRAKE_PARKING_POSITION') return cond.value ? `${label}: Angezogen` : `${label}: Gelöst`
+    if (cond.variable === 'SEAT_BELT_SIGNS') return cond.value ? `${label}: EIN` : `${label}: AUS`
     return `${label}: ${cond.value ? 'An' : 'Aus'}`
   }
   return `${label} ${op} ${cond.value}${unit ? ' ' + unit : ''}`
@@ -586,6 +588,7 @@ function getCurrentBooleanLabel(cond: SimCondition): string {
   if (cond.variable === 'BRAKE_PARKING_POSITION') return val ? 'Angezogen' : 'Gelöst'
   if (cond.variable === 'GEAR_HANDLE_POSITION') return val ? 'Ausgefahren' : 'Eingefahren'
   if (cond.variable === 'SIM_ON_GROUND') return val ? 'Am Boden' : 'In der Luft'
+  if (cond.variable === 'SEAT_BELT_SIGNS') return typeof val === 'boolean' ? (val ? 'EIN' : 'AUS') : 'Keine Daten'
   return val ? 'An' : 'Aus'
 }
 

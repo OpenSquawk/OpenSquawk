@@ -33,6 +33,7 @@ export interface FlightLabTelemetryState {
   GEAR_HANDLE_POSITION: boolean     // true = down, false = up
   FLAPS_HANDLE_INDEX: number        // 0-4 for A320
   BRAKE_PARKING_POSITION: boolean   // true = set, false = released
+  SEAT_BELT_SIGNS?: boolean         // true = on, false = off (if provided by bridge)
   AUTOPILOT_MASTER: boolean
   TRANSPONDER_CODE: number          // squawk code (0-7777 octal)
   ADF_ACTIVE_FREQUENCY: number      // Hz

@@ -22,7 +22,7 @@ export const takeoffEddf: FlightLabScenario = {
                     id: 'ready',
                     label: 'Bin bereit, los gehts!',
                     icon: 'mdi-check-circle',
-                    next: 'briefing',
+                    next: 'seatbelt_on',
                     type: 'primary'
                 },
                 {
@@ -53,7 +53,7 @@ export const takeoffEddf: FlightLabScenario = {
                     id: 'ready_after_comfort',
                     label: 'Okay, hab den Überblick',
                     icon: 'mdi-check-circle',
-                    next: 'briefing',
+                    next: 'seatbelt_on',
                     type: 'primary'
                 },
                 {
@@ -76,7 +76,7 @@ export const takeoffEddf: FlightLabScenario = {
                     id: 'ready_after_comfort_2',
                     label: 'Verstanden, weiter!',
                     icon: 'mdi-check-circle',
-                    next: 'briefing',
+                    next: 'seatbelt_on',
                     type: 'primary'
                 },
             ],
@@ -91,7 +91,7 @@ export const takeoffEddf: FlightLabScenario = {
                     id: 'ready_after_detail',
                     label: 'Alles klar, weiter!',
                     icon: 'mdi-check-circle',
-                    next: 'briefing',
+                    next: 'seatbelt_on',
                     type: 'primary'
                 },
                 {
@@ -112,11 +112,38 @@ export const takeoffEddf: FlightLabScenario = {
                     id: 'ready_after_questions',
                     label: 'Okay, starten wir!',
                     icon: 'mdi-check-circle',
-                    next: 'briefing',
+                    next: 'seatbelt_on',
                     type: 'primary'
                 },
             ],
             sounds: [],
+        },
+        {
+            id: 'seatbelt_on',
+            atcMessage: 'Bevor wir loslegen, schalten wir ganz am Anfang die Seat Belt Signs ein. Schau oben aufs Overhead-Panel und stell den Schalter auf ON. Das ist unser Start-Setup, damit alle angeschnallt bleiben.',
+            explanation: 'Seat Belt Signs vor dem Start auf ON setzen.',
+            instructorNote: 'Seat Belt Signs vor dem Briefing einschalten lassen.',
+            buttons: [
+                {
+                    id: 'seatbelt_on_done',
+                    label: 'Seat Belt Signs sind EIN',
+                    icon: 'mdi-seatbelt',
+                    next: 'briefing',
+                    type: 'primary'
+                },
+            ],
+            sounds: [
+                {id: 'chime', action: 'play', volume: 0.3, loop: false},
+            ],
+            simConditions: {
+                conditions: [
+                    {variable: 'SEAT_BELT_SIGNS', operator: '==', value: true},
+                ],
+                logic: 'AND',
+            },
+            simConditionTimeoutMs: 15000,
+            simConditionHelpMessage: 'Seat Belt Signs am Overhead-Panel auf ON stellen.',
+            simConditionNextPhase: 'briefing',
         },
 
         // --- Phase 1: Briefing ---
@@ -670,7 +697,7 @@ export const takeoffEddf: FlightLabScenario = {
         // --- Phase 8: Level-off & Debrief ---
         {
             id: 'leveloff',
-            atcMessage: '10.000 Fuß! Jetzt drückst du den Sidestick langsam nach vorne bis die Steigrate auf dem Variometer auf Null steht. Das Variometer ist die vertikale Geschwindigkeitsanzeige rechts neben dem Altitude-Tape. Wir wollen jetzt geradeaus fliegen, nicht mehr steigen. Gut so! Du fliegst jetzt einen Airbus A320 auf 10.000 Fuß!',
+            atcMessage: '10.000 Fuß! Jetzt drückst du den Sidestick langsam nach vorne bis die Steigrate auf dem Variometer auf Null steht. Das Variometer ist die vertikale Geschwindigkeitsanzeige rechts neben dem Altitude-Tape. Wir wollen jetzt geradeaus fliegen, nicht mehr steigen. Gut so! Du fliegst jetzt einen Airbus A320 auf 10.000 Fuß. Sobald wir stabil sind, schalten wir gleich die Seat Belt Signs wieder aus.',
             explanation: 'Level-off: Sidestick nach vorne bis Vertical Speed nahe Null.',
             instructorNote: 'Level-off erreicht. Teilnehmer bringt V/S auf Null.',
             buttons: [
@@ -678,29 +705,28 @@ export const takeoffEddf: FlightLabScenario = {
                     id: 'debrief_cool',
                     label: 'Das war genial!',
                     icon: 'mdi-party-popper',
-                    next: 'debrief',
+                    next: 'seatbelt_off',
                     type: 'primary'
                 },
                 {
                     id: 'debrief_relief',
                     label: 'Geschafft!',
                     icon: 'mdi-emoticon-happy',
-                    next: 'debrief',
+                    next: 'seatbelt_off',
                     type: 'primary'
                 },
-                {id: 'debrief_again', label: 'Nochmal!', icon: 'mdi-refresh', next: 'debrief_restart', type: 'info'},
+                {id: 'debrief_again', label: 'Nochmal!', icon: 'mdi-refresh', next: 'seatbelt_off', type: 'info'},
                 {
                     id: 'debrief_pause',
                     label: 'Kurz durchatmen',
                     icon: 'mdi-pause-circle',
-                    next: 'debrief_pause',
+                    next: 'seatbelt_off',
                     type: 'comfort'
                 },
             ],
             sounds: [
                 {id: 'engine-cruise', action: 'crossfade', volume: 0.2},
                 {id: 'wind-high', action: 'crossfade', volume: 0.15},
-                {id: 'chime', action: 'play', volume: 0.3, loop: false},
             ],
             simConditions: {
                 conditions: [
@@ -712,6 +738,33 @@ export const takeoffEddf: FlightLabScenario = {
             },
             simConditionTimeoutMs: 20000,
             simConditionHelpMessage: 'Nase etwas senken zum Geradeausflug. Steigrate auf nahe Null bringen.',
+            simConditionNextPhase: 'seatbelt_off',
+        },
+        {
+            id: 'seatbelt_off',
+            atcMessage: 'Perfekt, wir cruisen stabil auf 10.000 Fuß. Jetzt kannst du die Seat Belt Signs wieder ausschalten. Schalter auf OFF, dann geht es in die Nachbesprechung.',
+            explanation: 'Nach stabilem Cruise auf 10.000 Fuß Seat Belt Signs auf OFF setzen.',
+            instructorNote: 'Nach erfolgreichem 10.000-Fuß-Level-off Seat Belt Signs ausschalten lassen.',
+            buttons: [
+                {
+                    id: 'seatbelt_off_done',
+                    label: 'Seat Belt Signs sind AUS',
+                    icon: 'mdi-seatbelt',
+                    next: 'debrief',
+                    type: 'primary'
+                },
+            ],
+            sounds: [
+                {id: 'chime', action: 'play', volume: 0.3, loop: false},
+            ],
+            simConditions: {
+                conditions: [
+                    {variable: 'SEAT_BELT_SIGNS', operator: '==', value: false},
+                ],
+                logic: 'AND',
+            },
+            simConditionTimeoutMs: 20000,
+            simConditionHelpMessage: 'Seat Belt Signs am Overhead-Panel wieder auf OFF stellen.',
             simConditionNextPhase: 'debrief',
         },
         {
