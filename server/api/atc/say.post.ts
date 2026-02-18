@@ -1,14 +1,12 @@
 // server/api/atc/say.post.ts
 import {createError, readBody} from "h3";
-import {writeFile, mkdir} from "node:fs/promises";
-import {existsSync} from "node:fs";
+import {writeFile, mkdir, readFile} from "node:fs/promises";
 import {join} from "node:path";
-import {randomUUID} from "node:crypto";
+import {createHash, randomUUID} from "node:crypto";
 import {normalize, TTS_MODEL, normalizeATC} from "../../utils/normalize";
 import { getServerRuntimeConfig } from "../../utils/runtimeConfig";
 import {request} from "node:http";
 import { TransmissionLog } from "../../models/TransmissionLog";
-import { requireUserSession } from "../../utils/auth";
 
 
 function outDir() {
@@ -16,7 +14,44 @@ function outDir() {
 }
 
 async function ensureDir(p: string) {
-    if (!existsSync(p)) await mkdir(p, { recursive: true });
+    await mkdir(p, { recursive: true });
+}
+
+function flightLabCacheDir() {
+    return process.env.FLIGHTLAB_TTS_CACHE_DIR?.trim() || join(process.cwd(), ".cache", "flightlab-tts");
+}
+
+function isFlightLabTag(tag?: string) {
+    return (tag || "").trim().toLowerCase() === "flightlab";
+}
+
+type TTSProvider = "openai" | "speaches" | "piper";
+
+function resolveTtsProvider(useSpeaches: boolean, usePiper: boolean): TTSProvider {
+    if (useSpeaches) return "speaches";
+    if (usePiper) return "piper";
+    return "openai";
+}
+
+function buildFlightLabCacheKey(input: {
+    normalized: string;
+    level: number;
+    voice: string;
+    speed: number;
+    format: AudioFmt;
+    provider: TTSProvider;
+    model: string;
+}) {
+    return createHash("sha256")
+        .update(JSON.stringify(input))
+        .digest("hex");
+}
+
+function defaultMimeForProvider(provider: TTSProvider, format: AudioFmt) {
+    if (provider === "openai" || provider === "piper") {
+        return "audio/wav";
+    }
+    return fmtToMime(format);
 }
 
 function simulateRadioQuality(level: number) {
@@ -148,28 +183,63 @@ export default defineEventHandler(async (event) => {
     // Routing
     const useSpeaches = runtimeConfig.useSpeaches;
     const usePiper = !useSpeaches && runtimeConfig.usePiper;
+    const provider = resolveTtsProvider(useSpeaches, usePiper);
+    const providerModel = provider === "speaches"
+        ? (runtimeConfig.speechModelId || "speaches-ai/piper-en_US-ryan-low")
+        : provider === "piper"
+            ? "piper-local"
+            : TTS_MODEL;
 
     // Format
     const requestedFmt = (body?.format === "smallest" ? "mp3" : body?.format) as AudioFmt | undefined;
     const fmt: AudioFmt = requestedFmt || pickDefaultFormat(useSpeaches);
-    const mime = fmtToMime(fmt);
     const ext = fmtToExt(fmt);
+    const outputExt = (provider === "openai" || provider === "piper") ? "wav" : ext;
+    const flightlabRequest = isFlightLabTag(body?.tag);
+    const flightlabCacheKey = flightlabRequest
+        ? buildFlightLabCacheKey({
+            normalized,
+            level,
+            voice,
+            speed,
+            format: fmt,
+            provider,
+            model: providerModel
+        })
+        : null;
+    const flightlabCacheBaseDir = flightlabRequest ? flightLabCacheDir() : null;
+    const flightlabCachedAudioPath = (flightlabCacheBaseDir && flightlabCacheKey)
+        ? join(flightlabCacheBaseDir, `${flightlabCacheKey}.${outputExt}`)
+        : null;
+    const flightlabCachedMetaPath = (flightlabCacheBaseDir && flightlabCacheKey)
+        ? join(flightlabCacheBaseDir, `${flightlabCacheKey}.json`)
+        : null;
 
     const radioQuality = simulateRadioQuality(level);
     const id = randomUUID();
     const timestamp = new Date().toISOString();
     const dateFolder = timestamp.slice(0, 10);
     const baseDir = join(outDir(), dateFolder);
-    const fileOut = join(baseDir, `${id}.${ext}`);
+    const fileOut = join(baseDir, `${id}.${outputExt}`);
     const fileJson = join(baseDir, `${id}.json`);
 
     try {
-        let audioBuffer: Buffer;
-        let modelUsed: string;
-        let actualMime = mime;
-        let ttsProvider: 'openai' | 'speaches' | 'piper' = 'openai';
+        let audioBuffer: Buffer | null = null;
+        let modelUsed = providerModel;
+        let actualMime = defaultMimeForProvider(provider, fmt);
+        let ttsProvider: TTSProvider = provider;
+        let cacheHit = false;
 
-        if (useSpeaches) {
+        if (flightlabCachedAudioPath) {
+            try {
+                audioBuffer = await readFile(flightlabCachedAudioPath);
+                cacheHit = true;
+            } catch {
+                // Cache miss: generate TTS below.
+            }
+        }
+
+        if (!audioBuffer && useSpeaches) {
             // Speaches (prefer compact: MP3, otherwise FLAC/WAV/PCM)
             const baseUrl = runtimeConfig.speachesBaseUrl || "";
             const model = runtimeConfig.speechModelId || "speaches-ai/piper-en_US-ryan-low";
@@ -181,14 +251,14 @@ export default defineEventHandler(async (event) => {
             // Server returns the correct format according to response_format
             actualMime = fmtToMime(fmt);
             ttsProvider = 'speaches';
-        } else if (usePiper) {
+        } else if (!audioBuffer && usePiper) {
             // Local Piper
             audioBuffer = await piperTTS(normalized, voice, runtimeConfig.piperPort);
             modelUsed = "piper-local";
             // Piper returns WAV
             actualMime = "audio/wav";
             ttsProvider = 'piper';
-        } else {
+        } else if (!audioBuffer) {
             // OpenAI (fallback)
             const tts = await normalize.audio.speech.create({
                 model: TTS_MODEL,
@@ -202,9 +272,44 @@ export default defineEventHandler(async (event) => {
             ttsProvider = 'openai';
         }
 
-        // Optional persistence
-        // await ensureDir(baseDir);
-        // await writeFile(fileOut, audioBuffer);
+        if (!audioBuffer) {
+            throw new Error("TTS generation returned empty audio");
+        }
+
+        if (!cacheHit && flightlabCacheBaseDir && flightlabCachedAudioPath && flightlabCachedMetaPath) {
+            try {
+                await ensureDir(flightlabCacheBaseDir);
+                await writeFile(flightlabCachedAudioPath, audioBuffer);
+                await writeFile(
+                    flightlabCachedMetaPath,
+                    JSON.stringify(
+                        {
+                            key: flightlabCacheKey,
+                            createdAt: timestamp,
+                            tag: "flightlab",
+                            voice,
+                            speed,
+                            level,
+                            format: outputExt,
+                            mime: actualMime,
+                            provider: ttsProvider,
+                            model: modelUsed,
+                            normalized,
+                            text: raw
+                        },
+                        null,
+                        2
+                    )
+                );
+            } catch (cacheWriteError) {
+                console.warn("FlightLab TTS cache write failed", cacheWriteError);
+            }
+        }
+
+        const storedAudioPath = flightlabCachedAudioPath || fileOut;
+        const storedJsonPath = flightlabCachedMetaPath || fileJson;
+        const storedUrl = flightlabCachedAudioPath ? null : `/api/atc/audio/${dateFolder}/${id}.${outputExt}`;
+
         const meta = {
             id,
             createdAt: timestamp,
@@ -217,10 +322,15 @@ export default defineEventHandler(async (event) => {
             tag: body?.tag || null,
             moduleId: body?.moduleId || null,
             lessonId: body?.lessonId || null,
-            files: { audio: fileOut },
+            files: { audio: storedAudioPath },
             model: modelUsed,
             format: actualMime,
-            ttsProvider
+            ttsProvider,
+            cache: {
+                flightlab: flightlabRequest,
+                hit: cacheHit,
+                key: flightlabCacheKey
+            }
         };
 
         try {
@@ -244,7 +354,7 @@ export default defineEventHandler(async (event) => {
                         provider: ttsProvider,
                         model: modelUsed,
                         format: actualMime,
-                        extension: ext
+                        extension: outputExt
                     }
                 }
             })
@@ -265,14 +375,19 @@ export default defineEventHandler(async (event) => {
                 mime: actualMime,
                 base64: audioBuffer.toString("base64"),
                 size: audioBuffer.length,
-                ext
+                ext: outputExt
             },
             stored: {
-                audioPath: fileOut,
-                jsonPath: fileJson,
-                url: `/api/atc/audio/${dateFolder}/${id}.${ext}`
+                audioPath: storedAudioPath,
+                jsonPath: storedJsonPath,
+                url: storedUrl
             },
-            meta
+            meta,
+            cache: {
+                flightlab: flightlabRequest,
+                hit: cacheHit,
+                key: flightlabCacheKey
+            }
         };
     } catch (err: any) {
         throw createError({
