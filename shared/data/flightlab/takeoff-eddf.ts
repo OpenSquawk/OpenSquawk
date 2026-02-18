@@ -126,9 +126,9 @@ export const takeoffEddf: FlightLabScenario = {
             buttons: [
                 {
                     id: 'seatbelt_on_done',
-                    label: 'Seat Belt Signs sind EIN',
+                    label: 'Seat Belt Signs sind EIN (warte auf Bestätigung)',
                     icon: 'mdi-seatbelt',
-                    next: 'briefing',
+                    next: 'seatbelt_on',
                     type: 'primary'
                 },
             ],
@@ -748,9 +748,9 @@ export const takeoffEddf: FlightLabScenario = {
             buttons: [
                 {
                     id: 'seatbelt_off_done',
-                    label: 'Seat Belt Signs sind AUS',
+                    label: 'Seat Belt Signs sind AUS (warte auf Bestätigung)',
                     icon: 'mdi-seatbelt',
-                    next: 'debrief',
+                    next: 'seatbelt_off',
                     type: 'primary'
                 },
             ],

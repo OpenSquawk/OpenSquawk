@@ -383,10 +383,31 @@ const pageRoot = ref<HTMLElement | null>(null)
 const isFullscreen = ref(false)
 const canFullscreen = ref(false)
 const fullscreenEvents = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
+const ESC_DOUBLE_PRESS_WINDOW_MS = 450
+
+let lastEscapeAt = 0
 
 function onFullscreenChange() {
   if (typeof document === 'undefined') return
   isFullscreen.value = Boolean(document.fullscreenElement)
+}
+
+function onGlobalKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Escape') return
+  const now = Date.now()
+  const isQuickDoubleEscape = now - lastEscapeAt <= ESC_DOUBLE_PRESS_WINDOW_MS
+  lastEscapeAt = now
+
+  if (initialSpeechTimeout) {
+    clearTimeout(initialSpeechTimeout)
+    initialSpeechTimeout = null
+  }
+  audio.skipSpeech()
+
+  if (isQuickDoubleEscape && engine.hasSimConditions.value) {
+    engine.toggleAutoAdvance()
+    lastEscapeAt = 0
+  }
 }
 
 async function toggleFullscreen() {
@@ -443,7 +464,7 @@ watch(() => engine.currentPhase.value, (phase) => {
 const currentPhase = computed(() => engine.currentPhase.value)
 
 // Main phase IDs for sidebar stepper
-const mainPhaseIds = ['welcome', 'briefing', 'runway', 'engines_pre', 'engines_spool', 'takeoff_roll', 'rotation', 'gear_retract', 'climb', 'climb_high', 'leveloff', 'debrief', 'end']
+const mainPhaseIds = ['welcome', 'seatbelt_on', 'briefing', 'runway', 'engines_pre', 'engines_spool', 'takeoff_roll', 'rotation', 'gear_retract', 'climb', 'climb_high', 'leveloff', 'seatbelt_off', 'debrief', 'end']
 
 // Collect all unique sound IDs for preloading
 const allSoundIds = computed(() => {
@@ -461,6 +482,7 @@ const allSoundIds = computed(() => {
 function getPhaseLabel(id: string): string {
   const labels: Record<string, string> = {
     welcome: 'Willkommen',
+    seatbelt_on: 'Seatbelts EIN',
     briefing: 'Briefing',
     runway: 'Startbahn',
     engines_pre: 'Triebwerke (Vorb.)',
@@ -471,6 +493,7 @@ function getPhaseLabel(id: string): string {
     climb: 'Steigflug',
     climb_high: 'Steigflug (hoch)',
     leveloff: 'Level-off',
+    seatbelt_off: 'Seatbelts AUS',
     debrief: 'Nachbesprechung',
     end: 'Ende',
   }
@@ -676,6 +699,9 @@ onMounted(async () => {
     })
     onFullscreenChange()
   }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', onGlobalKeydown)
+  }
 
   // Speak initial welcome
   const phase = engine.currentPhase.value
@@ -688,6 +714,9 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', onGlobalKeydown)
+  }
   if (typeof document !== 'undefined') {
     fullscreenEvents.forEach((eventName) => {
       document.removeEventListener(eventName, onFullscreenChange)

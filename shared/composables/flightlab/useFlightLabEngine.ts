@@ -33,7 +33,7 @@ export function useFlightLabEngine(scenario: FlightLabScenario) {
   const currentPhase = computed(() => phasesMap.value.get(currentPhaseId.value) ?? null)
 
   // Count only main phases (not comfort/info branches) for progress
-  const mainPhaseIds = ['welcome', 'briefing', 'runway', 'engines_pre', 'engines_spool', 'takeoff_roll', 'rotation', 'gear_retract', 'climb', 'climb_high', 'leveloff', 'debrief', 'end']
+  const mainPhaseIds = ['welcome', 'seatbelt_on', 'briefing', 'runway', 'engines_pre', 'engines_spool', 'takeoff_roll', 'rotation', 'gear_retract', 'climb', 'climb_high', 'leveloff', 'seatbelt_off', 'debrief', 'end']
 
   const progress = computed(() => {
     const idx = mainPhaseIds.indexOf(currentPhaseId.value)
