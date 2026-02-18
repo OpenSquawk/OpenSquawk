@@ -47,6 +47,7 @@ export default defineNuxtConfig({
         useSpeaches: process.env.USE_SPEACHES,
         speachesBaseUrl: process.env.SPEACHES_BASE_URL,
         speechModelId: process.env.SPEECH_MODEL_ID,
+        domeLightWebhookUrl: process.env.DOME_LIGHT_WEBHOOK_URL || 'https://home.io.faktorxmensch.com/api/webhook/lidl_stab_3modi_8492',
         jwtSecret: process.env.JWT_SECRET,
         jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
         manualInvitePassword: process.env.MANUAL_INVITE_PASSWORD,
