@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-[#070d1a] text-white flex flex-col overflow-hidden">
+  <div ref="pageRoot" class="min-h-screen bg-[#070d1a] text-white flex flex-col overflow-hidden">
     <!-- ═══════ Global Progress Bar (top edge) ═══════ -->
     <div class="fixed top-0 left-0 right-0 z-50 h-1 bg-white/5">
       <div
@@ -10,7 +10,7 @@
 
     <!-- ═══════ Sidebar + Attached Toggle ═══════ -->
     <div
-      class="fixed left-0 top-0 bottom-0 z-40 flex transition-transform duration-300"
+      class="fixed left-0 top-0 bottom-0 z-10 flex transition-transform duration-300"
       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-[300px]'"
     >
       <aside
@@ -177,6 +177,17 @@
             />
             <span class="text-xs text-white/40 hidden sm:inline">Auto bei Sim-Bedingungen</span>
           </div>
+
+          <v-btn
+            v-if="canFullscreen"
+            size="small"
+            variant="text"
+            :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'"
+            class="text-white/50"
+            :title="isFullscreen ? 'Vollbild beenden' : 'Vollbild aktivieren'"
+            @click="toggleFullscreen"
+          >
+          </v-btn>
         </div>
       </div>
     </header>
@@ -368,6 +379,31 @@ const authStore = useAuthStore()
 
 const showDetails = ref(false)
 const sidebarOpen = ref(true)
+const pageRoot = ref<HTMLElement | null>(null)
+const isFullscreen = ref(false)
+const canFullscreen = ref(false)
+const fullscreenEvents = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
+
+function onFullscreenChange() {
+  if (typeof document === 'undefined') return
+  isFullscreen.value = Boolean(document.fullscreenElement)
+}
+
+async function toggleFullscreen() {
+  if (typeof document === 'undefined') return
+  try {
+    if (!document.fullscreenElement) {
+      const target = pageRoot.value ?? document.documentElement
+      if (target.requestFullscreen) {
+        await target.requestFullscreen()
+      }
+    } else if (document.exitFullscreen) {
+      await document.exitFullscreen()
+    }
+  } catch (error) {
+    console.error('Failed to toggle fullscreen', error)
+  }
+}
 
 // --- Direct Bridge Telemetry Polling (solo mode, no WS session) ---
 let telemetryPollInterval: ReturnType<typeof setInterval> | null = null
@@ -630,6 +666,14 @@ watch(() => engine.currentPhaseId.value, async (newId, oldId) => {
 onMounted(async () => {
   await audio.preloadSounds(allSoundIds.value)
 
+  if (typeof document !== 'undefined') {
+    canFullscreen.value = document.fullscreenEnabled !== false
+    fullscreenEvents.forEach((eventName) => {
+      document.addEventListener(eventName, onFullscreenChange)
+    })
+    onFullscreenChange()
+  }
+
   // Speak initial welcome
   const phase = engine.currentPhase.value
   if (phase?.atcMessage) {
@@ -641,6 +685,12 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  if (typeof document !== 'undefined') {
+    fullscreenEvents.forEach((eventName) => {
+      document.removeEventListener(eventName, onFullscreenChange)
+    })
+  }
+
   if (initialSpeechTimeout) {
     clearTimeout(initialSpeechTimeout)
     initialSpeechTimeout = null
