@@ -154,8 +154,8 @@ export const takeoffEddf: FlightLabScenario = {
       ],
       simConditions: {
         conditions: [
-          { variable: 'TURB_ENG_N1_1', operator: '>=', value: 80 },
-          { variable: 'TURB_ENG_N1_2', operator: '>=', value: 80 },
+          { variable: 'TURB_ENG_N1_1', operator: '>=', value: 50 },
+          { variable: 'TURB_ENG_N1_2', operator: '>=', value: 50 },
           { variable: 'BRAKE_PARKING_POSITION', operator: '==', value: false },
         ],
         logic: 'AND',
@@ -199,7 +199,7 @@ export const takeoffEddf: FlightLabScenario = {
       ],
       simConditions: {
         conditions: [
-          { variable: 'AIRSPEED_INDICATED', operator: '>=', value: 140 },
+          { variable: 'AIRSPEED_INDICATED', operator: '>=', value: 130 },
           { variable: 'SIM_ON_GROUND', operator: '==', value: true },
         ],
         logic: 'AND',

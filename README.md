@@ -59,6 +59,7 @@ You can connect to any OpenAI-compatible (self-hosted or third-party) API by set
    * `OPENAI_BASE_URL`: Optional override for any OpenAI API–compatible service; defaults to the OpenAI platform when unset.
    * `OPENAI_API_KEY`, optional `OPENAI_PROJECT`, `LLM_MODEL`, `TTS_MODEL`, `VOICE_ID`.
    * `ATC_OUT_DIR`: Directory for generated audio files.
+   * `FLIGHTLAB_TTS_CACHE_DIR`: Disk cache directory for FlightLab TTS audio (defaults to `./.cache/flightlab-tts`, git-ignored).
    * `USE_PIPER`, `PIPER_PORT`: Enable local Piper TTS instance.
    * SMTP settings (`NOTIFY_*`) if emails should be sent.
 4. Start MongoDB and ensure `ffmpeg` is on the PATH.
