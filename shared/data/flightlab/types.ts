@@ -120,9 +120,14 @@ export type FlightLabWSEvent =
 export type PfdElement = 'attitude' | 'speedTape' | 'altitudeTape' | 'verticalSpeed' | 'heading'
 export type PfdLayoutMode = 'model-focus' | 'split' | 'pfd-focus'
 
+export interface PfdSpeedTargetRange {
+  min: number
+  max: number
+}
+
 export interface PfdInteractionGoal {
-  /** What to check: pitch angle, altitude, heading, speed, bank */
-  parameter: 'pitch' | 'altitude' | 'heading' | 'speed' | 'bankAngle' | 'verticalSpeed'
+  /** What to check: pitch angle, altitude, heading, speed, bank, thrust */
+  parameter: 'pitch' | 'altitude' | 'heading' | 'speed' | 'bankAngle' | 'verticalSpeed' | 'throttlePercent'
   /** Target value */
   target: number
   /** Acceptable deviation (+/-) */
@@ -142,6 +147,8 @@ export interface LearnPfdPhase extends FlightLabPhase {
   goalTimeoutMs?: number
   /** Hint spoken via TTS if user struggles */
   goalHint?: string
+  /** Optional highlighted target range on speed tape */
+  speedTargetRange?: PfdSpeedTargetRange
 }
 
 export interface LearnPfdScenario {
