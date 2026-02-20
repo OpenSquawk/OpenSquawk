@@ -3,14 +3,15 @@ import { ref, computed, watch } from 'vue'
 import type { LearnPfdPhase, LearnPfdScenario, FlightLabButton, PfdInteractionGoal, PfdElement, PfdLayoutMode } from '../../data/flightlab/types'
 import type { FlightState } from './useAirbusFBW'
 
-const mainPhaseIds = ['welcome', 'horizon_intro', 'pitch_intro', 'speed_intro', 'alt_intro', 'vs_intro', 'heading_intro', 'combined', 'free_practice', 'end']
+const mainPhaseIds = ['welcome', 'horizon_intro', 'pitch_intro', 'speed_intro', 'speed_hold_pitch', 'alt_intro', 'vs_intro', 'heading_intro', 'combined', 'free_practice', 'end']
 
 const goalNextPhase: Record<string, string> = {
   'horizon_intro': 'horizon_roll_right',
   'horizon_roll_right': 'pitch_intro',
   'pitch_intro': 'pitch_down',
   'pitch_down': 'speed_intro',
-  'speed_intro': 'alt_intro',
+  'speed_intro': 'speed_hold_pitch',
+  'speed_hold_pitch': 'alt_intro',
   'alt_intro': 'vs_intro',
   'vs_intro': 'heading_intro',
   'heading_intro': 'combined',

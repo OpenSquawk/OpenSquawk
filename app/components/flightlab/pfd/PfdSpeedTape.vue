@@ -1,7 +1,13 @@
 <script setup lang="ts">
+interface SpeedTargetRange {
+  min: number
+  max: number
+}
+
 const props = withDefaults(defineProps<{
   speed: number
   speedTrend?: number
+  targetRange?: SpeedTargetRange
   width?: number
   height?: number
 }>(), {
@@ -19,6 +25,23 @@ const pixelsPerKnot = 3
 function speedToY(spd: number): number {
   return centerY.value + (props.speed - spd) * pixelsPerKnot
 }
+
+const targetZone = computed(() => {
+  if (!props.targetRange) return null
+  const min = Math.min(props.targetRange.min, props.targetRange.max)
+  const max = Math.max(props.targetRange.min, props.targetRange.max)
+  const minY = speedToY(min)
+  const maxY = speedToY(max)
+  const top = Math.min(minY, maxY)
+  const bottom = Math.max(minY, maxY)
+  return {
+    min,
+    max,
+    top,
+    bottom,
+    height: Math.max(2, bottom - top),
+  }
+})
 
 const visibleRange = computed(() => {
   const halfVisible = props.height / 2 / pixelsPerKnot + 10
@@ -75,6 +98,35 @@ const readoutBoxWidth = computed(() => props.width - 8)
 
     <!-- Scrolling tape (clipped) -->
     <g :clip-path="`url(#${clipId})`">
+      <!-- Target hold zone -->
+      <g v-if="targetZone">
+        <rect
+          x="1"
+          :y="targetZone.top"
+          :width="width - 2"
+          :height="targetZone.height"
+          fill="rgba(239, 68, 68, 0.22)"
+          stroke="rgba(248, 113, 113, 0.95)"
+          stroke-width="1.2"
+        />
+        <line
+          x1="1"
+          :y1="targetZone.top"
+          :x2="width - 1"
+          :y2="targetZone.top"
+          stroke="rgba(254, 202, 202, 0.95)"
+          stroke-width="1"
+        />
+        <line
+          x1="1"
+          :y1="targetZone.bottom"
+          :x2="width - 1"
+          :y2="targetZone.bottom"
+          stroke="rgba(254, 202, 202, 0.95)"
+          stroke-width="1"
+        />
+      </g>
+
       <g v-for="mark in marks" :key="mark.spd">
         <!-- Tick mark -->
         <line

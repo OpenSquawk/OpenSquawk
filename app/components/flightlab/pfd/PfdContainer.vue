@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PfdElement } from '~~/shared/data/flightlab/types'
+import type { PfdElement, PfdSpeedTargetRange } from '~~/shared/data/flightlab/types'
 
 const props = withDefaults(defineProps<{
   pitch: number
@@ -9,9 +9,11 @@ const props = withDefaults(defineProps<{
   altitude: number
   verticalSpeed: number
   visibleElements: PfdElement[]
+  speedTargetRange?: PfdSpeedTargetRange | null
   scale?: number
 }>(), {
   scale: 1,
+  speedTargetRange: null,
 })
 
 const attSize = computed(() => 280 * props.scale)
@@ -82,6 +84,7 @@ const headingWidth = computed(() => attSize.value + tapeWidth.value * 2)
       >
         <FlightlabPfdSpeedTape
           :speed="speed"
+          :target-range="speedTargetRange ?? undefined"
           :width="tapeWidth"
           :height="attSize"
         />

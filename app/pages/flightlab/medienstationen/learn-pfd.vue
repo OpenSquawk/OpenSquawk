@@ -213,6 +213,7 @@
             :speed="fbw.state.speed"
             :altitude="fbw.state.altitude"
             :vertical-speed="fbw.state.verticalSpeed"
+            :speed-target-range="speedTargetRange"
             :visible-elements="engine.visibleElements.value"
             :scale="pfdScale"
           />
@@ -395,13 +396,14 @@ const fullscreenEvents = ['fullscreenchange', 'webkitfullscreenchange', 'mozfull
 let initialSpeechTimeout: ReturnType<typeof setTimeout> | null = null
 
 // --- Sidebar phase IDs (main phases only) ---
-const sidebarPhaseIds = ['welcome', 'horizon_intro', 'pitch_intro', 'speed_intro', 'alt_intro', 'vs_intro', 'heading_intro', 'combined', 'free_practice', 'end']
+const sidebarPhaseIds = ['welcome', 'horizon_intro', 'pitch_intro', 'speed_intro', 'speed_hold_pitch', 'alt_intro', 'vs_intro', 'heading_intro', 'combined', 'free_practice', 'end']
 
 const phaseLabels: Record<string, string> = {
   welcome: 'Willkommen',
   horizon_intro: 'Horizont',
   pitch_intro: 'Pitch',
-  speed_intro: 'Speed Tape',
+  speed_intro: 'Schub 70%',
+  speed_hold_pitch: 'Speed halten',
   alt_intro: 'Altitude Tape',
   vs_intro: 'Vertical Speed',
   heading_intro: 'Heading',
@@ -411,6 +413,8 @@ const phaseLabels: Record<string, string> = {
 }
 
 const currentPhase = computed(() => engine.currentPhase.value)
+const speedTargetRange = computed(() => currentPhase.value?.speedTargetRange ?? null)
+const isPitchSpeedHoldPhase = computed(() => engine.currentPhaseId.value === 'speed_hold_pitch')
 
 // --- PFD Scale (responsive) ---
 const pfdScale = computed(() => {
@@ -436,6 +440,10 @@ const layoutGridStyle = computed(() => {
 
 // --- Goal description for sidebar ---
 const goalDescription = computed(() => {
+  if (engine.currentPhaseId.value === 'speed_hold_pitch') {
+    return 'Geschwindigkeit im roten Band halten (nur mit Pitch bei 70% Schub)'
+  }
+
   const goal = currentPhase.value?.interactionGoal
   if (!goal) return ''
   const labels: Record<string, string> = {
@@ -445,8 +453,10 @@ const goalDescription = computed(() => {
     speed: 'Geschwindigkeit',
     altitude: 'Höhe',
     verticalSpeed: 'Steigrate',
+    throttlePercent: 'Schub',
   }
-  return `${labels[goal.parameter] || goal.parameter}: ${goal.target} (± ${goal.tolerance})`
+  const unit = goal.parameter === 'throttlePercent' ? '%' : ''
+  return `${labels[goal.parameter] || goal.parameter}: ${goal.target}${unit} (± ${goal.tolerance}${unit})`
 })
 
 // --- Phase stepper helpers ---
@@ -531,13 +541,16 @@ sync.onStickInput((data) => {
   fbw.updateInput({
     pitch: data.pitch,
     roll: data.roll,
-    throttle: data.throttle,
+    throttle: isPitchSpeedHoldPhase.value ? 0.7 : data.throttle,
   })
 })
 
 // --- TTS on phase change ---
 watch(() => engine.currentPhaseId.value, async (newId, oldId) => {
   if (!newId || newId === oldId) return
+  if (newId === 'speed_hold_pitch') {
+    fbw.updateInput({ throttle: 0.7 })
+  }
   if (initialSpeechTimeout) {
     clearTimeout(initialSpeechTimeout)
     initialSpeechTimeout = null

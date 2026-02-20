@@ -75,19 +75,35 @@ const phases: LearnPfdPhase[] = [
     // --- Phase 6: Speed Intro ---
     {
         id: 'speed_intro',
-        atcMessage: 'Links erscheint jetzt das Speed Tape. Das zeigt dir wie schnell du fliegst, in Knoten. Schieb den Schubhebel auf etwa siebzig Prozent nach vorne — und schau was mit der Geschwindigkeit passiert.',
-        explanation: 'Das Speed Tape zeigt die angezeigte Fluggeschwindigkeit (IAS) in Knoten.',
+        atcMessage: 'Links erscheint jetzt das Speed Tape. Erster Schritt: Setz den Schubhebel sauber auf siebzig Prozent.',
+        explanation: 'Wir stabilisieren zuerst den Schub auf 70%, bevor wir Geschwindigkeit über Pitch kontrollieren.',
         visibleElements: ['attitude', 'speedTape'],
         layoutMode: 'split',
-        interactionGoal: { parameter: 'speed', target: 280, tolerance: 30, holdMs: 2000 },
+        interactionGoal: { parameter: 'throttlePercent', target: 70, tolerance: 4, holdMs: 1500 },
         goalTimeoutMs: 20000,
-        goalHint: 'Schieb den Schubhebel bis ungefähr siebzig Prozent. Die Zahl auf dem Speed Tape sollte steigen.',
+        goalHint: 'Schubhebel auf die 70%-Marke setzen und kurz halten.',
         buttons: [
-            { id: 'skip_speed', label: 'Weiter', icon: 'mdi-arrow-right', next: 'alt_intro', type: 'primary' },
+            { id: 'skip_speed', label: 'Weiter', icon: 'mdi-arrow-right', next: 'speed_hold_pitch', type: 'primary' },
         ],
     },
 
-    // --- Phase 7: Altitude Intro ---
+    // --- Phase 7: Hold Speed With Pitch ---
+    {
+        id: 'speed_hold_pitch',
+        atcMessage: 'Jetzt kommt der wichtige Teil: Halte die Geschwindigkeit im roten Bereich. Der Schub bleibt bei siebzig Prozent — du steuerst das nur mit Pitch. Nase leicht hoch macht langsamer, Nase leicht runter macht schneller.',
+        explanation: 'Energie-Management: Mit konstantem Schub kontrollierst du die Geschwindigkeit über den Pitchwinkel.',
+        visibleElements: ['attitude', 'speedTape'],
+        layoutMode: 'split',
+        interactionGoal: { parameter: 'speed', target: 225, tolerance: 8, holdMs: 3000 },
+        speedTargetRange: { min: 217, max: 233 },
+        goalTimeoutMs: 25000,
+        goalHint: 'Halte den Schub bei 70%. Korrigiere nur mit Pitch, bis die Speed-Zahl im roten Band bleibt.',
+        buttons: [
+            { id: 'skip_speed_hold', label: 'Weiter', icon: 'mdi-arrow-right', next: 'alt_intro', type: 'primary' },
+        ],
+    },
+
+    // --- Phase 8: Altitude Intro ---
     {
         id: 'alt_intro',
         atcMessage: 'Rechts kommt jetzt das Altitude Tape. Das zeigt deine Höhe in Fuß. Zieh den Stick leicht nach hinten — du steigst, und die Höhe nimmt zu.',
@@ -102,7 +118,7 @@ const phases: LearnPfdPhase[] = [
         ],
     },
 
-    // --- Phase 8: Vertical Speed Intro ---
+    // --- Phase 9: Vertical Speed Intro ---
     {
         id: 'vs_intro',
         atcMessage: 'Neben der Höhe siehst du jetzt die Vertical Speed Anzeige. Die zeigt dir, wie schnell du steigst oder sinkst. Plus heißt steigen, minus heißt sinken. Probier beides aus.',
@@ -117,7 +133,7 @@ const phases: LearnPfdPhase[] = [
         ],
     },
 
-    // --- Phase 9: Heading Intro ---
+    // --- Phase 10: Heading Intro ---
     {
         id: 'heading_intro',
         atcMessage: 'Unten erscheint jetzt das Heading. Das ist dein Kompass — es zeigt in welche Richtung du fliegst. Neig das Flugzeug nach rechts und beobachte, wie sich das Heading ändert.',
@@ -132,7 +148,7 @@ const phases: LearnPfdPhase[] = [
         ],
     },
 
-    // --- Phase 10: Combined ---
+    // --- Phase 11: Combined ---
     {
         id: 'combined',
         atcMessage: 'Sehr gut! Jetzt hast du alle Instrumente vor dir. Das ist das komplette PFD. Nimm dir einen Moment und spiel damit. Steig auf 8000 Fuß.',
@@ -146,7 +162,7 @@ const phases: LearnPfdPhase[] = [
         ],
     },
 
-    // --- Phase 11: Free Practice ---
+    // --- Phase 12: Free Practice ---
     {
         id: 'free_practice',
         atcMessage: 'Du hast das PFD verstanden. Ab jetzt kannst du frei üben. Experimentier mit dem Stick und dem Schubhebel. Schau dir an, wie alles zusammenhängt.',
@@ -157,7 +173,7 @@ const phases: LearnPfdPhase[] = [
         ],
     },
 
-    // --- Phase 12: End ---
+    // --- Phase 13: End ---
     {
         id: 'end',
         atcMessage: 'Fantastisch! Du kannst jetzt das PFD eines Airbus A320 lesen. Horizont, Geschwindigkeit, Höhe, Steigrate und Heading — alles klar.',
