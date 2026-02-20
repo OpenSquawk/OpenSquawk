@@ -102,6 +102,40 @@
             </div>
           </div>
 
+          <!-- Stick Input Card -->
+          <div class="group relative overflow-hidden rounded-3xl border border-white/10 bg-[#0b1328]/90 shadow-xl shadow-cyan-500/5 transition hover:border-amber-400/30 hover:shadow-amber-500/15">
+            <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
+            <div class="relative z-10 p-6">
+              <div class="mb-5 flex items-start justify-between">
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-400/40 bg-amber-500/10">
+                  <v-icon icon="mdi-gamepad-variant" size="30" class="text-amber-300" />
+                </div>
+                <span class="rounded-full border border-cyan-400/40 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-300">
+                  Input
+                </span>
+              </div>
+              <h3 class="mb-2 text-xl font-semibold">Stick Input</h3>
+              <p class="mb-4 text-sm text-white/60 leading-relaxed">
+                Touchscreen-Controller für Sidestick und Schubhebel.
+                Öffne diese Seite auf einem zweiten Gerät.
+              </p>
+              <div class="flex flex-col gap-3">
+                <NuxtLink to="/flightlab/medienstationen/stick-input">
+                  <v-btn
+                    color="amber"
+                    variant="flat"
+                    size="large"
+                    block
+                    class="rounded-xl font-semibold"
+                    prepend-icon="mdi-gamepad-variant"
+                  >
+                    Öffnen
+                  </v-btn>
+                </NuxtLink>
+              </div>
+            </div>
+          </div>
+
           <!-- Coming Soon Card -->
           <div class="flex items-center justify-center rounded-3xl border border-dashed border-white/10 bg-[#0b1328]/40 p-6">
             <div class="text-center">

@@ -127,7 +127,25 @@
             <span class="text-sm font-medium text-white/70">{{ engine.scenario.title }}</span>
           </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
+          <!-- Session Code for touchscreen connection -->
+          <div v-if="sync.sessionCode.value" class="flex items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-3 py-1.5">
+            <v-icon icon="mdi-gamepad-variant" size="16" class="text-cyan-400/70" />
+            <span class="text-xs text-white/50">Input:</span>
+            <code class="text-sm font-mono font-bold text-cyan-300 tracking-widest">{{ sync.sessionCode.value }}</code>
+            <v-icon
+              v-if="sync.isConnected.value"
+              icon="mdi-wifi"
+              size="14"
+              class="text-emerald-400"
+              title="Verbunden"
+            />
+          </div>
+          <div v-else-if="wsConnected" class="flex items-center gap-1.5 text-xs text-white/30">
+            <v-icon icon="mdi-loading" size="14" class="animate-spin text-cyan-400/50" />
+            Session wird erstellt...
+          </div>
+
           <v-btn
             v-if="canFullscreen"
             size="small"
@@ -371,6 +389,7 @@ const sidebarOpen = ref(true)
 const pageRoot = ref<HTMLElement | null>(null)
 const isFullscreen = ref(false)
 const canFullscreen = ref(false)
+const wsConnected = ref(false)
 const fullscreenEvents = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
 
 let initialSpeechTimeout: ReturnType<typeof setTimeout> | null = null
@@ -532,7 +551,7 @@ watch(() => engine.currentPhaseId.value, async (newId, oldId) => {
 })
 
 // --- Lifecycle ---
-onMounted(() => {
+onMounted(async () => {
   // Start FBW physics
   fbw.start()
 
@@ -545,6 +564,14 @@ onMounted(() => {
   }
   if (typeof window !== 'undefined') {
     window.addEventListener('keydown', onGlobalKeydown)
+  }
+
+  // Create WebSocket session for stick input
+  try {
+    await sync.createSession('learn-pfd')
+    wsConnected.value = true
+  } catch (e) {
+    console.warn('[learn-pfd] WS session creation failed:', e)
   }
 
   // Speak initial welcome
@@ -570,6 +597,7 @@ onBeforeUnmount(() => {
     clearTimeout(initialSpeechTimeout)
     initialSpeechTimeout = null
   }
+  sync.disconnect()
   fbw.cleanup()
   engine.cleanup()
   audio.dispose()
