@@ -28,7 +28,7 @@ function vsToY(fpm: number): number {
   const sign = Math.sign(fpm)
   if (sign === 0) return centerY.value
   const frac = speedFraction(Math.abs(fpm))
-  return centerY.value - sign * frac * scaleSpan.value
+  return centerY.value + sign * frac * scaleSpan.value
 }
 
 const markPositions = computed(() => {
