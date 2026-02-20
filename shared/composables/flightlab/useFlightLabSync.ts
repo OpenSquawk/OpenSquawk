@@ -16,6 +16,7 @@ export function useFlightLabSync() {
     onPeerLeft: [] as Array<(peerRole: FlightLabRole) => void>,
     onTelemetry: [] as Array<(data: any) => void>,
     onError: [] as Array<(msg: string) => void>,
+    onStickInput: [] as Array<(data: { pitch: number; roll: number; throttle: number }) => void>,
   }
 
   function connect(): Promise<void> {
@@ -77,6 +78,9 @@ export function useFlightLabSync() {
       case 'error':
         callbacks.onError.forEach(cb => cb(data.message))
         break
+      case 'stick-input':
+        callbacks.onStickInput.forEach(cb => cb(data.data))
+        break
     }
   }
 
@@ -128,6 +132,11 @@ export function useFlightLabSync() {
   function onPeerLeft(cb: (role: FlightLabRole) => void) { callbacks.onPeerLeft.push(cb) }
   function onTelemetry(cb: (data: any) => void) { callbacks.onTelemetry.push(cb) }
   function onError(cb: (msg: string) => void) { callbacks.onError.push(cb) }
+  function onStickInput(cb: (data: { pitch: number; roll: number; throttle: number }) => void) { callbacks.onStickInput.push(cb) }
+
+  function sendStickInput(data: { pitch: number; roll: number; throttle: number }) {
+    send({ type: 'stick-input', data })
+  }
 
   return {
     isConnected,
@@ -147,5 +156,7 @@ export function useFlightLabSync() {
     onPeerLeft,
     onTelemetry,
     onError,
+    onStickInput,
+    sendStickInput,
   }
 }

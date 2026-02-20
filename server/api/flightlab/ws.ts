@@ -174,6 +174,14 @@ export default defineWebSocketHandler({
         userSessionMap.set(data.userId, session.code)
         break
       }
+
+      case 'stick-input': {
+        // Broadcast stick/throttle input to all peers in session (for PFD display)
+        const session = findSessionByPeer(peerId)
+        if (!session) return
+        broadcastToSession(session, { type: 'stick-input', data: data.data }, peerId)
+        break
+      }
     }
   },
 
