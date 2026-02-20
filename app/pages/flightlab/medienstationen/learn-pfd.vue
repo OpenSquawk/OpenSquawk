@@ -128,11 +128,11 @@
           </div>
         </div>
         <div class="flex items-center gap-3">
-          <!-- Session Code for touchscreen connection -->
-          <div v-if="sync.sessionCode.value" class="flex items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-3 py-1.5">
+          <!-- Touch input connection status -->
+          <div v-if="sync.isConnected.value" class="flex items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-3 py-1.5">
             <v-icon icon="mdi-gamepad-variant" size="16" class="text-cyan-400/70" />
             <span class="text-xs text-white/50">Input:</span>
-            <code class="text-sm font-mono font-bold text-cyan-300 tracking-widest">{{ sync.sessionCode.value }}</code>
+            <span class="text-xs font-semibold text-cyan-200">Direkt verbunden</span>
             <v-icon
               v-if="sync.isConnected.value"
               icon="mdi-wifi"

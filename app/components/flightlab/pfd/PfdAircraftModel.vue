@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 const props = defineProps<{
   pitch: number
@@ -15,6 +16,7 @@ const props = defineProps<{
 }>()
 
 const containerRef = ref<HTMLDivElement | null>(null)
+const modelUrls = ['/models/airplane-user.glb', '/models/Airplane.glb', '/models/a320.glb']
 
 let renderer: THREE.WebGLRenderer | null = null
 let scene: THREE.Scene | null = null
@@ -23,6 +25,7 @@ let aircraft: THREE.Group | null = null
 let cloudPlane: THREE.Mesh | null = null
 let animFrameId: number | null = null
 let resizeObserver: ResizeObserver | null = null
+let disposed = false
 
 // Reactive targets for smooth interpolation
 let targetPitchRad = 0
@@ -90,6 +93,49 @@ function buildAircraft(): THREE.Group {
   return group
 }
 
+function centerAndScaleModel(model: THREE.Object3D, targetSize = 5) {
+  const box = new THREE.Box3().setFromObject(model)
+  const size = new THREE.Vector3()
+  box.getSize(size)
+  const maxDim = Math.max(size.x, size.y, size.z)
+  if (maxDim > 0) {
+    const scale = targetSize / maxDim
+    model.scale.setScalar(scale)
+  }
+
+  const centeredBox = new THREE.Box3().setFromObject(model)
+  const center = new THREE.Vector3()
+  centeredBox.getCenter(center)
+  model.position.sub(center)
+
+  // glTF is usually +Z forward; our scene uses -Z as nose-forward.
+  model.rotation.y = Math.PI
+}
+
+async function loadAircraftModel() {
+  if (!aircraft || disposed) return
+
+  const loader = new GLTFLoader()
+  for (const url of modelUrls) {
+    try {
+      const gltf = await loader.loadAsync(url)
+      if (!aircraft || disposed) return
+
+      const model = gltf.scene
+      centerAndScaleModel(model, 5)
+      aircraft.clear()
+      aircraft.add(model)
+      return
+    } catch {
+      // Try next model URL
+    }
+  }
+
+  if (!aircraft || disposed) return
+  aircraft.clear()
+  aircraft.add(buildAircraft())
+}
+
 function initScene() {
   const container = containerRef.value
   if (!container) return
@@ -116,8 +162,8 @@ function initScene() {
   directionalLight.position.set(5, 10, 5)
   scene.add(directionalLight)
 
-  // Aircraft
-  aircraft = buildAircraft()
+  // Aircraft (root group; model is loaded asynchronously)
+  aircraft = new THREE.Group()
   scene.add(aircraft)
 
   // Cloud plane
@@ -187,12 +233,15 @@ watch(
 )
 
 onMounted(() => {
+  disposed = false
   initScene()
   updateTargets()
+  loadAircraftModel()
   animate()
 })
 
 onBeforeUnmount(() => {
+  disposed = true
   // Cancel animation frame
   if (animFrameId !== null) {
     cancelAnimationFrame(animFrameId)

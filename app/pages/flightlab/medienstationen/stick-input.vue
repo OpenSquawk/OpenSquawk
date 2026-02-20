@@ -28,36 +28,23 @@
           <v-icon icon="mdi-wifi" size="36" class="text-cyan-300" />
         </div>
         <div>
-          <h2 class="text-xl font-semibold mb-2">Verbindung herstellen</h2>
+          <h2 class="text-xl font-semibold mb-2">Verbinde mit FlightLab</h2>
           <p class="text-sm text-white/50">
-            Gib den 4-stelligen Code ein, der auf dem PFD-Bildschirm angezeigt wird.
+            Kein Pairing-Code nötig. Diese Steuerung verbindet sich direkt mit der aktiven Instanz.
           </p>
+          <p v-if="connectionError" class="mt-2 text-sm text-red-300/90">{{ connectionError }}</p>
         </div>
-        <div class="space-y-3">
-          <v-text-field
-            v-model="sessionCodeInput"
-            variant="outlined"
-            density="compact"
-            placeholder="CODE"
-            maxlength="4"
-            class="session-code-input"
-            :error-messages="connectionError"
-            hide-details="auto"
-            @keydown.enter="connectToSession"
-          />
-          <v-btn
-            color="primary"
-            variant="flat"
-            size="large"
-            block
-            class="rounded-xl font-semibold"
-            :loading="isConnecting"
-            :disabled="sessionCodeInput.length < 4"
-            @click="connectToSession"
-          >
-            Verbinden
-          </v-btn>
-        </div>
+        <v-btn
+          color="primary"
+          variant="flat"
+          size="large"
+          block
+          class="rounded-xl font-semibold"
+          :loading="isConnecting"
+          @click="connectToSession"
+        >
+          Erneut verbinden
+        </v-btn>
       </div>
     </div>
 
@@ -65,30 +52,46 @@
     <div v-else class="flex-1 flex gap-2 p-3">
       <!-- Throttle (left side, vertical slider) -->
       <div class="w-20 flex flex-col items-center gap-2">
-        <span class="text-[10px] uppercase tracking-widest text-white/30">Thrust (max 70%)</span>
+        <span class="text-[10px] uppercase tracking-widest text-white/30">Thrust</span>
         <div
           ref="throttleTrack"
-          class="flex-1 w-16 rounded-2xl border border-white/10 bg-[#0b1328]/90 relative overflow-hidden cursor-pointer"
+          class="flex-1 w-16 rounded-2xl border bg-[#0b1328]/90 relative overflow-hidden cursor-pointer transition-all duration-150"
+          :class="isThrottleOverLimit ? 'border-red-400/70 shadow-[0_0_0_1px_rgba(248,113,113,0.35)]' : 'border-white/10'"
           @pointerdown="onThrottlePointerDown"
           @pointermove="onThrottlePointerMove"
           @pointerup="onThrottlePointerUp"
           @pointercancel="onThrottlePointerUp"
         >
+          <!-- Recommended max marker (70%) -->
+          <div
+            class="absolute left-0 right-0 border-t border-cyan-200/40"
+            :style="{ bottom: `${RECOMMENDED_THRUST * 100}%` }"
+          />
+
           <!-- Fill -->
           <div
-            class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-500/80 to-amber-400/40 transition-[height] duration-75"
+            class="absolute bottom-0 left-0 right-0 transition-[height] duration-75"
+            :class="isThrottleOverLimit ? 'bg-gradient-to-t from-red-600/90 to-red-400/80 throttle-overlimit' : 'bg-gradient-to-t from-amber-500/80 to-amber-400/40'"
             :style="{ height: `${throttleUiPercent}%` }"
           />
           <!-- Handle -->
           <div
-            class="absolute left-1/2 -translate-x-1/2 w-12 h-3 rounded-full bg-white/80 border border-white/30 shadow-lg"
+            class="absolute left-1/2 -translate-x-1/2 w-12 h-3 rounded-full border shadow-lg transition-colors duration-150"
+            :class="isThrottleOverLimit ? 'bg-red-200 border-red-300/90' : 'bg-white/80 border-white/30'"
             :style="{ bottom: `calc(${throttleUiPercent}% - 6px)` }"
           />
           <!-- Label -->
           <div class="absolute bottom-2 left-0 right-0 text-center">
-            <span class="text-xs font-mono font-bold text-white/70">{{ Math.round(throttle * 100) }}%</span>
+            <span class="text-xs font-mono font-bold" :class="isThrottleOverLimit ? 'text-red-100' : 'text-white/70'">{{ Math.round(throttle * 100) }}%</span>
+          </div>
+          <div class="absolute top-1 left-0 right-0 text-center">
+            <span class="text-[10px] font-mono text-cyan-100/65">70%</span>
           </div>
         </div>
+        <p v-if="isThrottleOverLimit" class="text-[10px] font-semibold uppercase tracking-wide text-red-300 throttle-warning-text">
+          Zu viel Schub
+        </p>
+        <p v-else class="text-[10px] text-white/35">Empfohlen bis 70%</p>
       </div>
 
       <!-- Sidestick (center, 2D pad) -->
@@ -144,17 +147,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useFlightLabSync } from '~~/shared/composables/flightlab/useFlightLabSync'
 
 definePageMeta({ layout: false })
 useHead({ title: 'FlightLab - Stick Input' })
 
 const sync = useFlightLabSync()
-const MAX_TRAINING_THROTTLE = 0.7
+const RECOMMENDED_THRUST = 0.7
 
 // --- Connection state ---
-const sessionCodeInput = ref('')
 const isConnecting = ref(false)
 const isConnected = ref(false)
 const connectionError = ref('')
@@ -162,10 +164,11 @@ const connectionError = ref('')
 // --- Stick state ---
 const stickX = ref(0)  // -1 (left) to +1 (right) = roll
 const stickY = ref(0)  // -1 (forward/push/nose down) to +1 (back/pull/nose up)
-const throttle = ref(0) // 0 (idle) to 0.7 (training max)
+const throttle = ref(0) // 0 (idle) to 1 (TOGA)
 const stickActive = ref(false)
 const throttleActive = ref(false)
-const throttleUiPercent = computed(() => (throttle.value / MAX_TRAINING_THROTTLE) * 100)
+const throttleUiPercent = computed(() => throttle.value * 100)
+const isThrottleOverLimit = computed(() => throttle.value > RECOMMENDED_THRUST)
 
 // --- Refs ---
 const stickPad = ref<HTMLElement | null>(null)
@@ -175,13 +178,18 @@ const throttleTrack = ref<HTMLElement | null>(null)
 let sendInterval: ReturnType<typeof setInterval> | null = null
 
 async function connectToSession() {
-  if (sessionCodeInput.value.length < 4) return
+  if (isConnecting.value) return
   isConnecting.value = true
   connectionError.value = ''
 
   try {
-    await sync.joinSession(sessionCodeInput.value, 'participant')
+    await sync.joinGlobalSession('participant', 'learn-pfd')
     isConnected.value = true
+
+    if (sendInterval) {
+      clearInterval(sendInterval)
+      sendInterval = null
+    }
 
     // Start sending stick input at 30Hz
     sendInterval = setInterval(() => {
@@ -192,7 +200,8 @@ async function connectToSession() {
       })
     }, 33)
   } catch (e) {
-    connectionError.value = 'Verbindung fehlgeschlagen. Code korrekt?'
+    isConnected.value = false
+    connectionError.value = 'Verbindung fehlgeschlagen. Bitte erneut versuchen.'
     console.error('[stick-input] Connection failed:', e)
   } finally {
     isConnecting.value = false
@@ -255,10 +264,14 @@ function updateThrottlePosition(e: PointerEvent) {
   const rect = track.getBoundingClientRect()
   // Bottom = 0, top = 1
   const rawThrottle = 1 - (e.clientY - rect.top) / rect.height
-  throttle.value = Math.max(0, Math.min(MAX_TRAINING_THROTTLE, rawThrottle))
+  throttle.value = Math.max(0, Math.min(1, rawThrottle))
 }
 
 // --- Cleanup ---
+onMounted(() => {
+  connectToSession()
+})
+
 onBeforeUnmount(() => {
   if (sendInterval) {
     clearInterval(sendInterval)
@@ -269,12 +282,27 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.session-code-input :deep(input) {
-  text-align: center;
-  font-family: monospace;
-  font-size: 24px;
-  font-weight: bold;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
+.throttle-overlimit {
+  animation: throttle-alert 0.7s ease-in-out infinite;
+}
+
+.throttle-warning-text {
+  animation: throttle-text-alert 0.7s ease-in-out infinite;
+}
+
+@keyframes throttle-alert {
+  0%, 100% {
+    filter: brightness(1);
+    opacity: 0.85;
+  }
+  50% {
+    filter: brightness(1.3);
+    opacity: 1;
+  }
+}
+
+@keyframes throttle-text-alert {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
 }
 </style>
