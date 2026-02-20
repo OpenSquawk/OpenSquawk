@@ -172,7 +172,7 @@
         <!-- 3D Aircraft Model -->
         <div class="relative rounded-2xl overflow-hidden border border-white/5 bg-[#050a15] min-h-[200px]">
           <ClientOnly>
-            <PfdAircraftModel
+            <FlightlabPfdAircraftModel
               :pitch="fbw.state.pitch"
               :bank-angle="fbw.state.bankAngle"
               :heading="fbw.state.heading"
@@ -206,7 +206,7 @@
           </Transition>
 
           <!-- PFD Container -->
-          <PfdContainer
+          <FlightlabPfdContainer
             :pitch="fbw.state.pitch"
             :bank-angle="fbw.state.bankAngle"
             :heading="fbw.state.heading"

@@ -80,7 +80,7 @@ const headingWidth = computed(() => attSize.value + tapeWidth.value * 2)
           top: `${speedTapePos.top}px`,
         }"
       >
-        <PfdSpeedTape
+        <FlightlabPfdSpeedTape
           :speed="speed"
           :width="tapeWidth"
           :height="attSize"
@@ -98,7 +98,7 @@ const headingWidth = computed(() => attSize.value + tapeWidth.value * 2)
           top: `${attitudePos.top}px`,
         }"
       >
-        <PfdAttitudeIndicator
+        <FlightlabPfdAttitudeIndicator
           :pitch="pitch"
           :bank-angle="bankAngle"
           :size="attSize"
@@ -116,7 +116,7 @@ const headingWidth = computed(() => attSize.value + tapeWidth.value * 2)
           top: `${altTapePos.top}px`,
         }"
       >
-        <PfdAltitudeTape
+        <FlightlabPfdAltitudeTape
           :altitude="altitude"
           :width="altTapeWidth"
           :height="attSize"
@@ -134,7 +134,7 @@ const headingWidth = computed(() => attSize.value + tapeWidth.value * 2)
           top: `${vsPos.top}px`,
         }"
       >
-        <PfdVerticalSpeed
+        <FlightlabPfdVerticalSpeed
           :vertical-speed="verticalSpeed"
           :width="vsWidth"
           :height="attSize"
@@ -152,7 +152,7 @@ const headingWidth = computed(() => attSize.value + tapeWidth.value * 2)
           top: `${headingPos.top}px`,
         }"
       >
-        <PfdHeadingIndicator
+        <FlightlabPfdHeadingIndicator
           :heading="heading"
           :width="headingWidth"
           :height="headingHeight"
