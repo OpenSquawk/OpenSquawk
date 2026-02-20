@@ -112,4 +112,42 @@ export type FlightLabWSEvent =
   | { type: 'instructor-command'; command: 'pause' | 'resume' | 'restart' | 'skip' | 'back'; targetPhaseId?: string }
   | { type: 'participant-action'; buttonId: string; phaseId: string }
   | { type: 'session-joined'; role: FlightLabRole }
+  | { type: 'stick-input'; data: { pitch: number; roll: number; throttle: number } }
   | { type: 'error'; message: string }
+
+// --- Learn PFD Extensions ---
+
+export type PfdElement = 'attitude' | 'speedTape' | 'altitudeTape' | 'verticalSpeed' | 'heading'
+export type PfdLayoutMode = 'model-focus' | 'split' | 'pfd-focus'
+
+export interface PfdInteractionGoal {
+  /** What to check: pitch angle, altitude, heading, speed, bank */
+  parameter: 'pitch' | 'altitude' | 'heading' | 'speed' | 'bankAngle' | 'verticalSpeed'
+  /** Target value */
+  target: number
+  /** Acceptable deviation (+/-) */
+  tolerance: number
+  /** How long (ms) the user must hold the value within tolerance to pass */
+  holdMs?: number
+}
+
+export interface LearnPfdPhase extends FlightLabPhase {
+  /** Which PFD elements are visible in this phase */
+  visibleElements: PfdElement[]
+  /** Layout mode controlling PFD vs 3D model sizing */
+  layoutMode: PfdLayoutMode
+  /** Optional interaction goal — user must achieve this to auto-advance */
+  interactionGoal?: PfdInteractionGoal
+  /** Timeout (ms) before showing hint if goal not reached. Default 15000 */
+  goalTimeoutMs?: number
+  /** Hint spoken via TTS if user struggles */
+  goalHint?: string
+}
+
+export interface LearnPfdScenario {
+  id: string
+  title: string
+  description: string
+  icon: string
+  phases: LearnPfdPhase[]
+}
