@@ -71,6 +71,10 @@ const trendLineEndY = computed(() => {
 
 const readoutBoxHeight = 24
 const readoutBoxWidth = computed(() => props.width - 8)
+const tapeInnerX = 2
+const tapeInnerY = 2
+const tapeInnerWidth = computed(() => props.width - 4)
+const tapeInnerHeight = computed(() => props.height - 4)
 </script>
 
 <template>
@@ -86,14 +90,23 @@ const readoutBoxWidth = computed(() => props.width - 8)
       </clipPath>
     </defs>
 
-    <!-- Background -->
+    <!-- Airbus-style tape body -->
     <rect
       x="0"
       y="0"
       :width="width"
       :height="height"
-      fill="rgba(10,10,30,0.95)"
-      rx="2"
+      fill="#8f9198"
+      rx="1"
+    />
+    <rect
+      :x="tapeInnerX"
+      :y="tapeInnerY"
+      :width="tapeInnerWidth"
+      :height="tapeInnerHeight"
+      fill="#93959c"
+      stroke="#d2d4da"
+      stroke-width="0.8"
     />
 
     <!-- Scrolling tape (clipped) -->
@@ -130,19 +143,19 @@ const readoutBoxWidth = computed(() => props.width - 8)
       <g v-for="mark in marks" :key="mark.spd">
         <!-- Tick mark -->
         <line
-          :x1="width - 8"
+          :x1="width - 10"
           :y1="mark.y"
-          :x2="width"
+          :x2="width - 1"
           :y2="mark.y"
-          stroke="white"
+          stroke="#f4f6fb"
           stroke-width="1"
         />
         <!-- Label -->
         <text
           v-if="mark.isLabel"
-          :x="width - 12"
+          :x="width - 14"
           :y="mark.y + 4"
-          fill="white"
+          fill="#f4f6fb"
           font-size="12"
           text-anchor="end"
           font-family="monospace"
@@ -158,7 +171,7 @@ const readoutBoxWidth = computed(() => props.width - 8)
         :y1="centerY"
         :x2="width / 2"
         :y2="trendLineEndY"
-        stroke="#22d3ee"
+        stroke="#30e3ff"
         stroke-width="2"
         opacity="0.8"
       />
@@ -170,15 +183,15 @@ const readoutBoxWidth = computed(() => props.width - 8)
       :y="centerY - readoutBoxHeight / 2"
       :width="readoutBoxWidth"
       :height="readoutBoxHeight"
-      fill="rgba(10,10,30,0.95)"
-      stroke="#22d3ee"
-      stroke-width="1.5"
-      rx="2"
+      fill="#02040b"
+      stroke="#2fe5ff"
+      stroke-width="1.4"
+      rx="1.5"
     />
     <text
       :x="width / 2"
       :y="centerY + 5"
-      fill="#22d3ee"
+      fill="#2fe5ff"
       font-size="15"
       font-weight="bold"
       text-anchor="middle"

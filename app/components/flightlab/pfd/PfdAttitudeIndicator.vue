@@ -82,12 +82,12 @@ const dotRadius = computed(() => 4)
         <circle :cx="cx" :cy="cy" :r="size * 0.46" />
       </clipPath>
       <linearGradient :id="skyGradId" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#1a5fb4" />
-        <stop offset="100%" stop-color="#62a0ea" />
+        <stop offset="0%" stop-color="#26aef0" />
+        <stop offset="100%" stop-color="#1e9ddf" />
       </linearGradient>
       <linearGradient :id="groundGradId" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#8b6914" />
-        <stop offset="100%" stop-color="#5e4108" />
+        <stop offset="0%" stop-color="#b56517" />
+        <stop offset="100%" stop-color="#9b5312" />
       </linearGradient>
     </defs>
 
@@ -118,7 +118,7 @@ const dotRadius = computed(() => 4)
           :x2="size * 2"
           :y2="0"
           stroke="white"
-          stroke-width="1.5"
+          stroke-width="2"
         />
 
         <!-- Pitch ladder -->
@@ -135,7 +135,7 @@ const dotRadius = computed(() => 4)
             <text
               :x="-mark.width / 2 - 6"
               :y="mark.y + 4"
-              fill="white"
+              fill="#f4f6fb"
               font-size="11"
               text-anchor="end"
               font-family="monospace"
@@ -145,7 +145,7 @@ const dotRadius = computed(() => 4)
             <text
               :x="mark.width / 2 + 6"
               :y="mark.y + 4"
-              fill="white"
+              fill="#f4f6fb"
               font-size="11"
               text-anchor="start"
               font-family="monospace"
@@ -165,21 +165,21 @@ const dotRadius = computed(() => 4)
       :y1="tick.y1"
       :x2="tick.x2"
       :y2="tick.y2"
-      stroke="white"
+      stroke="#f4f6fb"
       stroke-width="1.5"
     />
 
     <!-- Zero-bank reference triangle (fixed, top center) -->
     <polygon
       :points="`${cx},${cy - size * 0.42} ${cx - 6},${cy - size * 0.42 - 10} ${cx + 6},${cy - size * 0.42 - 10}`"
-      fill="white"
+      fill="#f4f6fb"
     />
 
     <!-- Bank pointer (rotates with bank) -->
     <polygon
       :points="bankPointer"
       :transform="bankPointerTransform"
-      fill="#22d3ee"
+      fill="#facc15"
     />
 
     <!-- Fixed aircraft reference symbol -->

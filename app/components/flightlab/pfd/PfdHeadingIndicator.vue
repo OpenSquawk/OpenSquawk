@@ -66,7 +66,7 @@ const readoutText = computed(() => {
   return normalized.toString().padStart(3, '0')
 })
 
-const readoutBoxWidth = 36
+const readoutBoxWidth = 40
 const readoutBoxHeight = 18
 </script>
 
@@ -83,14 +83,23 @@ const readoutBoxHeight = 18
       </clipPath>
     </defs>
 
-    <!-- Background -->
+    <!-- Airbus-style heading tape -->
     <rect
       x="0"
       y="0"
       :width="width"
       :height="height"
-      fill="rgba(10,10,30,0.95)"
-      rx="2"
+      fill="#8f9198"
+      rx="1"
+    />
+    <rect
+      x="1.5"
+      y="1.5"
+      :width="width - 3"
+      :height="height - 3"
+      fill="#94969d"
+      stroke="#d4d6dc"
+      stroke-width="0.8"
     />
 
     <!-- Readout box at top center (yellow heading value) -->
@@ -99,7 +108,7 @@ const readoutBoxHeight = 18
       y="2"
       :width="readoutBoxWidth"
       :height="readoutBoxHeight"
-      fill="rgba(10,10,30,0.95)"
+      fill="#02040b"
       stroke="#facc15"
       stroke-width="1"
       rx="2"
@@ -131,7 +140,7 @@ const readoutBoxHeight = 18
           :y1="height"
           :x2="mark.x"
           :y2="mark.isMajor ? height - 12 : height - 7"
-          stroke="white"
+          stroke="#f4f6fb"
           :stroke-width="mark.isMajor ? 1.5 : 1"
         />
         <!-- Label (above tick) -->
@@ -139,7 +148,7 @@ const readoutBoxHeight = 18
           v-if="mark.isMajor"
           :x="mark.x"
           :y="height - 15"
-          fill="white"
+          fill="#f4f6fb"
           font-size="11"
           text-anchor="middle"
           font-family="monospace"

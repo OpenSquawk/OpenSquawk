@@ -57,14 +57,14 @@ const bandHeight = computed(() => Math.abs(needleY.value - centerY.value))
       </clipPath>
     </defs>
 
-    <!-- Background -->
+    <!-- Airbus-like VS channel -->
     <rect
       x="0"
       y="0"
       :width="width"
       :height="height"
-      fill="rgba(10,10,30,0.95)"
-      rx="2"
+      fill="#0b1126"
+      rx="1"
     />
 
     <g :clip-path="`url(#${clipId})`">
@@ -86,14 +86,14 @@ const bandHeight = computed(() => Math.abs(needleY.value - centerY.value))
           :y1="mark.y"
           :x2="width * 0.45"
           :y2="mark.y"
-          stroke="white"
+          stroke="#f4f6fb"
           :stroke-width="mark.fpm === 0 ? 1.5 : 1"
         />
         <text
           v-if="mark.fpm !== 0"
           :x="width * 0.55"
           :y="mark.y + 4"
-          fill="white"
+          fill="#f4f6fb"
           font-size="9"
           text-anchor="start"
           font-family="monospace"
@@ -109,14 +109,14 @@ const bandHeight = computed(() => Math.abs(needleY.value - centerY.value))
         :y="bandY"
         :width="width * 0.3"
         :height="Math.max(bandHeight, 1)"
-        fill="#22d3ee"
+        fill="#2fe5ff"
         opacity="0.7"
       />
 
       <!-- Needle indicator -->
       <polygon
         :points="`${width * 0.05},${needleY} ${width * 0.3},${needleY - 4} ${width * 0.3},${needleY + 4}`"
-        fill="#22d3ee"
+        fill="#2fe5ff"
       />
     </g>
 
@@ -125,7 +125,7 @@ const bandHeight = computed(() => Math.abs(needleY.value - centerY.value))
       v-if="Math.abs(verticalSpeed) > 50"
       :x="width / 2"
       :y="height - 6"
-      fill="#22d3ee"
+      fill="#2fe5ff"
       font-size="9"
       font-weight="bold"
       text-anchor="middle"
