@@ -109,8 +109,8 @@
           </div>
 
           <!-- Axis labels -->
-          <div class="absolute top-2 left-1/2 -translate-x-1/2 text-[10px] text-white/20">PUSH (Nose Down)</div>
-          <div class="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-white/20">PULL (Nose Up)</div>
+          <div class="absolute top-2 left-1/2 -translate-x-1/2 text-[10px] text-white/20">PUSH (Nase runter)</div>
+          <div class="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-white/20">PULL (Nase hoch)</div>
           <div class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-white/20 -rotate-90 origin-center">LEFT</div>
           <div class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-white/20 rotate-90 origin-center">RIGHT</div>
 
@@ -225,9 +225,9 @@ function updateStickPosition(e: PointerEvent) {
   const rawY = ((e.clientY - rect.top) / rect.height) * 2 - 1
   // Clamp
   stickX.value = Math.max(-1, Math.min(1, rawX))
-  // Y is inverted: top of pad = forward (nose down = negative pitch input)
-  // bottom of pad = pull back (nose up = positive pitch input)
-  stickY.value = Math.max(-1, Math.min(1, -rawY))
+  // Screen Y: top of pad = push forward (nose down), bottom = pull back (nose up)
+  // rawY: -1 at top, +1 at bottom → matches: pull back (bottom) = positive pitch
+  stickY.value = Math.max(-1, Math.min(1, rawY))
 }
 
 // --- Throttle touch handling ---
