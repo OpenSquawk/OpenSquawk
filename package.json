@@ -28,6 +28,7 @@
     "nuxt-mongoose": "^1.0.6",
     "openai": "^6.22.0",
     "pinia": "^3.0.4",
+    "three": "^0.183.1",
     "vue": "^3.5.28",
     "vue-router": "^5.0.2",
     "vuetify": "^3.11.8",
@@ -39,6 +40,7 @@
   "packageManager": "yarn@4.9.4",
   "devDependencies": {
     "@types/fluent-ffmpeg": "^2.1.28",
+    "@types/three": "^0.183.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.4"
