@@ -98,7 +98,8 @@ function initScene() {
 
   // Camera
   camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 200)
-  camera.position.set(-8, 3, 5)
+  // View from front-right, slightly above — shows pitch and bank clearly
+  camera.position.set(6, 2, 4)
   camera.lookAt(0, 0, 0)
 
   // Lights
@@ -155,10 +156,11 @@ function animate() {
   animFrameId = requestAnimationFrame(animate)
 
   if (aircraft) {
-    // Pitch: rotate around Z axis (nose up/down in our coordinate system)
-    aircraft.rotation.z = lerp(aircraft.rotation.z, -targetPitchRad, 0.1)
-    // Bank: rotate around X axis
-    aircraft.rotation.x = lerp(aircraft.rotation.x, -targetBankRad, 0.1)
+    // Aircraft flies along +X, wings along Y, Z is up
+    // Pitch: rotate around Y axis (wing axis) — positive pitch = nose up
+    aircraft.rotation.y = lerp(aircraft.rotation.y, targetPitchRad, 0.1)
+    // Bank: rotate around X axis (longitudinal axis) — positive bank = right wing down
+    aircraft.rotation.x = lerp(aircraft.rotation.x, targetBankRad, 0.1)
   }
 
   if (renderer && scene && camera) {
