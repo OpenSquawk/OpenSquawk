@@ -313,9 +313,6 @@ function lerp(current: number, target: number, factor: number): number {
 }
 
 function updateCloudMotion(dt: number) {
-  const headingRad = (props.heading * Math.PI) / 180
-  const forwardX = Math.sin(headingRad)
-  const forwardZ = -Math.cos(headingRad)
   const speedFactor = Math.max(0.35, props.speed / 220)
   const driftSpeed = 9 * speedFactor
   const pitchRad = (props.pitch * Math.PI) / 180
@@ -324,22 +321,21 @@ function updateCloudMotion(dt: number) {
 
   if (cloudInstances.length > 0) {
     for (const cloud of cloudInstances) {
-      cloud.object.position.x -= forwardX * driftSpeed * cloud.driftScale * dt
-      cloud.object.position.z -= forwardZ * driftSpeed * cloud.driftScale * dt
+      // Keep cloud flow always coming from ahead of the aircraft toward the viewer.
+      cloud.object.position.z += driftSpeed * cloud.driftScale * dt
 
       const targetY = cloud.baseY + altitudeOffset
       cloud.object.position.y = lerp(cloud.object.position.y, targetY, 0.06)
-      cloud.object.rotation.y += 0.02 * cloud.driftScale * dt
 
-      if (cloud.object.position.x > CLOUD_AREA_X) cloud.object.position.x -= CLOUD_AREA_X * 2
-      if (cloud.object.position.x < -CLOUD_AREA_X) cloud.object.position.x += CLOUD_AREA_X * 2
-      if (cloud.object.position.z > CLOUD_AREA_Z) cloud.object.position.z -= CLOUD_AREA_Z * 2
-      if (cloud.object.position.z < -CLOUD_AREA_Z) cloud.object.position.z += CLOUD_AREA_Z * 2
+      if (cloud.object.position.z > CLOUD_AREA_Z) {
+        cloud.object.position.z = -CLOUD_AREA_Z
+        cloud.object.position.x = randomRange(-CLOUD_AREA_X, CLOUD_AREA_X)
+      }
     }
   } else if (cloudPlane) {
     cloudPlane.position.y = lerp(cloudPlane.position.y, CLOUD_BASE_Y + altitudeOffset, 0.05)
-    cloudPlane.position.x -= forwardX * driftSpeed * dt * 0.25
-    cloudPlane.position.z -= forwardZ * driftSpeed * dt * 0.25
+    cloudPlane.position.z += driftSpeed * dt * 0.25
+    if (cloudPlane.position.z > 30) cloudPlane.position.z = -30
     cloudPlane.rotation.z += verticalDrift * dt * 0.002
   }
 }
