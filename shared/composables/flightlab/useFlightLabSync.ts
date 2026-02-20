@@ -100,6 +100,11 @@ export function useFlightLabSync() {
     send({ type: 'join-session', code: code.toUpperCase(), role: joinRole })
   }
 
+  async function joinGlobalSession(joinRole: FlightLabRole = 'participant', scenarioId = 'learn-pfd') {
+    await connect()
+    send({ type: 'join-session', role: joinRole, scenarioId })
+  }
+
   /** Subscribe this session to receive telemetry for the given userId */
   function subscribeTelemetry(userId: string) {
     send({ type: 'subscribe-telemetry', userId })
@@ -145,6 +150,7 @@ export function useFlightLabSync() {
     remoteState,
     createSession,
     joinSession,
+    joinGlobalSession,
     subscribeTelemetry,
     sendParticipantAction,
     sendInstructorCommand,

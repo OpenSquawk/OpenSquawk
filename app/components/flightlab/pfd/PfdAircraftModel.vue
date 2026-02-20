@@ -102,11 +102,11 @@ function initScene() {
   scene.background = new THREE.Color(0x1a5fb4)
   scene.fog = new THREE.Fog(0x62a0ea, 30, 80)
 
-  // Camera — view from front-left, slightly above
-  // Aircraft nose points -Z, so camera at +Z looks at front
+  // Camera — chase-style view from behind and slightly above
+  // Aircraft nose points -Z, so +Z is behind the aircraft
   camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 200)
-  camera.position.set(-4, 3, -6)
-  camera.lookAt(0, 0, 0)
+  camera.position.set(0, 2.6, 8)
+  camera.lookAt(0, 0.2, -2.2)
 
   // Lights
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)

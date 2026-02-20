@@ -38,6 +38,7 @@ const DRAG_COEFFICIENT = 0.03
 const MASS = 150000
 const GRAVITY = 32.174
 const KT_TO_FPS = 1.68781
+const SPEED_PITCH_COUPLING = 0.5
 
 const INITIAL_SPEED = 220
 const INITIAL_ALTITUDE = 5000
@@ -130,8 +131,9 @@ export function useAirbusFBW() {
 
     // --- Speed ---
     const speedFps2 = state.speed * KT_TO_FPS
+    const pitchRad = state.pitch * Math.PI / 180
     const drag = DRAG_COEFFICIENT * speedFps2 * speedFps2
-    const climbPenalty = Math.sin(state.pitch * Math.PI / 180) * MASS * GRAVITY * 0.3
+    const climbPenalty = Math.sin(pitchRad) * MASS * GRAVITY * SPEED_PITCH_COUPLING
     const netForce = thrust - drag - climbPenalty
     const acceleration = netForce / MASS
     const speedDelta = (acceleration / KT_TO_FPS) * dt

@@ -16,6 +16,7 @@ interface FlightLabSession {
   telemetryUserIds: Set<string>
 }
 
+const GLOBAL_SESSION_CODE = 'GLOBAL'
 const sessions = new Map<string, FlightLabSession>()
 
 // Map userId → session code for telemetry routing
@@ -30,11 +31,27 @@ flightlabTelemetryStore.subscribe((userId, data) => {
   broadcastToSession(session, { type: 'telemetry', data })
 })
 
-function generateCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // No I,O,0,1 for readability
-  let code = ''
-  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)]
-  return sessions.has(code) ? generateCode() : code
+function getOrCreateGlobalSession(scenarioId = 'takeoff-eddf'): FlightLabSession {
+  const existing = sessions.get(GLOBAL_SESSION_CODE)
+  if (existing) {
+    existing.scenarioId = scenarioId
+    return existing
+  }
+
+  const session: FlightLabSession = {
+    code: GLOBAL_SESSION_CODE,
+    scenarioId,
+    currentPhaseId: 'welcome',
+    isPaused: false,
+    startedAt: Date.now(),
+    participantConnected: false,
+    instructorConnected: false,
+    history: [],
+    peers: new Map(),
+    telemetryUserIds: new Set(),
+  }
+  sessions.set(GLOBAL_SESSION_CODE, session)
+  return session
 }
 
 function broadcastToSession(session: FlightLabSession, event: any, excludePeerId?: string) {
@@ -81,26 +98,17 @@ export default defineWebSocketHandler({
 
     switch (data.type) {
       case 'create-session': {
-        const code = generateCode()
-        const session: FlightLabSession = {
-          code,
-          scenarioId: data.scenarioId ?? 'takeoff-eddf',
-          currentPhaseId: 'welcome',
-          isPaused: false,
-          startedAt: Date.now(),
-          participantConnected: false,
-          instructorConnected: true,
-          history: [],
-          peers: new Map([[peerId, { role: 'instructor', peer }]]),
-          telemetryUserIds: new Set(),
-        }
-        sessions.set(code, session)
-        peer.send(JSON.stringify({ type: 'session-created', code, state: getSessionState(session) }))
+        const session = getOrCreateGlobalSession(data.scenarioId ?? 'takeoff-eddf')
+        session.peers.set(peerId, { role: 'instructor', peer })
+        session.instructorConnected = true
+        peer.send(JSON.stringify({ type: 'session-created', code: session.code, state: getSessionState(session) }))
+        broadcastToSession(session, { type: 'peer-joined', role: 'instructor' }, peerId)
         break
       }
 
       case 'join-session': {
-        const session = sessions.get(data.code?.toUpperCase())
+        const requestedCode = typeof data.code === 'string' ? data.code.toUpperCase() : null
+        const session = requestedCode ? sessions.get(requestedCode) : getOrCreateGlobalSession(data.scenarioId ?? 'takeoff-eddf')
         if (!session) {
           peer.send(JSON.stringify({ type: 'error', message: 'Session nicht gefunden' }))
           return

@@ -65,7 +65,7 @@
     <div v-else class="flex-1 flex gap-2 p-3">
       <!-- Throttle (left side, vertical slider) -->
       <div class="w-20 flex flex-col items-center gap-2">
-        <span class="text-[10px] uppercase tracking-widest text-white/30">Thrust</span>
+        <span class="text-[10px] uppercase tracking-widest text-white/30">Thrust (max 70%)</span>
         <div
           ref="throttleTrack"
           class="flex-1 w-16 rounded-2xl border border-white/10 bg-[#0b1328]/90 relative overflow-hidden cursor-pointer"
@@ -77,12 +77,12 @@
           <!-- Fill -->
           <div
             class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-500/80 to-amber-400/40 transition-[height] duration-75"
-            :style="{ height: `${throttle * 100}%` }"
+            :style="{ height: `${throttleUiPercent}%` }"
           />
           <!-- Handle -->
           <div
             class="absolute left-1/2 -translate-x-1/2 w-12 h-3 rounded-full bg-white/80 border border-white/30 shadow-lg"
-            :style="{ bottom: `calc(${throttle * 100}% - 6px)` }"
+            :style="{ bottom: `calc(${throttleUiPercent}% - 6px)` }"
           />
           <!-- Label -->
           <div class="absolute bottom-2 left-0 right-0 text-center">
@@ -144,13 +144,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import { useFlightLabSync } from '~~/shared/composables/flightlab/useFlightLabSync'
 
 definePageMeta({ layout: false })
 useHead({ title: 'FlightLab - Stick Input' })
 
 const sync = useFlightLabSync()
+const MAX_TRAINING_THROTTLE = 0.7
 
 // --- Connection state ---
 const sessionCodeInput = ref('')
@@ -161,9 +162,10 @@ const connectionError = ref('')
 // --- Stick state ---
 const stickX = ref(0)  // -1 (left) to +1 (right) = roll
 const stickY = ref(0)  // -1 (forward/push/nose down) to +1 (back/pull/nose up)
-const throttle = ref(0) // 0 (idle) to 1 (TOGA)
+const throttle = ref(0) // 0 (idle) to 0.7 (training max)
 const stickActive = ref(false)
 const throttleActive = ref(false)
+const throttleUiPercent = computed(() => (throttle.value / MAX_TRAINING_THROTTLE) * 100)
 
 // --- Refs ---
 const stickPad = ref<HTMLElement | null>(null)
@@ -253,7 +255,7 @@ function updateThrottlePosition(e: PointerEvent) {
   const rect = track.getBoundingClientRect()
   // Bottom = 0, top = 1
   const rawThrottle = 1 - (e.clientY - rect.top) / rect.height
-  throttle.value = Math.max(0, Math.min(1, rawThrottle))
+  throttle.value = Math.max(0, Math.min(MAX_TRAINING_THROTTLE, rawThrottle))
 }
 
 // --- Cleanup ---

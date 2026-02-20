@@ -75,13 +75,13 @@ const phases: LearnPfdPhase[] = [
     // --- Phase 6: Speed Intro ---
     {
         id: 'speed_intro',
-        atcMessage: 'Links erscheint jetzt das Speed Tape. Das zeigt dir wie schnell du fliegst, in Knoten. Schieb den Schubhebel nach vorne — und schau was mit der Geschwindigkeit passiert.',
+        atcMessage: 'Links erscheint jetzt das Speed Tape. Das zeigt dir wie schnell du fliegst, in Knoten. Schieb den Schubhebel auf etwa siebzig Prozent nach vorne — und schau was mit der Geschwindigkeit passiert.',
         explanation: 'Das Speed Tape zeigt die angezeigte Fluggeschwindigkeit (IAS) in Knoten.',
         visibleElements: ['attitude', 'speedTape'],
         layoutMode: 'split',
         interactionGoal: { parameter: 'speed', target: 280, tolerance: 30, holdMs: 2000 },
         goalTimeoutMs: 20000,
-        goalHint: 'Schieb den Schubhebel weiter nach vorne. Die Zahl auf dem Speed Tape sollte steigen.',
+        goalHint: 'Schieb den Schubhebel bis ungefähr siebzig Prozent. Die Zahl auf dem Speed Tape sollte steigen.',
         buttons: [
             { id: 'skip_speed', label: 'Weiter', icon: 'mdi-arrow-right', next: 'alt_intro', type: 'primary' },
         ],
