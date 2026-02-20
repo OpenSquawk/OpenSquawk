@@ -4,44 +4,55 @@ const props = withDefaults(defineProps<{
   width?: number
   height?: number
 }>(), {
-  width: 40,
+  width: 48,
   height: 300,
 })
 
-const uid = useId()
-const clipId = computed(() => `vs-clip-${uid}`)
-
 const centerY = computed(() => props.height / 2)
-const scaleHeight = computed(() => props.height * 0.42)
+const axisX = computed(() => props.width * 0.56)
+const wingX = computed(() => props.width * 0.92)
+const scaleSpan = computed(() => props.height * 0.43)
+const WHITE = '#f4f6fb'
+const GREEN = '#19e34a'
+const majorMarks = [1000, 2000, 4000, 6000] as const
 
-function vsToY(fpm: number): number {
-  const normalized = Math.sign(fpm) * Math.sqrt(Math.abs(fpm) / 6000)
-  return centerY.value - normalized * scaleHeight.value
+function speedFraction(absFpm: number): number {
+  const f = Math.max(0, Math.min(6000, absFpm))
+  if (f <= 1000) return (f / 1000) * 0.24
+  if (f <= 2000) return 0.24 + ((f - 1000) / 1000) * 0.14
+  if (f <= 4000) return 0.38 + ((f - 2000) / 2000) * 0.28
+  return 0.66 + ((f - 4000) / 2000) * 0.24
 }
 
-const majorMarks = [-6000, -4000, -2000, -1000, 0, 1000, 2000, 4000, 6000]
+function vsToY(fpm: number): number {
+  const sign = Math.sign(fpm)
+  if (sign === 0) return centerY.value
+  const frac = speedFraction(Math.abs(fpm))
+  return centerY.value - sign * frac * scaleSpan.value
+}
 
-const marks = computed(() => {
-  return majorMarks.map(fpm => ({
-    fpm,
-    y: vsToY(fpm),
-    label: fpm === 0 ? '0' : (Math.abs(fpm) / 1000).toString(),
+const markPositions = computed(() => {
+  return majorMarks.map((mark) => ({
+    mark,
+    topY: vsToY(mark),
+    bottomY: vsToY(-mark),
+    label: String(mark / 1000),
   }))
 })
 
-const needleY = computed(() => {
-  const clamped = Math.max(-6000, Math.min(6000, props.verticalSpeed))
-  return vsToY(clamped)
-})
+const clampedVs = computed(() => Math.max(-6000, Math.min(6000, props.verticalSpeed)))
+const needleY = computed(() => vsToY(clampedVs.value))
+const showReadout = computed(() => Math.abs(props.verticalSpeed) >= 100)
+const readoutText = computed(() => Math.round(Math.abs(props.verticalSpeed) / 100).toString().padStart(2, '0'))
 
-const readoutText = computed(() => {
-  const rounded = Math.round(props.verticalSpeed / 50) * 50
-  if (rounded === 0) return '0'
-  return rounded > 0 ? `+${rounded}` : `${rounded}`
+const channelShape = computed(() => {
+  const left = props.width * 0.18
+  const right = props.width
+  const shoulder = props.width * 0.86
+  const topInset = props.height * 0.11
+  const bottomInset = props.height * 0.89
+  return `${left},0 ${shoulder},0 ${right},${topInset} ${right},${bottomInset} ${shoulder},${props.height} ${left},${props.height}`
 })
-
-const bandY = computed(() => Math.min(centerY.value, needleY.value))
-const bandHeight = computed(() => Math.abs(needleY.value - centerY.value))
 </script>
 
 <template>
@@ -51,84 +62,105 @@ const bandHeight = computed(() => Math.abs(needleY.value - centerY.value))
     :viewBox="`0 0 ${width} ${height}`"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <defs>
-      <clipPath :id="clipId">
-        <rect x="0" y="0" :width="width" :height="height" />
-      </clipPath>
-    </defs>
+    <!-- Background cutout -->
+    <rect x="0" y="0" :width="width" :height="height" fill="#030712" />
 
-    <!-- Airbus-like VS channel -->
-    <rect
-      x="0"
-      y="0"
-      :width="width"
-      :height="height"
-      fill="#0b1126"
-      rx="1"
+    <!-- Airbus-style VS channel -->
+    <polygon
+      :points="channelShape"
+      fill="#8f9198"
+      stroke="#d2d4da"
+      stroke-width="0.8"
     />
 
-    <g :clip-path="`url(#${clipId})`">
-      <!-- Scale line -->
+    <!-- Main vertical axis -->
+    <line
+      :x1="axisX"
+      y1="8"
+      :x2="axisX"
+      :y2="height - 8"
+      :stroke="WHITE"
+      stroke-width="1.1"
+      opacity="0.95"
+    />
+
+    <!-- Zero marker -->
+    <line
+      :x1="axisX - 12"
+      :y1="centerY"
+      :x2="axisX + 12"
+      :y2="centerY"
+      :stroke="WHITE"
+      stroke-width="1.5"
+    />
+
+    <!-- Major marks and labels -->
+    <g v-for="mark in markPositions" :key="mark.mark">
       <line
-        :x1="width * 0.3"
-        :y1="vsToY(6000)"
-        :x2="width * 0.3"
-        :y2="vsToY(-6000)"
-        stroke="white"
-        stroke-width="1"
-        opacity="0.4"
+        :x1="axisX - 10"
+        :y1="mark.topY"
+        :x2="axisX + 10"
+        :y2="mark.topY"
+        :stroke="WHITE"
+        stroke-width="1.2"
+      />
+      <line
+        :x1="axisX - 10"
+        :y1="mark.bottomY"
+        :x2="axisX + 10"
+        :y2="mark.bottomY"
+        :stroke="WHITE"
+        stroke-width="1.2"
       />
 
-      <!-- Major marks -->
-      <g v-for="mark in marks" :key="mark.fpm">
-        <line
-          :x1="width * 0.15"
-          :y1="mark.y"
-          :x2="width * 0.45"
-          :y2="mark.y"
-          stroke="#f4f6fb"
-          :stroke-width="mark.fpm === 0 ? 1.5 : 1"
-        />
-        <text
-          v-if="mark.fpm !== 0"
-          :x="width * 0.55"
-          :y="mark.y + 4"
-          fill="#f4f6fb"
-          font-size="9"
-          text-anchor="start"
-          font-family="monospace"
-        >
-          {{ mark.label }}
-        </text>
-      </g>
-
-      <!-- VS band from center to needle -->
-      <rect
-        v-if="Math.abs(verticalSpeed) > 10"
-        :x="width * 0.15"
-        :y="bandY"
-        :width="width * 0.3"
-        :height="Math.max(bandHeight, 1)"
-        fill="#2fe5ff"
-        opacity="0.7"
-      />
-
-      <!-- Needle indicator -->
-      <polygon
-        :points="`${width * 0.05},${needleY} ${width * 0.3},${needleY - 4} ${width * 0.3},${needleY + 4}`"
-        fill="#2fe5ff"
-      />
+      <text
+        :x="axisX + 14"
+        :y="mark.topY + 4"
+        :fill="WHITE"
+        font-size="8.5"
+        font-family="monospace"
+      >
+        {{ mark.label }}
+      </text>
+      <text
+        :x="axisX + 14"
+        :y="mark.bottomY + 4"
+        :fill="WHITE"
+        font-size="8.5"
+        font-family="monospace"
+      >
+        {{ mark.label }}
+      </text>
     </g>
 
-    <!-- Readout -->
+    <!-- Trend vector (center to current VS) -->
+    <line
+      :x1="axisX"
+      :y1="centerY"
+      :x2="wingX"
+      :y2="needleY"
+      :stroke="GREEN"
+      stroke-width="3.6"
+      stroke-linecap="round"
+      opacity="0.95"
+    />
+
+    <circle
+      :cx="axisX"
+      :cy="centerY"
+      r="2"
+      :fill="GREEN"
+    />
+
+    <!-- Numeric readout in hundreds fpm -->
     <text
-      v-if="Math.abs(verticalSpeed) > 50"
-      :x="width / 2"
-      :y="height - 6"
-      fill="#2fe5ff"
-      font-size="9"
+      v-if="showReadout"
+      :x="wingX - 1"
+      :y="height - 8"
+      :fill="GREEN"
+      font-size="10"
       font-weight="bold"
-      text-anchor="middle"
+      text-anchor="end"
       font-family="monospace"
     >
       {{ readoutText }}

@@ -16,6 +16,8 @@ const pitchScale = computed(() => props.size / 60)
 const clipId = computed(() => `att-clip-${uid}`)
 const skyGradId = computed(() => `att-sky-${uid}`)
 const groundGradId = computed(() => `att-ground-${uid}`)
+const WHITE = '#f4f6fb'
+const YELLOW = '#ffe100'
 
 const pitchMarks = computed(() => {
   const marks: Array<{ deg: number; y: number; isLabel: boolean; width: number }> = []
@@ -82,12 +84,12 @@ const dotRadius = computed(() => 4)
         <circle :cx="cx" :cy="cy" :r="size * 0.46" />
       </clipPath>
       <linearGradient :id="skyGradId" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#26aef0" />
-        <stop offset="100%" stop-color="#1e9ddf" />
+        <stop offset="0%" stop-color="#22a7eb" />
+        <stop offset="100%" stop-color="#22a7eb" />
       </linearGradient>
       <linearGradient :id="groundGradId" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#b56517" />
-        <stop offset="100%" stop-color="#9b5312" />
+        <stop offset="0%" stop-color="#b26113" />
+        <stop offset="100%" stop-color="#b26113" />
       </linearGradient>
     </defs>
 
@@ -117,7 +119,7 @@ const dotRadius = computed(() => 4)
           :y1="0"
           :x2="size * 2"
           :y2="0"
-          stroke="white"
+          :stroke="WHITE"
           stroke-width="2"
         />
 
@@ -128,14 +130,14 @@ const dotRadius = computed(() => 4)
             :y1="mark.y"
             :x2="mark.width / 2"
             :y2="mark.y"
-            stroke="white"
+            :stroke="WHITE"
             :stroke-width="mark.isLabel ? 1.5 : 1"
           />
           <template v-if="mark.isLabel">
             <text
               :x="-mark.width / 2 - 6"
               :y="mark.y + 4"
-              fill="#f4f6fb"
+              :fill="WHITE"
               font-size="11"
               text-anchor="end"
               font-family="monospace"
@@ -145,7 +147,7 @@ const dotRadius = computed(() => 4)
             <text
               :x="mark.width / 2 + 6"
               :y="mark.y + 4"
-              fill="#f4f6fb"
+              :fill="WHITE"
               font-size="11"
               text-anchor="start"
               font-family="monospace"
@@ -165,21 +167,21 @@ const dotRadius = computed(() => 4)
       :y1="tick.y1"
       :x2="tick.x2"
       :y2="tick.y2"
-      stroke="#f4f6fb"
+      :stroke="WHITE"
       stroke-width="1.5"
     />
 
     <!-- Zero-bank reference triangle (fixed, top center) -->
     <polygon
       :points="`${cx},${cy - size * 0.42} ${cx - 6},${cy - size * 0.42 - 10} ${cx + 6},${cy - size * 0.42 - 10}`"
-      fill="#f4f6fb"
+      :fill="WHITE"
     />
 
     <!-- Bank pointer (rotates with bank) -->
     <polygon
       :points="bankPointer"
       :transform="bankPointerTransform"
-      fill="#facc15"
+      :fill="YELLOW"
     />
 
     <!-- Fixed aircraft reference symbol -->
@@ -190,7 +192,7 @@ const dotRadius = computed(() => 4)
         :y="cy - wingThickness / 2"
         :width="wingSpan"
         :height="wingThickness"
-        fill="#fbbf24"
+        :fill="YELLOW"
         rx="1"
       />
       <!-- Right wing -->
@@ -199,7 +201,7 @@ const dotRadius = computed(() => 4)
         :y="cy - wingThickness / 2"
         :width="wingSpan"
         :height="wingThickness"
-        fill="#fbbf24"
+        :fill="YELLOW"
         rx="1"
       />
       <!-- Center dot -->
@@ -207,7 +209,7 @@ const dotRadius = computed(() => 4)
         :cx="cx"
         :cy="cy"
         :r="dotRadius"
-        fill="#fbbf24"
+        :fill="YELLOW"
       />
     </g>
   </svg>

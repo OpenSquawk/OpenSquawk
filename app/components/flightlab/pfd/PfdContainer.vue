@@ -56,11 +56,11 @@ const vsPos = computed(() => ({
 }))
 
 const headingPos = computed(() => ({
-  left: tapeWidth.value,
+  left: attitudePos.value.left - gap.value,
   top: attSize.value + gap.value,
 }))
 
-const headingWidth = computed(() => attSize.value + tapeWidth.value * 2)
+const headingWidth = computed(() => attSize.value + gap.value * 2)
 </script>
 
 <template>
