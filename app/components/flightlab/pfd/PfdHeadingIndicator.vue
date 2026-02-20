@@ -93,23 +93,52 @@ const readoutBoxHeight = 18
       rx="2"
     />
 
-    <!-- Scrolling compass tape (clipped) -->
+    <!-- Readout box at top center (yellow heading value) -->
+    <rect
+      :x="centerX - readoutBoxWidth / 2"
+      y="2"
+      :width="readoutBoxWidth"
+      :height="readoutBoxHeight"
+      fill="rgba(10,10,30,0.95)"
+      stroke="#facc15"
+      stroke-width="1"
+      rx="2"
+    />
+    <text
+      :x="centerX"
+      :y="16"
+      fill="#facc15"
+      font-size="12"
+      font-weight="bold"
+      text-anchor="middle"
+      font-family="monospace"
+    >
+      {{ readoutText }}
+    </text>
+
+    <!-- Center pointer triangle (yellow, pointing down from readout box) -->
+    <polygon
+      :points="`${centerX},${readoutBoxHeight + 6} ${centerX - 4},${readoutBoxHeight + 2} ${centerX + 4},${readoutBoxHeight + 2}`"
+      fill="#facc15"
+    />
+
+    <!-- Scrolling compass tape (clipped) — ticks grow upward from bottom -->
     <g :clip-path="`url(#${clipId})`">
       <g v-for="mark in marks" :key="mark.deg">
-        <!-- Tick mark -->
+        <!-- Tick mark (from bottom upward) -->
         <line
           :x1="mark.x"
-          y1="0"
+          :y1="height"
           :x2="mark.x"
-          :y2="mark.isMajor ? 12 : 7"
+          :y2="mark.isMajor ? height - 12 : height - 7"
           stroke="white"
           :stroke-width="mark.isMajor ? 1.5 : 1"
         />
-        <!-- Label -->
+        <!-- Label (above tick) -->
         <text
           v-if="mark.isMajor"
           :x="mark.x"
-          y="24"
+          :y="height - 15"
           fill="white"
           font-size="11"
           text-anchor="middle"
@@ -119,34 +148,5 @@ const readoutBoxHeight = 18
         </text>
       </g>
     </g>
-
-    <!-- Center pointer triangle (cyan) -->
-    <polygon
-      :points="`${centerX},2 ${centerX - 5},0 ${centerX + 5},0`"
-      fill="#22d3ee"
-    />
-
-    <!-- Readout box at bottom -->
-    <rect
-      :x="centerX - readoutBoxWidth / 2"
-      :y="height - readoutBoxHeight - 2"
-      :width="readoutBoxWidth"
-      :height="readoutBoxHeight"
-      fill="rgba(10,10,30,0.95)"
-      stroke="#22d3ee"
-      stroke-width="1"
-      rx="2"
-    />
-    <text
-      :x="centerX"
-      :y="height - 6"
-      fill="#22d3ee"
-      font-size="12"
-      font-weight="bold"
-      text-anchor="middle"
-      font-family="monospace"
-    >
-      {{ readoutText }}
-    </text>
   </svg>
 </template>

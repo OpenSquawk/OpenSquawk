@@ -29,56 +29,62 @@ let targetPitchRad = 0
 let targetBankRad = 0
 
 function buildAircraft(): THREE.Group {
+  // Three.js coords: X=right, Y=up, Z=toward viewer
+  // Aircraft: nose toward -Z, wings along X, Y is up
   const group = new THREE.Group()
 
-  // Fuselage - cylinder rotated to lie along X axis
+  const bodyColor = 0xdcdcdc
+  const darkColor = 0x2a2a2a
+  const engineColor = 0x555555
+
+  // Fuselage — cylinder along Z axis (default cylinder is along Y, rotate to Z)
   const fuselageGeo = new THREE.CylinderGeometry(0.4, 0.35, 5, 12)
-  const fuselageMat = new THREE.MeshStandardMaterial({ color: 0xdcdcdc })
+  const fuselageMat = new THREE.MeshStandardMaterial({ color: bodyColor })
   const fuselage = new THREE.Mesh(fuselageGeo, fuselageMat)
-  fuselage.rotation.z = Math.PI / 2
+  fuselage.rotation.x = Math.PI / 2 // rotate Y-cylinder to lie along Z
   group.add(fuselage)
 
-  // Nose cone
+  // Nose cone — pointing toward -Z (forward)
   const noseGeo = new THREE.ConeGeometry(0.35, 1, 12)
-  const noseMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a })
+  const noseMat = new THREE.MeshStandardMaterial({ color: darkColor })
   const nose = new THREE.Mesh(noseGeo, noseMat)
-  nose.rotation.z = -Math.PI / 2
-  nose.position.set(3, 0, 0)
+  nose.rotation.x = Math.PI / 2 // cone tip points along -Z
+  nose.position.set(0, 0, -3)
   group.add(nose)
 
-  // Main wings
-  const wingGeo = new THREE.BoxGeometry(0.6, 4.5, 0.08)
-  const wingMat = new THREE.MeshStandardMaterial({ color: 0xdcdcdc })
+  // Main wings — wide along X (wingspan), thin along Z (chord), very thin along Y
+  const wingGeo = new THREE.BoxGeometry(4.5, 0.08, 0.6) // X=span, Y=thickness, Z=chord
+  const wingMat = new THREE.MeshStandardMaterial({ color: bodyColor })
   const wings = new THREE.Mesh(wingGeo, wingMat)
-  wings.position.set(-0.2, 0, 0)
+  wings.position.set(0, 0, 0.2)
   group.add(wings)
 
-  // Horizontal stabilizer
-  const hStabGeo = new THREE.BoxGeometry(0.3, 1.8, 0.06)
-  const hStabMat = new THREE.MeshStandardMaterial({ color: 0xdcdcdc })
+  // Horizontal stabilizer — same orientation as wings, smaller
+  const hStabGeo = new THREE.BoxGeometry(1.8, 0.06, 0.3) // X=span, Y=thick, Z=chord
+  const hStabMat = new THREE.MeshStandardMaterial({ color: bodyColor })
   const hStab = new THREE.Mesh(hStabGeo, hStabMat)
-  hStab.position.set(-2.3, 0, 0)
+  hStab.position.set(0, 0, 2.3)
   group.add(hStab)
 
-  // Vertical stabilizer
-  const vStabGeo = new THREE.BoxGeometry(0.6, 0.06, 1.2)
-  const vStabMat = new THREE.MeshStandardMaterial({ color: 0xdcdcdc })
+  // Vertical stabilizer — tall along Y, along Z (chord)
+  const vStabGeo = new THREE.BoxGeometry(0.06, 1.2, 0.6) // X=thin, Y=height, Z=chord
+  const vStabMat = new THREE.MeshStandardMaterial({ color: bodyColor })
   const vStab = new THREE.Mesh(vStabGeo, vStabMat)
-  vStab.position.set(-2.1, 0, 0.6)
+  vStab.position.set(0, 0.6, 2.1)
   group.add(vStab)
 
-  // Engines (two, under each wing)
+  // Engines (two, under each wing) — cylinders along Z
   const engineGeo = new THREE.CylinderGeometry(0.18, 0.22, 0.8, 8)
-  const engineMat = new THREE.MeshStandardMaterial({ color: 0x555555 })
+  const engineMat = new THREE.MeshStandardMaterial({ color: engineColor })
 
   const engineLeft = new THREE.Mesh(engineGeo, engineMat)
-  engineLeft.rotation.z = Math.PI / 2
-  engineLeft.position.set(0.2, -1.5, -0.35)
+  engineLeft.rotation.x = Math.PI / 2 // align along Z
+  engineLeft.position.set(-1.5, -0.35, -0.2)
   group.add(engineLeft)
 
   const engineRight = new THREE.Mesh(engineGeo, engineMat)
-  engineRight.rotation.z = Math.PI / 2
-  engineRight.position.set(0.2, 1.5, -0.35)
+  engineRight.rotation.x = Math.PI / 2 // align along Z
+  engineRight.position.set(1.5, -0.35, -0.2)
   group.add(engineRight)
 
   return group
@@ -96,10 +102,10 @@ function initScene() {
   scene.background = new THREE.Color(0x1a5fb4)
   scene.fog = new THREE.Fog(0x62a0ea, 30, 80)
 
-  // Camera
+  // Camera — view from front-left, slightly above
+  // Aircraft nose points -Z, so camera at +Z looks at front
   camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 200)
-  // View from front-right, slightly above — shows pitch and bank clearly
-  camera.position.set(6, 2, 4)
+  camera.position.set(-4, 3, -6)
   camera.lookAt(0, 0, 0)
 
   // Lights
@@ -156,11 +162,11 @@ function animate() {
   animFrameId = requestAnimationFrame(animate)
 
   if (aircraft) {
-    // Aircraft flies along +X, wings along Y, Z is up
-    // Pitch: rotate around Y axis (wing axis) — positive pitch = nose up
-    aircraft.rotation.y = lerp(aircraft.rotation.y, targetPitchRad, 0.1)
-    // Bank: rotate around X axis (longitudinal axis) — positive bank = right wing down
-    aircraft.rotation.x = lerp(aircraft.rotation.x, targetBankRad, 0.1)
+    // Aircraft: nose toward -Z, wings along X, Y is up
+    // Pitch: rotate around X axis — positive pitch = nose up (rotates nose away from -Z toward +Y)
+    aircraft.rotation.x = lerp(aircraft.rotation.x, targetPitchRad, 0.1)
+    // Bank: rotate around Z axis — positive bank = right wing down
+    aircraft.rotation.z = lerp(aircraft.rotation.z, -targetBankRad, 0.1)
   }
 
   if (renderer && scene && camera) {
