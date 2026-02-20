@@ -17,19 +17,36 @@ const props = defineProps<{
 
 const containerRef = ref<HTMLDivElement | null>(null)
 const modelUrls = ['/models/airplane-user.glb', '/models/Airplane.glb', '/models/a320.glb']
+const cloudModelUrls = ['/models/cloud-user.glb', '/models/Cloud.glb']
+
+const CLOUD_COUNT = 26
+const CLOUD_AREA_X = 120
+const CLOUD_AREA_Z = 150
+const CLOUD_BASE_Y = -8
 
 let renderer: THREE.WebGLRenderer | null = null
 let scene: THREE.Scene | null = null
 let camera: THREE.PerspectiveCamera | null = null
 let aircraft: THREE.Group | null = null
 let cloudPlane: THREE.Mesh | null = null
+let cloudField: THREE.Group | null = null
 let animFrameId: number | null = null
 let resizeObserver: ResizeObserver | null = null
 let disposed = false
+let lastFrameTime: number | null = null
+let initialAltitude = props.altitude
 
 // Reactive targets for smooth interpolation
 let targetPitchRad = 0
 let targetBankRad = 0
+
+type CloudInstance = {
+  object: THREE.Object3D
+  baseY: number
+  driftScale: number
+}
+
+const cloudInstances: CloudInstance[] = []
 
 function buildAircraft(): THREE.Group {
   // Three.js coords: X=right, Y=up, Z=toward viewer
@@ -91,6 +108,110 @@ function buildAircraft(): THREE.Group {
   group.add(engineRight)
 
   return group
+}
+
+function randomRange(min: number, max: number): number {
+  return min + Math.random() * (max - min)
+}
+
+function tuneCloudMaterial(material: THREE.Material) {
+  if (
+    material instanceof THREE.MeshStandardMaterial
+    || material instanceof THREE.MeshPhongMaterial
+    || material instanceof THREE.MeshLambertMaterial
+    || material instanceof THREE.MeshBasicMaterial
+  ) {
+    material.transparent = true
+    material.depthWrite = false
+    material.opacity = Math.min(material.opacity, 0.74)
+    material.color.multiplyScalar(1.05)
+  }
+}
+
+function normalizeCloudModel(model: THREE.Object3D, targetSize = 10) {
+  const box = new THREE.Box3().setFromObject(model)
+  const size = new THREE.Vector3()
+  box.getSize(size)
+  const maxDim = Math.max(size.x, size.y, size.z)
+  if (maxDim > 0) {
+    model.scale.setScalar(targetSize / maxDim)
+  }
+
+  const centeredBox = new THREE.Box3().setFromObject(model)
+  const center = new THREE.Vector3()
+  centeredBox.getCenter(center)
+  model.position.sub(center)
+
+  model.traverse((obj) => {
+    if (!(obj instanceof THREE.Mesh)) return
+    if (Array.isArray(obj.material)) {
+      obj.material.forEach(m => tuneCloudMaterial(m))
+    } else {
+      tuneCloudMaterial(obj.material)
+    }
+  })
+}
+
+function createFallbackCloudLayer() {
+  if (!scene) return
+  const cloudGeo = new THREE.PlaneGeometry(260, 260)
+  const cloudMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.3,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  })
+  cloudPlane = new THREE.Mesh(cloudGeo, cloudMat)
+  cloudPlane.rotation.x = -Math.PI / 2
+  cloudPlane.position.y = CLOUD_BASE_Y
+  scene.add(cloudPlane)
+}
+
+async function loadCloudField() {
+  if (!scene || disposed) return
+
+  const loader = new GLTFLoader()
+  let cloudTemplate: THREE.Object3D | null = null
+
+  for (const url of cloudModelUrls) {
+    try {
+      const gltf = await loader.loadAsync(url)
+      cloudTemplate = gltf.scene
+      break
+    } catch {
+      // Try next cloud model URL
+    }
+  }
+
+  if (!cloudTemplate || disposed || !scene) {
+    createFallbackCloudLayer()
+    return
+  }
+
+  normalizeCloudModel(cloudTemplate, 10)
+  cloudField = new THREE.Group()
+  scene.add(cloudField)
+
+  cloudInstances.length = 0
+  for (let i = 0; i < CLOUD_COUNT; i++) {
+    const cloud = cloudTemplate.clone(true)
+    const baseY = CLOUD_BASE_Y + randomRange(-3.5, 8.5)
+    const scale = randomRange(0.55, 1.45)
+    cloud.scale.multiplyScalar(scale)
+    cloud.position.set(
+      randomRange(-CLOUD_AREA_X, CLOUD_AREA_X),
+      baseY,
+      randomRange(-CLOUD_AREA_Z, CLOUD_AREA_Z),
+    )
+    cloud.rotation.y = randomRange(0, Math.PI * 2)
+    cloudField.add(cloud)
+    cloudInstances.push({
+      object: cloud,
+      baseY,
+      driftScale: randomRange(0.7, 1.55),
+    })
+  }
 }
 
 function centerAndScaleModel(model: THREE.Object3D, targetSize = 5) {
@@ -166,19 +287,6 @@ function initScene() {
   aircraft = new THREE.Group()
   scene.add(aircraft)
 
-  // Cloud plane
-  const cloudGeo = new THREE.PlaneGeometry(200, 200)
-  const cloudMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.3,
-    side: THREE.DoubleSide,
-  })
-  cloudPlane = new THREE.Mesh(cloudGeo, cloudMat)
-  cloudPlane.rotation.x = -Math.PI / 2
-  cloudPlane.position.y = -8
-  scene.add(cloudPlane)
-
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -204,8 +312,43 @@ function lerp(current: number, target: number, factor: number): number {
   return current + (target - current) * factor
 }
 
-function animate() {
+function updateCloudMotion(dt: number) {
+  const headingRad = (props.heading * Math.PI) / 180
+  const forwardX = Math.sin(headingRad)
+  const forwardZ = -Math.cos(headingRad)
+  const speedFactor = Math.max(0.35, props.speed / 220)
+  const driftSpeed = 9 * speedFactor
+  const pitchRad = (props.pitch * Math.PI) / 180
+  const verticalDrift = Math.sin(pitchRad) * driftSpeed * 0.4
+  const altitudeOffset = (initialAltitude - props.altitude) * 0.008
+
+  if (cloudInstances.length > 0) {
+    for (const cloud of cloudInstances) {
+      cloud.object.position.x -= forwardX * driftSpeed * cloud.driftScale * dt
+      cloud.object.position.z -= forwardZ * driftSpeed * cloud.driftScale * dt
+
+      const targetY = cloud.baseY + altitudeOffset
+      cloud.object.position.y = lerp(cloud.object.position.y, targetY, 0.06)
+      cloud.object.rotation.y += 0.02 * cloud.driftScale * dt
+
+      if (cloud.object.position.x > CLOUD_AREA_X) cloud.object.position.x -= CLOUD_AREA_X * 2
+      if (cloud.object.position.x < -CLOUD_AREA_X) cloud.object.position.x += CLOUD_AREA_X * 2
+      if (cloud.object.position.z > CLOUD_AREA_Z) cloud.object.position.z -= CLOUD_AREA_Z * 2
+      if (cloud.object.position.z < -CLOUD_AREA_Z) cloud.object.position.z += CLOUD_AREA_Z * 2
+    }
+  } else if (cloudPlane) {
+    cloudPlane.position.y = lerp(cloudPlane.position.y, CLOUD_BASE_Y + altitudeOffset, 0.05)
+    cloudPlane.position.x -= forwardX * driftSpeed * dt * 0.25
+    cloudPlane.position.z -= forwardZ * driftSpeed * dt * 0.25
+    cloudPlane.rotation.z += verticalDrift * dt * 0.002
+  }
+}
+
+function animate(frameTime = 0) {
   animFrameId = requestAnimationFrame(animate)
+  if (lastFrameTime === null) lastFrameTime = frameTime
+  const dt = Math.min((frameTime - lastFrameTime) / 1000, 0.06)
+  lastFrameTime = frameTime
 
   if (aircraft) {
     // Aircraft: nose toward -Z, wings along X, Y is up
@@ -214,6 +357,8 @@ function animate() {
     // Bank: rotate around Z axis — positive bank = right wing down
     aircraft.rotation.z = lerp(aircraft.rotation.z, -targetBankRad, 0.1)
   }
+
+  updateCloudMotion(dt)
 
   if (renderer && scene && camera) {
     renderer.render(scene, camera)
@@ -234,14 +379,20 @@ watch(
 
 onMounted(() => {
   disposed = false
+  lastFrameTime = null
+  initialAltitude = props.altitude
   initScene()
   updateTargets()
   loadAircraftModel()
+  loadCloudField()
   animate()
 })
 
 onBeforeUnmount(() => {
   disposed = true
+  lastFrameTime = null
+  cloudInstances.length = 0
+  cloudField = null
   // Cancel animation frame
   if (animFrameId !== null) {
     cancelAnimationFrame(animFrameId)
