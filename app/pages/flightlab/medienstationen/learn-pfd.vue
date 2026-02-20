@@ -1,5 +1,5 @@
 <template>
-  <div ref="pageRoot" class="min-h-screen bg-[#070d1a] text-white flex flex-col overflow-hidden">
+  <div ref="pageRoot" class="h-screen bg-[#070d1a] text-white flex flex-col overflow-hidden">
     <!-- Global Progress Bar -->
     <div class="fixed top-0 left-0 right-0 z-50 h-1 bg-white/5">
       <div
@@ -152,7 +152,7 @@
         :style="layoutGridStyle"
       >
         <!-- 3D Aircraft Model -->
-        <div class="relative rounded-2xl overflow-hidden border border-white/5 bg-[#050a15] min-h-0">
+        <div class="relative rounded-2xl overflow-hidden border border-white/5 bg-[#050a15] min-h-[200px]">
           <ClientOnly>
             <PfdAircraftModel
               :pitch="fbw.state.pitch"
@@ -171,7 +171,7 @@
         </div>
 
         <!-- PFD Instruments -->
-        <div class="relative flex items-center justify-center rounded-2xl overflow-hidden border border-white/5 bg-[#030712] min-h-0">
+        <div class="relative flex items-center justify-center rounded-2xl overflow-hidden border border-white/5 bg-[#030712] min-h-[200px]">
           <!-- Black screen when no elements visible -->
           <Transition name="fade-scale">
             <div
