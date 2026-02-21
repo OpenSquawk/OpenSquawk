@@ -63,13 +63,13 @@ const channelShape = computed(() => {
     xmlns="http://www.w3.org/2000/svg"
   >
     <!-- Background cutout -->
-    <rect x="0" y="0" :width="width" :height="height" fill="#030712" />
+    <rect x="0" y="0" :width="width" :height="height" fill="#0a171d" />
 
     <!-- Airbus-style VS channel -->
     <polygon
       :points="channelShape"
-      fill="#1c1e26"
-      stroke="#3a3d48"
+      fill="#1d282a"
+      stroke="#304c50"
       stroke-width="0.8"
     />
 

@@ -17,7 +17,7 @@ const clipId = computed(() => `att-clip-${uid}`)
 const skyGradId = computed(() => `att-sky-${uid}`)
 const groundGradId = computed(() => `att-ground-${uid}`)
 const WHITE = '#f4f6fb'
-const YELLOW = '#ffe100'
+const YELLOW = '#faf56c'
 
 const pitchMarks = computed(() => {
   const marks: Array<{ deg: number; y: number; isLabel: boolean; width: number }> = []
@@ -84,12 +84,12 @@ const dotRadius = computed(() => 4)
         <circle :cx="cx" :cy="cy" :r="size * 0.46" />
       </clipPath>
       <linearGradient :id="skyGradId" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#0a4a8a" />
-        <stop offset="100%" stop-color="#22a7eb" />
+        <stop offset="0%" stop-color="#0a4080" />
+        <stop offset="100%" stop-color="#19b5e6" />
       </linearGradient>
       <linearGradient :id="groundGradId" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#b26113" />
-        <stop offset="100%" stop-color="#5a2e08" />
+        <stop offset="0%" stop-color="#64241a" />
+        <stop offset="100%" stop-color="#3a1510" />
       </linearGradient>
     </defs>
 

@@ -89,7 +89,7 @@ const readoutBoxHeight = 18
       y="0"
       :width="width"
       :height="height"
-      fill="#16181f"
+      fill="#1a2628"
       rx="1"
     />
     <rect
@@ -97,8 +97,8 @@ const readoutBoxHeight = 18
       y="1.5"
       :width="width - 3"
       :height="height - 3"
-      fill="#1c1e26"
-      stroke="#3a3d48"
+      fill="#1d282a"
+      stroke="#304c50"
       stroke-width="0.8"
     />
 
@@ -109,14 +109,14 @@ const readoutBoxHeight = 18
       :width="readoutBoxWidth"
       :height="readoutBoxHeight"
       fill="#02040b"
-      stroke="#facc15"
+      stroke="#fbe044"
       stroke-width="1"
       rx="2"
     />
     <text
       :x="centerX"
       :y="16"
-      fill="#facc15"
+      fill="#fbe044"
       font-size="12"
       font-weight="bold"
       text-anchor="middle"
@@ -128,7 +128,7 @@ const readoutBoxHeight = 18
     <!-- Center pointer triangle (yellow, pointing down from readout box) -->
     <polygon
       :points="`${centerX},${readoutBoxHeight + 6} ${centerX - 4},${readoutBoxHeight + 2} ${centerX + 4},${readoutBoxHeight + 2}`"
-      fill="#facc15"
+      fill="#fbe044"
     />
 
     <!-- Scrolling compass tape (clipped) — ticks grow upward from bottom -->

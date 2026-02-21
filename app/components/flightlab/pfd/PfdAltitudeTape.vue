@@ -65,7 +65,7 @@ const tapeInnerHeight = computed(() => props.height - 4)
       y="0"
       :width="width"
       :height="height"
-      fill="#16181f"
+      fill="#1a2628"
       rx="1"
     />
     <rect
@@ -73,8 +73,8 @@ const tapeInnerHeight = computed(() => props.height - 4)
       :y="tapeInnerY"
       :width="tapeInnerWidth"
       :height="tapeInnerHeight"
-      fill="#1c1e26"
-      stroke="#3a3d48"
+      fill="#1d282a"
+      stroke="#304c50"
       stroke-width="0.8"
     />
 
@@ -112,14 +112,14 @@ const tapeInnerHeight = computed(() => props.height - 4)
       :width="readoutBoxWidth"
       :height="readoutBoxHeight"
       fill="#02040b"
-      stroke="#19e34a"
+      stroke="#fbe044"
       stroke-width="1.4"
       rx="1.5"
     />
     <text
       :x="width / 2"
       :y="centerY + 5"
-      fill="#19e34a"
+      fill="#3ae061"
       font-size="14"
       font-weight="bold"
       text-anchor="middle"
