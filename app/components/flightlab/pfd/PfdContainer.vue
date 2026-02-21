@@ -16,51 +16,64 @@ const props = withDefaults(defineProps<{
   speedTargetRange: null,
 })
 
-const attSize = computed(() => 280 * props.scale)
-const tapeWidth = computed(() => 70 * props.scale)
-const altTapeWidth = computed(() => 80 * props.scale)
-const vsWidth = computed(() => 40 * props.scale)
-const headingHeight = computed(() => 44 * props.scale)
-const gap = computed(() => 4 * props.scale)
+// Base dimensions from licarth/a320pfd reference (631.18 x 604.72)
+// We add a heading tape at the bottom since the reference doesn't include one
+const BASE_W = 631
+const BASE_H = 550 // trimmed — no FMA labels, add heading tape at bottom
+const HEADING_H = 44
 
-const totalWidth = computed(() =>
-  tapeWidth.value + gap.value + attSize.value + gap.value + altTapeWidth.value + gap.value + vsWidth.value,
-)
-const totalHeight = computed(() =>
-  attSize.value + gap.value + headingHeight.value,
-)
+const s = computed(() => props.scale)
+
+// Instrument dimensions (matching licarth proportions)
+// Speed tape: left=25.5, top=152.4, w=100, h=319.8
+const speedTape = computed(() => ({
+  left: 26 * s.value,
+  top: 120 * s.value,
+  width: 100 * s.value,
+  height: 320 * s.value,
+}))
+
+// Attitude indicator: centered at (281, 313) in reference, circular ~280px diameter
+const attitude = computed(() => {
+  const size = 290 * s.value
+  return {
+    left: (281 - 145) * s.value,
+    top: (280 - 145) * s.value,
+    size,
+  }
+})
+
+// Altitude tape: left=440, top=151, w=110, h=325
+const altTape = computed(() => ({
+  left: 440 * s.value,
+  top: 119 * s.value,
+  width: 110 * s.value,
+  height: 325 * s.value,
+}))
+
+// Vertical speed: left=576, top=121, w=48, h=385
+const vsTape = computed(() => ({
+  left: 562 * s.value,
+  top: 89 * s.value,
+  width: 48 * s.value,
+  height: 385 * s.value,
+}))
+
+// Heading tape: below the attitude indicator
+const headingTape = computed(() => ({
+  left: attitude.value.left - 10 * s.value,
+  top: (attitude.value.top + attitude.value.size + 4 * s.value),
+  width: attitude.value.size + 20 * s.value,
+  height: HEADING_H * s.value,
+}))
+
+// Total container
+const totalWidth = computed(() => BASE_W * s.value)
+const totalHeight = computed(() => BASE_H * s.value)
 
 function isVisible(element: PfdElement): boolean {
   return props.visibleElements.includes(element)
 }
-
-// Positions
-const speedTapePos = computed(() => ({
-  left: 0,
-  top: 0,
-}))
-
-const attitudePos = computed(() => ({
-  left: tapeWidth.value + gap.value,
-  top: 0,
-}))
-
-const altTapePos = computed(() => ({
-  left: tapeWidth.value + attSize.value + gap.value * 2,
-  top: 0,
-}))
-
-const vsPos = computed(() => ({
-  left: tapeWidth.value + attSize.value + altTapeWidth.value + gap.value * 3,
-  top: 0,
-}))
-
-const headingPos = computed(() => ({
-  left: attitudePos.value.left - gap.value,
-  top: attSize.value + gap.value,
-}))
-
-const headingWidth = computed(() => attSize.value + gap.value * 2)
 </script>
 
 <template>
@@ -70,41 +83,45 @@ const headingWidth = computed(() => attSize.value + gap.value * 2)
       width: `${totalWidth}px`,
       height: `${totalHeight}px`,
       position: 'relative',
+      overflow: 'hidden',
+      background: '#000',
     }"
   >
+    <!-- Attitude Indicator (center, behind everything) -->
+    <Transition name="pfd-fade">
+      <div
+        v-if="isVisible('attitude')"
+        :style="{
+          position: 'absolute',
+          left: `${attitude.left}px`,
+          top: `${attitude.top}px`,
+          zIndex: 0,
+        }"
+      >
+        <FlightlabPfdAttitudeIndicator
+          :pitch="pitch"
+          :bank-angle="bankAngle"
+          :size="attitude.size"
+        />
+      </div>
+    </Transition>
+
     <!-- Speed Tape (left) -->
     <Transition name="pfd-fade">
       <div
         v-if="isVisible('speedTape')"
         :style="{
           position: 'absolute',
-          left: `${speedTapePos.left}px`,
-          top: `${speedTapePos.top}px`,
+          left: `${speedTape.left}px`,
+          top: `${speedTape.top}px`,
+          zIndex: 2,
         }"
       >
         <FlightlabPfdSpeedTape
           :speed="speed"
           :target-range="speedTargetRange ?? undefined"
-          :width="tapeWidth"
-          :height="attSize"
-        />
-      </div>
-    </Transition>
-
-    <!-- Attitude Indicator (center) -->
-    <Transition name="pfd-fade">
-      <div
-        v-if="isVisible('attitude')"
-        :style="{
-          position: 'absolute',
-          left: `${attitudePos.left}px`,
-          top: `${attitudePos.top}px`,
-        }"
-      >
-        <FlightlabPfdAttitudeIndicator
-          :pitch="pitch"
-          :bank-angle="bankAngle"
-          :size="attSize"
+          :width="speedTape.width"
+          :height="speedTape.height"
         />
       </div>
     </Transition>
@@ -115,14 +132,15 @@ const headingWidth = computed(() => attSize.value + gap.value * 2)
         v-if="isVisible('altitudeTape')"
         :style="{
           position: 'absolute',
-          left: `${altTapePos.left}px`,
-          top: `${altTapePos.top}px`,
+          left: `${altTape.left}px`,
+          top: `${altTape.top}px`,
+          zIndex: 2,
         }"
       >
         <FlightlabPfdAltitudeTape
           :altitude="altitude"
-          :width="altTapeWidth"
-          :height="attSize"
+          :width="altTape.width"
+          :height="altTape.height"
         />
       </div>
     </Transition>
@@ -133,32 +151,34 @@ const headingWidth = computed(() => attSize.value + gap.value * 2)
         v-if="isVisible('verticalSpeed')"
         :style="{
           position: 'absolute',
-          left: `${vsPos.left}px`,
-          top: `${vsPos.top}px`,
+          left: `${vsTape.left}px`,
+          top: `${vsTape.top}px`,
+          zIndex: 2,
         }"
       >
         <FlightlabPfdVerticalSpeed
           :vertical-speed="verticalSpeed"
-          :width="vsWidth"
-          :height="attSize"
+          :width="vsTape.width"
+          :height="vsTape.height"
         />
       </div>
     </Transition>
 
-    <!-- Heading Indicator (bottom, spanning below attitude) -->
+    <!-- Heading Indicator (bottom center) -->
     <Transition name="pfd-fade">
       <div
         v-if="isVisible('heading')"
         :style="{
           position: 'absolute',
-          left: `${headingPos.left}px`,
-          top: `${headingPos.top}px`,
+          left: `${headingTape.left}px`,
+          top: `${headingTape.top}px`,
+          zIndex: 2,
         }"
       >
         <FlightlabPfdHeadingIndicator
           :heading="heading"
-          :width="headingWidth"
-          :height="headingHeight"
+          :width="headingTape.width"
+          :height="headingTape.height"
         />
       </div>
     </Transition>

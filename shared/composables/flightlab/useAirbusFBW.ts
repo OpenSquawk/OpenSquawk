@@ -24,14 +24,14 @@ const MAX_PITCH_UP = 30
 const MAX_PITCH_DOWN = -15
 const MAX_BANK = 67
 const BANK_NEUTRAL_LIMIT = 33
-const MAX_ROLL_RATE = 7
-const ROLL_RETURN_RATE = 2
+const MAX_ROLL_RATE = 12  // A320 Normal Law: ~15°/s max, 12 is responsive but not twitchy
+const ROLL_RETURN_RATE = 3 // faster return to neutral when stick released
 
 const MAX_G_PULL = 2.5
 const MIN_G_PUSH = -1.0
 const NEUTRAL_G = 1.0
-const PITCH_RATE_PER_G_DELTA = 1.2
-const PITCH_SMOOTH_TAU = 2.0 // seconds — exponential smoothing time constant
+const PITCH_RATE_PER_G_DELTA = 2.5 // more responsive pitch — feel the aircraft reacting
+const PITCH_SMOOTH_TAU = 0.8 // seconds — faster response, still smoothed (not instant)
 
 const IDLE_THRUST = 2000
 const MAX_THRUST = 50000

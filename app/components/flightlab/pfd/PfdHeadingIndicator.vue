@@ -12,14 +12,13 @@ const uid = useId()
 const clipId = computed(() => `hdg-clip-${uid}`)
 
 const centerX = computed(() => props.width / 2)
-const pixelsPerDeg = 3
+const pixelsPerDeg = computed(() => props.width / 100) // ~3px/deg at 300px width
 
 function hdgToX(deg: number): number {
   let delta = deg - props.heading
-  // Wrap around 180 for shortest path
   while (delta > 180) delta -= 360
   while (delta < -180) delta += 360
-  return centerX.value + delta * pixelsPerDeg
+  return centerX.value + delta * pixelsPerDeg.value
 }
 
 const cardinals: Record<number, string> = {
@@ -36,7 +35,7 @@ function headingLabel(deg: number): string {
 }
 
 const visibleRange = computed(() => {
-  const halfVisible = props.width / 2 / pixelsPerDeg + 15
+  const halfVisible = props.width / 2 / pixelsPerDeg.value + 15
   return {
     min: Math.floor(props.heading - halfVisible),
     max: Math.ceil(props.heading + halfVisible),
@@ -68,6 +67,8 @@ const readoutText = computed(() => {
 
 const readoutBoxWidth = 40
 const readoutBoxHeight = 18
+const labelFontSize = computed(() => Math.max(9, Math.round(props.height * 0.26)))
+const readoutFontSize = computed(() => Math.max(10, Math.round(props.height * 0.3)))
 </script>
 
 <template>
@@ -81,25 +82,18 @@ const readoutBoxHeight = 18
       <clipPath :id="clipId">
         <rect x="0" y="0" :width="width" :height="height" />
       </clipPath>
+      <radialGradient :id="`hdg-bg-${uid}`" cx="0.5" cy="0.5" r="1">
+        <stop offset="0%" stop-color="#1f2a2c" />
+        <stop offset="57%" stop-color="#304c50" />
+        <stop offset="100%" stop-color="#1d282a" />
+      </radialGradient>
     </defs>
 
-    <!-- Airbus-style heading tape -->
+    <!-- Background matching licarth bezel style -->
     <rect
-      x="0"
-      y="0"
-      :width="width"
-      :height="height"
-      fill="#1a2628"
-      rx="1"
-    />
-    <rect
-      x="1.5"
-      y="1.5"
-      :width="width - 3"
-      :height="height - 3"
-      fill="#1d282a"
-      stroke="#304c50"
-      stroke-width="0.8"
+      x="0" y="0"
+      :width="width" :height="height"
+      :fill="`url(#hdg-bg-${uid})`"
     />
 
     <!-- Readout box at top center (yellow heading value) -->
@@ -108,16 +102,16 @@ const readoutBoxHeight = 18
       y="2"
       :width="readoutBoxWidth"
       :height="readoutBoxHeight"
-      fill="#02040b"
+      fill="black"
       stroke="#fbe044"
-      stroke-width="1"
-      rx="2"
+      stroke-width="1.5"
+      rx="1"
     />
     <text
       :x="centerX"
-      :y="16"
+      :y="readoutBoxHeight - 2"
       fill="#fbe044"
-      font-size="12"
+      :font-size="readoutFontSize"
       font-weight="bold"
       text-anchor="middle"
       font-family="monospace"
@@ -125,13 +119,13 @@ const readoutBoxHeight = 18
       {{ readoutText }}
     </text>
 
-    <!-- Center pointer triangle (yellow, pointing down from readout box) -->
+    <!-- Center pointer triangle (yellow, pointing down) -->
     <polygon
-      :points="`${centerX},${readoutBoxHeight + 6} ${centerX - 4},${readoutBoxHeight + 2} ${centerX + 4},${readoutBoxHeight + 2}`"
+      :points="`${centerX},${readoutBoxHeight + 6} ${centerX - 5},${readoutBoxHeight + 1} ${centerX + 5},${readoutBoxHeight + 1}`"
       fill="#fbe044"
     />
 
-    <!-- Scrolling compass tape (clipped) — ticks grow upward from bottom -->
+    <!-- Scrolling compass tape (clipped) -->
     <g :clip-path="`url(#${clipId})`">
       <g v-for="mark in marks" :key="mark.deg">
         <!-- Tick mark (from bottom upward) -->
@@ -140,16 +134,16 @@ const readoutBoxHeight = 18
           :y1="height"
           :x2="mark.x"
           :y2="mark.isMajor ? height - 12 : height - 7"
-          stroke="#f4f6fb"
+          stroke="white"
           :stroke-width="mark.isMajor ? 1.5 : 1"
         />
-        <!-- Label (above tick) -->
+        <!-- Label -->
         <text
           v-if="mark.isMajor"
           :x="mark.x"
           :y="height - 15"
-          fill="#f4f6fb"
-          font-size="11"
+          fill="white"
+          :font-size="labelFontSize"
           text-anchor="middle"
           font-family="monospace"
         >

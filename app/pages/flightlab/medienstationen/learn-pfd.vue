@@ -418,10 +418,11 @@ const isPitchSpeedHoldPhase = computed(() => engine.currentPhaseId.value === 'sp
 
 // --- PFD Scale (responsive) ---
 const pfdScale = computed(() => {
-  // Smaller when model-focus, bigger when pfd-focus
-  if (engine.layoutMode.value === 'model-focus') return 0.8
-  if (engine.layoutMode.value === 'pfd-focus') return 1.1
-  return 1.0
+  // Base dimensions are 631x550 (licarth reference proportions)
+  // Scale to fit learning UI layout while keeping instruments readable
+  if (engine.layoutMode.value === 'model-focus') return 0.7
+  if (engine.layoutMode.value === 'pfd-focus') return 0.95
+  return 0.82
 })
 
 // --- Layout ---

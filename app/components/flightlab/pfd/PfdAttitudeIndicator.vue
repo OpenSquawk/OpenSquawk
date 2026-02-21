@@ -4,58 +4,73 @@ const props = withDefaults(defineProps<{
   bankAngle: number
   size?: number
 }>(), {
-  size: 300,
+  size: 290,
 })
 
 const uid = useId()
 
 const cx = computed(() => props.size / 2)
 const cy = computed(() => props.size / 2)
-const pitchScale = computed(() => props.size / 60)
+
+// licarth: oneDegreeInPixels = 6.7 at full size
+const pitchScale = computed(() => props.size / 43.3)
 
 const clipId = computed(() => `att-clip-${uid}`)
 const skyGradId = computed(() => `att-sky-${uid}`)
 const groundGradId = computed(() => `att-ground-${uid}`)
-const WHITE = '#f4f6fb'
-const YELLOW = '#faf56c'
 
+const WHITE = '#fff'
+const YELLOW = 'yellow'
+
+// Pitch ladder marks matching licarth pattern
 const pitchMarks = computed(() => {
-  const marks: Array<{ deg: number; y: number; isLabel: boolean; width: number }> = []
-  for (let deg = -30; deg <= 30; deg += 5) {
+  const marks: Array<{ deg: number; y: number; type: 'S' | 'M' | 'L'; halfWidth: number }> = []
+  for (let deg = -80; deg <= 80; deg += 2.5) {
     if (deg === 0) continue
     const y = -deg * pitchScale.value
-    const isLabel = deg % 10 === 0
-    const width = isLabel ? props.size * 0.2 : props.size * 0.1
-    marks.push({ deg, y, isLabel, width })
+    if (deg % 10 === 0) {
+      marks.push({ deg, y, type: 'L', halfWidth: props.size * 0.12 })
+    } else if (deg % 5 === 0) {
+      marks.push({ deg, y, type: 'M', halfWidth: props.size * 0.066 })
+    } else {
+      marks.push({ deg, y, type: 'S', halfWidth: props.size * 0.035 })
+    }
   }
   return marks
 })
 
+// Bank angle ticks
+const bankAngles = [10, 20, 30, 45, 60]
 const bankTicks = computed(() => {
-  const angles = [10, 20, 30, 45, 60]
-  const ticks: Array<{ angle: number; length: number }> = []
-  const r = props.size * 0.42
-  for (const a of angles) {
-    const len = a === 30 || a === 60 ? 12 : 8
-    ticks.push({ angle: -a, length: len })
-    ticks.push({ angle: a, length: len })
+  const r = props.size * 0.44
+  const ticks: Array<{ x1: number; y1: number; x2: number; y2: number }> = []
+  for (const a of bankAngles) {
+    for (const sign of [-1, 1]) {
+      const angle = sign * a
+      const len = (a === 30 || a === 60) ? 12 : 8
+      const rad = ((angle - 90) * Math.PI) / 180
+      ticks.push({
+        x1: cx.value + r * Math.cos(rad),
+        y1: cy.value + r * Math.sin(rad),
+        x2: cx.value + (r - len) * Math.cos(rad),
+        y2: cy.value + (r - len) * Math.sin(rad),
+      })
+    }
   }
-  return ticks.map(t => {
-    const rad = ((t.angle - 90) * Math.PI) / 180
-    const x1 = cx.value + r * Math.cos(rad)
-    const y1 = cy.value + r * Math.sin(rad)
-    const x2 = cx.value + (r - t.length) * Math.cos(rad)
-    const y2 = cy.value + (r - t.length) * Math.sin(rad)
-    return { x1, y1, x2, y2 }
-  })
+  return ticks
 })
 
 const bankPointer = computed(() => {
-  const r = props.size * 0.42
-  const s = 8
-  const tipX = cx.value
+  const r = props.size * 0.44
+  const s = 7
   const tipY = cy.value - r
-  return `${tipX},${tipY} ${tipX - s},${tipY - s * 1.5} ${tipX + s},${tipY - s * 1.5}`
+  return `${cx.value},${tipY} ${cx.value - s},${tipY - s * 1.5} ${cx.value + s},${tipY - s * 1.5}`
+})
+
+const zeroRef = computed(() => {
+  const r = props.size * 0.44
+  const tipY = cy.value - r
+  return `${cx.value},${tipY} ${cx.value - 6},${tipY - 10} ${cx.value + 6},${tipY - 10}`
 })
 
 const horizonTransform = computed(() => {
@@ -67,9 +82,23 @@ const bankPointerTransform = computed(() => {
   return `rotate(${-props.bankAngle}, ${cx.value}, ${cy.value})`
 })
 
-const wingSpan = computed(() => props.size * 0.18)
-const wingThickness = computed(() => 3)
-const dotRadius = computed(() => 4)
+// Aircraft symbol (licarth-style L-shaped wings)
+// licarth: wings from ±75 to ±133, tip drops to y=22, center square 10x10
+const rightWingPoints = computed(() => {
+  const wi = props.size * 0.259
+  const wo = props.size * 0.459
+  const td = props.size * 0.076
+  const c = cy.value
+  return `${cx.value + wi},${c - 5} ${cx.value + wo},${c - 5} ${cx.value + wo},${c + 5} ${cx.value + wi + 10},${c + 5} ${cx.value + wi + 10},${c + td} ${cx.value + wi},${c + td}`
+})
+
+const leftWingPoints = computed(() => {
+  const wi = props.size * 0.259
+  const wo = props.size * 0.459
+  const td = props.size * 0.076
+  const c = cy.value
+  return `${cx.value - wi},${c - 5} ${cx.value - wo},${c - 5} ${cx.value - wo},${c + 5} ${cx.value - wi - 10},${c + 5} ${cx.value - wi - 10},${c + td} ${cx.value - wi},${c + td}`
+})
 </script>
 
 <template>
@@ -95,7 +124,6 @@ const dotRadius = computed(() => 4)
 
     <!-- Clipped viewport -->
     <g :clip-path="`url(#${clipId})`">
-      <!-- Rotating group for pitch + bank -->
       <g :transform="horizonTransform">
         <!-- Sky -->
         <rect
@@ -120,36 +148,37 @@ const dotRadius = computed(() => 4)
           :x2="size * 2"
           :y2="0"
           :stroke="WHITE"
-          stroke-width="2"
+          stroke-width="2.5"
         />
 
         <!-- Pitch ladder -->
         <g v-for="mark in pitchMarks" :key="mark.deg">
           <line
-            :x1="-mark.width / 2"
+            :x1="-mark.halfWidth"
             :y1="mark.y"
-            :x2="mark.width / 2"
+            :x2="mark.halfWidth"
             :y2="mark.y"
             :stroke="WHITE"
-            :stroke-width="mark.isLabel ? 1.5 : 1"
+            :stroke-width="mark.type === 'L' ? 2.5 : mark.type === 'M' ? 2 : 1.5"
+            stroke-linecap="round"
           />
-          <template v-if="mark.isLabel">
+          <template v-if="mark.type === 'L'">
             <text
-              :x="-mark.width / 2 - 6"
-              :y="mark.y + 4"
+              :x="-mark.halfWidth - 28"
+              :y="mark.y + 5"
               :fill="WHITE"
-              font-size="11"
-              text-anchor="end"
+              font-size="13"
+              text-anchor="middle"
               font-family="monospace"
             >
               {{ Math.abs(mark.deg) }}
             </text>
             <text
-              :x="mark.width / 2 + 6"
-              :y="mark.y + 4"
+              :x="mark.halfWidth + 28"
+              :y="mark.y + 5"
               :fill="WHITE"
-              font-size="11"
-              text-anchor="start"
+              font-size="13"
+              text-anchor="middle"
               font-family="monospace"
             >
               {{ Math.abs(mark.deg) }}
@@ -171,66 +200,38 @@ const dotRadius = computed(() => 4)
       stroke-width="1.5"
     />
 
-    <!-- Zero-bank reference triangle (fixed, top center) -->
-    <polygon
-      :points="`${cx},${cy - size * 0.42} ${cx - 6},${cy - size * 0.42 - 10} ${cx + 6},${cy - size * 0.42 - 10}`"
-      :fill="WHITE"
-    />
+    <!-- Zero-bank reference triangle (fixed, top center, white) -->
+    <polygon :points="zeroRef" :fill="WHITE" />
 
-    <!-- Bank pointer (rotates with bank) -->
-    <polygon
-      :points="bankPointer"
-      :transform="bankPointerTransform"
-      :fill="YELLOW"
-    />
+    <!-- Bank pointer (rotates with bank, yellow) -->
+    <polygon :points="bankPointer" :transform="bankPointerTransform" :fill="YELLOW" />
 
-    <!-- Fixed aircraft reference symbol (W-shape) -->
-    <g>
-      <!-- Left wing -->
-      <rect
-        :x="cx - wingSpan - dotRadius"
-        :y="cy - wingThickness / 2"
-        :width="wingSpan"
-        :height="wingThickness"
-        :fill="YELLOW"
-        rx="1"
-      />
-      <!-- Left wing tip (descending) -->
-      <line
-        :x1="cx - wingSpan - dotRadius"
-        :y1="cy"
-        :x2="cx - wingSpan - dotRadius"
-        :y2="cy + 5"
-        :stroke="YELLOW"
-        stroke-width="3"
-        stroke-linecap="round"
-      />
-      <!-- Right wing -->
-      <rect
-        :x="cx + dotRadius"
-        :y="cy - wingThickness / 2"
-        :width="wingSpan"
-        :height="wingThickness"
-        :fill="YELLOW"
-        rx="1"
-      />
-      <!-- Right wing tip (descending) -->
-      <line
-        :x1="cx + wingSpan + dotRadius"
-        :y1="cy"
-        :x2="cx + wingSpan + dotRadius"
-        :y2="cy + 5"
-        :stroke="YELLOW"
-        stroke-width="3"
-        stroke-linecap="round"
-      />
-      <!-- Center dot -->
-      <circle
-        :cx="cx"
-        :cy="cy"
-        :r="dotRadius"
-        :fill="YELLOW"
-      />
-    </g>
+    <!-- Fixed aircraft reference symbol (licarth-style L-shaped wings) -->
+    <!-- Center square -->
+    <rect
+      :x="cx - 5"
+      :y="cy - 5"
+      width="10"
+      height="10"
+      fill="none"
+      :stroke="YELLOW"
+      stroke-width="2"
+    />
+    <!-- Right wing -->
+    <polygon
+      :points="rightWingPoints"
+      fill="black"
+      :stroke="YELLOW"
+      stroke-width="2"
+      stroke-linecap="round"
+    />
+    <!-- Left wing -->
+    <polygon
+      :points="leftWingPoints"
+      fill="black"
+      :stroke="YELLOW"
+      stroke-width="2"
+      stroke-linecap="round"
+    />
   </svg>
 </template>
