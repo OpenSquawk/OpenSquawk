@@ -16,13 +16,13 @@ const phases: LearnPfdPhase[] = [
     // --- Phase 2: Horizon Intro (bank left) ---
     {
         id: 'horizon_intro',
-        atcMessage: 'Das hier ist der künstliche Horizont. Blau ist der Himmel, braun ist der Boden. Genau wie draußen. Beweg jetzt den Stick nach links — und schau was passiert.',
+        atcMessage: 'Das hier ist der künstliche Horizont. Blau ist der Himmel, braun ist der Boden. Genau wie draußen. Beweg jetzt den Stick ganz sanft nach links — nur ein kleines bisschen. Im echten Flugzeug macht man immer nur kleine, sanfte Bewegungen.',
         explanation: 'Der künstliche Horizont zeigt dir die Lage des Flugzeugs im Raum.',
         visibleElements: ['attitude'],
         layoutMode: 'model-focus',
-        interactionGoal: { parameter: 'bankAngle', target: -20, tolerance: 15, holdMs: 1500 },
+        interactionGoal: { parameter: 'bankAngle', target: -10, tolerance: 8, holdMs: 1500 },
         goalTimeoutMs: 20000,
-        goalHint: 'Versuch den Stick nach links zu drücken. Du solltest sehen, wie sich der Horizont dreht.',
+        goalHint: 'Drück den Stick ganz leicht nach links. Nur ein kleiner Ausschlag reicht.',
         autoAdvanceAfterTTS: false,
         buttons: [
             { id: 'skip_horizon', label: 'Weiter', icon: 'mdi-arrow-right', next: 'pitch_intro', type: 'primary' },
@@ -32,12 +32,12 @@ const phases: LearnPfdPhase[] = [
     // --- Phase 3: Horizon Roll Right ---
     {
         id: 'horizon_roll_right',
-        atcMessage: 'Perfekt! Du hast das Flugzeug nach links geneigt. Jetzt andersrum — Stick nach rechts.',
+        atcMessage: 'Perfekt! Jetzt ganz sanft in die andere Richtung — Stick leicht nach rechts.',
         visibleElements: ['attitude'],
         layoutMode: 'model-focus',
-        interactionGoal: { parameter: 'bankAngle', target: 20, tolerance: 15, holdMs: 1500 },
+        interactionGoal: { parameter: 'bankAngle', target: 10, tolerance: 8, holdMs: 1500 },
         goalTimeoutMs: 15000,
-        goalHint: 'Stick nach rechts drücken, bis der Horizont sich nach links neigt.',
+        goalHint: 'Stick ganz leicht nach rechts. Kleine, sanfte Bewegungen.',
         buttons: [
             { id: 'skip_roll', label: 'Weiter', icon: 'mdi-arrow-right', next: 'pitch_intro', type: 'primary' },
         ],
@@ -46,13 +46,13 @@ const phases: LearnPfdPhase[] = [
     // --- Phase 4: Pitch Intro (pitch up) ---
     {
         id: 'pitch_intro',
-        atcMessage: 'Jetzt kommt was Wichtiges. Zieh den Stick leicht nach hinten. Die Nase geht hoch. Und das Besondere beim Airbus: Wenn du loslässt, hält er die Lage. Probier es aus.',
+        atcMessage: 'Jetzt kommt was Wichtiges. Zieh den Stick ganz leicht nach hinten. Nur ein kleines bisschen. Das Besondere beim Airbus: Wenn du loslässt, hält er die Lage. Und das Flugzeug reagiert langsam — du musst immer vorausdenken.',
         explanation: 'Beim Airbus steuert der Stick nicht direkt die Ruder, sondern wie stark das Flugzeug steigen oder sinken soll.',
         visibleElements: ['attitude'],
         layoutMode: 'model-focus',
-        interactionGoal: { parameter: 'pitch', target: 10, tolerance: 5, holdMs: 2000 },
+        interactionGoal: { parameter: 'pitch', target: 4, tolerance: 3, holdMs: 2000 },
         goalTimeoutMs: 20000,
-        goalHint: 'Zieh den Stick langsam nach hinten. Du siehst die braune Fläche größer werden — das heißt, die Nase zeigt nach oben.',
+        goalHint: 'Zieh den Stick nur ganz leicht nach hinten. Beim echten Airbus macht man nur minimale Bewegungen.',
         buttons: [
             { id: 'skip_pitch', label: 'Weiter', icon: 'mdi-arrow-right', next: 'pitch_down', type: 'primary' },
         ],
@@ -61,18 +61,18 @@ const phases: LearnPfdPhase[] = [
     // --- Phase 5: Pitch Down ---
     {
         id: 'pitch_down',
-        atcMessage: 'Gut gemacht! Jetzt drück den Stick leicht nach vorne. Die Nase geht runter.',
+        atcMessage: 'Gut gemacht! Jetzt drück den Stick ganz leicht nach vorne. Auch hier gilt: kleine Bewegungen, und Geduld — das Flugzeug braucht ein paar Sekunden bis es reagiert.',
         visibleElements: ['attitude'],
         layoutMode: 'model-focus',
-        interactionGoal: { parameter: 'pitch', target: -5, tolerance: 5, holdMs: 1500 },
+        interactionGoal: { parameter: 'pitch', target: -3, tolerance: 3, holdMs: 1500 },
         goalTimeoutMs: 15000,
-        goalHint: 'Stick nach vorne drücken. Die blaue Fläche wird größer.',
+        goalHint: 'Stick ganz leicht nach vorne drücken und warten. Das Flugzeug reagiert mit Verzögerung.',
         buttons: [
             { id: 'skip_pitch_down', label: 'Weiter', icon: 'mdi-arrow-right', next: 'speed_intro', type: 'primary' },
         ],
     },
 
-    // --- Phase 6: Speed Intro ---
+    // --- Phase 6: Speed Intro (set throttle) ---
     {
         id: 'speed_intro',
         atcMessage: 'Links erscheint jetzt das Speed Tape. Erster Schritt: Setz den Schubhebel sauber auf siebzig Prozent.',
@@ -83,23 +83,53 @@ const phases: LearnPfdPhase[] = [
         goalTimeoutMs: 20000,
         goalHint: 'Schubhebel auf die 70%-Marke setzen und kurz halten.',
         buttons: [
-            { id: 'skip_speed', label: 'Weiter', icon: 'mdi-arrow-right', next: 'speed_hold_pitch', type: 'primary' },
+            { id: 'skip_speed', label: 'Weiter', icon: 'mdi-arrow-right', next: 'speed_explain', type: 'primary' },
         ],
     },
 
-    // --- Phase 7: Hold Speed With Pitch ---
+    // --- Phase 7a: Speed Explain ---
     {
-        id: 'speed_hold_pitch',
-        atcMessage: 'Jetzt kommt der wichtige Teil: Halte die Geschwindigkeit im roten Bereich. Der Schub bleibt bei siebzig Prozent — du steuerst das nur mit Pitch. Nase leicht hoch macht langsamer, Nase leicht runter macht schneller.',
-        explanation: 'Energie-Management: Mit konstantem Schub kontrollierst du die Geschwindigkeit über den Pitchwinkel.',
+        id: 'speed_explain',
+        atcMessage: 'Bevor wir loslegen, eine wichtige Regel: Beim Airbus kontrollierst du die Geschwindigkeit mit der Nase. Nase hoch — du wirst langsamer. Nase runter — du wirst schneller. Der Schub bleibt dabei immer gleich. Das nennt man Energie-Management.',
+        explanation: 'Im echten Flug hält der Autopilot den Schub konstant. Der Pilot steuert die Geschwindigkeit über den Pitch.',
         visibleElements: ['attitude', 'speedTape'],
         layoutMode: 'split',
-        interactionGoal: { parameter: 'speed', target: 225, tolerance: 8, holdMs: 3000 },
-        speedTargetRange: { min: 217, max: 233 },
-        goalTimeoutMs: 25000,
-        goalHint: 'Halte den Schub bei 70%. Korrigiere nur mit Pitch, bis die Speed-Zahl im roten Band bleibt.',
         buttons: [
-            { id: 'skip_speed_hold', label: 'Weiter', icon: 'mdi-arrow-right', next: 'alt_intro', type: 'primary' },
+            { id: 'understood', label: 'Verstanden', icon: 'mdi-check', next: 'speed_hold_coarse', type: 'primary' },
+        ],
+    },
+
+    // --- Phase 7b: Speed Hold Coarse ---
+    {
+        id: 'speed_hold_coarse',
+        atcMessage: 'Gut, Schub steht. Jetzt versuch die Geschwindigkeit in den türkisen Bereich zu bringen. Nase ganz leicht hoch oder runter — und dann warten. Das Flugzeug braucht mehrere Sekunden bis sich die Speed ändert.',
+        explanation: 'Erste Annäherung: Bringe die Speed grob in den Zielbereich.',
+        visibleElements: ['attitude', 'speedTape'],
+        layoutMode: 'split',
+        interactionGoal: { parameter: 'speed', target: 225, tolerance: 10, holdMs: 5000 },
+        speedTargetRange: { min: 215, max: 235 },
+        goalTimeoutMs: 30000,
+        goalHint: 'Korrigiere nur mit ganz kleinen Pitch-Bewegungen. Die Speed ändert sich langsam — hab Geduld.',
+        autoAdvanceAfterTTS: false,
+        buttons: [
+            { id: 'skip_coarse', label: 'Weiter', icon: 'mdi-arrow-right', next: 'speed_hold_fine', type: 'primary' },
+        ],
+    },
+
+    // --- Phase 7c: Speed Hold Fine ---
+    {
+        id: 'speed_hold_fine',
+        atcMessage: 'Sehr gut! Jetzt genauer. Halte die Geschwindigkeit möglichst exakt auf 225 Knoten. Nur winzige Korrekturen — und immer ein paar Sekunden warten bevor du nachkorrigierst.',
+        explanation: 'Feinsteuerung: Präzise Speed-Kontrolle mit minimalen Pitch-Änderungen.',
+        visibleElements: ['attitude', 'speedTape'],
+        layoutMode: 'split',
+        interactionGoal: { parameter: 'speed', target: 225, tolerance: 5, holdMs: 8000 },
+        speedTargetRange: { min: 220, max: 230 },
+        goalTimeoutMs: 40000,
+        goalHint: 'Ganz kleine Pitch-Korrekturen. Warte nach jeder Korrektur 3-4 Sekunden bevor du nachjustierst.',
+        autoAdvanceAfterTTS: false,
+        buttons: [
+            { id: 'skip_fine', label: 'Weiter', icon: 'mdi-arrow-right', next: 'alt_intro', type: 'primary' },
         ],
     },
 

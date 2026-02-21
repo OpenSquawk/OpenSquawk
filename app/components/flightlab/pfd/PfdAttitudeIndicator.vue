@@ -84,12 +84,12 @@ const dotRadius = computed(() => 4)
         <circle :cx="cx" :cy="cy" :r="size * 0.46" />
       </clipPath>
       <linearGradient :id="skyGradId" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#22a7eb" />
+        <stop offset="0%" stop-color="#0a4a8a" />
         <stop offset="100%" stop-color="#22a7eb" />
       </linearGradient>
       <linearGradient :id="groundGradId" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#b26113" />
-        <stop offset="100%" stop-color="#b26113" />
+        <stop offset="100%" stop-color="#5a2e08" />
       </linearGradient>
     </defs>
 
@@ -184,7 +184,7 @@ const dotRadius = computed(() => 4)
       :fill="YELLOW"
     />
 
-    <!-- Fixed aircraft reference symbol -->
+    <!-- Fixed aircraft reference symbol (W-shape) -->
     <g>
       <!-- Left wing -->
       <rect
@@ -195,6 +195,16 @@ const dotRadius = computed(() => 4)
         :fill="YELLOW"
         rx="1"
       />
+      <!-- Left wing tip (descending) -->
+      <line
+        :x1="cx - wingSpan - dotRadius"
+        :y1="cy"
+        :x2="cx - wingSpan - dotRadius"
+        :y2="cy + 5"
+        :stroke="YELLOW"
+        stroke-width="3"
+        stroke-linecap="round"
+      />
       <!-- Right wing -->
       <rect
         :x="cx + dotRadius"
@@ -203,6 +213,16 @@ const dotRadius = computed(() => 4)
         :height="wingThickness"
         :fill="YELLOW"
         rx="1"
+      />
+      <!-- Right wing tip (descending) -->
+      <line
+        :x1="cx + wingSpan + dotRadius"
+        :y1="cy"
+        :x2="cx + wingSpan + dotRadius"
+        :y2="cy + 5"
+        :stroke="YELLOW"
+        stroke-width="3"
+        stroke-linecap="round"
       />
       <!-- Center dot -->
       <circle

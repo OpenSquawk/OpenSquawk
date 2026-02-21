@@ -8,10 +8,14 @@ const props = withDefaults(defineProps<{
   speed: number
   speedTrend?: number
   targetRange?: SpeedTargetRange
+  vfeSpeed?: number
+  minSpeed?: number
   width?: number
   height?: number
 }>(), {
   speedTrend: 0,
+  vfeSpeed: 340,
+  minSpeed: 130,
   width: 70,
   height: 300,
 })
@@ -96,7 +100,7 @@ const tapeInnerHeight = computed(() => props.height - 4)
       y="0"
       :width="width"
       :height="height"
-      fill="#8f9198"
+      fill="#16181f"
       rx="1"
     />
     <rect
@@ -104,22 +108,59 @@ const tapeInnerHeight = computed(() => props.height - 4)
       :y="tapeInnerY"
       :width="tapeInnerWidth"
       :height="tapeInnerHeight"
-      fill="#93959c"
-      stroke="#d2d4da"
+      fill="#1c1e26"
+      stroke="#3a3d48"
       stroke-width="0.8"
     />
 
     <!-- Scrolling tape (clipped) -->
     <g :clip-path="`url(#${clipId})`">
-      <!-- Target hold zone -->
+      <!-- VFE overspeed band (red) -->
+      <rect
+        x="1"
+        :y="0"
+        :width="width - 2"
+        :height="Math.max(0, speedToY(vfeSpeed))"
+        fill="rgba(239, 40, 40, 0.45)"
+      />
+      <line
+        v-if="speedToY(vfeSpeed) > 0"
+        x1="1"
+        :y1="speedToY(vfeSpeed)"
+        :x2="width - 1"
+        :y2="speedToY(vfeSpeed)"
+        stroke="#ef4444"
+        stroke-width="1.5"
+      />
+
+      <!-- Minimum speed band (red) -->
+      <rect
+        v-if="speedToY(minSpeed) < height"
+        x="1"
+        :y="speedToY(minSpeed)"
+        :width="width - 2"
+        :height="Math.max(0, height - speedToY(minSpeed))"
+        fill="rgba(239, 40, 40, 0.45)"
+      />
+      <line
+        v-if="speedToY(minSpeed) < height"
+        x1="1"
+        :y1="speedToY(minSpeed)"
+        :x2="width - 1"
+        :y2="speedToY(minSpeed)"
+        stroke="#ef4444"
+        stroke-width="1.5"
+      />
+
+      <!-- Target hold zone (cyan) -->
       <g v-if="targetZone">
         <rect
           x="1"
           :y="targetZone.top"
           :width="width - 2"
           :height="targetZone.height"
-          fill="rgba(239, 68, 68, 0.22)"
-          stroke="rgba(248, 113, 113, 0.95)"
+          fill="rgba(45, 212, 255, 0.18)"
+          stroke="rgba(45, 229, 255, 0.8)"
           stroke-width="1.2"
         />
         <line
@@ -127,7 +168,7 @@ const tapeInnerHeight = computed(() => props.height - 4)
           :y1="targetZone.top"
           :x2="width - 1"
           :y2="targetZone.top"
-          stroke="rgba(254, 202, 202, 0.95)"
+          stroke="rgba(45, 229, 255, 0.5)"
           stroke-width="1"
         />
         <line
@@ -135,7 +176,7 @@ const tapeInnerHeight = computed(() => props.height - 4)
           :y1="targetZone.bottom"
           :x2="width - 1"
           :y2="targetZone.bottom"
-          stroke="rgba(254, 202, 202, 0.95)"
+          stroke="rgba(45, 229, 255, 0.5)"
           stroke-width="1"
         />
       </g>
@@ -171,7 +212,7 @@ const tapeInnerHeight = computed(() => props.height - 4)
         :y1="centerY"
         :x2="width / 2"
         :y2="trendLineEndY"
-        stroke="#30e3ff"
+        stroke="#19e34a"
         stroke-width="2"
         opacity="0.8"
       />
@@ -184,14 +225,14 @@ const tapeInnerHeight = computed(() => props.height - 4)
       :width="readoutBoxWidth"
       :height="readoutBoxHeight"
       fill="#02040b"
-      stroke="#2fe5ff"
+      stroke="#19e34a"
       stroke-width="1.4"
       rx="1.5"
     />
     <text
       :x="width / 2"
       :y="centerY + 5"
-      fill="#2fe5ff"
+      fill="#19e34a"
       font-size="15"
       font-weight="bold"
       text-anchor="middle"

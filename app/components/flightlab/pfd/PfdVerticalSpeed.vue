@@ -68,8 +68,8 @@ const channelShape = computed(() => {
     <!-- Airbus-style VS channel -->
     <polygon
       :points="channelShape"
-      fill="#8f9198"
-      stroke="#d2d4da"
+      fill="#1c1e26"
+      stroke="#3a3d48"
       stroke-width="0.8"
     />
 

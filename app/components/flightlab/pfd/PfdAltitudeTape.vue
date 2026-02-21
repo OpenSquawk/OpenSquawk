@@ -65,7 +65,7 @@ const tapeInnerHeight = computed(() => props.height - 4)
       y="0"
       :width="width"
       :height="height"
-      fill="#8f9198"
+      fill="#16181f"
       rx="1"
     />
     <rect
@@ -73,27 +73,27 @@ const tapeInnerHeight = computed(() => props.height - 4)
       :y="tapeInnerY"
       :width="tapeInnerWidth"
       :height="tapeInnerHeight"
-      fill="#93959c"
-      stroke="#d2d4da"
+      fill="#1c1e26"
+      stroke="#3a3d48"
       stroke-width="0.8"
     />
 
     <!-- Scrolling tape (clipped) -->
     <g :clip-path="`url(#${clipId})`">
       <g v-for="mark in marks" :key="mark.alt">
-        <!-- Tick mark -->
+        <!-- Tick mark (left side, toward attitude indicator) -->
         <line
-          :x1="width - 10"
+          x1="1"
           :y1="mark.y"
-          :x2="width - 1"
+          x2="10"
           :y2="mark.y"
           stroke="#f4f6fb"
           stroke-width="1"
         />
-        <!-- Label -->
+        <!-- Label (right of ticks) -->
         <text
           v-if="mark.isLabel"
-          x="4"
+          x="14"
           :y="mark.y + 4"
           fill="#f4f6fb"
           font-size="12"
@@ -112,14 +112,14 @@ const tapeInnerHeight = computed(() => props.height - 4)
       :width="readoutBoxWidth"
       :height="readoutBoxHeight"
       fill="#02040b"
-      stroke="#2fe5ff"
+      stroke="#19e34a"
       stroke-width="1.4"
       rx="1.5"
     />
     <text
       :x="width / 2"
       :y="centerY + 5"
-      fill="#2fe5ff"
+      fill="#19e34a"
       font-size="14"
       font-weight="bold"
       text-anchor="middle"

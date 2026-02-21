@@ -89,7 +89,7 @@ const readoutBoxHeight = 18
       y="0"
       :width="width"
       :height="height"
-      fill="#8f9198"
+      fill="#16181f"
       rx="1"
     />
     <rect
@@ -97,8 +97,8 @@ const readoutBoxHeight = 18
       y="1.5"
       :width="width - 3"
       :height="height - 3"
-      fill="#94969d"
-      stroke="#d4d6dc"
+      fill="#1c1e26"
+      stroke="#3a3d48"
       stroke-width="0.8"
     />
 

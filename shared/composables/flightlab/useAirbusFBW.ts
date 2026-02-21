@@ -24,13 +24,14 @@ const MAX_PITCH_UP = 30
 const MAX_PITCH_DOWN = -15
 const MAX_BANK = 67
 const BANK_NEUTRAL_LIMIT = 33
-const MAX_ROLL_RATE = 15
-const ROLL_RETURN_RATE = 5
+const MAX_ROLL_RATE = 7
+const ROLL_RETURN_RATE = 2
 
 const MAX_G_PULL = 2.5
 const MIN_G_PUSH = -1.0
 const NEUTRAL_G = 1.0
-const PITCH_RATE_PER_G_DELTA = 3.5
+const PITCH_RATE_PER_G_DELTA = 1.2
+const PITCH_SMOOTH_TAU = 2.0 // seconds — exponential smoothing time constant
 
 const IDLE_THRUST = 2000
 const MAX_THRUST = 50000
@@ -39,7 +40,7 @@ const MASS = 150000
 const GRAVITY = 32.174
 const KT_TO_FPS = 1.68781
 const TRIM_PITCH_DEG = 2
-const SPEED_PITCH_COUPLING = 1.2
+const SPEED_PITCH_COUPLING = 2.0
 
 const INITIAL_SPEED = 220
 const INITIAL_ALTITUDE = 5000
@@ -63,6 +64,7 @@ export function useAirbusFBW() {
   let animFrame: number | null = null
   let lastTime: number | null = null
   let running = false
+  let smoothedPitchRate = 0
 
   function updateInput(newInput: Partial<StickInput>) {
     if (newInput.pitch !== undefined) input.pitch = clamp(newInput.pitch, -1, 1)
@@ -84,6 +86,7 @@ export function useAirbusFBW() {
     state.throttlePercent = 50
     state.onGround = false
     lastTime = null
+    smoothedPitchRate = 0
   }
 
   function tick(timestamp: number) {
@@ -126,8 +129,10 @@ export function useAirbusFBW() {
     const currentG = speedFps > 50 ? 1 + (state.pitch * Math.PI / 180) * speedFps / GRAVITY * 0.01 : 1
 
     const gDelta = targetG - currentG
-    const pitchRate = gDelta * PITCH_RATE_PER_G_DELTA
-    state.pitch += pitchRate * dt
+    const rawPitchRate = gDelta * PITCH_RATE_PER_G_DELTA
+    const alpha = 1 - Math.exp(-dt / PITCH_SMOOTH_TAU)
+    smoothedPitchRate += (rawPitchRate - smoothedPitchRate) * alpha
+    state.pitch += smoothedPitchRate * dt
     state.pitch = clamp(state.pitch, MAX_PITCH_DOWN, MAX_PITCH_UP)
 
     // --- Speed ---
