@@ -117,3 +117,6 @@ We welcome issues, pull requests, and ideas—especially Nuxt/Node expertise, AT
 Contact: [info@opensquawk.de](mailto:info@opensquawk.de).
 
 OpenSquawk thrives on community collaboration—priorities are set together. Join in!
+
+
+
