@@ -32,6 +32,9 @@ const pxPerKt = computed(() => props.height * 3.808 / 319.8)
 // Tape area: left 68% for numbers/ticks, right 32% for tick marks edge
 const tapeW = computed(() => props.width * 0.68)
 function speedToY(spd: number): number {
+  // Real PFD: higher speeds above (lower Y), lower speeds below (higher Y)
+  // spd=240 at speed=220: centerY + (220-240)*px = centerY - 76 → above center ✓
+  // spd=200 at speed=220: centerY + (220-200)*px = centerY + 76 → below center ✓
   return centerY.value + (props.speed - spd) * pxPerKt.value
 }
 
