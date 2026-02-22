@@ -652,6 +652,15 @@
                 placeholder="Type the answer"
                 class="w-full rounded-2xl border border-white/10 bg-[#0b1020]/40 px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-cyan-400"
               />
+              <div class="flex justify-end">
+                <button
+                  type="button"
+                  class="rounded-xl border border-white/20 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-cyan-200 transition hover:border-cyan-300/60 hover:text-cyan-100"
+                  @click="tryDifferentWaitlistCaptcha"
+                >
+                  Try something different
+                </button>
+              </div>
               <p v-if="waitlistCaptchaReminder" class="text-xs text-amber-200">{{ waitlistCaptchaReminder }}</p>
               <p v-else-if="waitlistCaptcha.answer && !waitlistCaptchaValid" class="text-xs text-red-300">
                 Check the ATC question and try again.
@@ -1210,7 +1219,11 @@ const CAPTCHA_CHALLENGES: CaptchaChallenge[] = [
   },
 ]
 
-const DEFAULT_CAPTCHA = CAPTCHA_CHALLENGES[0]
+const DEFAULT_CAPTCHA: CaptchaChallenge = CAPTCHA_CHALLENGES[0] ?? {
+  id: 'fallback-vfr',
+  prompt: 'What does the “V” in VFR stand for?',
+  answers: ['visual', 'visual flight rules'],
+}
 
 const createCaptchaState = () =>
   reactive({
@@ -1237,16 +1250,24 @@ const isCaptchaAnswerValid = (state: CaptchaState) => {
   return state.challenge.answers.some((answer) => normaliseCaptchaValue(answer) === response)
 }
 
-const pickRandomChallenge = (excludeId?: string) => {
+const pickRandomChallenge = (excludeId?: string): CaptchaChallenge => {
   const pool = excludeId ? CAPTCHA_CHALLENGES.filter((challenge) => challenge.id !== excludeId) : CAPTCHA_CHALLENGES
   const available = pool.length ? pool : CAPTCHA_CHALLENGES
   const index = Math.floor(Math.random() * available.length)
-  return available[index]
+  return available[index] ?? DEFAULT_CAPTCHA
 }
 
 const rotateCaptchaChallenge = (state: CaptchaState) => {
   const nextChallenge = pickRandomChallenge(state.challenge?.id)
   state.challenge = nextChallenge
+  state.answer = ''
+}
+
+const cycleCaptchaChallenge = (state: CaptchaState) => {
+  const currentIndex = CAPTCHA_CHALLENGES.findIndex((challenge) => challenge.id === state.challenge?.id)
+  const normalizedIndex = currentIndex >= 0 ? currentIndex : 0
+  const nextIndex = (normalizedIndex + 1) % CAPTCHA_CHALLENGES.length
+  state.challenge = CAPTCHA_CHALLENGES[nextIndex] ?? DEFAULT_CAPTCHA
   state.answer = ''
 }
 
@@ -1294,6 +1315,11 @@ const waitlistLastJoinedFormatted = computed(() => {
   return formatWaitlistDate(iso)
 })
 const waitlistCaptchaValid = computed(() => isCaptchaAnswerValid(waitlistCaptcha))
+
+const tryDifferentWaitlistCaptcha = () => {
+  cycleCaptchaChallenge(waitlistCaptcha)
+  waitlistCaptchaReminder.value = ''
+}
 
 watch(
   () => waitlistForm.email,
