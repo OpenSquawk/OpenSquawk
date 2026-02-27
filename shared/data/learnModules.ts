@@ -970,10 +970,21 @@ const readbackLessons: Lesson[] = [
     desc: 'Acknowledge the takeoff clearance',
     keywords: ['Tower', 'Departure'],
     hints: [
-      'Order: runway – cleared for takeoff – call sign.',
-      'Wind information can be omitted if it was not given.'
+      'Order: wind – runway – cleared for takeoff – call sign.',
+      'Write the wind as direction/speed, e.g. 030/12.'
     ],
     fields: [
+      {
+        key: 'tko-wind',
+        label: 'Wind',
+        expected: scenario => scenario.wind,
+        alternatives: scenario => [
+          scenario.wind,
+          `${scenario.wind}KT`,
+          scenario.windWords
+        ],
+        width: 'md'
+      },
       {
         key: 'tko-runway',
         label: 'Runway',
@@ -994,7 +1005,9 @@ const readbackLessons: Lesson[] = [
       }
     ],
     readback: [
-      { type: 'text', text: 'Runway ' },
+      { type: 'text', text: 'Wind ' },
+      { type: 'field', key: 'tko-wind', width: 'md' },
+      { type: 'text', text: ', runway ' },
       { type: 'field', key: 'tko-runway', width: 'sm' },
       { type: 'text', text: ', cleared for takeoff, ' },
       { type: 'field', key: 'tko-callsign', width: 'lg' }
@@ -1500,10 +1513,21 @@ const readbackLessons: Lesson[] = [
     desc: 'Read back the landing clearance',
     keywords: ['Tower', 'Landing', 'Readback'],
     hints: [
-      'Lead with the runway, then "cleared to land".',
-      'Keep the call sign at the end.'
+      'Order: wind – runway – cleared to land – call sign.',
+      'Write the wind as direction/speed, e.g. 260/08.'
     ],
     fields: [
+      {
+        key: 'landing-wind',
+        label: 'Wind',
+        expected: scenario => scenario.arrivalWind,
+        alternatives: scenario => [
+          scenario.arrivalWind,
+          `${scenario.arrivalWind}KT`,
+          scenario.arrivalWindWords
+        ],
+        width: 'md'
+      },
       {
         key: 'landing-runway',
         label: 'Runway',
@@ -1527,7 +1551,9 @@ const readbackLessons: Lesson[] = [
       }
     ],
     readback: [
-      { type: 'text', text: 'Runway ' },
+      { type: 'text', text: 'Wind ' },
+      { type: 'field', key: 'landing-wind', width: 'md' },
+      { type: 'text', text: ', runway ' },
       { type: 'field', key: 'landing-runway', width: 'sm' },
       { type: 'text', text: ', cleared to land, ' },
       { type: 'field', key: 'landing-callsign', width: 'lg' }
@@ -2863,9 +2889,21 @@ const fullFlightLessons: Lesson[] = [
     desc: 'Acknowledge the takeoff clearance',
     keywords: ['Tower', 'Departure', 'Flow'],
     hints: [
-      'Order: runway – cleared for takeoff – call sign.'
+      'Order: wind – runway – cleared for takeoff – call sign.',
+      'Write the wind as direction/speed, e.g. 030/12.'
     ],
     fields: [
+      {
+        key: 'full-tko-wind',
+        label: 'Wind',
+        expected: scenario => scenario.wind,
+        alternatives: scenario => [
+          scenario.wind,
+          `${scenario.wind}KT`,
+          scenario.windWords
+        ],
+        width: 'md'
+      },
       {
         key: 'full-tko-runway',
         label: 'Runway',
@@ -2886,7 +2924,9 @@ const fullFlightLessons: Lesson[] = [
       }
     ],
     readback: [
-      { type: 'text', text: 'Runway ' },
+      { type: 'text', text: 'Wind ' },
+      { type: 'field', key: 'full-tko-wind', width: 'md' },
+      { type: 'text', text: ', runway ' },
       { type: 'field', key: 'full-tko-runway', width: 'sm' },
       { type: 'text', text: ', cleared for takeoff, ' },
       { type: 'field', key: 'full-tko-callsign', width: 'lg' }
@@ -3170,9 +3210,21 @@ const fullFlightLessons: Lesson[] = [
     desc: 'Confirm the landing clearance',
     keywords: ['Tower', 'Landing', 'Flow'],
     hints: [
-      'Lead with the runway, then "cleared to land".'
+      'Order: wind – runway – cleared to land – call sign.',
+      'Write the wind as direction/speed, e.g. 260/08.'
     ],
     fields: [
+      {
+        key: 'full-landing-wind',
+        label: 'Wind',
+        expected: scenario => scenario.arrivalWind,
+        alternatives: scenario => [
+          scenario.arrivalWind,
+          `${scenario.arrivalWind}KT`,
+          scenario.arrivalWindWords
+        ],
+        width: 'md'
+      },
       {
         key: 'full-landing-runway',
         label: 'Runway',
@@ -3193,7 +3245,9 @@ const fullFlightLessons: Lesson[] = [
       }
     ],
     readback: [
-      { type: 'text', text: 'Runway ' },
+      { type: 'text', text: 'Wind ' },
+      { type: 'field', key: 'full-landing-wind', width: 'md' },
+      { type: 'text', text: ', runway ' },
       { type: 'field', key: 'full-landing-runway', width: 'sm' },
       { type: 'text', text: ', cleared to land, ' },
       { type: 'field', key: 'full-landing-callsign', width: 'lg' }
