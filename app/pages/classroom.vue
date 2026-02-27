@@ -1035,6 +1035,23 @@
                     {{ info }}
                   </div>
                 </div>
+                <div v-if="lessonReference.length" class="reference-section">
+                  <button
+                      class="reference-toggle"
+                      type="button"
+                      @click="referenceOpen = !referenceOpen"
+                      :aria-expanded="referenceOpen ? 'true' : 'false'"
+                  >
+                    <v-icon size="16">{{ referenceOpen ? 'mdi-chevron-down' : 'mdi-chevron-right' }}</v-icon>
+                    <span class="reference-toggle-label">Reference data</span>
+                  </button>
+                  <div v-if="referenceOpen" class="reference-table" :class="{ 'audio-blur': audioContentHidden }">
+                    <div v-for="entry in lessonReference" :key="entry.label" class="reference-row">
+                      <span class="reference-label">{{ entry.label }}</span>
+                      <span class="reference-value">{{ entry.value }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="col">
@@ -1181,6 +1198,9 @@
             <div v-else-if="nextMissionMeta" class="mission-footer-hint">
               Next mission: {{ nextMissionMeta.module.title }} · Mission {{ nextMissionMeta.position }} of
               {{ nextMissionMeta.total }}
+            </div>
+            <div v-else-if="isAtEndOfCurriculum" class="mission-footer-hint">
+              You've completed all available lessons! More content is coming soon.
             </div>
             <div v-else class="mission-footer-hint">
               Last lesson in this mission.
@@ -2686,6 +2706,7 @@ type CachedAudio = { base64: string; mime?: string; model?: string | null; speed
 const sayCache = new Map<string, CachedAudio>()
 const pendingSayRequests = new Map<string, Promise<CachedAudio>>()
 const audioReveal = ref(true)
+const referenceOpen = ref(false)
 
 const toast = ref({show: false, text: ''})
 const showSettings = ref(false)
@@ -3241,6 +3262,45 @@ const targetPhrase = computed(() => {
   return displayCallsign(activeLesson.value.phrase(scenario.value), scenario.value)
 })
 const lessonInfo = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.info(scenario.value) : []))
+
+const lessonReference = computed(() => {
+  if (!activeLesson.value || !scenario.value) return []
+  const lesson = activeLesson.value
+  const s = scenario.value
+  if (lesson.reference) return lesson.reference(s)
+  const entries: { label: string; value: string }[] = []
+  const fieldKeys = new Set(lesson.fields.map(f => f.key))
+  const phraseText = lesson.phrase(s)
+  const hasCallsign = fieldKeys.has('callsign') || fieldKeys.has('rc-callsign')
+      || fieldKeys.has('tko-callsign') || fieldKeys.has('landing-callsign')
+      || phraseText.includes(s.radioCall)
+  if (hasCallsign) {
+    entries.push({ label: 'Callsign', value: s.callsign })
+    entries.push({ label: 'Radio call', value: s.radioCall })
+    if (s.airlineCode && s.airlineCall) {
+      entries.push({ label: 'Airline', value: `${s.airlineCode} = ${s.airlineCall}` })
+    }
+  }
+  if (phraseText.includes(s.airport.city) || phraseText.includes(s.airport.icao)) {
+    entries.push({ label: 'Airport', value: `${s.airport.icao} ${s.airport.name}` })
+  }
+  if (phraseText.includes(s.destination.city) || phraseText.includes(s.destination.icao)) {
+    entries.push({ label: 'Destination', value: `${s.destination.icao} ${s.destination.name}` })
+  }
+  if (phraseText.includes(s.sid)) {
+    entries.push({ label: 'SID', value: s.sid })
+  }
+  if (phraseText.includes(s.transition)) {
+    entries.push({ label: 'Transition', value: s.transition })
+  }
+  if (phraseText.includes(s.approach)) {
+    entries.push({ label: 'Approach', value: s.approach })
+  }
+  if (s.arrivalStar && phraseText.includes(s.arrivalStar)) {
+    entries.push({ label: 'STAR', value: s.arrivalStar })
+  }
+  return entries
+})
 const showScenarioPracticeHint = computed(() => {
   if (!current.value || !activeLesson.value) return false
   const index = modules.value.findIndex(module => module.id === current.value?.id)
@@ -3324,6 +3384,15 @@ const lessonHasInput = computed(() => {
   })
 })
 
+const isAtEndOfCurriculum = computed(() => {
+  if (!current.value || !activeLesson.value) return false
+  if (nextLessonMeta.value || nextMissionMeta.value) return false
+  const lastModule = modules.value[modules.value.length - 1]
+  if (!lastModule || current.value.id !== lastModule.id) return false
+  const lessons = lastModule.lessons
+  return activeLesson.value.id === lessons[lessons.length - 1]?.id
+})
+
 const canAdvanceLesson = computed(() => Boolean(nextLessonMeta.value || nextMissionMeta.value))
 
 const missionFooterNoop = () => {
@@ -3341,12 +3410,31 @@ const missionFooterPrimary = computed(() => {
   }
 
   if (!lessonHasInput.value) {
+    if (isAtEndOfCurriculum.value) {
+      return {
+        label: 'Back to hub',
+        icon: 'mdi-view-dashboard',
+        disabled: false,
+        action: () => { panel.value = 'hub' },
+        mode: 'is-skip'
+      }
+    }
     return {
       label: 'Skip lesson',
       icon: 'mdi-skip-next',
       disabled: !canAdvanceLesson.value,
       action: canAdvanceLesson.value ? goToNextLesson : missionFooterNoop,
       mode: 'is-skip'
+    }
+  }
+
+  if (isAtEndOfCurriculum.value) {
+    return {
+      label: 'Back to hub',
+      icon: 'mdi-view-dashboard',
+      disabled: false,
+      action: () => { panel.value = 'hub' },
+      mode: 'is-next'
     }
   }
 
@@ -6502,6 +6590,54 @@ onMounted(() => {
 
 .hint.secondary {
   opacity: 0.8;
+}
+
+.reference-section {
+  margin-top: 8px;
+  border-top: 1px solid var(--b2, rgba(255, 255, 255, 0.08));
+  padding-top: 6px;
+}
+
+.reference-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--t2, rgba(255, 255, 255, 0.6));
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 0;
+  transition: color 0.15s;
+}
+
+.reference-toggle:hover {
+  color: var(--t1, rgba(255, 255, 255, 0.9));
+}
+
+.reference-toggle-label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.reference-table {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  padding: 6px 0 2px 20px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.reference-label {
+  color: var(--t2, rgba(255, 255, 255, 0.6));
+  white-space: nowrap;
+}
+
+.reference-value {
+  color: var(--t1, rgba(255, 255, 255, 0.9));
+  font-family: var(--font-mono, monospace);
 }
 
 .audio-blur {

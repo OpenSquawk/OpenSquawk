@@ -157,6 +157,11 @@ export type ReadbackSegment =
   | { type: 'text'; text: string | ((scenario: Scenario) => string) }
   | { type: 'field'; key: string; width?: BlankWidth }
 
+export type ReferenceEntry = {
+  label: string
+  value: string
+}
+
 export type Lesson = {
   id: string
   title: string
@@ -168,6 +173,7 @@ export type Lesson = {
   defaultFrequency?: string
   phrase: (scenario: Scenario) => string
   info: (scenario: Scenario) => string[]
+  reference?: (scenario: Scenario) => ReferenceEntry[]
   generate: () => Scenario
 }
 
