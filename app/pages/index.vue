@@ -539,9 +539,12 @@
           <article class="card" data-aos="fade-up" data-aos-delay="0">
             <h3 class="text-lg font-semibold">Discord Community</h3>
             <p class="mt-2 text-sm text-white/70">
-              Join ongoing discussions around phraseology, scenarios and upcoming training modules.
+              Join the server for updates and occasional discussion. Activity is still light right now, so email is the
+              fastest way to reach us.
             </p>
-            <a :href="DISCORD_INVITE_MAILTO" class="btn btn-ghost mt-4">Request Discord invite</a>
+            <a :href="DISCORD_INVITE_URL" target="_blank" rel="noopener noreferrer" class="btn btn-ghost mt-4">
+              Join Discord server
+            </a>
           </article>
           <article class="card" data-aos="fade-up" data-aos-delay="100">
             <h3 class="text-lg font-semibold">Early feedback</h3>
@@ -823,7 +826,12 @@
                 <li><NuxtLink to="#community" class="hover:text-cyan-300">Social proof</NuxtLink></li>
                 <li><NuxtLink to="#faq" class="hover:text-cyan-300">FAQ</NuxtLink></li>
                 <li><NuxtLink to="/feedback" class="hover:text-cyan-300">Feedback & ideas</NuxtLink></li>
-                <li><a :href="DISCORD_INVITE_MAILTO" class="hover:text-cyan-300">Discord invite request</a></li>
+                <li>
+                  <a :href="DISCORD_INVITE_URL" target="_blank" rel="noopener noreferrer" class="hover:text-cyan-300">
+                    Discord server invite
+                  </a>
+                </li>
+                <li class="text-white/50">Low activity right now. Email is still the best way to reach us.</li>
                 <li><a href="mailto:info@opensquawk.de" class="hover:text-cyan-300">info@opensquawk.de</a></li>
               </ul>
             </div>
@@ -855,7 +863,7 @@ import { useApi } from '~/composables/useApi'
 const api = useApi()
 
 const GITHUB_URL = 'https://github.com/OpenSquawk/OpenSquawk'
-const DISCORD_INVITE_MAILTO = 'mailto:info@opensquawk.de?subject=Discord%20Community%20Invite%20Request'
+const DISCORD_INVITE_URL = 'https://discord.gg/jJztEW8r2S'
 
 interface NavLink {
   label: string
