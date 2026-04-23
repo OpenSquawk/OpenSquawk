@@ -1322,6 +1322,39 @@
       </div>
     </v-dialog>
 
+    <v-dialog v-model="showSpeechServerWarning" max-width="620" persistent>
+      <div class="panel dialog speech-server-dialog">
+        <div class="speech-server-icon">
+          <v-icon size="34">mdi-alert-circle-outline</v-icon>
+        </div>
+        <div>
+          <p class="eyebrow">Sprachserver aktuell nicht erreichbar</p>
+          <h3 class="h3">Server-TTS ist gerade überlastet</h3>
+          <p class="muted speech-server-copy">
+            Unser Sprachserver ist aktuell wegen zu hoher Auslastung nicht erreichbar. Es kann ein bisschen dauern,
+            bis dieses Feature wieder verfügbar ist. Du kannst solange Browser TTS nutzen.
+          </p>
+        </div>
+        <div class="speech-server-actions">
+          <button
+              class="btn primary"
+              type="button"
+              :disabled="!browserTtsAvailable"
+              @click="enableBrowserTtsFromWarning"
+          >
+            <v-icon size="18">mdi-volume-high</v-icon>
+            Browser TTS nutzen
+          </button>
+          <button class="btn ghost" type="button" @click="showSpeechServerWarning=false">
+            Verstanden
+          </button>
+        </div>
+        <p v-if="!browserTtsAvailable" class="muted small">
+          Dein Browser meldet aktuell keine Web-Speech-Unterstützung.
+        </p>
+      </div>
+    </v-dialog>
+
     <!-- TOAST -->
     <v-snackbar v-model="toast.show" timeout="2200" location="top" color="#22d3ee">
       <v-icon class="mr-2">mdi-trophy</v-icon>
@@ -2710,9 +2743,16 @@ const referenceOpen = ref(false)
 
 const toast = ref({show: false, text: ''})
 const showSettings = ref(false)
+const showSpeechServerWarning = ref(false)
 const api = useApi()
 const isClient = typeof window !== 'undefined'
 const auth = useAuthStore()
+const browserTtsAvailable = computed(() => isClient && 'speechSynthesis' in window)
+
+type SpeechServerHealth = {
+  configured: boolean
+  reachable: boolean
+}
 
 const ATC_SETTINGS_STORAGE_PREFIX = 'os_atc_settings_'
 
@@ -2767,6 +2807,20 @@ function persistLocalAtcSettings(config: LearnConfig) {
   } catch (err) {
     console.warn('Failed to persist ATC settings locally', err)
   }
+}
+
+async function checkSpeechServerAvailability() {
+  try {
+    const health = await api.get<SpeechServerHealth>('/api/classroom/speech-server-health')
+    showSpeechServerWarning.value = Boolean(health.configured && !health.reachable)
+  } catch (error) {
+    console.error('Failed to check speech server availability', error)
+  }
+}
+
+function enableBrowserTtsFromWarning() {
+  cfg.value.tts = true
+  showSpeechServerWarning.value = false
 }
 
 function loadLocalAtcSettings(): LearnConfigPatch | null {
@@ -4576,6 +4630,7 @@ onMounted(() => {
       simbriefForm.userId = storedId
     }
   }
+  void checkSpeechServerAvailability()
 })
 </script>
 
@@ -6705,6 +6760,40 @@ onMounted(() => {
   flex-direction: column;
   gap: 4px;
   max-width: 70%;
+}
+
+.speech-server-dialog {
+  display: grid;
+  gap: 16px;
+  position: relative;
+}
+
+.speech-server-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: #fbbf24;
+  background: color-mix(in srgb, #f59e0b 18%, transparent);
+  border: 1px solid color-mix(in srgb, #f59e0b 36%, transparent);
+  box-shadow: 0 18px 36px rgba(245, 158, 11, .16);
+}
+
+.speech-server-copy {
+  margin-top: 10px;
+  line-height: 1.6;
+}
+
+.speech-server-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.speech-server-actions .btn {
+  justify-content: center;
 }
 
 .sr-only {
