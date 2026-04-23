@@ -1328,11 +1328,11 @@
           <v-icon size="34">mdi-alert-circle-outline</v-icon>
         </div>
         <div>
-          <p class="eyebrow">Sprachserver aktuell nicht erreichbar</p>
-          <h3 class="h3">Server-TTS ist gerade überlastet</h3>
+          <p class="eyebrow">Voice service is temporarily unavailable</p>
+          <h3 class="h3">Online voice is busy right now</h3>
           <p class="muted speech-server-copy">
-            Unser Sprachserver ist aktuell wegen zu hoher Auslastung nicht erreichbar. Es kann ein bisschen dauern,
-            bis dieses Feature wieder verfügbar ist. Du kannst solange Browser TTS nutzen.
+            Our online voice server is currently under heavy load and cannot be reached. It may take a little while
+            until this feature is available again. You can use the voice built into your browser in the meantime.
           </p>
         </div>
         <div class="speech-server-actions">
@@ -1343,14 +1343,42 @@
               @click="enableBrowserTtsFromWarning"
           >
             <v-icon size="18">mdi-volume-high</v-icon>
-            Browser TTS nutzen
+            Use browser voice
           </button>
           <button class="btn ghost" type="button" @click="showSpeechServerWarning=false">
-            Verstanden
+            Got it
           </button>
         </div>
         <p v-if="!browserTtsAvailable" class="muted small">
-          Dein Browser meldet aktuell keine Web-Speech-Unterstützung.
+          Your browser does not report built-in voice support right now.
+        </p>
+      </div>
+    </v-dialog>
+
+    <v-dialog v-model="showOnlineTtsSuggestion" max-width="620" persistent>
+      <div class="panel dialog speech-server-dialog">
+        <div class="speech-server-icon is-online">
+          <v-icon size="34">mdi-cloud-check-outline</v-icon>
+        </div>
+        <div>
+          <p class="eyebrow">Better voice available</p>
+          <h3 class="h3">Use the online voice?</h3>
+          <p class="muted speech-server-copy">
+            You are currently using the voice built into your browser. The online voice service is available and usually
+            sounds clearer and more natural for ATC practice.
+          </p>
+        </div>
+        <div class="speech-server-actions">
+          <button class="btn primary" type="button" @click="enableOnlineTtsFromSuggestion">
+            <v-icon size="18">mdi-cloud-outline</v-icon>
+            Use online voice
+          </button>
+          <button class="btn ghost" type="button" @click="showOnlineTtsSuggestion=false">
+            Keep browser voice
+          </button>
+        </div>
+        <p class="muted small">
+          You can change this later in Settings under Browser TTS.
         </p>
       </div>
     </v-dialog>
@@ -2744,6 +2772,7 @@ const referenceOpen = ref(false)
 const toast = ref({show: false, text: ''})
 const showSettings = ref(false)
 const showSpeechServerWarning = ref(false)
+const showOnlineTtsSuggestion = ref(false)
 const api = useApi()
 const isClient = typeof window !== 'undefined'
 const auth = useAuthStore()
@@ -2812,7 +2841,9 @@ function persistLocalAtcSettings(config: LearnConfig) {
 async function checkSpeechServerAvailability() {
   try {
     const health = await api.get<SpeechServerHealth>('/api/classroom/speech-server-health')
+    const hasOnlineTts = Boolean(health.configured && health.reachable)
     showSpeechServerWarning.value = Boolean(health.configured && !health.reachable)
+    showOnlineTtsSuggestion.value = Boolean(hasOnlineTts && cfg.value.tts)
   } catch (error) {
     console.error('Failed to check speech server availability', error)
   }
@@ -2821,6 +2852,11 @@ async function checkSpeechServerAvailability() {
 function enableBrowserTtsFromWarning() {
   cfg.value.tts = true
   showSpeechServerWarning.value = false
+}
+
+function enableOnlineTtsFromSuggestion() {
+  cfg.value.tts = false
+  showOnlineTtsSuggestion.value = false
 }
 
 function loadLocalAtcSettings(): LearnConfigPatch | null {
@@ -6780,6 +6816,13 @@ onMounted(() => {
   box-shadow: 0 18px 36px rgba(245, 158, 11, .16);
 }
 
+.speech-server-icon.is-online {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 36%, transparent);
+  box-shadow: 0 18px 36px rgba(34, 211, 238, .16);
+}
+
 .speech-server-copy {
   margin-top: 10px;
   line-height: 1.6;
@@ -6794,6 +6837,18 @@ onMounted(() => {
 
 .speech-server-actions .btn {
   justify-content: center;
+}
+
+.speech-server-actions .btn.primary:not([disabled]):hover {
+  color: #051217;
+  background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent) 98%, white 10%),
+      color-mix(in srgb, var(--accent2) 78%, transparent)
+  );
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22),
+  0 16px 30px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .sr-only {
