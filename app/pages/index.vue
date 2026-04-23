@@ -31,7 +31,7 @@
         </div>
 
         <div class="flex items-center gap-2 sm:gap-3">
-          <NuxtLink to="/roadmap" class="btn btn-ghost whitespace-nowrap btn-compact hidden sm:inline-flex">
+          <NuxtLink to="/roadmap" class="btn btn-ghost whitespace-nowrap btn-compact hidden md:inline-flex">
             <v-icon icon="mdi-map-marker-path" size="18" />
             Roadmap
           </NuxtLink>
@@ -82,7 +82,10 @@
                 :external="item.external"
                 :target="item.external ? '_blank' : undefined"
                 :rel="item.external ? 'noopener' : undefined"
-                class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 transition hover:bg-white/10"
+                :class="[
+                  'items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 transition hover:bg-white/10',
+                  item.hideOnSmall ? 'hidden sm:flex' : 'flex'
+                ]"
                 @click="handleMobileNavLinkClick($event, item)"
               >
                 <span class="flex items-center gap-3">
@@ -873,6 +876,7 @@ interface NavLink {
 interface ExtendedNavLink extends NavLink {
   external?: boolean
   icon?: string
+  hideOnSmall?: boolean
 }
 
 const navLinks: NavLink[] = [
@@ -885,9 +889,9 @@ const navLinks: NavLink[] = [
 
 const mobileNavLinks = computed<ExtendedNavLink[]>(() => [
   ...navLinks,
-  { label: 'Roadmap', to: '/roadmap', icon: 'mdi-map-marker-path' },
+  { label: 'Roadmap', to: '/roadmap', icon: 'mdi-map-marker-path', hideOnSmall: true },
   { label: 'News', to: '/news', icon: 'mdi-newspaper-variant-outline' },
-  { label: 'GitHub', to: GITHUB_URL, external: true, icon: 'mdi-github' },
+  { label: 'GitHub', to: GITHUB_URL, external: true, icon: 'mdi-github', hideOnSmall: true },
 ])
 
 const router = useRouter()
