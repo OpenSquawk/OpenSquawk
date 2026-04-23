@@ -31,7 +31,7 @@
         </div>
 
         <div class="flex items-center gap-2 sm:gap-3">
-          <NuxtLink to="/roadmap" class="btn btn-ghost whitespace-nowrap btn-compact hidden md:inline-flex">
+          <NuxtLink to="/roadmap" class="btn btn-ghost whitespace-nowrap btn-compact topnav-secondary-action topnav-roadmap-action">
             <v-icon icon="mdi-map-marker-path" size="18" />
             Roadmap
           </NuxtLink>
@@ -40,7 +40,7 @@
             external
             target="_blank"
             rel="noopener"
-            class="btn btn-ghost whitespace-nowrap btn-compact hidden lg:inline-flex"
+            class="btn btn-ghost whitespace-nowrap btn-compact topnav-secondary-action topnav-github-action"
           >
             <v-icon icon="mdi-github" size="18" />
             GitHub
@@ -83,8 +83,8 @@
                 :target="item.external ? '_blank' : undefined"
                 :rel="item.external ? 'noopener' : undefined"
                 :class="[
-                  'items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 transition hover:bg-white/10',
-                  item.hideOnSmall ? 'hidden sm:flex' : 'flex'
+                  'flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 transition hover:bg-white/10',
+                  item.hideOnSmall ? 'mobile-nav-link--hide-small' : ''
                 ]"
                 @click="handleMobileNavLinkClick($event, item)"
               >
@@ -1775,6 +1775,22 @@ useHead(() => ({
   font-size: 0.75rem;
 }
 
+.topnav-secondary-action {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .topnav-roadmap-action {
+    display: inline-flex;
+  }
+}
+
+@media (min-width: 1024px) {
+  .topnav-github-action {
+    display: inline-flex;
+  }
+}
+
 @media (min-width: 640px) {
   .btn-compact {
     padding: 0.6rem 1rem;
@@ -1815,6 +1831,16 @@ useHead(() => ({
 .mobile-nav-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+.mobile-nav-link--hide-small {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .mobile-nav-link--hide-small {
+    display: flex;
+  }
 }
 
 .mobile-toggle {
