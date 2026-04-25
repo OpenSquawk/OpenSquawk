@@ -1,0 +1,23 @@
+{
+  "name": "OpenSquawk Copilot",
+  "short_name": "Copilot",
+  "description": "A320 SOP & VATSIM-Copilot – durchklickbare Timeline mit Scratchpad und Canvas.",
+  "start_url": "/copilot",
+  "scope": "/copilot",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#050910",
+  "theme_color": "#050910",
+  "icons": [
+    {
+      "src": "/img/icon-sm.jpeg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/img/icon-sm.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
