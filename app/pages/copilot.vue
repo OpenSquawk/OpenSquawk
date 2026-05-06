@@ -56,7 +56,7 @@ useHead({
     link: [{rel: 'manifest', href: '/copilot.webmanifest'}],
 })
 
-const STORAGE_KEY = 'opensquawk.copilot.v3'
+const STORAGE_KEY = 'opensquawk.copilot.v4'
 
 const activeProfile = ref(a320Profile)
 const phases = computed<SopPhase[]>(() => activeProfile.value.phases)
@@ -68,36 +68,8 @@ const activeStepId = ref<string | null>(null)
 const simbriefUser = ref('')
 const simbriefLoading = ref(false)
 const simbriefError = ref('')
-const showAside = ref(false)
-const rightTab = ref<'scratch' | 'canvas'>('scratch')
-
-// Quick-Jot
-interface QuickNote {
-    text: string
-    time: string
-}
-
-const quickDraft = ref('')
-const quickNotes = ref<QuickNote[]>([])
-
-function feedQuick() {
-    const t = quickDraft.value.trim()
-    if (!t) return
-    const time = new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-    quickNotes.value.push({text: t, time})
-    quickDraft.value = ''
-    persist()
-    nextTick(() => {
-        const f = document.querySelector('.quickjot-feed') as HTMLElement | null
-        if (f) f.scrollTop = f.scrollHeight
-    })
-}
-
-function clearJot() {
-    if (!confirm('Alle Notizen löschen?')) return
-    quickNotes.value = []
-    persist()
-}
+const showCanvas = ref(true)
+const showSimbrief = ref(false)
 
 // Glossary
 const glossaryByTerm = new Map(glossary.map(g => [g.term.toUpperCase(), g]))
@@ -294,7 +266,45 @@ function scrollToStep(id: string) {
 }
 
 function toggleWhy(id: string) {
+    scrollLock = true
     expanded.value[id] = !expanded.value[id]
+    nextTick(() => {
+        scrollToStep(id)
+    })
+}
+
+function selectVariant(stepId: string, variantId: string) {
+    scrollLock = true
+    variantSel.value[stepId] = variantId
+    nextTick(() => scrollToStep(stepId))
+}
+
+function cycleVariant(dir: 1 | -1) {
+    const cur = activeStep.value
+    if (!cur) return
+    let owner: SopStep | null = null
+    for (const p of phases.value) {
+        for (const s of p.steps) {
+            if (!s.variants?.length) continue
+            if (s.id === cur.step.id) {
+                owner = s
+                break
+            }
+            const sel = variantSel.value[s.id] || s.variants[0].id
+            const v = s.variants.find(x => x.id === sel)
+            if (v?.steps.some(cs => cs.id === cur.step.id)) {
+                owner = s
+                break
+            }
+        }
+        if (owner) break
+    }
+    if (!owner || !owner.variants?.length) return
+    const ids = owner.variants.map(v => v.id)
+    const cursel = variantSel.value[owner.id] || ids[0]
+    const idx = ids.indexOf(cursel)
+    const next = ids[(idx + dir + ids.length) % ids.length]
+    selectVariant(owner.id, next)
 }
 
 function jumpToPhase(id: string) {
@@ -304,27 +314,32 @@ function jumpToPhase(id: string) {
 }
 
 function resetAll() {
-    if (!confirm('Alle Eingaben & Fortschritt löschen?')) return
+    if (!confirm('Alle Eingaben, Fortschritt & Canvas löschen?')) return
     scratch.value = {}
     variantSel.value = {}
     expanded.value = {}
     activeStepId.value = phases.value[0]?.steps[0]?.id || null
+    canvasImage.value = ''
+    clearCanvas()
     persist()
 }
 
 // Persistence
+const canvasImage = ref<string>('')
+
 function persist() {
     if (typeof localStorage === 'undefined') return
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
         scratch: scratch.value,
         variantSel: variantSel.value,
         activeStepId: activeStepId.value,
-        quickNotes: quickNotes.value,
+        simbriefUser: simbriefUser.value,
+        showCanvas: showCanvas.value,
+        canvasImage: canvasImage.value,
     }))
 }
 
-watch([scratch, variantSel], persist, {deep: true})
-watch(quickNotes, persist, {deep: true})
+watch([scratch, variantSel, activeStepId, showCanvas, simbriefUser], persist, {deep: true})
 
 // Keyboard
 function onKey(e: KeyboardEvent) {
@@ -339,6 +354,12 @@ function onKey(e: KeyboardEvent) {
     } else if (e.key === 'Enter') {
         e.preventDefault()
         nextStep()
+    } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        cycleVariant(-1)
+    } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        cycleVariant(1)
     } else if (e.key === 'i' || e.key === 'I') {
         if (activeStepId.value) toggleWhy(activeStepId.value)
     }
@@ -378,7 +399,9 @@ onMounted(() => {
                 if (v.scratch) scratch.value = v.scratch
                 if (v.variantSel) variantSel.value = v.variantSel
                 if (v.activeStepId) activeStepId.value = v.activeStepId
-                if (Array.isArray(v.quickNotes)) quickNotes.value = v.quickNotes
+                if (typeof v.simbriefUser === 'string') simbriefUser.value = v.simbriefUser
+                if (typeof v.showCanvas === 'boolean') showCanvas.value = v.showCanvas
+                if (typeof v.canvasImage === 'string') canvasImage.value = v.canvasImage
             } catch {
             }
         }
@@ -397,29 +420,33 @@ onUnmounted(() => {
     window.removeEventListener('keydown', onKey)
 })
 
-// Scratchpad Felder
-const groupedFields = computed(() => {
-    const groups: Record<string, typeof scratchFields> = {}
-    for (const f of scratchFields) {
-        if (!groups[f.group]) groups[f.group] = []
-        groups[f.group].push(f)
-    }
-    return groups
-})
-
-const groupTitles: Record<string, string> = {
-    flight: 'Flight',
-    env: 'ATIS / Environment',
-    atc: 'ATC',
-    perf: 'Performance',
-    fuel: 'Fuel & Weights',
-}
-
 // Canvas
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const drawColor = ref('#fde68a')
-const lineWidth = ref(2.6)
+const drawColor = '#fde68a'
+const lineWidth = 2.6
 let canvasInited = false
+
+function loadCanvasImage() {
+    const cv = canvasRef.value
+    if (!cv || !canvasImage.value) return
+    const img = new Image()
+    img.onload = () => {
+        const ctx = cv.getContext('2d')!
+        const r = cv.getBoundingClientRect()
+        ctx.drawImage(img, 0, 0, r.width, r.height)
+    }
+    img.src = canvasImage.value
+}
+
+function saveCanvasImage() {
+    const cv = canvasRef.value
+    if (!cv) return
+    try {
+        canvasImage.value = cv.toDataURL('image/png')
+        persist()
+    } catch {
+    }
+}
 
 function setupCanvas() {
     const cv = canvasRef.value
@@ -429,6 +456,7 @@ function setupCanvas() {
     const resize = () => {
         const rect = cv.getBoundingClientRect()
         if (rect.width <= 0 || rect.height <= 0) return
+        const prev = canvasImage.value
         cv.width = rect.width * dpr
         cv.height = rect.height * dpr
         const ctx = cv.getContext('2d')!
@@ -436,9 +464,15 @@ function setupCanvas() {
         ctx.scale(dpr, dpr)
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
+        if (prev) {
+            const img = new Image()
+            img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height)
+            img.src = prev
+        }
     }
     resize()
     new ResizeObserver(resize).observe(cv)
+    if (canvasImage.value) nextTick(loadCanvasImage)
 
     let drawing = false
     let last: { x: number; y: number; p: number } | null = null
@@ -457,8 +491,8 @@ function setupCanvas() {
         e.preventDefault()
         const ctx = cv.getContext('2d')!
         const cur = pos(e)
-        ctx.strokeStyle = drawColor.value
-        ctx.lineWidth = lineWidth.value * (0.5 + cur.p)
+        ctx.strokeStyle = drawColor
+        ctx.lineWidth = lineWidth * (0.5 + cur.p)
         ctx.beginPath()
         ctx.moveTo(last.x, last.y)
         ctx.lineTo(cur.x, cur.y)
@@ -466,17 +500,19 @@ function setupCanvas() {
         last = cur
     })
     const stop = (e: PointerEvent) => {
+        if (!drawing) return
         drawing = false
         last = null
         if (cv.hasPointerCapture(e.pointerId)) cv.releasePointerCapture(e.pointerId)
+        saveCanvasImage()
     }
     cv.addEventListener('pointerup', stop)
     cv.addEventListener('pointercancel', stop)
     cv.addEventListener('pointerleave', stop)
 }
 
-watch(rightTab, (v) => {
-    if (v === 'canvas') nextTick(setupCanvas)
+watch(showCanvas, (v) => {
+    if (v) nextTick(setupCanvas)
 })
 
 function clearCanvas() {
@@ -489,6 +525,25 @@ function clearCanvas() {
     ctx.clearRect(0, 0, cv.width, cv.height)
     ctx.restore()
     ctx.scale(dpr, dpr)
+    canvasImage.value = ''
+    persist()
+}
+
+function cleanfeedCanvas() {
+    const cv = canvasRef.value
+    if (!cv) return
+    const ctx = cv.getContext('2d')!
+    const dpr = window.devicePixelRatio || 1
+    const rect = cv.getBoundingClientRect()
+    const shift = Math.round(rect.height * 0.4)
+    const img = ctx.getImageData(0, 0, cv.width, cv.height)
+    ctx.save()
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.clearRect(0, 0, cv.width, cv.height)
+    ctx.putImageData(img, 0, -shift * dpr)
+    ctx.restore()
+    ctx.scale(dpr, dpr)
+    saveCanvasImage()
 }
 
 // Actor-Meta
@@ -528,48 +583,62 @@ const actorLabel: Record<string, string> = {
                 </div>
 
                 <div class="hud-right">
-                    <div class="simbrief-box">
-                        <v-icon size="16" class="simbrief-icon">mdi-cloud-download-outline</v-icon>
-                        <input
-                            v-model="simbriefUser"
-                            placeholder="SimBrief User / ID"
-                            class="simbrief-input"
-                            @keyup.enter="importSimbrief"
-                        />
+                    <div class="simbrief-wrap">
                         <button
-                            class="simbrief-btn"
-                            :disabled="simbriefLoading || !simbriefUser.trim()"
-                            @click="importSimbrief"
+                            class="icon-btn"
+                            :class="{active: showSimbrief}"
+                            title="SimBrief"
+                            @click="showSimbrief = !showSimbrief"
                         >
-                            <v-icon v-if="simbriefLoading" size="14">mdi-loading mdi-spin</v-icon>
-                            <span v-else>Import</span>
+                            <v-icon size="18">mdi-cloud-download-outline</v-icon>
                         </button>
+                        <Transition name="pop">
+                            <div v-if="showSimbrief" class="simbrief-pop" @click.stop>
+                                <div class="simbrief-pop-title">SimBrief Import</div>
+                                <input
+                                    v-model="simbriefUser"
+                                    placeholder="SimBrief User / ID"
+                                    class="simbrief-input"
+                                    @keyup.enter="importSimbrief"
+                                />
+                                <button
+                                    class="simbrief-btn"
+                                    :disabled="simbriefLoading || !simbriefUser.trim()"
+                                    @click="importSimbrief"
+                                >
+                                    <v-icon v-if="simbriefLoading" size="14">mdi-loading mdi-spin</v-icon>
+                                    <span v-else>Import</span>
+                                </button>
+                                <div v-if="simbriefError" class="simbrief-pop-err">{{ simbriefError }}</div>
+                            </div>
+                        </Transition>
                     </div>
-                    <button class="icon-btn" :title="showAside ? 'Schließen' : 'Scratchpad / Canvas'"
-                            @click="showAside = !showAside">
-                        <v-icon size="20">{{ showAside ? 'mdi-close' : 'mdi-notebook-edit-outline' }}</v-icon>
+                    <button class="icon-btn" :class="{active: showCanvas}" :title="showCanvas ? 'Canvas ausblenden' : 'Canvas einblenden'"
+                            @click="showCanvas = !showCanvas">
+                        <v-icon size="18">mdi-draw-pen</v-icon>
                     </button>
                     <button class="icon-btn" title="Reset" @click="resetAll">
-                        <v-icon size="20">mdi-refresh</v-icon>
+                        <v-icon size="18">mdi-refresh</v-icon>
                     </button>
                 </div>
             </div>
-            <div class="phase-bar">
+            <div class="phase-bar" role="tablist">
                 <button
                     v-for="p in phases"
                     :key="p.id"
-                    class="phase-pill"
+                    class="phase-tab"
                     :class="['accent-' + p.accent, {active: activeStep?.phase.id === p.id}]"
+                    role="tab"
+                    :aria-selected="activeStep?.phase.id === p.id"
                     @click="jumpToPhase(p.id)"
                 >
-                    <span class="phase-pill-label">{{ p.title }}</span>
-                    <span class="phase-pill-progress">{{ phaseProgress[p.id]?.done }}/{{ phaseProgress[p.id]?.total }}</span>
+                    <span class="phase-tab-label">{{ p.title }}</span>
+                    <span class="phase-tab-progress">{{ phaseProgress[p.id]?.done }}/{{ phaseProgress[p.id]?.total }}</span>
                 </button>
             </div>
             <div class="progress-track">
                 <div class="progress-fill" :style="{width: totalProgress + '%'}"/>
             </div>
-            <div v-if="simbriefError" class="error-banner">{{ simbriefError }}</div>
         </header>
 
         <main class="body">
@@ -668,7 +737,7 @@ const actorLabel: Record<string, string> = {
                                             :key="v.id"
                                             class="variant-tab"
                                             :class="{active: (variantSel[step.id] || step.variants[0].id) === v.id}"
-                                            @click="variantSel[step.id] = v.id"
+                                            @click="selectVariant(step.id, v.id)"
                                         >
                                             {{ v.title }}
                                         </button>
@@ -700,78 +769,23 @@ const actorLabel: Record<string, string> = {
                 </div>
             </section>
 
-            <!-- Aside (Scratchpad / Canvas) -->
-            <aside class="aside" :class="{'mobile-open': showAside}">
-                <div class="aside-tabs">
-                    <button :class="['aside-tab', {active: rightTab === 'scratch'}]" @click="rightTab = 'scratch'">
-                        <v-icon size="18">mdi-notebook-edit-outline</v-icon>
-                        Scratchpad
-                    </button>
-                    <button :class="['aside-tab', {active: rightTab === 'canvas'}]" @click="rightTab = 'canvas'">
-                        <v-icon size="18">mdi-draw-pen</v-icon>
-                        Canvas
-                    </button>
-                </div>
-
-                <div v-show="rightTab === 'scratch'" class="scratchpad">
-                    <div v-for="(fields, group) in groupedFields" :key="group" class="field-group">
-                        <div class="field-group-title">{{ groupTitles[group] || group }}</div>
-                        <div class="field-grid">
-                            <label v-for="f in fields" :key="f.key" class="field">
-                                <span class="field-label">{{ f.label }}</span>
-                                <input v-model="scratch[f.key]" :placeholder="f.placeholder" class="field-input"/>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-show="rightTab === 'canvas'" class="canvas-wrap">
+            <!-- Aside (Canvas only, split view) -->
+            <aside v-if="showCanvas" class="aside">
+                <div class="canvas-wrap">
                     <div class="canvas-toolbar">
-                        <div class="color-row">
-                            <button
-                                v-for="c in ['#fde68a','#22d3ee','#a78bfa','#f472b6','#ffffff']"
-                                :key="c"
-                                class="color-dot"
-                                :style="{background: c}"
-                                :class="{active: drawColor === c}"
-                                @click="drawColor = c"
-                            />
-                        </div>
-                        <input v-model.number="lineWidth" type="range" min="1" max="6" step="0.5" class="line-slider"/>
-                        <button class="canvas-clear" @click="clearCanvas">
+                        <button class="canvas-btn" @click="clearCanvas">
                             <v-icon size="14">mdi-eraser</v-icon>
-                            Clear
+                            Wipe
+                        </button>
+                        <button class="canvas-btn" @click="cleanfeedCanvas" title="Inhalt nach oben schieben, unten leeren Platz nachrutschen">
+                            <v-icon size="14">mdi-arrow-up-bold-box-outline</v-icon>
+                            Cleanfeed
                         </button>
                     </div>
                     <canvas ref="canvasRef" class="canvas"/>
-                    <div class="canvas-hint">Maus, Trackpad, Apple Pencil & Stylus – druckempfindlich.</div>
                 </div>
             </aside>
         </main>
-
-        <!-- Mobile Quick-Jot -->
-        <div class="quickjot">
-            <div v-if="quickNotes.length" class="quickjot-feed">
-                <div v-for="(n, i) in quickNotes" :key="i" class="quickjot-note">
-                    <span class="quickjot-time">{{ n.time }}</span>
-                    <span class="quickjot-text">{{ n.text }}</span>
-                </div>
-            </div>
-            <div class="quickjot-input">
-                <input
-                    v-model="quickDraft"
-                    placeholder="Schnell notieren · Enter oder ↑"
-                    class="quickjot-field"
-                    @keyup.enter="feedQuick"
-                />
-                <button v-if="quickNotes.length" class="quickjot-clear" title="Notizen löschen" @click="clearJot">
-                    <v-icon size="16">mdi-delete-outline</v-icon>
-                </button>
-                <button class="quickjot-feed-btn" :disabled="!quickDraft.trim()" title="Feed (nach oben pushen)" @click="feedQuick">
-                    <v-icon size="18">mdi-arrow-up-bold</v-icon>
-                </button>
-            </div>
-        </div>
     </div>
 </template>
 
@@ -867,8 +881,8 @@ const actorLabel: Record<string, string> = {
 .hud-inner {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 10px 14px;
+    gap: 10px;
+    padding: 6px 12px;
     max-width: 1600px;
     margin: 0 auto;
 }
@@ -884,9 +898,9 @@ const actorLabel: Record<string, string> = {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
     border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
     background: color-mix(in srgb, var(--accent) 14%, transparent);
     color: var(--accent);
@@ -900,24 +914,29 @@ const actorLabel: Record<string, string> = {
 
 .hud-divider {
     width: 1px;
-    height: 32px;
+    height: 22px;
     background: var(--border);
 }
 
 .hud-brand {
     display: flex;
-    flex-direction: column;
-    line-height: 1.1;
+    align-items: baseline;
+    gap: 8px;
+    line-height: 1;
+    min-width: 0;
 }
 
 .brand-name {
     font-weight: 600;
-    font-size: 15px;
+    font-size: 14px;
 }
 
 .brand-mode {
-    font-size: 12px;
+    font-size: 11.5px;
     color: var(--accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .hud-right {
@@ -927,28 +946,49 @@ const actorLabel: Record<string, string> = {
     gap: 8px;
 }
 
-.simbrief-box {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 8px 6px 12px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    height: 44px;
+.simbrief-wrap {
+    position: relative;
 }
 
-.simbrief-icon {
-    color: var(--t3);
+.simbrief-pop {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    width: 260px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg) 96%, transparent);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, .45);
+}
+
+.simbrief-pop-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.simbrief-pop-err {
+    font-size: 12px;
+    color: #fecaca;
 }
 
 .simbrief-input {
-    background: transparent;
-    border: none;
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: rgba(0, 0, 0, .25);
     outline: none;
     color: var(--text);
-    width: 150px;
-    font-size: 14px;
+    font-size: 13px;
 }
 
 .simbrief-input::placeholder {
@@ -958,8 +998,9 @@ const actorLabel: Record<string, string> = {
 .simbrief-btn {
     display: inline-flex;
     align-items: center;
-    padding: 6px 12px;
-    border-radius: 9px;
+    justify-content: center;
+    height: 36px;
+    border-radius: 8px;
     background: var(--accent);
     color: #001218;
     border: none;
@@ -977,9 +1018,9 @@ const actorLabel: Record<string, string> = {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--t2);
@@ -993,50 +1034,79 @@ const actorLabel: Record<string, string> = {
     color: var(--text);
 }
 
+.icon-btn.active {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    color: var(--accent);
+}
+
+.pop-enter-active, .pop-leave-active {
+    transition: opacity .15s, transform .15s;
+}
+
+.pop-enter-from, .pop-leave-to {
+    opacity: 0;
+    transform: translateY(-4px);
+}
+
 .phase-bar {
     display: flex;
-    gap: 6px;
+    gap: 0;
     overflow-x: auto;
-    padding: 0 14px 10px;
+    padding: 0 12px;
     max-width: 1600px;
     margin: 0 auto;
     scrollbar-width: none;
+    border-top: 1px solid var(--border);
 }
 
 .phase-bar::-webkit-scrollbar {
     display: none;
 }
 
-.phase-pill {
+.phase-tab {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 7px 14px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--t2);
-    font-size: 13px;
+    padding: 8px 14px;
+    border: none;
+    background: transparent;
+    color: var(--t3);
+    font-size: 12.5px;
     cursor: pointer;
     white-space: nowrap;
     flex-shrink: 0;
-    transition: all .2s;
+    transition: color .15s;
 }
 
-.phase-pill:hover {
-    background: var(--surface-2);
+.phase-tab::after {
+    content: '';
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 0;
+    height: 2px;
+    background: transparent;
+    border-radius: 2px 2px 0 0;
+    transition: background .15s;
+}
+
+.phase-tab:hover {
     color: var(--text);
 }
 
-.phase-pill.active {
-    color: #001218;
-    background: var(--pa);
-    border-color: var(--pa);
+.phase-tab.active {
+    color: var(--pa);
 }
 
-.phase-pill-progress {
-    font-size: 11px;
-    opacity: .8;
+.phase-tab.active::after {
+    background: var(--pa);
+}
+
+.phase-tab-progress {
+    font-size: 10.5px;
+    opacity: .7;
     font-variant-numeric: tabular-nums;
 }
 
@@ -1059,22 +1129,33 @@ const actorLabel: Record<string, string> = {
     text-align: center;
 }
 
-/* Body */
+/* Body — Split view: Timeline + Canvas (desktop right, mobile bottom) */
 .body {
     display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
     max-width: 1600px;
     margin: 0 auto;
-    height: calc(100dvh - 132px - env(safe-area-inset-top));
+    height: calc(100dvh - 88px - env(safe-area-inset-top));
+}
+
+.body:has(.aside) {
+    grid-template-rows: minmax(0, 1fr) 38vh;
 }
 
 @media (min-width: 1100px) {
     .body {
+        grid-template-rows: minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+        padding: 12px;
+        height: calc(100dvh - 96px - env(safe-area-inset-top));
+    }
+
+    .body:has(.aside) {
         grid-template-columns: minmax(0, 1fr) 440px;
-        gap: 16px;
-        padding: 16px;
-        height: calc(100dvh - 148px - env(safe-area-inset-top));
+        gap: 14px;
     }
 }
 
@@ -1587,121 +1668,31 @@ const actorLabel: Record<string, string> = {
     max-height: 80px;
 }
 
-/* Aside */
+/* Aside — Split view, immer sichtbar wenn showCanvas */
 .aside {
     display: flex;
     flex-direction: column;
-    gap: 10px;
     min-width: 0;
+    min-height: 0;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
 }
 
 @media (min-width: 1100px) {
     .aside {
-        max-height: 100%;
+        border-top: none;
+        border-left: 1px solid var(--border);
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--surface);
     }
 }
 
-.aside-tabs {
-    display: flex;
-    gap: 4px;
-    padding: 4px;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-}
-
-.aside-tab {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: none;
-    background: transparent;
-    color: var(--t3);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.aside-tab.active {
-    background: var(--surface-2);
-    color: var(--accent);
-}
-
-.scratchpad {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding: 16px;
-    border-radius: 18px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-}
-
-.field-group-title {
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    color: var(--accent);
-    opacity: .85;
-    margin-bottom: 8px;
-}
-
-.field-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-}
-
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.field-label {
-    font-size: 10.5px;
-    color: var(--t4);
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    font-weight: 600;
-}
-
-.field-input {
-    height: 40px;
-    padding: 0 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: rgba(0, 0, 0, .25);
-    color: var(--text);
-    font-size: 14px;
-    font-variant-numeric: tabular-nums;
-}
-
-.field-input::placeholder {
-    color: var(--t4);
-}
-
-.field-input:focus {
-    outline: none;
-    border-color: color-mix(in srgb, var(--accent) 56%, transparent);
-}
-
 .canvas-wrap {
-    padding: 12px;
-    border-radius: 18px;
-    border: 1px solid var(--border);
-    background: var(--surface);
+    padding: 8px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     flex: 1;
     min-height: 0;
 }
@@ -1709,238 +1700,38 @@ const actorLabel: Record<string, string> = {
 .canvas-toolbar {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.color-row {
-    display: flex;
     gap: 6px;
 }
 
-.color-dot {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    border: none;
-    box-shadow: 0 0 0 2px transparent;
-    cursor: pointer;
-    transition: box-shadow .2s, transform .15s;
-}
-
-.color-dot.active {
-    box-shadow: 0 0 0 2px var(--text);
-    transform: scale(1.06);
-}
-
-.line-slider {
-    flex: 1;
-    accent-color: var(--accent);
-    min-width: 80px;
-}
-
-.canvas-clear {
+.canvas-btn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-    border-radius: 9px;
+    gap: 5px;
+    padding: 6px 10px;
+    border-radius: 8px;
     border: 1px solid var(--border);
     background: var(--surface-2);
     color: var(--t2);
-    font-size: 12.5px;
+    font-size: 12px;
     cursor: pointer;
+    transition: all .15s;
+}
+
+.canvas-btn:hover {
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
+    color: var(--text);
 }
 
 .canvas {
     display: block;
     width: 100%;
     flex: 1;
-    min-height: 280px;
-    border-radius: 14px;
+    min-height: 0;
+    border-radius: 10px;
     background: rgba(0, 0, 0, .35);
     border: 1px solid var(--border);
     cursor: crosshair;
     touch-action: none;
-}
-
-.canvas-hint {
-    font-size: 11.5px;
-    color: var(--t4);
-}
-
-/* Mobile Aside Drawer */
-@media (max-width: 1099px) {
-    .aside {
-        position: fixed;
-        inset: 0;
-        z-index: 70;
-        background: var(--bg);
-        padding: 16px;
-        padding-top: calc(env(safe-area-inset-top) + 16px);
-        padding-bottom: calc(env(safe-area-inset-bottom) + 80px);
-        transform: translateY(100%);
-        transition: transform .25s ease;
-        overflow-y: auto;
-    }
-
-    .aside.mobile-open {
-        transform: translateY(0);
-    }
-
-    .scratchpad, .canvas-wrap {
-        max-height: none;
-    }
-}
-
-/* QUICK-JOT (immer sichtbar unten auf Mobile) */
-.quickjot {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 50;
-    border-top: 1px solid var(--border);
-    background: color-mix(in srgb, var(--bg) 92%, transparent);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    padding-bottom: env(safe-area-inset-bottom);
-    display: flex;
-    flex-direction: column;
-    max-height: 50vh;
-}
-
-@media (min-width: 1100px) {
-    .quickjot {
-        display: none;
-    }
-
-    /* Auf Desktop fügen wir den Notes-Bereich später optional hinzu */
-}
-
-.quickjot-feed {
-    overflow-y: auto;
-    padding: 8px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    max-height: 36vh;
-}
-
-.quickjot-feed::-webkit-scrollbar {
-    width: 4px;
-}
-
-.quickjot-feed::-webkit-scrollbar-thumb {
-    background: var(--border-strong);
-    border-radius: 2px;
-}
-
-.quickjot-note {
-    display: flex;
-    gap: 8px;
-    padding: 6px 10px;
-    border-radius: 8px;
-    background: var(--surface);
-    border-left: 2px solid var(--accent);
-    font-size: 13.5px;
-    color: var(--t2);
-    line-height: 1.4;
-    word-break: break-word;
-    animation: jot-in .25s ease;
-}
-
-@keyframes jot-in {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.quickjot-time {
-    flex-shrink: 0;
-    font-size: 11px;
-    color: var(--t4);
-    font-variant-numeric: tabular-nums;
-    padding-top: 1px;
-}
-
-.quickjot-text {
-    flex: 1;
-    min-width: 0;
-}
-
-.quickjot-input {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border-top: 1px solid var(--border);
-    background: var(--bg);
-}
-
-.quickjot-field {
-    flex: 1;
-    height: 44px;
-    padding: 0 14px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-    font-size: 14px;
-}
-
-.quickjot-field::placeholder {
-    color: var(--t4);
-}
-
-.quickjot-field:focus {
-    outline: none;
-    border-color: color-mix(in srgb, var(--accent) 56%, transparent);
-    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
-}
-
-.quickjot-clear {
-    width: 38px;
-    height: 44px;
-    border-radius: 11px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--t3);
-    cursor: pointer;
-}
-
-.quickjot-feed-btn {
-    width: 48px;
-    height: 44px;
-    border-radius: 12px;
-    border: none;
-    background: var(--accent);
-    color: #001218;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.quickjot-feed-btn:disabled {
-    opacity: .35;
-    cursor: not-allowed;
-}
-
-/* Auf Mobile: Platz schaffen damit Quick-Jot nicht den letzten Step verdeckt */
-@media (max-width: 1099px) {
-    .body {
-        padding-bottom: 0;
-    }
-
-    .timeline-spacer:last-of-type {
-        height: calc(40vh + 60px);
-    }
 }
 
 /* RichText */
