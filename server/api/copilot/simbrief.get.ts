@@ -16,10 +16,20 @@ export default defineEventHandler(async (event) => {
 
     const url = `https://www.simbrief.com/api/xml.fetcher.php?${params.toString()}`
     const fetcher = (globalThis as any).$fetch as (target: string, options?: Record<string, unknown>) => Promise<any>
-    const ofp = await fetcher(url, {method: 'GET'})
+    let ofp: any
+    try {
+        ofp = await fetcher(url, {method: 'GET', ignoreResponseError: true})
+    } catch (e: any) {
+        throw createError({statusCode: 502, statusMessage: `SimBrief API unreachable: ${e?.message || e}`})
+    }
 
-    if (!ofp || ofp.fetch?.status !== 'Success') {
-        throw createError({statusCode: 404, statusMessage: 'No SimBrief OFP found'})
+    if (!ofp || typeof ofp !== 'object') {
+        throw createError({statusCode: 502, statusMessage: 'SimBrief returned invalid response'})
+    }
+    const status = ofp.fetch?.status
+    if (status !== 'Success') {
+        // Beispiele: "Error: Unknown UserID", "Error: No data found"
+        throw createError({statusCode: 404, statusMessage: status || 'No SimBrief OFP found'})
     }
 
     return {
