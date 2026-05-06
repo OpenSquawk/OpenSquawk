@@ -71,6 +71,20 @@ const simbriefError = ref('')
 const showCanvas = ref(true)
 const showSimbrief = ref(false)
 const asideHeight = ref(280)
+const simbriefWrapRef = ref<HTMLElement | null>(null)
+const simbriefPopPos = ref<Record<string, string>>({})
+
+watch(showSimbrief, (v) => {
+    if (v && simbriefWrapRef.value) {
+        nextTick(() => {
+            const rect = simbriefWrapRef.value!.getBoundingClientRect()
+            simbriefPopPos.value = {
+                top: (rect.bottom + 6) + 'px',
+                right: Math.max(8, window.innerWidth - rect.right) + 'px',
+            }
+        })
+    }
+})
 
 // Glossary
 const glossaryByTerm = new Map(glossary.map(g => [g.term.toUpperCase(), g]))
@@ -548,14 +562,13 @@ function clearCanvas() {
     const cv = canvasRef.value
     if (!cv) return
     const ctx = cv.getContext('2d')!
-    const dpr = window.devicePixelRatio || 1
     ctx.save()
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, cv.width, cv.height)
     ctx.restore()
-    ctx.scale(dpr, dpr)
     canvasImage.value = ''
     persist()
+    if (canvasWrapRef.value) canvasWrapRef.value.scrollTop = 0
 }
 
 function cleanfeedCanvas() {
@@ -573,7 +586,6 @@ function cleanfeedCanvas() {
     ctx.clearRect(0, 0, cv.width, cv.height)
     ctx.putImageData(img, 0, -shift * dpr)
     ctx.restore()
-    ctx.scale(dpr, dpr)
     // Scroll-Position mitnehmen: gleicher Viewport-Bereich sichtbar nach Shift
     if (wrap) wrap.scrollTop = Math.max(0, wrap.scrollTop - shift)
     saveCanvasImage()
@@ -616,7 +628,7 @@ const actorLabel: Record<string, string> = {
                 </div>
 
                 <div class="hud-right">
-                    <div class="simbrief-wrap">
+                    <div ref="simbriefWrapRef" class="simbrief-wrap">
                         <button
                             class="icon-btn"
                             :class="{active: showSimbrief}"
@@ -625,26 +637,6 @@ const actorLabel: Record<string, string> = {
                         >
                             <v-icon size="18">mdi-cloud-download-outline</v-icon>
                         </button>
-                        <Transition name="pop">
-                            <div v-if="showSimbrief" class="simbrief-pop" @click.stop>
-                                <div class="simbrief-pop-title">SimBrief Import</div>
-                                <input
-                                    v-model="simbriefUser"
-                                    placeholder="SimBrief User / ID"
-                                    class="simbrief-input"
-                                    @keyup.enter="importSimbrief"
-                                />
-                                <button
-                                    class="simbrief-btn"
-                                    :disabled="simbriefLoading || !simbriefUser.trim()"
-                                    @click="importSimbrief"
-                                >
-                                    <v-icon v-if="simbriefLoading" size="14">mdi-loading mdi-spin</v-icon>
-                                    <span v-else>Import</span>
-                                </button>
-                                <div v-if="simbriefError" class="simbrief-pop-err">{{ simbriefError }}</div>
-                            </div>
-                        </Transition>
                     </div>
                     <button class="icon-btn" :class="{active: showCanvas}" :title="showCanvas ? 'Canvas ausblenden' : 'Canvas einblenden'"
                             @click="showCanvas = !showCanvas">
@@ -784,7 +776,7 @@ const actorLabel: Record<string, string> = {
                     <div class="timeline-spacer"/>
                 </div>
                 <!-- Fixer Footer: immer an gleicher Position -->
-                <div v-if="activeStep" class="step-footer" @click.stop>
+                <div v-if="activeStep" :class="['step-footer', 'accent-' + activeStep.phase.accent]" @click.stop>
                     <button class="act act-back" :disabled="activeIdx <= 0" @click="prevStep">
                         <v-icon size="20">mdi-chevron-left</v-icon>
                         <span>Back</span>
@@ -812,7 +804,7 @@ const actorLabel: Record<string, string> = {
 
             <!-- Aside (Canvas only, immer unten) -->
             <aside v-if="showCanvas" class="aside" :style="{height: asideHeight + 'px'}">
-                <div ref="canvasWrapRef" class="canvas-wrap">
+                <div class="canvas-wrap">
                     <div class="canvas-toolbar">
                         <button class="canvas-btn" @click="clearCanvas">
                             <v-icon size="14">mdi-eraser</v-icon>
@@ -823,10 +815,41 @@ const actorLabel: Record<string, string> = {
                             Cleanfeed
                         </button>
                     </div>
-                    <canvas ref="canvasRef" class="canvas"/>
+                    <div ref="canvasWrapRef" class="canvas-scroll">
+                        <canvas ref="canvasRef" class="canvas"/>
+                    </div>
                 </div>
             </aside>
         </main>
+
+        <!-- SimBrief Popover (Teleport zum body um stacking-context zu umgehen) -->
+        <Teleport to="body">
+            <Transition name="pop">
+                <div
+                    v-if="showSimbrief"
+                    class="simbrief-pop-fixed"
+                    :style="simbriefPopPos"
+                    @click.stop
+                >
+                    <div class="simbrief-pop-title">SimBrief Import</div>
+                    <input
+                        v-model="simbriefUser"
+                        placeholder="SimBrief User / ID"
+                        class="simbrief-input"
+                        @keyup.enter="importSimbrief"
+                    />
+                    <button
+                        class="simbrief-btn"
+                        :disabled="simbriefLoading || !simbriefUser.trim()"
+                        @click="importSimbrief"
+                    >
+                        <v-icon v-if="simbriefLoading" size="14">mdi-loading mdi-spin</v-icon>
+                        <span v-else>Import</span>
+                    </button>
+                    <div v-if="simbriefError" class="simbrief-pop-err">{{ simbriefError }}</div>
+                </div>
+            </Transition>
+        </Teleport>
     </div>
 </template>
 
@@ -991,21 +1014,21 @@ const actorLabel: Record<string, string> = {
     position: relative;
 }
 
-.simbrief-pop {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    z-index: 400;
+.simbrief-pop-fixed {
+    position: fixed;
+    z-index: 9999;
     display: flex;
     flex-direction: column;
     gap: 8px;
     padding: 12px;
     width: 260px;
     border-radius: 12px;
-    border: 1px solid var(--border);
-    background: color-mix(in srgb, var(--bg) 96%, transparent);
+    border: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(11, 16, 32, .96);
+    color: #fff;
     backdrop-filter: blur(14px);
-    box-shadow: 0 16px 36px rgba(0, 0, 0, .45);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, .55);
 }
 
 .simbrief-pop-title {
@@ -1737,16 +1760,23 @@ const actorLabel: Record<string, string> = {
 }
 
 .canvas-wrap {
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    position: relative;
     flex: 1;
     min-height: 0;
+}
+
+.canvas-scroll {
+    position: absolute;
+    inset: 0;
     overflow-y: auto;
+    padding: 8px;
 }
 
 .canvas-toolbar {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1758,12 +1788,15 @@ const actorLabel: Record<string, string> = {
     gap: 5px;
     padding: 6px 10px;
     border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--surface-2);
-    color: var(--t2);
+    border: 1px solid var(--border-strong);
+    background: rgba(11, 16, 32, .85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--text);
     font-size: 12px;
     cursor: pointer;
     transition: all .15s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .35);
 }
 
 .canvas-btn:hover {
