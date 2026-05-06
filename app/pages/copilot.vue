@@ -70,6 +70,7 @@ const simbriefLoading = ref(false)
 const simbriefError = ref('')
 const showCanvas = ref(true)
 const showSimbrief = ref(false)
+const asideHeight = ref(280)
 
 // Glossary
 const glossaryByTerm = new Map(glossary.map(g => [g.term.toUpperCase(), g]))
@@ -336,10 +337,11 @@ function persist() {
         simbriefUser: simbriefUser.value,
         showCanvas: showCanvas.value,
         canvasImage: canvasImage.value,
+        asideHeight: asideHeight.value,
     }))
 }
 
-watch([scratch, variantSel, activeStepId, showCanvas, simbriefUser], persist, {deep: true})
+watch([scratch, variantSel, activeStepId, showCanvas, simbriefUser, asideHeight], persist, {deep: true})
 
 // Keyboard
 function onKey(e: KeyboardEvent) {
@@ -402,6 +404,7 @@ onMounted(() => {
                 if (typeof v.simbriefUser === 'string') simbriefUser.value = v.simbriefUser
                 if (typeof v.showCanvas === 'boolean') showCanvas.value = v.showCanvas
                 if (typeof v.canvasImage === 'string') canvasImage.value = v.canvasImage
+                if (typeof v.asideHeight === 'number') asideHeight.value = v.asideHeight
             } catch {
             }
         }
@@ -420,8 +423,34 @@ onUnmounted(() => {
     window.removeEventListener('keydown', onKey)
 })
 
+// Resize Handle für Scratchpad
+let resizing = false
+let resizeStartY = 0
+let resizeStartH = 0
+
+function onResizeStart(e: PointerEvent) {
+    resizing = true
+    resizeStartY = e.clientY
+    resizeStartH = asideHeight.value
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+}
+
+function onResizeMove(e: PointerEvent) {
+    if (!resizing) return
+    const dy = resizeStartY - e.clientY
+    asideHeight.value = Math.max(100, Math.min(resizeStartH + dy, window.innerHeight * 0.8))
+}
+
+function onResizeEnd(e: PointerEvent) {
+    if (!resizing) return
+    resizing = false
+    ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+    persist()
+}
+
 // Canvas
 const canvasRef = ref<HTMLCanvasElement | null>(null)
+const canvasWrapRef = ref<HTMLElement | null>(null)
 const drawColor = '#fde68a'
 const lineWidth = 2.6
 let canvasInited = false
@@ -531,11 +560,13 @@ function clearCanvas() {
 
 function cleanfeedCanvas() {
     const cv = canvasRef.value
+    const wrap = canvasWrapRef.value
     if (!cv) return
     const ctx = cv.getContext('2d')!
     const dpr = window.devicePixelRatio || 1
-    const rect = cv.getBoundingClientRect()
-    const shift = Math.round(rect.height * 0.4)
+    // shift = 40% der sichtbaren Wrapper-Höhe
+    const wrapH = wrap ? wrap.clientHeight : 400
+    const shift = Math.round(wrapH * 0.4)
     const img = ctx.getImageData(0, 0, cv.width, cv.height)
     ctx.save()
     ctx.setTransform(1, 0, 0, 1, 0, 0)
@@ -543,6 +574,8 @@ function cleanfeedCanvas() {
     ctx.putImageData(img, 0, -shift * dpr)
     ctx.restore()
     ctx.scale(dpr, dpr)
+    // Scroll-Position mitnehmen: gleicher Viewport-Bereich sichtbar nach Shift
+    if (wrap) wrap.scrollTop = Math.max(0, wrap.scrollTop - shift)
     saveCanvasImage()
 }
 
@@ -615,7 +648,7 @@ const actorLabel: Record<string, string> = {
                     </div>
                     <button class="icon-btn" :class="{active: showCanvas}" :title="showCanvas ? 'Canvas ausblenden' : 'Canvas einblenden'"
                             @click="showCanvas = !showCanvas">
-                        <v-icon size="18">mdi-draw-pen</v-icon>
+                        <v-icon size="18">mdi-pen</v-icon>
                     </button>
                     <button class="icon-btn" title="Reset" @click="resetAll">
                         <v-icon size="18">mdi-refresh</v-icon>
@@ -743,23 +776,6 @@ const actorLabel: Record<string, string> = {
                                         </button>
                                     </div>
 
-                                    <!-- Inline Actions: nur auf aktiver Karte -->
-                                    <Transition name="actions">
-                                        <div v-if="activeStepId === step.id" class="inline-actions" @click.stop>
-                                            <button class="act act-back" :disabled="activeIdx <= 0" @click="prevStep">
-                                                <v-icon size="20">mdi-chevron-left</v-icon>
-                                                <span>Back</span>
-                                            </button>
-                                            <button v-if="step.why" class="act act-why" :class="{open: expanded[step.id]}" @click="toggleWhy(step.id)">
-                                                <v-icon size="18">{{ expanded[step.id] ? 'mdi-information' : 'mdi-information-outline' }}</v-icon>
-                                                <span>Warum</span>
-                                            </button>
-                                            <button class="act act-next" :disabled="activeIdx >= allSteps.length - 1" @click="nextStep">
-                                                <span>Done & Next</span>
-                                                <v-icon size="20">mdi-chevron-right</v-icon>
-                                            </button>
-                                        </div>
-                                    </Transition>
                                 </div>
                             </article>
                         </template>
@@ -767,11 +783,36 @@ const actorLabel: Record<string, string> = {
 
                     <div class="timeline-spacer"/>
                 </div>
+                <!-- Fixer Footer: immer an gleicher Position -->
+                <div v-if="activeStep" class="step-footer" @click.stop>
+                    <button class="act act-back" :disabled="activeIdx <= 0" @click="prevStep">
+                        <v-icon size="20">mdi-chevron-left</v-icon>
+                        <span>Back</span>
+                    </button>
+                    <button v-if="activeStep.step.why" class="act act-why" :class="{open: expanded[activeStep.step.id]}" @click="toggleWhy(activeStep.step.id)">
+                        <v-icon size="18">{{ expanded[activeStep.step.id] ? 'mdi-information' : 'mdi-information-outline' }}</v-icon>
+                        <span>Warum</span>
+                    </button>
+                    <button class="act act-next" :disabled="activeIdx >= allSteps.length - 1" @click="nextStep">
+                        <span>Done & Next</span>
+                        <v-icon size="20">mdi-chevron-right</v-icon>
+                    </button>
+                </div>
             </section>
 
-            <!-- Aside (Canvas only, split view) -->
-            <aside v-if="showCanvas" class="aside">
-                <div class="canvas-wrap">
+            <!-- Resize Handle -->
+            <div
+                v-if="showCanvas"
+                class="resize-handle"
+                @pointerdown="onResizeStart"
+                @pointermove="onResizeMove"
+                @pointerup="onResizeEnd"
+                @pointercancel="onResizeEnd"
+            />
+
+            <!-- Aside (Canvas only, immer unten) -->
+            <aside v-if="showCanvas" class="aside" :style="{height: asideHeight + 'px'}">
+                <div ref="canvasWrapRef" class="canvas-wrap">
                     <div class="canvas-toolbar">
                         <button class="canvas-btn" @click="clearCanvas">
                             <v-icon size="14">mdi-eraser</v-icon>
@@ -871,7 +912,7 @@ const actorLabel: Record<string, string> = {
 .hud {
     position: sticky;
     top: 0;
-    z-index: 40;
+    z-index: 200;
     border-bottom: 1px solid var(--border);
     background: color-mix(in srgb, var(--bg) 86%, transparent);
     backdrop-filter: blur(14px);
@@ -954,7 +995,7 @@ const actorLabel: Record<string, string> = {
     position: absolute;
     top: calc(100% + 6px);
     right: 0;
-    z-index: 60;
+    z-index: 400;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -1129,33 +1170,20 @@ const actorLabel: Record<string, string> = {
     text-align: center;
 }
 
-/* Body — Split view: Timeline + Canvas (desktop right, mobile bottom) */
+/* Body — Flex-Spalte: Timeline + Canvas immer unten */
 .body {
-    display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
+    display: flex;
+    flex-direction: column;
     max-width: 1600px;
     margin: 0 auto;
     height: calc(100dvh - 88px - env(safe-area-inset-top));
-}
-
-.body:has(.aside) {
-    grid-template-rows: minmax(0, 1fr) 38vh;
+    overflow: hidden;
 }
 
 @media (min-width: 1100px) {
     .body {
-        grid-template-rows: minmax(0, 1fr);
-        grid-template-columns: minmax(0, 1fr);
-        gap: 0;
-        padding: 12px;
+        padding: 12px 12px 0;
         height: calc(100dvh - 96px - env(safe-area-inset-top));
-    }
-
-    .body:has(.aside) {
-        grid-template-columns: minmax(0, 1fr) 440px;
-        gap: 14px;
     }
 }
 
@@ -1163,6 +1191,8 @@ const actorLabel: Record<string, string> = {
     min-width: 0;
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 /* Timeline = große Scroll-Snap-Liste, nahtlose Blöcke */
@@ -1580,12 +1610,27 @@ const actorLabel: Record<string, string> = {
     color: var(--pa);
 }
 
-/* Inline Actions */
-.inline-actions {
+/* Fixer Step-Footer */
+.step-footer {
     display: flex;
     gap: 8px;
-    margin-top: 6px;
+    padding: 10px 12px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    flex-shrink: 0;
     align-items: stretch;
+}
+
+@media (max-width: 480px) {
+    .step-footer .act-back span, .step-footer .act-why span {
+        display: none;
+    }
+    .step-footer .act-back, .step-footer .act-why {
+        padding: 0 12px;
+    }
 }
 
 .act {
@@ -1642,48 +1687,51 @@ const actorLabel: Record<string, string> = {
     box-shadow: 0 18px 30px -10px color-mix(in srgb, var(--pa) 70%, transparent);
 }
 
-@media (max-width: 480px) {
-    .act-back span, .act-why span {
-        display: none;
-    }
 
-    .act-back, .act-why {
-        padding: 0 12px;
-    }
+/* Resize Handle */
+.resize-handle {
+    height: 8px;
+    cursor: row-resize;
+    flex-shrink: 0;
+    background: transparent;
+    position: relative;
+    z-index: 10;
+    touch-action: none;
 }
 
-.actions-enter-active, .actions-leave-active {
-    transition: opacity .2s, max-height .25s, transform .2s;
-    overflow: hidden;
+.resize-handle::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--border-strong);
+    transition: background .15s;
 }
 
-.actions-enter-from, .actions-leave-to {
-    opacity: 0;
-    max-height: 0;
-    transform: translateY(-4px);
+.resize-handle:hover::after {
+    background: var(--accent);
 }
 
-.actions-enter-to, .actions-leave-from {
-    opacity: 1;
-    max-height: 80px;
-}
-
-/* Aside — Split view, immer sichtbar wenn showCanvas */
+/* Aside — immer unten */
 .aside {
     display: flex;
     flex-direction: column;
     min-width: 0;
     min-height: 0;
+    flex-shrink: 0;
     border-top: 1px solid var(--border);
     background: var(--bg2);
 }
 
 @media (min-width: 1100px) {
     .aside {
-        border-top: none;
-        border-left: 1px solid var(--border);
-        border-radius: 14px;
+        border-radius: 14px 14px 0 0;
         border: 1px solid var(--border);
+        border-bottom: none;
         background: var(--surface);
     }
 }
@@ -1695,6 +1743,7 @@ const actorLabel: Record<string, string> = {
     gap: 6px;
     flex: 1;
     min-height: 0;
+    overflow-y: auto;
 }
 
 .canvas-toolbar {
@@ -1725,8 +1774,8 @@ const actorLabel: Record<string, string> = {
 .canvas {
     display: block;
     width: 100%;
-    flex: 1;
-    min-height: 0;
+    flex-shrink: 0;
+    height: 1400px;
     border-radius: 10px;
     background: rgba(0, 0, 0, .35);
     border: 1px solid var(--border);
