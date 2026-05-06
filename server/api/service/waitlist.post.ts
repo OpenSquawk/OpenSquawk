@@ -1,5 +1,6 @@
 import { readBody, createError, getRequestURL, type H3Event } from 'h3'
 import { WaitlistEntry, type WaitlistEntryDocument } from '../../models/WaitlistEntry'
+import { LandingAnalyticsEvent } from '../../models/LandingAnalyticsEvent'
 import { sendAdminNotification } from '../../utils/notifications'
 import { registerUpdateSubscriber } from '../../utils/subscribers'
 import {
@@ -14,6 +15,7 @@ interface WaitlistRequestBody {
   consentPrivacy?: boolean
   consentTerms?: boolean
   source?: string
+  product?: string
   wantsProductUpdates?: boolean
   referralToken?: string
 }
@@ -62,6 +64,7 @@ export default defineEventHandler(async (event) => {
   const name = body.name?.trim()
   const notes = body.notes?.trim()
   const source = body.source?.trim() || 'landing'
+  const product = body.product === 'liveatc' ? 'liveatc' : 'classroom'
   const wantsProductUpdates = Boolean(body.wantsProductUpdates)
   const normalizedReferralToken = normalizeWaitlistReferralToken(body.referralToken)
   const fromAddress = email ? (name ? `${name} <${email}>` : email) : undefined
@@ -102,6 +105,7 @@ export default defineEventHandler(async (event) => {
     existing.name = name || existing.name
     existing.notes = notes || existing.notes
     existing.source = referralSource
+    existing.product = product
     existing.consentPrivacy = true
     existing.consentTerms = true
     if (wantsProductUpdates && !previouslyWantedUpdates) {
@@ -164,6 +168,7 @@ export default defineEventHandler(async (event) => {
     name,
     notes,
     source: referralSource,
+    product,
     consentPrivacy: true,
     consentTerms: true,
     joinedAt: now,
@@ -172,6 +177,13 @@ export default defineEventHandler(async (event) => {
     referralToken,
     referredBy: canAttributeReferral && referrer ? (referrer._id as any) : undefined,
   })
+
+  await LandingAnalyticsEvent.create({
+    type: 'waitlist_submit',
+    product,
+    path: '/',
+    source: referralSource,
+  }).catch(() => undefined)
 
   if (canAttributeReferral) {
     await applyReferralAttribution(referrer)
@@ -197,6 +209,7 @@ export default defineEventHandler(async (event) => {
     dataEntries.push(['Notes', notes])
   }
   dataEntries.push(['Source', referralSource])
+  dataEntries.push(['Product', product])
   dataEntries.push(['Opt-in', wantsProductUpdates ? 'Product updates' : 'Waitlist only'])
   if (canAttributeReferral && referrer) {
     dataEntries.push(['Referral', normalizedReferralToken as string])

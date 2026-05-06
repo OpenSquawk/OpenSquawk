@@ -1,4 +1,5 @@
 import { createError, readBody } from 'h3'
+import { FeedbackSubmission } from '../../../models/FeedbackSubmission'
 import { sendAdminNotification } from '../../../utils/notifications'
 
 interface FeedbackRequestBody {
@@ -14,6 +15,7 @@ interface FeedbackRequestBody {
   hostingInterest?: string
   otherIdeas?: string
   contactConsent?: boolean
+  product?: string
 }
 
 function ensureRating(value: unknown) {
@@ -62,7 +64,24 @@ export default defineEventHandler(async (event) => {
   const highlightSelections = normaliseArray(body.highlightSelections)
   const frictionSelections = normaliseArray(body.frictionSelections)
   const allowContact = Boolean(body.contactConsent)
+  const product = body.product === 'liveatc' ? 'liveatc' : 'classroom'
   const fromAddress = email ? (name ? `${name} <${email}>` : email) : undefined
+
+  await FeedbackSubmission.create({
+    product,
+    name,
+    email,
+    discordHandle,
+    excitement,
+    highlightSelections,
+    highlightNotes,
+    frictionSelections,
+    frictionNotes,
+    classroomNotes,
+    hostingInterest,
+    otherIdeas,
+    contactConsent: allowContact,
+  })
 
   const details: string[] = []
   details.push(`Overall excitement: ${excitement}/5`)
@@ -107,6 +126,7 @@ export default defineEventHandler(async (event) => {
       ['Email', email || '—'],
       ['Discord', discordHandle || '—'],
       ['Okay to contact', allowContact ? 'Yes' : 'No'],
+      ['Product', product],
     ],
     replyTo: fromAddress,
   })

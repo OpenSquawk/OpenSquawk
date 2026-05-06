@@ -7,6 +7,7 @@ export interface WaitlistEntryDocument extends mongoose.Document {
   name?: string
   notes?: string
   source?: string
+  product: 'classroom' | 'liveatc'
   consentPrivacy: boolean
   consentTerms: boolean
   joinedAt: Date
@@ -28,6 +29,7 @@ const waitlistSchema = new mongoose.Schema<WaitlistEntryDocument>({
   name: { type: String, trim: true },
   notes: { type: String, trim: true },
   source: { type: String, default: 'landing' },
+  product: { type: String, enum: ['classroom', 'liveatc'], default: 'classroom', index: true },
   consentPrivacy: { type: Boolean, default: false },
   consentTerms: { type: Boolean, default: false },
   joinedAt: { type: Date, default: () => new Date() },

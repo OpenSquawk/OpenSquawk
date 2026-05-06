@@ -918,6 +918,8 @@ interface ScrollOptions {
 let sectionElements: { hash: string; element: HTMLElement }[] = []
 let isInternalNavigation = false
 let parallaxAnimationFrame: number | null = null
+const landingAnalyticsSessionId = ref('')
+const landingScrollTracked = ref(false)
 
 const clampParallax = (value: number) => Math.max(-PARALLAX_LIMIT, Math.min(PARALLAX_LIMIT, value))
 
@@ -997,6 +999,7 @@ const updateActiveSection = () => {
 const handleScroll = () => {
   updateActiveSection()
   scheduleParallaxUpdate()
+  trackLandingScrollIfNeeded()
 }
 
 const handleResize = () => {
@@ -1319,6 +1322,49 @@ const activeReferralToken = computed(() => {
 })
 const supportsNativeShare = computed(() => import.meta.client && typeof navigator !== 'undefined' && typeof navigator.share === 'function')
 
+const getLandingAnalyticsSessionId = () => {
+  if (!import.meta.client) return ''
+  const storageKey = 'os_landing_analytics_session'
+  const existing = window.sessionStorage.getItem(storageKey)
+  if (existing) return existing
+  const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  window.sessionStorage.setItem(storageKey, id)
+  return id
+}
+
+const sendLandingAnalytics = async (type: 'view' | 'scrolled' | 'waitlist_submit', scrollDepth?: number) => {
+  if (!import.meta.client) return
+
+  try {
+    await api.post(
+      '/api/service/analytics/landing',
+      {
+        type,
+        product: 'classroom',
+        sessionId: landingAnalyticsSessionId.value || getLandingAnalyticsSessionId(),
+        path: route.path,
+        source: 'landing-phase1-cta',
+        scrollDepth,
+      },
+      { auth: false },
+    )
+  } catch (error) {
+    console.warn('Could not track landing analytics event', error)
+  }
+}
+
+const trackLandingScrollIfNeeded = () => {
+  if (!import.meta.client || landingScrollTracked.value) return
+  const scrollableHeight = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
+  const depth = Math.round((window.scrollY / scrollableHeight) * 100)
+  if (depth >= 50) {
+    landingScrollTracked.value = true
+    void sendLandingAnalytics('scrolled', depth)
+  }
+}
+
 const waitlistCountDisplay = computed(() => formatNumber(waitlistStats.value?.displayCount ?? 0))
 const waitlistReferralJoinsDisplay = computed(() => formatNumber(waitlistStats.value?.referralJoins ?? 0))
 const waitlistLastJoinedFormatted = computed(() => {
@@ -1414,12 +1460,14 @@ async function submitWaitlist() {
         consentTerms: waitlistForm.consentTerms,
         wantsProductUpdates: waitlistForm.subscribeUpdates,
         source: 'landing-phase1-cta',
+        product: 'classroom',
         referralToken: activeReferralToken.value || undefined,
       },
       { auth: false },
     )
 
     waitlistSuccess.value = true
+    void sendLandingAnalytics('waitlist_submit')
     waitlistReferralToken.value = response.referralToken || ''
     waitlistReferralUrl.value = response.referralUrl || ''
     await loadWaitlistStats()
@@ -1545,6 +1593,8 @@ onMounted(() => {
   if (!import.meta.client) return
 
   rotateCaptchaChallenge(waitlistCaptcha)
+  landingAnalyticsSessionId.value = getLandingAnalyticsSessionId()
+  void sendLandingAnalytics('view')
 
   nextTick(() => {
     updateHeaderHeight()
