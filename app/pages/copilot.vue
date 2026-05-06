@@ -586,8 +586,8 @@ function cleanfeedCanvas() {
     ctx.clearRect(0, 0, cv.width, cv.height)
     ctx.putImageData(img, 0, -shift * dpr)
     ctx.restore()
-    // Scroll-Position mitnehmen: gleicher Viewport-Bereich sichtbar nach Shift
-    if (wrap) wrap.scrollTop = Math.max(0, wrap.scrollTop - shift)
+    // Nach Shift: direkt zum neuen freien Bereich unten scrollen
+    if (wrap) wrap.scrollTop += shift
     saveCanvasImage()
 }
 
@@ -612,7 +612,7 @@ const actorLabel: Record<string, string> = {
 </script>
 
 <template>
-    <div class="copilot scene">
+    <div class="copilot scene learn-theme">
         <!-- HUD -->
         <header class="hud">
             <div class="hud-inner">
@@ -776,17 +776,17 @@ const actorLabel: Record<string, string> = {
                     <div class="timeline-spacer"/>
                 </div>
                 <!-- Fixer Footer: immer an gleicher Position -->
-                <div v-if="activeStep" :class="['step-footer', 'accent-' + activeStep.phase.accent]" @click.stop>
-                    <button class="act act-back" :disabled="activeIdx <= 0" @click="prevStep">
+                <div v-if="activeStep" class="step-footer" @click.stop>
+                    <button class="btn" :disabled="activeIdx <= 0" @click="prevStep">
                         <v-icon size="20">mdi-chevron-left</v-icon>
-                        <span>Back</span>
+                        <span class="footer-btn-label">Back</span>
                     </button>
-                    <button v-if="activeStep.step.why" class="act act-why" :class="{open: expanded[activeStep.step.id]}" @click="toggleWhy(activeStep.step.id)">
+                    <button v-if="activeStep.step.why" class="btn" :class="{open: expanded[activeStep.step.id]}" @click="toggleWhy(activeStep.step.id)">
                         <v-icon size="18">{{ expanded[activeStep.step.id] ? 'mdi-information' : 'mdi-information-outline' }}</v-icon>
-                        <span>Warum</span>
+                        <span class="footer-btn-label">Warum</span>
                     </button>
-                    <button class="act act-next" :disabled="activeIdx >= allSteps.length - 1" @click="nextStep">
-                        <span>Done & Next</span>
+                    <button class="btn primary footer-next" :disabled="activeIdx >= allSteps.length - 1" @click="nextStep">
+                        <span>Done &amp; Next</span>
                         <v-icon size="20">mdi-chevron-right</v-icon>
                     </button>
                 </div>
@@ -1647,67 +1647,32 @@ const actorLabel: Record<string, string> = {
     align-items: stretch;
 }
 
+.step-footer .btn {
+    border-radius: 12px;
+    height: 48px;
+}
+
+.footer-next {
+    flex: 1;
+    justify-content: center;
+}
+
 @media (max-width: 480px) {
-    .step-footer .act-back span, .step-footer .act-why span {
+    .footer-btn-label {
         display: none;
     }
-    .step-footer .act-back, .step-footer .act-why {
-        padding: 0 12px;
-    }
 }
 
-.act {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    height: 48px;
-    padding: 0 16px;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--t2);
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all .15s;
-}
-
-.act:hover:not(:disabled) {
-    background: var(--surface-2);
-    color: var(--text);
-}
-
-.act:disabled {
+/* Step-Footer Button Overrides */
+.step-footer .btn:disabled {
     opacity: .35;
     cursor: not-allowed;
 }
 
-.act-back {
-    flex: 0 0 auto;
-}
-
-.act-why {
-    flex: 0 0 auto;
-}
-
-.act-why.open {
+.step-footer .btn.open {
     background: color-mix(in srgb, #fbbf24 18%, transparent);
     border-color: color-mix(in srgb, #fbbf24 40%, transparent);
     color: #fcd34d;
-}
-
-.act-next {
-    flex: 1 1 auto;
-    background: linear-gradient(135deg, var(--pa), color-mix(in srgb, var(--pa) 70%, var(--accent2) 30%));
-    border-color: transparent;
-    color: #001218;
-    box-shadow: 0 12px 24px -10px color-mix(in srgb, var(--pa) 60%, transparent);
-}
-
-.act-next:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 18px 30px -10px color-mix(in srgb, var(--pa) 70%, transparent);
 }
 
 
