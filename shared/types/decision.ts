@@ -220,7 +220,9 @@ export interface RuntimeDecisionState {
   name?: string
   summary?: string
   say_tpl?: string
+  say_template?: string
   utterance_tpl?: string
+  expected_pilot_template?: string
   else_say_tpl?: string
   next?: Array<{ to: string; label?: string; when?: string; guard?: string }>
   ok_next?: Array<{ to: string; label?: string; when?: string; guard?: string }>

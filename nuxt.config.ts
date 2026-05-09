@@ -57,6 +57,7 @@ export default defineNuxtConfig({
         },
         public: {
             apiDocumentationUrl: '/api-docs',
+            radioBackendUrl: process.env.NUXT_PUBLIC_RADIO_BACKEND_URL || 'http://127.0.0.1:8000',
         },
     },
     vuetify: {

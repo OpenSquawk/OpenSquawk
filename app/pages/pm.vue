@@ -970,6 +970,8 @@ const engine = useCommunicationsEngine()
 const auth = useAuthStore()
 const api = useApi()
 const router = useRouter()
+const radioBackend = useRadioBackend()
+const config = useRuntimeConfig()
 
 const STORAGE_KEYS = {
   selectedPlan: 'pm_selected_plan',
@@ -1014,12 +1016,15 @@ const {
   buildLLMContext,
   applyLLMDecision,
   moveTo: forceMove,
+  moveToSilent,
   normalizeATCText,
   renderATCMessage,
   getStateDetails,
   collectAtcStatesUntilPilotTurn,
   expectedPilotPhrases,
 } = engine
+
+const backendSessionId = ref<string | null>(null)
 
 const lastTransmission = ref('')
 const lastTransmissionFaulty = ref(false)
@@ -1409,9 +1414,9 @@ onMounted(async () => {
     }
 
     try {
-      await fetchRuntimeTree()
+      await fetchRuntimeTree('icao_atc_decision_tree', config.public.radioBackendUrl as string)
     } catch (err) {
-      console.error('Failed to load decision tree runtime', err)
+      console.error('Failed to load decision tree from Python backend', err)
       error.value = 'Decision engine konnte nicht initialisiert werden.'
       return
     }
@@ -1907,51 +1912,39 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
     speakPilotReadback(transcript)
   }
 
-  const ctx = buildLLMContext(transcript)
+  if (!backendSessionId.value) {
+    console.error('No backend session — cannot transmit')
+    setLastTransmission(`${prefix}: ${transcript} (no session)`)
+    return
+  }
 
   try {
-    const result = await api.post('/api/llm/decide', ctx)
-    const decision =
-      result?.decision && typeof result.decision === 'object'
-        ? result.decision
-        : (result && typeof result === 'object' && 'next_state' in result)
-          ? result
-          : null
+    const response = await radioBackend.transmit(backendSessionId.value, transcript)
 
-    if (!decision) {
-      console.error('LLM decision response had unexpected shape:', result)
-      setLastTransmission(`${prefix}: ${transcript} (invalid decision response)`)
-      return
+    // Advance local cursor through every state the backend auto-walked, then
+    // the final state. moveToSilent updates current_unit, actions, handoffs,
+    // and the communication log without scheduling further auto-transitions.
+    for (const stateId of response.auto_advanced_states ?? []) {
+      moveToSilent(stateId)
+    }
+    moveToSilent(response.next_state_id)
+
+    // Sync boolean routing flags (in_air, emergency_active, etc.) from backend.
+    for (const [k, v] of Object.entries(response.flags ?? {})) {
+      if (typeof v === 'boolean') (flags as any).value[k] = v
     }
 
-    const normalizedTrace = normalizeDecisionTraceResult(result)
-
-    applyLLMDecision(decision, normalizedTrace ?? null)
-
-    // If decision explicitly has controller_say_tpl, speak it
-    if (decision.controller_say_tpl && !decision.radio_check) {
-      scheduleControllerSpeech(decision.controller_say_tpl)
+    // TTS: use the template so local variables (callsign, squawk, etc.) render correctly.
+    if (response.controller_say_template) {
+      scheduleControllerSpeech(response.controller_say_template)
     }
 
-    // Auto-advance through ATC/system states and speak any say_tpl messages.
-    // This is the key fix: after a decision moves us to a new state, we need
-    // to walk through all non-pilot states (ATC replies, system transitions)
-    // until we reach the next pilot state, speaking each ATC message via TTS.
-    if (!decision.radio_check) {
-      await nextTick()
-      const atcMessages = collectAtcStatesUntilPilotTurn()
-      for (const msg of atcMessages) {
-        // Don't double-speak if the decision already had controller_say_tpl
-        // for this exact template
-        if (decision.controller_say_tpl && msg.say_tpl === decision.controller_say_tpl) {
-          continue
-        }
-        scheduleControllerSpeech(msg.say_tpl)
-      }
+    if (response.fallback_used) {
+      console.warn('[Backend] Fallback used:', response.fallback_reason)
     }
   } catch (e) {
-    console.error('LLM decision failed', e)
-    setLastTransmission(`${prefix}: ${transcript} (LLM failed)`)
+    console.error('Backend transmission failed', e)
+    setLastTransmission(`${prefix}: ${transcript} (backend failed)`)
   }
 }
 
@@ -1982,9 +1975,10 @@ const loadFlightPlans = async () => {
 }
 
 const startMonitoring = async (flightPlan: any) => {
+  // 1. Ensure the local tree is loaded from the Python backend (same source as session)
   try {
     if (!engineReady.value) {
-      await fetchRuntimeTree()
+      await fetchRuntimeTree('icao_atc_decision_tree', config.public.radioBackendUrl as string)
     }
   } catch (err) {
     console.error('Failed to prepare decision engine', err)
@@ -1992,22 +1986,41 @@ const startMonitoring = async (flightPlan: any) => {
     return
   }
 
+  // 2. Create a backend session — this is the authoritative state from here on
+  try {
+    const session = await radioBackend.createSession('icao_atc_decision_tree')
+    backendSessionId.value = session.session_id
+    // Sync cursor to wherever the backend initialised (usually start_state)
+    moveToSilent(session.current_state)
+    // Sync boolean routing flags from session
+    for (const [k, v] of Object.entries(session.flags ?? {})) {
+      if (typeof v === 'boolean') (flags as any).value[k] = v
+    }
+  } catch (err) {
+    console.error('Failed to create backend session', err)
+    error.value = 'Verbindung zum Training-Backend fehlgeschlagen.'
+    return
+  }
+
   error.value = ''
   selectedPlan.value = flightPlan
+
+  // 3. initializeFlight sets the real flight plan variables (callsign, squawk, dep/dest, etc.)
+  //    This runs AFTER session creation so these values win over backend defaults.
   initializeFlight(flightPlan)
   currentScreen.value = 'monitor'
   persistSelectedPlan(flightPlan)
 
-  // Set appropriate frequency based on departure airport
   if (flightPlan.dep === 'EDDF') {
-    frequencies.value.active = '121.900' // Frankfurt Delivery
-    frequencies.value.standby = '121.700' // Frankfurt Ground
+    frequencies.value.active = '121.900'
+    frequencies.value.standby = '121.700'
   }
 
   await fetchAirportFrequencies(flightPlan.dep || flightPlan.departure)
 
-  // If the start state is an ATC state, auto-advance and speak its message
-  // so the pilot sees the first prompt immediately after connecting.
+  // 4. Walk the initial ATC/system states locally (deterministic, no LLM).
+  //    Safe because we loaded the tree from the same Python backend, so the
+  //    walk is identical to what the backend will do on the first transmission.
   try {
     await nextTick()
     const startMessages = collectAtcStatesUntilPilotTurn()
