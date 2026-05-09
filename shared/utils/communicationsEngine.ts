@@ -159,12 +159,23 @@ function createDefaultFlightContext(): FlightContext {
 }
 
 function renderTpl(tpl: string, ctx: Record<string, any>): string {
-    return tpl.replace(/\{([\w.]+)\}/g, (_m, key) => {
+    // Handles both {variable} (old schema) and {{variable}} (new YAML/Jinja2 schema).
+    // Double-brace is matched first so {{x}} isn't partially matched as {x} with trailing brace.
+    return tpl.replace(/\{\{([\w.]+)\}\}|\{([\w.]+)\}/g, (_m, key1, key2) => {
+        const key = key1 ?? key2
         const parts = key.split('.')
         let cur: any = ctx
         for (const p of parts) cur = cur?.[p]
         return (cur ?? '').toString()
     })
+}
+
+function stateSayTpl(s: RuntimeDecisionState): string | undefined {
+    return s.say_tpl ?? s.say_template
+}
+
+function stateUtteranceTpl(s: RuntimeDecisionState): string | undefined {
+    return s.utterance_tpl ?? s.expected_pilot_template
 }
 
 export default function useCommunicationsEngine() {
@@ -562,13 +573,20 @@ export default function useCommunicationsEngine() {
             })
     })
 
-    async function fetchRuntimeTree(slug = 'icao_atc_decision_tree') {
+    async function fetchRuntimeTree(slug = 'icao_atc_decision_tree', baseUrl?: string) {
         ready.value = false
-        const fetcher: any = (globalThis as any).$fetch
-        if (typeof fetcher !== 'function') {
-            throw new Error('Universal fetch is not available in this context')
+        let data: RuntimeDecisionSystem
+        if (baseUrl) {
+            const res = await fetch(`${baseUrl}/api/decision-flows/runtime`)
+            if (!res.ok) throw new Error(`Failed to load flows from ${baseUrl}: ${res.status}`)
+            data = await res.json() as RuntimeDecisionSystem
+        } else {
+            const fetcher: any = (globalThis as any).$fetch
+            if (typeof fetcher !== 'function') {
+                throw new Error('Universal fetch is not available in this context')
+            }
+            data = (await fetcher('/api/decision-flows/runtime')) as RuntimeDecisionSystem
         }
-        const data = (await fetcher('/api/decision-flows/runtime')) as RuntimeDecisionSystem
         const activeSlug = slug && data.flows[slug] ? slug : data.main
         resetEngineFromSystem(data, { activeSlug })
     }
@@ -959,12 +977,13 @@ export default function useCommunicationsEngine() {
             if (endStates.includes(s.id)) break
 
             // Collect ATC/system messages for TTS
-            if (s.say_tpl) {
+            const sayTpl = stateSayTpl(s)
+            if (sayTpl) {
                 messages.push({
                     stateId: s.id,
-                    say_tpl: s.say_tpl,
-                    rendered: renderTpl(s.say_tpl, exposeCtx()),
-                    normalized: normalizeATCText(s.say_tpl, exposeCtxFlat()),
+                    say_tpl: sayTpl,
+                    rendered: renderTpl(sayTpl, exposeCtx()),
+                    normalized: normalizeATCText(sayTpl, exposeCtxFlat()),
                 })
             }
 
@@ -991,10 +1010,16 @@ export default function useCommunicationsEngine() {
             }
 
             if (!nextId) {
-                // Collect all eligible transitions
+                // Collect all eligible transitions — also include new-schema auto_transitions
+                // (used by ATC states in the new YAML that have no ok_next/next entries)
+                const autoTransitionTargets = (s.auto_transitions ?? [])
+                    .map(t => ({ to: (t as any).to as string | undefined }))
+                    .filter(t => !!t.to)
+
                 const allTransitions = [
                     ...(s.next ?? []),
                     ...(s.ok_next ?? []),
+                    ...autoTransitionTargets,
                 ] as Array<{ to?: string; when?: string; guard?: string }>
 
                 const eligible = allTransitions.filter(t => {
@@ -1028,12 +1053,13 @@ export default function useCommunicationsEngine() {
         const s = currentState.value
         if (!s) return []
 
-        // If current state IS a pilot state with utterance_tpl, show it
-        if (s.role === 'pilot' && s.utterance_tpl) {
+        // If current state IS a pilot state with utterance_tpl / expected_pilot_template, show it
+        const currentUtteranceTpl = stateUtteranceTpl(s)
+        if (s.role === 'pilot' && currentUtteranceTpl) {
             return [{
                 stateId: s.id,
-                text: renderTpl(s.utterance_tpl, exposeCtx()),
-                normalized: normalizeATCText(s.utterance_tpl, exposeCtxFlat()),
+                text: renderTpl(currentUtteranceTpl, exposeCtx()),
+                normalized: normalizeATCText(currentUtteranceTpl, exposeCtxFlat()),
             }]
         }
 
@@ -1042,11 +1068,12 @@ export default function useCommunicationsEngine() {
         for (const id of nextCandidates.value) {
             const state = states.value[id]
             if (!state) continue
-            if (state.role === 'pilot' && state.utterance_tpl) {
+            const utteranceTpl = stateUtteranceTpl(state)
+            if (state.role === 'pilot' && utteranceTpl) {
                 results.push({
                     stateId: id,
-                    text: renderTpl(state.utterance_tpl, exposeCtx()),
-                    normalized: normalizeATCText(state.utterance_tpl, exposeCtxFlat()),
+                    text: renderTpl(utteranceTpl, exposeCtx()),
+                    normalized: normalizeATCText(utteranceTpl, exposeCtxFlat()),
                 })
             }
         }
@@ -1111,7 +1138,7 @@ export default function useCommunicationsEngine() {
 
         const state = currentState.value
         if (!state) return
-        if (state.role === 'atc' && state.say_tpl) return
+        if (state.role === 'atc' && stateSayTpl(state)) return
 
         const transitions = [
             ...(state.next ?? []),
@@ -1141,7 +1168,7 @@ export default function useCommunicationsEngine() {
         const targetState = states.value[targetId]
         if (!targetState) return
 
-        const silentSystemHop = targetState.role === 'system' && !targetState.say_tpl
+        const silentSystemHop = targetState.role === 'system' && !stateSayTpl(targetState)
         const delay = silentSystemHop
             ? 50
             : Math.floor(Math.random() * 1000) + 1000
@@ -1230,13 +1257,57 @@ export default function useCommunicationsEngine() {
         }
 
         // Auto-Say
-        if (s.say_tpl) {
-            speak(s.role, s.say_tpl, s.id!)
+        const sayTplMoveTo = stateSayTpl(s)
+        if (sayTplMoveTo) {
+            speak(s.role, sayTplMoveTo, s.id!)
         }
 
         // Update flight context phase
         updateFlightPhase(s.phase)
         queueMicrotask(() => evaluateAutoTransitions())
+    }
+
+    // Like moveTo but does NOT schedule auto-transitions — used when the backend
+    // is driving state and we only need to sync the local cursor + side-effects
+    // (actions, handoffs, communication log) without the engine trying to advance further.
+    function moveToSilent(stateId: string) {
+        ensureTree()
+        if (!states.value[stateId]) {
+            console.warn(`[Engine] Unknown state for silent move: ${stateId}`)
+            return
+        }
+
+        if (stateId.startsWith('INT_')) {
+            flags.value.stack.push(currentStateId.value)
+        }
+
+        setActiveStateId(stateId)
+        resetAutoHistory(stateId)
+        const s = currentState.value
+        if (!s) return
+
+        for (const act of s.actions ?? []) {
+            if (typeof act === 'string') continue
+            if (act.if && !safeEvalBoolean(act.if)) continue
+            if (act.set) {
+                setByPath({ variables: variables.value, flags: flags.value, telemetry: telemetry.value }, act.set, act.to)
+            }
+        }
+
+        if (s.handoff?.to) {
+            flags.value.current_unit = unitFromHandoff(s.handoff.to)
+            if (s.handoff.freq) {
+                variables.value.handoff_freq = renderTpl(s.handoff.freq, exposeCtx())
+            }
+        }
+
+        const sayTplSilent = stateSayTpl(s)
+        if (sayTplSilent) {
+            speak(s.role, sayTplSilent, s.id!)
+        }
+
+        updateFlightPhase(s.phase)
+        // deliberately no evaluateAutoTransitions — backend owns the next move
     }
 
     function updateFlightPhase(phase: Phase) {
@@ -1419,6 +1490,7 @@ export default function useCommunicationsEngine() {
 
         // Flow Control
         moveTo,
+        moveToSilent,
 
         // Utilities
         normalizeATCText,
