@@ -56,7 +56,7 @@ useHead({
   link: [{rel: 'manifest', href: '/copilot.webmanifest'}],
 })
 
-const STORAGE_KEY = 'opensquawk.copilot.v4'
+const STORAGE_KEY = 'opensquawk.copilot.v5'
 
 const activeProfile = ref(a320Profile)
 const phases = computed<SopPhase[]>(() => activeProfile.value.phases)
@@ -73,6 +73,102 @@ const showSimbrief = ref(false)
 const asideHeight = ref(280)
 const simbriefWrapRef = ref<HTMLElement | null>(null)
 const simbriefPopPos = ref<Record<string, string>>({})
+
+// View / Filter / Columns
+type ViewMode = 'timeline' | 'table'
+const viewMode = ref<ViewMode>('timeline')
+
+const ALL_ACTORS = ['pilot', 'pf', 'pm', 'atc', 'cabin', 'system'] as const
+type ActorKey = typeof ALL_ACTORS[number]
+const actorFilter = ref<Record<ActorKey, boolean>>({
+  pilot: true, pf: true, pm: true, atc: true, cabin: true, system: true,
+})
+
+type ColKey = 'idx' | 'phase' | 'actor' | 'label' | 'callout' | 'detail' | 'inputs'
+const ALL_COLS: { key: ColKey; label: string }[] = [
+  {key: 'idx', label: '#'},
+  {key: 'phase', label: 'Phase'},
+  {key: 'actor', label: 'Wer'},
+  {key: 'label', label: 'Step'},
+  {key: 'callout', label: 'Callout'},
+  {key: 'detail', label: 'Detail'},
+  {key: 'inputs', label: 'Inputs'},
+]
+const visibleCols = ref<Record<ColKey, boolean>>({
+  idx: true, phase: true, actor: true, label: true, callout: true, detail: false, inputs: false,
+})
+
+const showFilterMenu = ref(false)
+const showColumnMenu = ref(false)
+const filterWrapRef = ref<HTMLElement | null>(null)
+const columnWrapRef = ref<HTMLElement | null>(null)
+const filterPopPos = ref<Record<string, string>>({})
+const columnPopPos = ref<Record<string, string>>({})
+
+function positionPopover(triggerRef: any, posRef: any) {
+  if (!triggerRef.value) return
+  nextTick(() => {
+    const rect = triggerRef.value.getBoundingClientRect()
+    posRef.value = {
+      top: (rect.bottom + 6) + 'px',
+      right: Math.max(8, window.innerWidth - rect.right) + 'px',
+    }
+  })
+}
+
+watch(showFilterMenu, (v) => {
+  if (v) {
+    showColumnMenu.value = false
+    showSimbrief.value = false
+    positionPopover(filterWrapRef, filterPopPos)
+  }
+})
+watch(showColumnMenu, (v) => {
+  if (v) {
+    showFilterMenu.value = false
+    showSimbrief.value = false
+    positionPopover(columnWrapRef, columnPopPos)
+  }
+})
+
+function toggleActorFilter(a: ActorKey) {
+  actorFilter.value[a] = !actorFilter.value[a]
+  if (!Object.values(actorFilter.value).some(Boolean)) actorFilter.value[a] = true
+}
+
+function toggleColumn(c: ColKey) {
+  visibleCols.value[c] = !visibleCols.value[c]
+  if (!Object.values(visibleCols.value).some(Boolean)) visibleCols.value[c] = true
+}
+
+function setAllActors(on: boolean) {
+  for (const a of ALL_ACTORS) actorFilter.value[a] = on
+}
+
+function onlyActor(a: ActorKey) {
+  for (const k of ALL_ACTORS) actorFilter.value[k] = false
+  actorFilter.value[a] = true
+}
+
+const visibleColList = computed(() => ALL_COLS.filter(c => visibleCols.value[c.key]))
+const activeFilterCount = computed(() => ALL_ACTORS.filter(a => !actorFilter.value[a]).length)
+const hiddenColCount = computed(() => ALL_COLS.filter(c => !visibleCols.value[c.key]).length)
+
+function phaseHasVisibleStep(p: SopPhase): boolean {
+  for (const s of p.steps) {
+    if (actorFilter.value[s.actor as ActorKey]) return true
+    if (s.variants?.length) {
+      const sel = variantSel.value[s.id] || s.variants[0].id
+      const variant = s.variants.find(v => v.id === sel)
+      if (variant && variant.steps.some(cs => actorFilter.value[cs.actor as ActorKey])) return true
+    }
+  }
+  return false
+}
+
+function stepIsVisible(s: SopStep): boolean {
+  return actorFilter.value[s.actor as ActorKey] || !!(s.variants?.length)
+}
 
 watch(showSimbrief, (v) => {
   if (v && simbriefWrapRef.value) {
@@ -231,18 +327,21 @@ const allSteps = computed(() => {
   return out
 })
 
-const activeIdx = computed(() => allSteps.value.findIndex(s => s.step.id === activeStepId.value))
-const activeStep = computed(() => allSteps.value[activeIdx.value])
+// Gefiltert nach Actor-Typ. Wird in Timeline + Tabelle + Tastatur-Navigation genutzt.
+const filteredSteps = computed(() => allSteps.value.filter(s => actorFilter.value[s.step.actor as ActorKey]))
+
+const activeIdx = computed(() => filteredSteps.value.findIndex(s => s.step.id === activeStepId.value))
+const activeStep = computed(() => filteredSteps.value[activeIdx.value])
 
 const phaseProgress = computed(() => {
   const ai = activeIdx.value
   const out: Record<string, { done: number; total: number; pct: number }> = {}
   for (const p of phases.value) {
-    const steps = stepsForPhase(p)
+    const steps = stepsForPhase(p).filter(s => actorFilter.value[s.actor as ActorKey])
     const total = steps.length
     let done = 0
     for (const s of steps) {
-      const idx = allSteps.value.findIndex(a => a.step.id === s.id)
+      const idx = filteredSteps.value.findIndex(a => a.step.id === s.id)
       if (idx >= 0 && idx < ai) done++
     }
     out[p.id] = {done, total, pct: total ? Math.round(done / total * 100) : 0}
@@ -251,7 +350,7 @@ const phaseProgress = computed(() => {
 })
 
 const totalProgress = computed(() => {
-  const total = allSteps.value.length
+  const total = filteredSteps.value.length
   if (!total || activeIdx.value < 0) return 0
   return Math.round((activeIdx.value / total) * 100)
 })
@@ -264,7 +363,23 @@ function positionClass(idx: number): string {
   return d <= 1 ? 'is-future is-near' : 'is-future'
 }
 
+// Scroll-Lock: verhindert, dass IntersectionObserver activeStepId überschreibt,
+// während wir gerade per Tastatur/Klick zu einem Step scrollen. Timer wird bei
+// jedem neuen Navigationsruf zurückgesetzt — so springt es bei schnellen
+// Tastendrücken nicht mehr.
 let scrollLock = false
+let scrollLockTimer: ReturnType<typeof setTimeout> | null = null
+let pendingScrollId: string | null = null
+
+function lockScroll(duration = 750) {
+  scrollLock = true
+  if (scrollLockTimer) clearTimeout(scrollLockTimer)
+  scrollLockTimer = setTimeout(() => {
+    scrollLock = false
+    scrollLockTimer = null
+    pendingScrollId = null
+  }, duration)
+}
 
 function setActive(id: string) {
   activeStepId.value = id
@@ -272,29 +387,49 @@ function setActive(id: string) {
 }
 
 function nextStep() {
-  if (activeIdx.value < 0 || activeIdx.value >= allSteps.value.length - 1) return
-  activeStepId.value = allSteps.value[activeIdx.value + 1].step.id
+  if (viewMode.value === 'table') {
+    // In Tabellen-Modus reicht reines Highlighten – das Scrollen erledigt der
+    // smooth-scroll auf die aktive Tabellenzeile.
+    if (activeIdx.value < 0 || activeIdx.value >= filteredSteps.value.length - 1) return
+    activeStepId.value = filteredSteps.value[activeIdx.value + 1].step.id
+    nextTick(() => scrollToTableRow(activeStepId.value!))
+    return
+  }
+  if (activeIdx.value < 0 || activeIdx.value >= filteredSteps.value.length - 1) return
+  activeStepId.value = filteredSteps.value[activeIdx.value + 1].step.id
   nextTick(() => scrollToStep(activeStepId.value!))
 }
 
 function prevStep() {
+  if (viewMode.value === 'table') {
+    if (activeIdx.value <= 0) return
+    activeStepId.value = filteredSteps.value[activeIdx.value - 1].step.id
+    nextTick(() => scrollToTableRow(activeStepId.value!))
+    return
+  }
   if (activeIdx.value <= 0) return
-  activeStepId.value = allSteps.value[activeIdx.value - 1].step.id
+  activeStepId.value = filteredSteps.value[activeIdx.value - 1].step.id
   nextTick(() => scrollToStep(activeStepId.value!))
 }
 
 function scrollToStep(id: string) {
-  const el = document.querySelector(`[data-step-id="${id}"]`) as HTMLElement | null
+  const el = document.querySelector(`.timeline [data-step-id="${id}"]`) as HTMLElement | null
   if (!el) return
-  scrollLock = true
+  pendingScrollId = id
+  lockScroll(750)
   el.scrollIntoView({behavior: 'smooth', block: 'center'})
-  setTimeout(() => {
-    scrollLock = false
-  }, 600)
+}
+
+function scrollToTableRow(id: string) {
+  const el = document.querySelector(`.steps-table tr[data-step-id="${id}"]`) as HTMLElement | null
+  if (!el) return
+  pendingScrollId = id
+  lockScroll(450)
+  el.scrollIntoView({behavior: 'smooth', block: 'nearest'})
 }
 
 function toggleWhy(id: string) {
-  scrollLock = true
+  lockScroll()
   expanded.value[id] = !expanded.value[id]
   nextTick(() => {
     scrollToStep(id)
@@ -302,7 +437,7 @@ function toggleWhy(id: string) {
 }
 
 function selectVariant(stepId: string, variantId: string) {
-  scrollLock = true
+  lockScroll()
   variantSel.value[stepId] = variantId
   nextTick(() => scrollToStep(stepId))
 }
@@ -346,7 +481,7 @@ function resetAll() {
   scratch.value = {}
   variantSel.value = {}
   expanded.value = {}
-  activeStepId.value = phases.value[0]?.steps[0]?.id || null
+  activeStepId.value = filteredSteps.value[0]?.step.id || phases.value[0]?.steps[0]?.id || null
   canvasImage.value = ''
   clearCanvas()
   persist()
@@ -365,10 +500,13 @@ function persist() {
     showCanvas: showCanvas.value,
     canvasImage: canvasImage.value,
     asideHeight: asideHeight.value,
+    viewMode: viewMode.value,
+    actorFilter: actorFilter.value,
+    visibleCols: visibleCols.value,
   }))
 }
 
-watch([scratch, variantSel, activeStepId, showCanvas, simbriefUser, asideHeight], persist, {deep: true})
+watch([scratch, variantSel, activeStepId, showCanvas, simbriefUser, asideHeight, viewMode, actorFilter, visibleCols], persist, {deep: true})
 
 // Keyboard
 function onKey(e: KeyboardEvent) {
@@ -400,9 +538,11 @@ let observer: IntersectionObserver | null = null
 function setupObserver() {
   if (typeof IntersectionObserver === 'undefined') return
   observer?.disconnect()
+  if (viewMode.value !== 'timeline') return
   const root = document.querySelector('.timeline') as HTMLElement | null
   if (!root) return
   observer = new IntersectionObserver((entries) => {
+    // Keine Updates während Tastatur/Klick-Scroll – sonst springt der active Step
     if (scrollLock) return
     let best: { id: string; ratio: number } | null = null
     for (const e of entries) {
@@ -412,12 +552,12 @@ function setupObserver() {
         if (!best || e.intersectionRatio > best.ratio) best = {id, ratio: e.intersectionRatio}
       }
     }
-    if (best) activeStepId.value = best.id
-  }, {root, rootMargin: '-40% 0px -40% 0px', threshold: [0, 0.1, 0.5, 1]})
-  document.querySelectorAll('[data-step-id]').forEach(el => observer?.observe(el))
+    if (best && best.id !== activeStepId.value) activeStepId.value = best.id
+  }, {root, rootMargin: '-45% 0px -45% 0px', threshold: [0, 0.25, 0.5, 0.75, 1]})
+  document.querySelectorAll('.timeline [data-step-id]').forEach(el => observer?.observe(el))
 }
 
-watch(allSteps, () => nextTick(setupObserver))
+watch(filteredSteps, () => nextTick(setupObserver))
 
 onMounted(() => {
   if (typeof localStorage !== 'undefined') {
@@ -432,22 +572,71 @@ onMounted(() => {
         if (typeof v.showCanvas === 'boolean') showCanvas.value = v.showCanvas
         if (typeof v.canvasImage === 'string') canvasImage.value = v.canvasImage
         if (typeof v.asideHeight === 'number') asideHeight.value = v.asideHeight
+        if (v.viewMode === 'timeline' || v.viewMode === 'table') viewMode.value = v.viewMode
+        if (v.actorFilter && typeof v.actorFilter === 'object') {
+          for (const a of ALL_ACTORS) {
+            if (typeof v.actorFilter[a] === 'boolean') actorFilter.value[a] = v.actorFilter[a]
+          }
+        }
+        if (v.visibleCols && typeof v.visibleCols === 'object') {
+          for (const c of ALL_COLS) {
+            if (typeof v.visibleCols[c.key] === 'boolean') visibleCols.value[c.key] = v.visibleCols[c.key]
+          }
+        }
       } catch {
       }
     }
   }
   if (!activeStepId.value && allSteps.value.length) activeStepId.value = allSteps.value[0].step.id
+  // Falls aktiver Step durch Filter weggefiltert ist → ersten sichtbaren wählen
+  if (activeStepId.value && !filteredSteps.value.some(s => s.step.id === activeStepId.value)) {
+    activeStepId.value = filteredSteps.value[0]?.step.id || activeStepId.value
+  }
   nextTick(() => {
     setupObserver()
-    scrollToStep(activeStepId.value!)
+    if (activeStepId.value) scrollToStep(activeStepId.value)
     setupCanvas()
   })
   window.addEventListener('keydown', onKey)
+  window.addEventListener('mousedown', onDocMouseDown)
+})
+
+function onDocMouseDown(e: MouseEvent) {
+  const t = e.target as HTMLElement
+  if (showFilterMenu.value && !t.closest('.filter-pop') && !t.closest('.filter-trigger')) showFilterMenu.value = false
+  if (showColumnMenu.value && !t.closest('.column-pop') && !t.closest('.column-trigger')) showColumnMenu.value = false
+}
+
+// Filter-Änderung: Falls aktiver Step rausfällt → näher auf den nächsten sichtbaren springen
+watch(actorFilter, () => {
+  if (!filteredSteps.value.length) return
+  if (!filteredSteps.value.some(s => s.step.id === activeStepId.value)) {
+    activeStepId.value = filteredSteps.value[0].step.id
+    nextTick(() => {
+      if (viewMode.value === 'timeline') scrollToStep(activeStepId.value!)
+      else scrollToTableRow(activeStepId.value!)
+    })
+  }
+}, {deep: true})
+
+watch(viewMode, (v) => {
+  // Beim View-Wechsel: kurz scrollen zum aktiven Step
+  nextTick(() => {
+    if (!activeStepId.value) return
+    if (v === 'timeline') {
+      setupObserver()
+      scrollToStep(activeStepId.value)
+    } else {
+      scrollToTableRow(activeStepId.value)
+    }
+  })
 })
 
 onUnmounted(() => {
   observer?.disconnect()
   window.removeEventListener('keydown', onKey)
+  window.removeEventListener('mousedown', onDocMouseDown)
+  if (scrollLockTimer) clearTimeout(scrollLockTimer)
 })
 
 // Resize Handle für Scratchpad
@@ -641,6 +830,56 @@ const actorLabel: Record<string, string> = {
         </div>
 
         <div class="hud-right">
+          <!-- View Toggle: Timeline / Table -->
+          <div class="seg" role="tablist" aria-label="Ansicht">
+            <button
+                class="seg-btn"
+                :class="{active: viewMode === 'timeline'}"
+                title="Timeline-Ansicht"
+                role="tab"
+                :aria-selected="viewMode === 'timeline'"
+                @click="viewMode = 'timeline'"
+            >
+              <v-icon size="16">mdi-timeline-text-outline</v-icon>
+            </button>
+            <button
+                class="seg-btn"
+                :class="{active: viewMode === 'table'}"
+                title="Tabellen-Ansicht"
+                role="tab"
+                :aria-selected="viewMode === 'table'"
+                @click="viewMode = 'table'"
+            >
+              <v-icon size="16">mdi-table</v-icon>
+            </button>
+          </div>
+
+          <!-- Actor / Type Filter -->
+          <div ref="filterWrapRef" class="pop-wrap">
+            <button
+                class="icon-btn filter-trigger"
+                :class="{active: showFilterMenu || activeFilterCount > 0}"
+                title="Typen filtern"
+                @click="showFilterMenu = !showFilterMenu"
+            >
+              <v-icon size="18">mdi-filter-variant</v-icon>
+              <span v-if="activeFilterCount > 0" class="badge">{{ activeFilterCount }}</span>
+            </button>
+          </div>
+
+          <!-- Spalten (nur sinnvoll in Tabelle) -->
+          <div v-if="viewMode === 'table'" ref="columnWrapRef" class="pop-wrap">
+            <button
+                class="icon-btn column-trigger"
+                :class="{active: showColumnMenu}"
+                title="Spalten ein-/ausblenden"
+                @click="showColumnMenu = !showColumnMenu"
+            >
+              <v-icon size="18">mdi-table-column</v-icon>
+              <span v-if="hiddenColCount > 0" class="badge">{{ hiddenColCount }}</span>
+            </button>
+          </div>
+
           <div ref="simbriefWrapRef" class="simbrief-wrap">
             <button
                 class="icon-btn"
@@ -682,13 +921,16 @@ const actorLabel: Record<string, string> = {
 
     <main class="body">
       <!-- Timeline -->
-      <section class="timeline-col">
+      <section v-if="viewMode === 'timeline'" class="timeline-col">
         <div class="timeline">
           <div class="timeline-spacer"/>
 
           <template v-for="(phase, pi) in phases" :key="phase.id">
             <!-- Phase Banner als nahtloser Abschnitt -->
-            <div :class="['phase-banner', 'accent-' + phase.accent, {first: pi === 0}]">
+            <div
+                v-if="phaseHasVisibleStep(phase)"
+                :class="['phase-banner', 'accent-' + phase.accent, {first: pi === 0}]"
+            >
               <div class="phase-banner-bar"/>
               <div class="phase-banner-body">
                 <div class="phase-eyebrow">Phase {{ pi + 1 }} · {{ phases.length }}</div>
@@ -706,9 +948,10 @@ const actorLabel: Record<string, string> = {
             <template v-for="step in phase.steps" :key="step.id">
               <!-- Step Block (mit oder ohne Variants) -->
               <article
+                  v-if="stepIsVisible(step)"
                   :data-step-id="step.id"
                   :class="['step', 'accent-' + phase.accent,
-                                    positionClass(allSteps.findIndex(a => a.step.id === step.id)),
+                                    positionClass(filteredSteps.findIndex(a => a.step.id === step.id)),
                                     `actor-${step.actor}`,
                                     {'has-variants': !!step.variants}]"
                   @click="setActive(step.id)"
@@ -806,7 +1049,99 @@ const actorLabel: Record<string, string> = {
             </v-icon>
             <span class="footer-btn-label">Warum</span>
           </button>
-          <button class="btn primary footer-next" :disabled="activeIdx >= allSteps.length - 1" @click="nextStep">
+          <button class="btn primary footer-next" :disabled="activeIdx >= filteredSteps.length - 1" @click="nextStep">
+            <span>Done &amp; Next</span>
+            <v-icon size="20">mdi-chevron-right</v-icon>
+          </button>
+        </div>
+      </section>
+
+      <!-- Tabellen-Ansicht: kompakt -->
+      <section v-else class="table-col">
+        <div class="table-scroll">
+          <table class="steps-table">
+            <thead>
+            <tr>
+              <th v-for="c in visibleColList" :key="c.key" :class="'col-' + c.key">{{ c.label }}</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr
+                v-for="(row, ri) in filteredSteps"
+                :key="row.step.id"
+                :data-step-id="row.step.id"
+                :class="['table-row', 'accent-' + row.phase.accent, `actor-${row.step.actor}`,
+                                {'is-active-row': row.step.id === activeStepId}]"
+                @click="setActive(row.step.id)"
+            >
+              <td v-for="c in visibleColList" :key="c.key" :class="'col-' + c.key">
+                <template v-if="c.key === 'idx'">{{ ri + 1 }}</template>
+                <template v-else-if="c.key === 'phase'">
+                  <span class="cell-phase">{{ row.phase.title }}</span>
+                </template>
+                <template v-else-if="c.key === 'actor'">
+                  <span class="cell-actor">
+                    <v-icon size="14">{{ actorIcon[row.step.actor] }}</v-icon>
+                    <span class="cell-actor-label">{{ actorLabel[row.step.actor] }}</span>
+                  </span>
+                </template>
+                <template v-else-if="c.key === 'label'">
+                  <RichText :tokens="tokenize(row.step.label)" :resolve="placeholderValue"
+                            :glossary="glossaryByTerm"/>
+                </template>
+                <template v-else-if="c.key === 'callout'">
+                  <span v-if="row.step.callout" class="cell-callout">
+                    <RichText :tokens="tokenize(row.step.callout)" :resolve="placeholderValue"
+                              :glossary="glossaryByTerm"/>
+                  </span>
+                  <span v-else class="cell-empty">—</span>
+                </template>
+                <template v-else-if="c.key === 'detail'">
+                  <span v-if="row.step.detail" class="cell-detail">
+                    <RichText :tokens="tokenize(row.step.detail)" :resolve="placeholderValue"
+                              :glossary="glossaryByTerm"/>
+                  </span>
+                  <span v-else class="cell-empty">—</span>
+                </template>
+                <template v-else-if="c.key === 'inputs'">
+                  <span v-if="row.step.inputKeys?.length" class="cell-inputs">
+                    <span
+                        v-for="k in row.step.inputKeys"
+                        :key="k"
+                        class="cell-chip"
+                        :class="{filled: !!scratch[k]}"
+                    >
+                      {{ scratchFields.find(f => f.key === k)?.label || k }}<span
+                        v-if="scratch[k]">: {{ scratch[k] }}</span>
+                    </span>
+                  </span>
+                  <span v-else class="cell-empty">—</span>
+                </template>
+              </td>
+            </tr>
+            <tr v-if="!filteredSteps.length">
+              <td :colspan="visibleColList.length" class="empty-state">
+                Keine Schritte sichtbar — Filter prüfen.
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Footer auch in Tabelle -->
+        <div v-if="activeStep" class="step-footer" @click.stop>
+          <button class="btn" :disabled="activeIdx <= 0" @click="prevStep">
+            <v-icon size="20">mdi-chevron-left</v-icon>
+            <span class="footer-btn-label">Back</span>
+          </button>
+          <button v-if="activeStep.step.why" class="btn" :class="{open: expanded[activeStep.step.id]}"
+                  @click="toggleWhy(activeStep.step.id)">
+            <v-icon size="18">{{
+                expanded[activeStep.step.id] ? 'mdi-information' : 'mdi-information-outline'
+              }}
+            </v-icon>
+            <span class="footer-btn-label">Warum</span>
+          </button>
+          <button class="btn primary footer-next" :disabled="activeIdx >= filteredSteps.length - 1" @click="nextStep">
             <span>Done &amp; Next</span>
             <v-icon size="20">mdi-chevron-right</v-icon>
           </button>
@@ -872,29 +1207,72 @@ const actorLabel: Record<string, string> = {
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Typen-Filter Popover -->
+    <Teleport to="body">
+      <Transition name="pop">
+        <div
+            v-if="showFilterMenu"
+            class="menu-pop filter-pop"
+            :style="filterPopPos"
+            @click.stop
+        >
+          <div class="menu-pop-title">Typen anzeigen</div>
+          <label v-for="a in ALL_ACTORS" :key="a" :class="['menu-row', `actor-${a}`]">
+            <input type="checkbox" :checked="actorFilter[a]" @change="toggleActorFilter(a)"/>
+            <v-icon size="14" class="menu-icon">{{ actorIcon[a] }}</v-icon>
+            <span class="menu-label">{{ actorLabel[a] }}</span>
+          </label>
+          <div class="menu-pop-foot">
+            <button class="menu-link" @click="setAllActors(true)">Alle</button>
+            <span class="menu-dot">·</span>
+            <button class="menu-link" @click="onlyActor('pilot')">Nur Pilot</button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Spalten Popover -->
+    <Teleport to="body">
+      <Transition name="pop">
+        <div
+            v-if="showColumnMenu"
+            class="menu-pop column-pop"
+            :style="columnPopPos"
+            @click.stop
+        >
+          <div class="menu-pop-title">Spalten</div>
+          <label v-for="c in ALL_COLS" :key="c.key" class="menu-row">
+            <input type="checkbox" :checked="visibleCols[c.key]" @change="toggleColumn(c.key)"/>
+            <span class="menu-label">{{ c.label }}</span>
+          </label>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
 .copilot {
-  --bg: #0b1020;
-  --bg2: #0a0f1c;
+  --bg: #0a0f1d;
+  --bg2: #080d18;
   --accent: #22d3ee;
   --accent2: #0ea5e9;
-  --text: #ffffff;
-  --t2: rgba(255, 255, 255, .80);
-  --t3: rgba(255, 255, 255, .60);
-  --t4: rgba(255, 255, 255, .38);
-  --border: rgba(255, 255, 255, .10);
-  --border-strong: rgba(255, 255, 255, .18);
-  --surface: rgba(255, 255, 255, .03);
-  --surface-2: rgba(255, 255, 255, .06);
+  --text: #f1f5f9;
+  --t2: rgba(241, 245, 249, .82);
+  --t3: rgba(241, 245, 249, .58);
+  --t4: rgba(241, 245, 249, .36);
+  --border: rgba(255, 255, 255, .07);
+  --border-strong: rgba(255, 255, 255, .14);
+  --surface: rgba(255, 255, 255, .025);
+  --surface-2: rgba(255, 255, 255, .05);
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
   padding-top: env(safe-area-inset-top);
-  background-image: radial-gradient(900px 480px at 80% -10%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
-  radial-gradient(680px 360px at 8% -6%, color-mix(in srgb, var(--accent2) 12%, transparent), transparent 60%);
+  /* Dezenter, ruhiger Farbverlauf statt dominante Glow-Spots */
+  background-image: radial-gradient(1100px 560px at 82% -16%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 65%),
+  radial-gradient(720px 380px at 6% -8%, color-mix(in srgb, var(--accent2) 6%, transparent), transparent 65%);
 }
 
 .accent-cyan {
@@ -958,9 +1336,9 @@ const actorLabel: Record<string, string> = {
   top: 0;
   z-index: 200;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 86%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .hud-inner {
@@ -1202,7 +1580,7 @@ const actorLabel: Record<string, string> = {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #22d3ee, #818cf8, #fb7185);
+  background: var(--accent);
   transition: width .3s ease;
 }
 
@@ -1263,8 +1641,8 @@ const actorLabel: Record<string, string> = {
   align-items: stretch;
   gap: 14px;
   padding: 22px 18px 16px;
-  background: linear-gradient(180deg, var(--pa-soft), transparent);
-  border-top: 1px solid color-mix(in srgb, var(--pa) 24%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pa) 6%, transparent), transparent);
+  border-top: 1px solid color-mix(in srgb, var(--pa) 18%, transparent);
   scroll-snap-align: start;
 }
 
@@ -1273,10 +1651,9 @@ const actorLabel: Record<string, string> = {
 }
 
 .phase-banner-bar {
-  width: 4px;
-  border-radius: 4px;
+  width: 3px;
+  border-radius: 3px;
   background: var(--pa);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--pa) 60%, transparent);
 }
 
 .phase-banner-body {
@@ -1368,8 +1745,8 @@ const actorLabel: Record<string, string> = {
 .step.is-active {
   opacity: 1;
   background: linear-gradient(180deg,
-  color-mix(in srgb, var(--pa) 8%, transparent),
-  color-mix(in srgb, var(--pa) 4%, transparent) 60%,
+  color-mix(in srgb, var(--pa) 5%, transparent),
+  color-mix(in srgb, var(--pa) 2%, transparent) 60%,
   transparent);
   padding: 24px 18px 22px;
 }
@@ -1421,9 +1798,8 @@ const actorLabel: Record<string, string> = {
 .step.is-active .actor-dot {
   background: var(--aa);
   color: #001218;
-  transform: scale(1.18);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--aa) 28%, transparent),
-  0 8px 22px color-mix(in srgb, var(--aa) 50%, transparent);
+  transform: scale(1.14);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--aa) 22%, transparent);
 }
 
 .step.is-past .actor-dot {
@@ -1661,9 +2037,9 @@ const actorLabel: Record<string, string> = {
   padding: 10px 12px;
   padding-bottom: calc(10px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 94%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--bg) 96%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   flex-shrink: 0;
   align-items: stretch;
 }
@@ -1872,6 +2248,330 @@ const actorLabel: Record<string, string> = {
   font-size: 12px;
   color: var(--t3);
   line-height: 1.5;
+}
+
+/* ============================================================
+   Segmented Button Group (View Toggle)
+   ============================================================ */
+.seg {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.seg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--t3);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.seg-btn:hover {
+  color: var(--text);
+}
+
+.seg-btn.active {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* Badge auf Icon-Buttons */
+.icon-btn {
+  position: relative;
+}
+
+.badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: #001218;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+
+/* ============================================================
+   Generisches Menu-Popover (Filter, Spalten)
+   ============================================================ */
+.pop-wrap {
+  position: relative;
+}
+
+.menu-pop {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  min-width: 200px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: rgba(11, 16, 32, .96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .5);
+}
+
+.menu-pop-title {
+  padding: 4px 6px 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--t2);
+  transition: background .12s, color .12s;
+}
+
+.menu-row:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.menu-row input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+}
+
+.menu-icon {
+  color: var(--aa, var(--t3));
+  flex-shrink: 0;
+}
+
+.menu-label {
+  flex: 1;
+}
+
+.menu-pop-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 6px 6px 2px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+}
+
+.menu-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 11.5px;
+}
+
+.menu-link:hover {
+  text-decoration: underline;
+}
+
+.menu-dot {
+  color: var(--t4);
+}
+
+/* ============================================================
+   Tabellen-Ansicht
+   ============================================================ */
+.table-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.table-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 4px 8px;
+}
+
+.steps-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+}
+
+.steps-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--t3);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.steps-table tbody td {
+  padding: 8px 10px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+  color: var(--t2);
+  line-height: 1.45;
+}
+
+.table-row {
+  cursor: pointer;
+  transition: background .12s;
+}
+
+.table-row:hover {
+  background: var(--surface);
+}
+
+.table-row.is-active-row {
+  background: color-mix(in srgb, var(--pa, var(--accent)) 10%, transparent);
+}
+
+.table-row.is-active-row td {
+  border-bottom-color: color-mix(in srgb, var(--pa, var(--accent)) 30%, var(--border));
+}
+
+.table-row.is-active-row td:first-child {
+  box-shadow: inset 3px 0 0 var(--pa, var(--accent));
+}
+
+.col-idx {
+  width: 38px;
+  color: var(--t4);
+  font-variant-numeric: tabular-nums;
+}
+
+.col-phase {
+  width: 130px;
+}
+
+.col-actor {
+  width: 140px;
+}
+
+.col-callout {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+}
+
+.cell-phase {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--pa-soft, var(--surface));
+  color: var(--pa, var(--text));
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cell-actor {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--aa, var(--t3));
+}
+
+.cell-actor-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.cell-callout {
+  color: #cffafe;
+}
+
+.cell-detail {
+  color: var(--t3);
+  font-size: 12px;
+}
+
+.cell-empty {
+  color: var(--t4);
+  font-size: 11px;
+}
+
+.cell-inputs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cell-chip {
+  display: inline-flex;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 10.5px;
+  color: var(--t3);
+}
+
+.cell-chip.filled {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: #cffafe;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 12px;
+  color: var(--t3);
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .col-phase, .col-detail {
+    display: none;
+  }
+
+  .steps-table {
+    font-size: 12px;
+  }
+
+  .col-actor {
+    width: 38px;
+  }
+
+  .cell-actor-label {
+    display: none;
+  }
 }
 </style>
 <style>
