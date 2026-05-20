@@ -2126,17 +2126,10 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
     if (isIntercom) {
       const result = await api.post('/api/atc/ptt', {
         audio: base64Audio,
-        context: {
-          state_id: currentState.value?.id || 'INTERCOM',
-          state: {},
-          candidates: [],
-          variables: { callsign: vars.value.callsign },
-          flags: {}
-        },
         moduleId: 'pilot-monitoring-intercom',
         lessonId: 'intercom',
         format: 'webm',
-        autoDecide: false
+        sessionId: backendSessionId.value || undefined,
       })
 
       if (result.success) {
@@ -2152,15 +2145,12 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
         }
       }
     } else {
-      const ctx = buildLLMContext('')
-
       const result = await api.post('/api/atc/ptt', {
         audio: base64Audio,
-        context: ctx,
         moduleId: 'pilot-monitoring',
         lessonId: currentState.value?.id || 'general',
         format: 'webm',
-        autoDecide: false
+        sessionId: backendSessionId.value || undefined,
       })
 
       if (result.success) {
