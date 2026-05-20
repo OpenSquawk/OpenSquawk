@@ -4,6 +4,7 @@ export interface RadioSessionResponse {
     current_state: string
     variables: Record<string, any>
     flags: Record<string, boolean>
+    expected_pilot_template: string | null
 }
 
 export interface RadioTransmitResponse {
@@ -27,10 +28,13 @@ export function useRadioBackend() {
         return (config.public.radioBackendUrl as string) || 'http://127.0.0.1:8000'
     }
 
-    async function createSession(flowSlug: string): Promise<RadioSessionResponse> {
+    async function createSession(
+        flowSlug: string,
+        variables?: Record<string, any>,
+    ): Promise<RadioSessionResponse> {
         return await $fetch<RadioSessionResponse>(`${baseUrl()}/api/radio/session`, {
             method: 'POST',
-            body: { flow_slug: flowSlug },
+            body: { flow_slug: flowSlug, variables: variables ?? null },
         })
     }
 

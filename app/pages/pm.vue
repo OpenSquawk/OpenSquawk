@@ -254,28 +254,39 @@
           </v-card-text>
         </v-card>
 
-        <!-- Expected Communication -->
-        <v-card v-if="currentStep" class="bg-white/5 border border-white/10">
+        <!-- Expected Communication — driven by backend session state -->
+        <v-card v-if="displayControllerSay || displayExpectedPhrase" class="bg-white/5 border border-white/10">
           <v-card-text class="space-y-3">
             <div class="flex items-center justify-between">
               <p class="text-xs uppercase tracking-[0.3em] text-white/40">Expected communication</p>
-              <v-chip color="orange" variant="tonal" size="small">{{ currentStep.frequencyName }}</v-chip>
+              <v-tooltip :text="showRadioPronunciation ? 'Switch to plain text' : 'Switch to radio pronunciation'" location="top">
+                <template #activator="{ props: tip }">
+                  <v-btn
+                      v-bind="tip"
+                      :icon="showRadioPronunciation ? 'mdi-text' : 'mdi-radio'"
+                      size="x-small"
+                      variant="text"
+                      :color="showRadioPronunciation ? 'cyan' : 'white'"
+                      @click="showRadioPronunciation = !showRadioPronunciation"
+                  />
+                </template>
+              </v-tooltip>
             </div>
 
-            <div v-if="currentStep.atc" class="space-y-2 rounded-2xl bg-green-500/10 border border-green-500/20 p-3 text-sm">
+            <div v-if="displayControllerSay" class="space-y-2 rounded-2xl bg-green-500/10 border border-green-500/20 p-3 text-sm">
               <div class="flex items-center gap-2 text-green-300">
                 <v-icon size="16">mdi-radio-tower</v-icon>
                 <span class="text-xs uppercase font-semibold">ATC</span>
               </div>
-              <p class="font-mono text-white">{{ normalizeExpectedText(currentStep.atc) }}</p>
+              <p class="font-mono text-white">{{ displayControllerSay }}</p>
             </div>
 
-            <div v-if="currentStep.pilot" class="space-y-2 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 text-sm">
+            <div v-if="displayExpectedPhrase" class="space-y-2 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 text-sm">
               <div class="flex items-center gap-2 text-blue-300">
                 <v-icon size="16">mdi-account-pilot</v-icon>
                 <span class="text-xs uppercase font-semibold">Pilot (You)</span>
               </div>
-              <p class="font-mono text-white">{{ normalizeExpectedText(currentStep.pilot) }}</p>
+              <p class="font-mono text-white">{{ displayExpectedPhrase }}</p>
             </div>
           </v-card-text>
         </v-card>
@@ -475,20 +486,18 @@
                 @click:append-inner="sendPilotText"
             />
 
-            <!-- Suggested next phrases (debug aid) -->
-            <div v-if="expectedPilotPhrases.length" class="space-y-1">
-              <p class="text-[11px] uppercase tracking-[0.25em] text-white/40">Suggested phrases</p>
+            <!-- Suggested next phrase — sourced from backend (authoritative variables) -->
+            <div v-if="backendExpectedPhrase" class="space-y-1">
+              <p class="text-[11px] uppercase tracking-[0.25em] text-white/40">Suggested phrase</p>
               <div class="flex flex-wrap gap-2">
                 <v-chip
-                    v-for="phrase in expectedPilotPhrases"
-                    :key="phrase.stateId"
                     size="small"
                     color="cyan"
                     variant="outlined"
                     class="cursor-pointer text-xs font-mono"
-                    @click="pilotInput = phrase.text"
+                    @click="pilotInput = backendExpectedPhrase"
                 >
-                  {{ phrase.text }}
+                  {{ backendExpectedPhrase }}
                 </v-chip>
               </div>
             </div>
@@ -951,6 +960,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
+import { normalizeRadioPhrase, DEFAULT_AIRLINE_TELEPHONY } from '../../shared/utils/radioSpeech';
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { loadPizzicatoLite } from '../../shared/utils/pizzicatoLite'
@@ -1052,6 +1062,52 @@ const {
 } = engine
 
 const backendSessionId = ref<string | null>(null)
+// Last ATC utterance returned by the backend (pre-rendered, correct variables).
+const lastControllerSay = ref<string | null>(null)
+// Authoritative expected pilot phrase from the backend — replaces local engine rendering.
+const backendExpectedPhrase = ref<string | null>(null)
+// Toggle: show radio pronunciation (wun, tree, squawk niner…) vs plain text.
+const showRadioPronunciation = ref(false)
+
+function toRadioSpeech(text: string): string {
+  return normalizeRadioPhrase(text, {
+    expandCallsigns: true,
+    airlineMap: DEFAULT_AIRLINE_TELEPHONY,
+    sidSuffixIcao: true,
+  })
+}
+
+// Display helpers — apply ICAO phonetics when the toggle is on.
+const displayControllerSay = computed(() =>
+  lastControllerSay.value
+    ? (showRadioPronunciation.value ? toRadioSpeech(lastControllerSay.value) : lastControllerSay.value)
+    : null
+)
+const displayExpectedPhrase = computed(() =>
+  backendExpectedPhrase.value
+    ? (showRadioPronunciation.value ? toRadioSpeech(backendExpectedPhrase.value) : backendExpectedPhrase.value)
+    : null
+)
+
+// Maps frequency_name from the flow state to the resolved airport frequency variable.
+const FREQ_NAME_TO_VAR: Record<string, string> = {
+  'clearance delivery': 'delivery_freq',
+  'delivery':           'delivery_freq',
+  'ground':             'ground_freq',
+  'tower':              'tower_freq',
+  'departure':          'departure_freq',
+  'approach':           'approach_freq',
+  'centre':             'handoff_freq',
+  'center':             'handoff_freq',
+  'radar':              'handoff_freq',
+}
+
+function expectedFrequencyForState(): string | null {
+  const freqName = (currentState.value as any)?.frequency_name as string | undefined
+  if (!freqName) return null
+  const varKey = FREQ_NAME_TO_VAR[freqName.toLowerCase()]
+  return varKey ? ((vars as any).value[varKey] as string ?? null) : null
+}
 
 const lastTransmission = ref('')
 const lastTransmissionFaulty = ref(false)
@@ -1944,6 +2000,20 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
     speakPilotReadback(transcript)
   }
 
+  // --- Frequency check ---
+  // Reject the transmission if the pilot is on the wrong frequency.
+  const expectedFreq = expectedFrequencyForState()
+  if (expectedFreq && frequencies.value.active !== expectedFreq) {
+    const callsign = (vars as any).value?.callsign ?? ''
+    const reply = callsign
+      ? `${callsign}, check frequency. You are on ${frequencies.value.active}, expected ${expectedFreq}.`
+      : `Station calling, check frequency. Expected ${expectedFreq}.`
+    pmLog.warn('WRONG FREQUENCY', { active: frequencies.value.active, expected: expectedFreq })
+    lastControllerSay.value = reply
+    scheduleControllerSpeech(reply)
+    return
+  }
+
   if (!backendSessionId.value) {
     pmLog.error('TRANSMIT BLOCKED — no backend session', { transcript, source })
     console.error('No backend session — cannot transmit')
@@ -1985,6 +2055,10 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
     pmLog.debug('moveToSilent ← next_state_id:', response.next_state_id)
     moveToSilent(response.next_state_id)
 
+    // Update expected phrase AFTER cursor moves so any local-engine reactive
+    // updates from moveToSilent have already settled.
+    backendExpectedPhrase.value = response.expected_pilot_template ?? null
+
     // Sync variables from backend — keeps local renderer in step with backend state.
     // Without this, {{squawk}} / {{sid}} etc. render from stale frontend defaults.
     const changedVars: Record<string, any> = {}
@@ -2015,6 +2089,7 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
     const sayText = response.controller_say_rendered || response.controller_say_template
     if (sayText) {
       pmLog.info('TTS →', sayText)
+      lastControllerSay.value = sayText
       scheduleControllerSpeech(sayText)
     }
 
@@ -2067,9 +2142,28 @@ const startMonitoring = async (flightPlan: any) => {
     return
   }
 
-  // 2. Create a backend session — this is the authoritative state from here on
+  // 2. Initialize the local flight engine first so generated values (stand, SID, squawk)
+  //    are computed and available in vars.value before we create the backend session.
+  initializeFlight(flightPlan)
+
+  // 3. Build the backend variable payload — maps frontend variable names to the
+  //    names declared in clearance-v1.yaml. Unknown keys are silently ignored by
+  //    the backend so it's safe to pass extras.
+  const v = (vars as any).value
+  const backendVariables: Record<string, any> = {
+    callsign:        v.callsign    || flightPlan.callsign || 'UNKNOWN',
+    information:     v.atis_code   || 'K',
+    destination:     v.dest        || flightPlan.arr || flightPlan.arrival || 'Unknown',
+    stand:           v.stand       || 'A1',
+    sid:             v.sid         || 'UNKNOWN1A',
+    initial_altitude: String(v.initial_altitude_ft ?? 5000),
+    squawk:          String(v.squawk ?? '2000'),
+  }
+  pmLog.info('backend variables payload:', backendVariables)
+
+  // 4. Create a backend session with the flight-plan-derived variables
   try {
-    const session = await radioBackend.createSession('clearance')
+    const session = await radioBackend.createSession('clearance', backendVariables)
     backendSessionId.value = session.session_id
     pmLog.group(`SESSION CREATED  id=${session.session_id.slice(0, 8)}`, () => {
       pmLog.info('flow        :', session.flow_slug)
@@ -2080,10 +2174,17 @@ const startMonitoring = async (flightPlan: any) => {
     // Sync cursor to wherever the backend initialised (usually start_state)
     moveToSilent(session.current_state)
     pmLog.debug('moveToSilent ← session start_state:', session.current_state)
+    // Sync session variables back so the local renderer stays in step
+    for (const [k, v] of Object.entries(session.variables ?? {})) {
+      ;(vars as any).value[k] = v
+    }
     // Sync boolean routing flags from session
     for (const [k, v] of Object.entries(session.flags ?? {})) {
       if (typeof v === 'boolean') (flags as any).value[k] = v
     }
+    // Seed the expected pilot phrase from the start state
+    backendExpectedPhrase.value = session.expected_pilot_template ?? null
+    pmLog.info('expected_pilot (session start):', backendExpectedPhrase.value ?? '—')
   } catch (err) {
     pmLog.error('SESSION CREATE FAILED', err)
     console.error('Failed to create backend session', err)
@@ -2093,10 +2194,6 @@ const startMonitoring = async (flightPlan: any) => {
 
   error.value = ''
   selectedPlan.value = flightPlan
-
-  // 3. initializeFlight sets the real flight plan variables (callsign, squawk, dep/dest, etc.)
-  //    This runs AFTER session creation so these values win over backend defaults.
-  initializeFlight(flightPlan)
   currentScreen.value = 'monitor'
   persistSelectedPlan(flightPlan)
 
@@ -2128,7 +2225,6 @@ const startDemoFlight = () => {
     dep: 'EDDF',
     arr: 'EDDM',
     altitude: '36000',
-    assignedsquawk: '1234'
   }
   void startMonitoring(demoFlight)
 }
