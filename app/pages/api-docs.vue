@@ -1105,37 +1105,7 @@ const endpointSections: EndpointSection[] = [
     "controller_say_tpl": "Lufthansa 478 contact departure 120.8"
   }
 }`,
-        notes: 'Uses FFmpeg for format conversion when available and logs transmissions together with LLM traces.',
-      },
-      {
-        method: 'POST',
-        path: '/api/llm/decide',
-        summary: 'Run the LLM router against the provided decision graph state.',
-        category: 'Decision engine',
-        auth: 'protected',
-        body: [
-          { name: 'state_id', type: 'string', required: true, description: 'Identifier of the current node in the flow.' },
-          { name: 'candidates', type: 'Array', required: true, description: 'Candidate states for the router to choose from.' },
-          { name: 'pilot_utterance', type: 'string', description: 'Recent transcription forwarded to the model.' },
-          { name: 'variables', type: 'object', description: 'Arbitrary variables passed to the router.' },
-          { name: 'flags', type: 'object', description: 'Boolean flags controlling heuristics.' },
-        ],
-        sampleRequest: `curl -X POST https://opensquawk.de/api/llm/decide \
-  -H 'Authorization: Bearer <token>' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "state_id": "vector-entry",
-    "pilot_utterance": "ready for departure",
-    "candidates": [ { "id": "handoff", "state": { "type": "handoff" } } ],
-    "variables": { "runway": "25C" }
-  }'`,
-        sampleResponse: `{
-  "next_state": "handoff",
-  "controller_say_tpl": "Contact departure 120.8",
-  "off_schema": false,
-  "radio_check": false
-}`,
-        notes: 'Returns HTTP 500 when the router or downstream LLM fails.',
+        notes: 'Uses FFmpeg for format conversion when available and logs transmissions.',
       },
     ],
   },

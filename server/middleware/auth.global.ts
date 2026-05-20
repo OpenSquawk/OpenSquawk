@@ -18,9 +18,6 @@ export default defineEventHandler(async (event) => {
     if (url.pathname.startsWith('/api/copilot/')) {
         return
     }
-    if (url.pathname === '/api/decision-flows/runtime') {
-        return
-    }
     if (event.node.req.method === 'OPTIONS') {
         return
     }
