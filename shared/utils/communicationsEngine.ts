@@ -295,8 +295,24 @@ export default function useCommunicationsEngine() {
     }
 
     function createSnapshotFromTree(treeData: RuntimeDecisionTree): FlowSnapshot {
-        const variables = { ...treeData.variables }
-        const baseFlags = (treeData.flags && typeof treeData.flags === 'object') ? { ...treeData.flags } : {}
+        // The Python backend serializes variables/flags as VariableDefinition/FlagDefinition objects
+        // ({ name, type, initial, mutable_by }) rather than raw values. Unwrap them here so
+        // template rendering gets the primitive value instead of [object Object].
+        const rawVars = treeData.variables ?? {}
+        const variables = Object.fromEntries(
+            Object.entries(rawVars).map(([k, v]) => [
+                k,
+                v !== null && typeof v === 'object' && 'initial' in v ? (v as any).initial : v,
+            ])
+        )
+        const rawFlags = treeData.flags ?? {}
+        const unwrappedFlags = Object.fromEntries(
+            Object.entries(rawFlags).map(([k, v]) => [
+                k,
+                v !== null && typeof v === 'object' && 'initial' in v ? (v as any).initial : v,
+            ])
+        )
+        const baseFlags = typeof unwrappedFlags === 'object' ? unwrappedFlags : {}
         const stack = Array.isArray((baseFlags as any).stack) ? [...(baseFlags as any).stack] : []
         const flags: EngineFlags = {
             in_air: Boolean((baseFlags as any).in_air),

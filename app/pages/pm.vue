@@ -494,7 +494,7 @@
             </div>
 
             <p class="text-xs text-white/50">
-              For emergencies when PTT fails or for testing
+              For emergencies when STT fails or for testing
             </p>
           </v-card-text>
         </v-card>
@@ -964,6 +964,33 @@ import type {
   DecisionCandidateTimeline,
   LLMDecisionTrace,
 } from '../../shared/types/llm'
+
+// ---------------------------------------------------------------------------
+// Debug logger — prefix [PM] so it's easy to filter in DevTools.
+// Disable at runtime: localStorage.setItem('PM_DEBUG', '0')
+// Re-enable:          localStorage.setItem('PM_DEBUG', '1')
+// Show trace detail:  localStorage.setItem('PM_DEBUG', 'verbose')
+// ---------------------------------------------------------------------------
+const pmLog = (() => {
+  const level = () => {
+    if (typeof localStorage === 'undefined') return 'on'
+    return localStorage.getItem('PM_DEBUG') ?? 'on'
+  }
+  const enabled  = () => level() !== '0'
+  const verbose  = () => level() === 'verbose'
+  return {
+    info:  (...a: any[]) => enabled() && console.log   ('[PM]', ...a),
+    warn:  (...a: any[]) => enabled() && console.warn  ('[PM]', ...a),
+    error: (...a: any[]) => enabled() && console.error ('[PM]', ...a),
+    debug: (...a: any[]) => verbose() && console.debug ('[PM:v]', ...a),
+    group: (label: string, fn: () => void) => {
+      if (!enabled()) { fn(); return }
+      console.groupCollapsed(`[PM] ${label}`)
+      fn()
+      console.groupEnd()
+    },
+  }
+})()
 
 // Core State
 const engine = useCommunicationsEngine()
@@ -1809,6 +1836,7 @@ const playAudioWithEffects = async (base64: string, mime = 'audio/wav') => {
 }
 
 const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = {}) => {
+  pmLog.info('TTS ▶', prepared.plain.slice(0, 100))
   try {
     const speed = options.speed ?? speechSpeed.value
     const response = await api.post('/api/atc/say', {
@@ -1823,12 +1851,16 @@ const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = 
     })
 
     if (response.success && response.audio) {
+      pmLog.debug('TTS ✓  provider=%s  size=%dB', response.meta?.ttsProvider, response.audio.size)
       if (options.updateLastTransmission !== false) {
         setLastTransmission(options.lastTransmissionLabel || `ATC: ${prepared.plain}`)
       }
       await playAudioWithEffects(response.audio.base64, response.audio.mime)
+    } else {
+      pmLog.warn('TTS ✗  unexpected response', response)
     }
   } catch (err) {
+    pmLog.error('TTS FAILED', err)
     console.error('TTS failed:', err)
   }
 }
@@ -1913,36 +1945,85 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   }
 
   if (!backendSessionId.value) {
+    pmLog.error('TRANSMIT BLOCKED — no backend session', { transcript, source })
     console.error('No backend session — cannot transmit')
     setLastTransmission(`${prefix}: ${transcript} (no session)`)
     return
   }
 
+  pmLog.group(`▶ TRANSMIT  [${source}]  session=${backendSessionId.value.slice(0,8)}`, () => {
+    pmLog.info('utterance   :', transcript)
+    pmLog.info('local state :', currentState.value?.id ?? '—')
+    pmLog.info('session_id  :', backendSessionId.value)
+  })
+
   try {
     const response = await radioBackend.transmit(backendSessionId.value, transcript)
+
+    pmLog.group(`✓ RESPONSE  ${currentState.value?.id ?? '?'} → ${response.next_state_id}`, () => {
+      pmLog.info('next_state        :', response.next_state_id)
+      pmLog.info('auto_advanced     :', response.auto_advanced_states ?? [])
+      pmLog.info('fallback_used     :', response.fallback_used, response.fallback_reason ?? '')
+      pmLog.info('say_template      :', response.controller_say_template ?? '—')
+      pmLog.info('say_rendered      :', response.controller_say_rendered ?? '—')
+      pmLog.info('expected_pilot    :', response.expected_pilot_template ?? '—')
+      pmLog.info('variables         :', response.variables)
+      pmLog.info('flags             :', response.flags)
+      if (response.trace?.length) {
+        pmLog.debug('trace:')
+        response.trace.forEach(t => pmLog.debug(`  [${t.type}]`, t.message))
+      }
+    })
 
     // Advance local cursor through every state the backend auto-walked, then
     // the final state. moveToSilent updates current_unit, actions, handoffs,
     // and the communication log without scheduling further auto-transitions.
     for (const stateId of response.auto_advanced_states ?? []) {
+      pmLog.debug('moveToSilent ← auto_advanced:', stateId)
       moveToSilent(stateId)
     }
+    pmLog.debug('moveToSilent ← next_state_id:', response.next_state_id)
     moveToSilent(response.next_state_id)
 
-    // Sync boolean routing flags (in_air, emergency_active, etc.) from backend.
-    for (const [k, v] of Object.entries(response.flags ?? {})) {
-      if (typeof v === 'boolean') (flags as any).value[k] = v
+    // Sync variables from backend — keeps local renderer in step with backend state.
+    // Without this, {{squawk}} / {{sid}} etc. render from stale frontend defaults.
+    const changedVars: Record<string, any> = {}
+    for (const [k, v] of Object.entries(response.variables ?? {})) {
+      if ((vars as any).value[k] !== v) {
+        ;(vars as any).value[k] = v
+        changedVars[k] = v
+      }
+    }
+    if (Object.keys(changedVars).length) {
+      pmLog.debug('variables synced:', changedVars)
     }
 
-    // TTS: use the template so local variables (callsign, squawk, etc.) render correctly.
-    if (response.controller_say_template) {
-      scheduleControllerSpeech(response.controller_say_template)
+    // Sync boolean routing flags (in_air, emergency_active, etc.) from backend.
+    const changedFlags: Record<string, boolean> = {}
+    for (const [k, v] of Object.entries(response.flags ?? {})) {
+      if (typeof v === 'boolean') {
+        (flags as any).value[k] = v
+        changedFlags[k] = v
+      }
+    }
+    if (Object.keys(changedFlags).length) {
+      pmLog.debug('flags synced:', changedFlags)
+    }
+
+    // TTS: use the pre-rendered string from the backend (correct variable values).
+    // Fall back to rendering the template locally if rendered is absent.
+    const sayText = response.controller_say_rendered || response.controller_say_template
+    if (sayText) {
+      pmLog.info('TTS →', sayText)
+      scheduleControllerSpeech(sayText)
     }
 
     if (response.fallback_used) {
+      pmLog.warn('FALLBACK USED:', response.fallback_reason)
       console.warn('[Backend] Fallback used:', response.fallback_reason)
     }
   } catch (e) {
+    pmLog.error('TRANSMIT FAILED', { transcript, session: backendSessionId.value, error: e })
     console.error('Backend transmission failed', e)
     setLastTransmission(`${prefix}: ${transcript} (backend failed)`)
   }
@@ -1978,7 +2059,7 @@ const startMonitoring = async (flightPlan: any) => {
   // 1. Ensure the local tree is loaded from the Python backend (same source as session)
   try {
     if (!engineReady.value) {
-      await fetchRuntimeTree('icao_atc_decision_tree', config.public.radioBackendUrl as string)
+      await fetchRuntimeTree('clearance', config.public.radioBackendUrl as string)
     }
   } catch (err) {
     console.error('Failed to prepare decision engine', err)
@@ -1988,15 +2069,23 @@ const startMonitoring = async (flightPlan: any) => {
 
   // 2. Create a backend session — this is the authoritative state from here on
   try {
-    const session = await radioBackend.createSession('icao_atc_decision_tree')
+    const session = await radioBackend.createSession('clearance')
     backendSessionId.value = session.session_id
+    pmLog.group(`SESSION CREATED  id=${session.session_id.slice(0, 8)}`, () => {
+      pmLog.info('flow        :', session.flow_slug)
+      pmLog.info('start state :', session.current_state)
+      pmLog.info('variables   :', session.variables)
+      pmLog.info('flags       :', session.flags)
+    })
     // Sync cursor to wherever the backend initialised (usually start_state)
     moveToSilent(session.current_state)
+    pmLog.debug('moveToSilent ← session start_state:', session.current_state)
     // Sync boolean routing flags from session
     for (const [k, v] of Object.entries(session.flags ?? {})) {
       if (typeof v === 'boolean') (flags as any).value[k] = v
     }
   } catch (err) {
+    pmLog.error('SESSION CREATE FAILED', err)
     console.error('Failed to create backend session', err)
     error.value = 'Verbindung zum Training-Backend fehlgeschlagen.'
     return
@@ -2119,6 +2208,8 @@ const stopRecording = () => {
 }
 
 const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
+  const channel = isIntercom ? 'INTERCOM' : 'RADIO'
+  pmLog.info(`PTT ▶ ${channel}  blob=${(audioBlob.size / 1024).toFixed(1)}KB  session=${backendSessionId.value?.slice(0,8) ?? 'none'}`)
   try {
     const arrayBuffer = await audioBlob.arrayBuffer()
     const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
@@ -2133,6 +2224,7 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
       })
 
       if (result.success) {
+        pmLog.info('PTT ✓ INTERCOM  transcription:', result.transcription)
         setLastTransmission(`INTERCOM: ${result.transcription}`)
         const transcription = result.transcription.toLowerCase()
         if (transcription.includes('checklist') || transcription.includes('check list')) {
@@ -2154,10 +2246,14 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
       })
 
       if (result.success) {
+        pmLog.info('PTT ✓ RADIO  transcription:', result.transcription)
         await handlePilotTransmission(result.transcription, 'ptt')
+      } else {
+        pmLog.warn('PTT ✗ RADIO  Whisper returned no transcription', result)
       }
     }
   } catch (err) {
+    pmLog.error(`PTT ✗ ${channel}  error:`, err)
     console.error('Error processing transmission:', err)
     setLastTransmission('Error processing audio')
   }
