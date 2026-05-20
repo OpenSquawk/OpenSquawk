@@ -174,11 +174,27 @@ export default defineEventHandler(async (event): Promise<FrequencyResponse> => {
     console.warn('[OpenSquawk] Failed to fetch VATSIM frequencies:', err)
   }
 
+  // OpenAIP v2 numeric frequency type → our internal type code.
+  // Derived from real API responses (EDDF: 5=Delivery, 9=Ground, 14=Tower, 15=ATIS).
+  const OPENAIP_TYPE_MAP: Record<number, string> = {
+    4:  'GND',  // Ground (some older entries)
+    5:  'DEL',  // Clearance Delivery
+    6:  'APP',  // Approach
+    7:  'DEP',  // Departure
+    8:  'CTR',  // Centre / ACC
+    9:  'GND',  // Ground
+    14: 'TWR',  // Tower
+    15: 'ATIS', // ATIS
+  }
+
   const { openaipApiKey } = getServerRuntimeConfig()
   if (openaipApiKey) {
     try {
+      // Must use `search` (not `icao`) — the `icao` param does a full-text search
+      // across all fields and returns the entire 46k-airport dataset unpaged.
+      // `search=<ICAO>` returns exactly the matching airport.
       const openaipData: any = await $fetch('https://api.core.openaip.net/api/airports', {
-        query: { icao },
+        query: { search: icao },
         headers: {
           Accept: 'application/json',
           'x-openaip-api-key': openaipApiKey
@@ -187,22 +203,28 @@ export default defineEventHandler(async (event): Promise<FrequencyResponse> => {
 
       const items = Array.isArray(openaipData?.items) ? openaipData.items : []
       for (const airport of items) {
-        if ((airport?.icao || '').toUpperCase() !== icao) continue
-        const freqCollections = [airport?.frequencies, airport?.radio, airport?.communication]
-          .filter(Array.isArray) as any[][]
+        // Real field is `icaoCode`, not `icao`
+        if ((airport?.icaoCode || '').toUpperCase() !== icao) continue
+        // Frequencies live under `airport.frequencies[]`; each item has:
+        //   value  (MHz string, e.g. "122.035")
+        //   type   (numeric code, e.g. 5 for Delivery)
+        //   name   (human label, e.g. "FRANKFURT DELIVERY")
+        const freqItems: any[] = Array.isArray(airport?.frequencies) ? airport.frequencies : []
 
-        for (const collection of freqCollections) {
-          for (const freqItem of collection) {
-            const frequency = normalizeFrequency(freqItem?.frequency ?? freqItem?.frequencyMHz ?? freqItem?.frequency_mhz)
-            if (!frequency) continue
-            const { type, label } = toTypeLabel(freqItem?.type, freqItem?.description || freqItem?.name)
-            addFrequencyEntry(frequencyMap, {
-              type,
-              label,
-              frequency,
-              source: 'openaip'
-            })
-          }
+        for (const freqItem of freqItems) {
+          // Real field is `value`, not `frequency` / `frequencyMHz`
+          const frequency = normalizeFrequency(freqItem?.value ?? freqItem?.frequency)
+          if (!frequency) continue
+
+          const numericType: number | undefined = typeof freqItem?.type === 'number' ? freqItem.type : undefined
+          const typeCode = numericType !== undefined ? (OPENAIP_TYPE_MAP[numericType] ?? 'UNK') : 'UNK'
+          const { type, label } = toTypeLabel(typeCode, freqItem?.name || freqItem?.description)
+          addFrequencyEntry(frequencyMap, {
+            type,
+            label,
+            frequency,
+            source: 'openaip'
+          })
         }
       }
 
