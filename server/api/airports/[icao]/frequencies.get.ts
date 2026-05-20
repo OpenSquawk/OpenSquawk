@@ -177,7 +177,7 @@ export default defineEventHandler(async (event): Promise<FrequencyResponse> => {
   const { openaipApiKey } = getServerRuntimeConfig()
   if (openaipApiKey) {
     try {
-      const openaipData: any = await $fetch('https://api.openaip.net/api/airports', {
+      const openaipData: any = await $fetch('https://api.core.openaip.net/api/airports', {
         query: { icao },
         headers: {
           Accept: 'application/json',
