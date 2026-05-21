@@ -134,33 +134,33 @@
           </div>
 
           <div class="flex items-center gap-2 shrink-0">
-            <HoldSelect
-                :options="presetOptions"
-                placement="down"
-                title="Select frequency (active)"
-                @select="onPresetSelectActive"
-            >
-              <template #default="{ open }">
-                <button type="button" class="freq-chip" :class="{ 'is-open': open }">
-                  <span class="freq-chip-row">
-                    <span class="freq-chip-tag">ACT</span>
-                    <span class="freq-chip-value">{{ frequencies.active || '---' }}</span>
-                  </span>
-                  <span class="freq-chip-standby">SBY {{ frequencies.standby || '---' }}</span>
-                </button>
-              </template>
-            </HoldSelect>
+            <div class="freq-control-group" aria-label="Frequency controls">
+              <HoldSelect
+                  :options="presetOptions"
+                  placement="down"
+                  title="Select frequency (active)"
+                  @select="onPresetSelectActive"
+              >
+                <template #default="{ open }">
+                  <button type="button" class="freq-chip" :class="{ 'is-open': open }">
+                    <span class="freq-chip-row">
+                      <span class="freq-chip-tag">ACT</span>
+                      <span class="freq-chip-value">{{ frequencies.active || '---' }}</span>
+                    </span>
+                    <span class="freq-chip-standby">SBY {{ frequencies.standby || '---' }}</span>
+                  </button>
+                </template>
+              </HoldSelect>
 
-            <v-btn
-                icon
-                size="small"
-                variant="tonal"
-                color="cyan"
-                :class="{ 'swap-animation': swapAnimation }"
-                @click="swapFrequencies"
-            >
-              <v-icon>mdi-swap-vertical</v-icon>
-            </v-btn>
+              <button
+                  type="button"
+                  class="freq-swap-btn"
+                  aria-label="Swap active and standby frequencies"
+                  @click="swapFrequencies"
+              >
+                <v-icon :class="{ 'swap-animation': swapAnimation }">mdi-swap-vertical</v-icon>
+              </button>
+            </div>
 
             <HoldSelect
                 :options="readabilityOptions"
@@ -3184,23 +3184,53 @@ watch(() => activeFrequency.value, (newFreq) => {
   background: rgba(34, 211, 238, 0.12);
 }
 
-/* Frequency chip in the top bar (also the hold-select trigger) */
+/* Frequency control group in the top bar */
+.freq-control-group {
+  display: inline-flex;
+  align-items: stretch;
+  height: 46px;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  background: rgba(34, 211, 238, 0.09);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
 .freq-chip {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 1px;
-  padding: 6px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  background: rgba(34, 211, 238, 0.1);
+  min-width: 98px;
+  padding: 6px 11px 6px 12px;
+  background: transparent;
   line-height: 1.1;
-  transition: border-color 120ms ease, background 120ms ease, transform 80ms ease;
+  transition: background 120ms ease, transform 80ms ease;
+}
+.freq-chip:hover {
+  background: rgba(34, 211, 238, 0.08);
 }
 .freq-chip.is-open {
-  border-color: rgba(34, 211, 238, 0.8);
   background: rgba(34, 211, 238, 0.18);
   transform: scale(0.98);
+}
+.freq-swap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  min-height: 100%;
+  border-left: 1px solid rgba(34, 211, 238, 0.26);
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.08);
+  transition: background 120ms ease, color 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.freq-swap-btn:hover {
+  color: #cffafe;
+  background: rgba(34, 211, 238, 0.16);
+}
+.freq-swap-btn:active {
+  background: rgba(34, 211, 238, 0.22);
 }
 .freq-chip-row {
   display: flex;
@@ -3221,7 +3251,7 @@ watch(() => activeFrequency.value, (newFreq) => {
 .freq-chip-standby {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
-  color: rgba(245, 158, 11, 0.9);
+  color: rgba(255, 255, 255, 0.58);
 }
 
 /* Preset hold-select trigger buttons (freq tab) */
@@ -3284,15 +3314,20 @@ watch(() => activeFrequency.value, (newFreq) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  transition: border-color 120ms ease, background 120ms ease, transform 80ms ease;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border-radius: 14px;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  background: rgba(34, 211, 238, 0.09);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  transition: background 120ms ease, transform 80ms ease;
+}
+.signal-chip:hover {
+  background: rgba(34, 211, 238, 0.16);
 }
 .signal-chip.is-open {
-  border-color: rgba(34, 211, 238, 0.7);
-  background: rgba(34, 211, 238, 0.14);
+  background: rgba(34, 211, 238, 0.18);
   transform: scale(0.97);
 }
 .signal-chip .signal-bars {
