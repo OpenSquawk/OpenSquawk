@@ -535,57 +535,49 @@
                         :key="freq.displayKey"
                         class="frequency-card"
                     >
-                      <div class="frequency-card-main">
-                        <div class="min-w-0">
-                          <div class="flex items-center gap-2">
-                            <v-chip size="x-small" color="cyan" variant="outlined">{{ freq.type }}</v-chip>
-                            <span class="truncate text-sm font-semibold text-white">{{ freq.label }}</span>
-                          </div>
-                          <div v-if="freq.callsign" class="mt-1 truncate text-xs text-white/45">
-                            {{ freq.callsign }}
-                          </div>
+                      <div class="frequency-card-content">
+                        <div class="frequency-card-topline">
+                          <v-chip size="x-small" color="cyan" variant="outlined">{{ freq.type }}</v-chip>
+                          <v-tooltip :text="`Source: ${freq.sourceLabel}`" location="top">
+                            <template #activator="{ props: tip }">
+                              <v-btn
+                                  v-bind="tip"
+                                  icon="mdi-information-outline"
+                                  size="x-small"
+                                  variant="text"
+                                  color="cyan"
+                                  aria-label="Show frequency source"
+                              />
+                            </template>
+                          </v-tooltip>
                         </div>
-                        <div class="font-mono text-lg font-semibold text-white">
+
+                        <div class="frequency-value">
                           {{ freq.frequency }}
+                        </div>
+
+                        <div class="frequency-description">
+                          <span>{{ freq.label }}</span>
+                          <span v-if="freq.callsign"> · {{ freq.callsign }}</span>
+                          <span v-if="freq.atisCode"> · ATIS {{ freq.atisCode }}</span>
                         </div>
                       </div>
 
-                      <div class="frequency-card-footer">
-                        <div class="flex min-w-0 flex-wrap items-center gap-2">
-                          <v-chip
-                              size="x-small"
-                              :color="freq.sourceList.length > 1 ? 'cyan' : (freq.source === 'vatsim' ? 'green' : 'blue')"
-                              variant="outlined"
-                          >
-                            {{ freq.sourceLabel }}
-                          </v-chip>
-                          <v-chip
-                              v-if="freq.atisCode"
-                              size="x-small"
-                              color="cyan"
-                              variant="tonal"
-                          >
-                            ATIS {{ freq.atisCode }}
-                          </v-chip>
-                        </div>
-                        <div class="frequency-actions">
-                          <v-btn
-                              icon="mdi-crosshairs-gps"
-                              size="x-small"
-                              color="cyan"
-                              variant="tonal"
-                              aria-label="Set active frequency"
-                              @click="setActiveFrequencyFromList(freq)"
-                          />
-                          <v-btn
-                              icon="mdi-timer-sand"
-                              size="x-small"
-                              color="cyan"
-                              variant="text"
-                              aria-label="Set standby frequency"
-                              @click="setStandbyFrequencyFromList(freq)"
-                          />
-                        </div>
+                      <div class="frequency-actions" role="group" aria-label="Frequency actions">
+                        <button
+                            type="button"
+                            class="frequency-action-btn"
+                            @click="setActiveFrequencyFromList(freq)"
+                        >
+                          ACT
+                        </button>
+                        <button
+                            type="button"
+                            class="frequency-action-btn"
+                            @click="setStandbyFrequencyFromList(freq)"
+                        >
+                          SBY
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -3334,30 +3326,68 @@ watch(() => activeFrequency.value, (newFreq) => {
 }
 .frequency-card {
   display: flex;
-  min-height: 118px;
+  min-height: 136px;
   flex-direction: column;
   justify-content: space-between;
-  gap: 12px;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.32);
-  padding: 12px;
+  overflow: hidden;
 }
-.frequency-card-main,
-.frequency-card-footer {
+.frequency-card-content {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  padding: 14px;
 }
-.frequency-card-footer {
+.frequency-card-topline {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+}
+.frequency-value {
+  margin-top: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 30px;
+  font-weight: 750;
+  line-height: 1;
+  color: #fff;
+}
+.frequency-description {
+  margin-top: 6px;
+  min-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
 }
 .frequency-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(34, 211, 238, 0.06);
+}
+.frequency-action-btn {
+  min-height: 38px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(103, 232, 249, 0.95);
+  transition: background 120ms ease, color 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.frequency-action-btn + .frequency-action-btn {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+.frequency-action-btn:hover {
+  background: rgba(34, 211, 238, 0.14);
+  color: #cffafe;
+}
+.frequency-action-btn:active {
+  background: rgba(34, 211, 238, 0.22);
 }
 
 /* Tablet / desktop: use the extra space ----------------------------------- */
