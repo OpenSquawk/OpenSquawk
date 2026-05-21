@@ -1580,11 +1580,11 @@ type PmTab = {
   debugOnly?: boolean
 }
 const TABS: PmTab[] = [
-  { id: 'funk', label: 'Funk', icon: 'mdi-radio-handheld' },
+  { id: 'funk', label: 'Radio', icon: 'mdi-radio-handheld' },
   { id: 'freq', label: 'Freq', icon: 'mdi-sine-wave' },
   { id: 'log', label: 'Log', icon: 'mdi-format-list-bulleted', mobileOnly: true },
-  { id: 'flug', label: 'Flug', icon: 'mdi-airplane' },
-  { id: 'more', label: 'Mehr', icon: 'mdi-cog' },
+  { id: 'flug', label: 'Flight', icon: 'mdi-airplane' },
+  { id: 'more', label: 'More', icon: 'mdi-cog' },
   { id: 'debug', label: 'Debug', icon: 'mdi-bug', debugOnly: true },
 ]
 const visibleTabs = computed(() => TABS.filter((tab) => !tab.debugOnly || debugMode.value))
