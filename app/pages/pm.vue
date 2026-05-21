@@ -454,62 +454,9 @@
             <div v-show="activeTab === 'freq'" class="pm-block">
               <v-card class="bg-white/5 backdrop-blur border border-white/10">
                 <v-card-text class="space-y-4">
-                  <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold">Radio Setup</h3>
-                    <v-chip color="cyan" variant="flat" size="small" class="font-mono">
-                      {{ frequencies.active || '---' }}
-                    </v-chip>
-                  </div>
+                  <h3 class="text-lg font-semibold">Radio Setup</h3>
 
-                  <!-- Presets: hold-to-select gesture -->
-                  <div v-if="presetOptions.length" class="space-y-2">
-                    <p class="text-[11px] uppercase tracking-[0.25em] text-white/40">
-                      Presets - tap for active, hold &amp; drag to select
-                    </p>
-                    <div class="flex flex-wrap gap-2">
-                      <HoldSelect
-                          :options="presetOptions"
-                          placement="auto"
-                          title="Set active"
-                          @select="onPresetSelectActive"
-                      >
-                        <template #default="{ open }">
-                          <button type="button" class="preset-action-chip" :class="{ 'is-open': open }">
-                            <v-icon size="16">mdi-crosshairs-gps</v-icon>
-                            <span>Select active</span>
-                          </button>
-                        </template>
-                      </HoldSelect>
-                      <HoldSelect
-                          :options="presetOptions"
-                          placement="auto"
-                          title="Set standby"
-                          @select="onPresetSelectStandby"
-                      >
-                        <template #default="{ open }">
-                          <button type="button" class="preset-action-chip standby" :class="{ 'is-open': open }">
-                            <v-icon size="16">mdi-timer-sand</v-icon>
-                            <span>Select standby</span>
-                          </button>
-                        </template>
-                      </HoldSelect>
-                    </div>
-                    <div class="flex flex-wrap gap-2 pt-1">
-                      <v-chip
-                          v-for="preset in frequencyPresets"
-                          :key="`${preset.type}-${preset.frequency}`"
-                          size="small"
-                          color="cyan"
-                          variant="outlined"
-                          class="cursor-pointer font-mono"
-                          @click="setActiveFrequencyFromList(preset)"
-                      >
-                        {{ presetLabel(preset) }} · {{ preset.frequency }}
-                      </v-chip>
-                    </div>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-3">
+                  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                     <v-text-field
                         v-model="frequencies.active"
                         label="Active"
@@ -518,6 +465,15 @@
                         hide-details
                         density="comfortable"
                         class="freq-input-active font-mono"
+                    />
+                    <v-btn
+                        icon="mdi-swap-horizontal"
+                        color="cyan"
+                        variant="tonal"
+                        size="small"
+                        aria-label="Swap frequencies"
+                        :class="{ 'swap-animation': swapAnimation }"
+                        @click="swapFrequencies"
                     />
                     <v-text-field
                         v-model="frequencies.standby"
@@ -529,17 +485,6 @@
                         class="freq-input-standby font-mono"
                     />
                   </div>
-
-                  <v-btn
-                      block
-                      color="cyan"
-                      variant="tonal"
-                      prepend-icon="mdi-swap-horizontal"
-                      @click="swapFrequencies"
-                      :class="{ 'swap-animation': swapAnimation }"
-                  >
-                    Swap frequencies
-                  </v-btn>
                 </v-card-text>
               </v-card>
             </div>
@@ -571,94 +516,79 @@
                     </div>
                   </div>
 
-                  <v-expansion-panels variant="accordion" class="bg-transparent">
-                    <v-expansion-panel>
-                      <v-expansion-panel-title class="text-sm text-white/70">
-                        Frequencies for {{ flightContext.dep || 'departure' }}
-                      </v-expansion-panel-title>
-                      <v-expansion-panel-text>
-                        <div
-                            v-if="airportFrequencyLoading"
-                            class="flex items-center gap-2 text-sm text-white/60"
-                        >
-                          <v-progress-circular indeterminate size="20" color="cyan" />
-                          <span>Loading frequencies from the network…</span>
-                        </div>
-                        <div
-                            v-else-if="airportFrequencies.length === 0"
-                            class="text-xs text-white/50"
-                        >
-                          No frequencies available. Please try again later.
-                        </div>
-                        <div v-else class="space-y-3">
-                          <div
-                              v-for="freq in airportFrequencies"
-                              :key="freq.callsign || `${freq.type}-${freq.frequency}-${freq.source}`"
-                              class="rounded-2xl border border-white/10 bg-black/40 p-3 space-y-2"
-                          >
-                            <div class="flex flex-wrap items-start justify-between gap-3">
-                              <div>
-                                <div class="flex items-center gap-2">
-                                  <v-chip size="x-small" color="cyan" variant="outlined">{{ freq.type }}</v-chip>
-                                  <span class="text-sm font-semibold text-white">{{ freq.label }}</span>
-                                </div>
-                                <div class="text-xs text-white/50 mt-1" v-if="freq.callsign">
-                                  {{ freq.callsign }}
-                                </div>
-                                <div class="text-xs text-white/50 mt-1" v-else>
-                                  {{ freq.source === 'vatsim' ? 'VATSIM' : 'OpenAIP' }}
-                                </div>
-                              </div>
-                              <div class="text-right">
-                                <div class="text-lg font-mono text-white">{{ freq.frequency }}</div>
-                                <div class="flex items-center justify-end gap-2 mt-2">
-                                  <v-btn
-                                      size="x-small"
-                                      color="cyan"
-                                      variant="tonal"
-                                      @click="setActiveFrequencyFromList(freq)"
-                                  >
-                                    <template #prepend>
-                                      <v-icon size="16">mdi-crosshairs-gps</v-icon>
-                                    </template>
-                                    Active
-                                  </v-btn>
-                                  <v-btn
-                                      size="x-small"
-                                      color="orange"
-                                      variant="text"
-                                      @click="setStandbyFrequencyFromList(freq)"
-                                  >
-                                    <template #prepend>
-                                      <v-icon size="16">mdi-timer-sand</v-icon>
-                                    </template>
-                                    Standby
-                                  </v-btn>
-                                </div>
-                              </div>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-2 text-[11px] text-white/40">
-                              <v-chip
-                                  size="x-small"
-                                  :color="freq.source === 'vatsim' ? 'green' : 'blue'"
-                                  variant="outlined"
-                              >
-                                {{ freq.source.toUpperCase() }}
-                              </v-chip>
-                              <v-chip
-                                  v-if="freq.atisCode"
-                                  size="x-small"
-                                  color="orange"
-                                  variant="tonal"
-                              >
-                                ATIS {{ freq.atisCode }}
-                              </v-chip>
-                            </div>
+                  <div
+                      v-if="airportFrequencyLoading"
+                      class="flex items-center gap-2 text-sm text-white/60"
+                  >
+                    <v-progress-circular indeterminate size="20" color="cyan" />
+                    <span>Loading frequencies from the network...</span>
+                  </div>
+                  <div
+                      v-else-if="displayAirportFrequencies.length === 0"
+                      class="text-xs text-white/50"
+                  >
+                    No frequencies available. Please try again later.
+                  </div>
+                  <div v-else class="frequency-grid">
+                    <div
+                        v-for="freq in displayAirportFrequencies"
+                        :key="freq.displayKey"
+                        class="frequency-card"
+                    >
+                      <div class="frequency-card-main">
+                        <div class="min-w-0">
+                          <div class="flex items-center gap-2">
+                            <v-chip size="x-small" color="cyan" variant="outlined">{{ freq.type }}</v-chip>
+                            <span class="truncate text-sm font-semibold text-white">{{ freq.label }}</span>
+                          </div>
+                          <div v-if="freq.callsign" class="mt-1 truncate text-xs text-white/45">
+                            {{ freq.callsign }}
                           </div>
                         </div>
-                      </v-expansion-panel-text>
-                    </v-expansion-panel>
-                  </v-expansion-panels>
+                        <div class="font-mono text-lg font-semibold text-white">
+                          {{ freq.frequency }}
+                        </div>
+                      </div>
+
+                      <div class="frequency-card-footer">
+                        <div class="flex min-w-0 flex-wrap items-center gap-2">
+                          <v-chip
+                              size="x-small"
+                              :color="freq.sourceList.length > 1 ? 'cyan' : (freq.source === 'vatsim' ? 'green' : 'blue')"
+                              variant="outlined"
+                          >
+                            {{ freq.sourceLabel }}
+                          </v-chip>
+                          <v-chip
+                              v-if="freq.atisCode"
+                              size="x-small"
+                              color="cyan"
+                              variant="tonal"
+                          >
+                            ATIS {{ freq.atisCode }}
+                          </v-chip>
+                        </div>
+                        <div class="frequency-actions">
+                          <v-btn
+                              icon="mdi-crosshairs-gps"
+                              size="x-small"
+                              color="cyan"
+                              variant="tonal"
+                              aria-label="Set active frequency"
+                              @click="setActiveFrequencyFromList(freq)"
+                          />
+                          <v-btn
+                              icon="mdi-timer-sand"
+                              size="x-small"
+                              color="cyan"
+                              variant="text"
+                              aria-label="Set standby frequency"
+                              @click="setStandbyFrequencyFromList(freq)"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </v-card-text>
               </v-card>
             </div>
@@ -1707,6 +1637,61 @@ const frequencySourceLabels = computed(() => {
   return labels
 })
 
+const normalizedFrequencyValue = (value: string | undefined) =>
+  (value || '').trim().replace(/\s+/g, '').replace(',', '.')
+
+const frequencyDisplayKey = (entry: AirportFrequencyEntry) =>
+  [
+    (entry.type || '').trim().toUpperCase(),
+    normalizedFrequencyValue(entry.frequency),
+  ].join('|')
+
+const sourceLabel = (sources: Array<'vatsim' | 'openaip'>) => {
+  const hasVatsim = sources.includes('vatsim')
+  const hasOpenAip = sources.includes('openaip')
+  if (hasVatsim && hasOpenAip) return 'VATSIM + OpenAIP'
+  if (hasVatsim) return 'VATSIM'
+  if (hasOpenAip) return 'OpenAIP'
+  return 'Source'
+}
+
+const displayAirportFrequencies = computed<DisplayAirportFrequencyEntry[]>(() => {
+  const grouped = new Map<string, DisplayAirportFrequencyEntry>()
+
+  for (const entry of airportFrequencies.value) {
+    if (!entry.frequency || entry.frequency === FREQUENCY_PLACEHOLDER) continue
+
+    const key = frequencyDisplayKey(entry)
+    const existing = grouped.get(key)
+
+    if (!existing) {
+      grouped.set(key, {
+        ...entry,
+        displayKey: key,
+        sourceList: [entry.source],
+        sourceLabel: sourceLabel([entry.source]),
+      })
+      continue
+    }
+
+    if (!existing.sourceList.includes(entry.source)) {
+      existing.sourceList.push(entry.source)
+    }
+    existing.sourceLabel = sourceLabel(existing.sourceList)
+    existing.callsign ||= entry.callsign
+    existing.atisCode ||= entry.atisCode
+    existing.atisText ||= entry.atisText
+  }
+
+  return [...grouped.values()].sort((a, b) => {
+    const aRoleIndex = FREQ_ROLE_ORDER.includes(a.type) ? FREQ_ROLE_ORDER.indexOf(a.type) : Number.MAX_SAFE_INTEGER
+    const bRoleIndex = FREQ_ROLE_ORDER.includes(b.type) ? FREQ_ROLE_ORDER.indexOf(b.type) : Number.MAX_SAFE_INTEGER
+    const roleDiff = aRoleIndex - bRoleIndex
+    if (roleDiff !== 0) return roleDiff
+    return a.frequency.localeCompare(b.frequency)
+  })
+})
+
 type PreparedSpeech = {
   template: string
   plain: string
@@ -1748,6 +1733,12 @@ type AirportFrequencyEntry = {
   atisCode?: string
   atisText?: string
   lastUpdated?: string
+}
+
+type DisplayAirportFrequencyEntry = AirportFrequencyEntry & {
+  displayKey: string
+  sourceList: Array<'vatsim' | 'openaip'>
+  sourceLabel: string
 }
 
 type FrequencyVariableUpdate = Partial<Record<'atis_freq' | 'delivery_freq' | 'ground_freq' | 'tower_freq' | 'departure_freq' | 'approach_freq' | 'handoff_freq', string>>
@@ -3334,6 +3325,39 @@ watch(() => activeFrequency.value, (newFreq) => {
   display: inline-flex;
   align-items: flex-end;
   gap: 2px;
+}
+
+.frequency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+.frequency-card {
+  display: flex;
+  min-height: 118px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.32);
+  padding: 12px;
+}
+.frequency-card-main,
+.frequency-card-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.frequency-card-footer {
+  align-items: center;
+}
+.frequency-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
 }
 
 /* Tablet / desktop: use the extra space ----------------------------------- */
