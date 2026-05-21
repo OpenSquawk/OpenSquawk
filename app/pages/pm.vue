@@ -125,7 +125,7 @@
               <p class="text-base font-semibold leading-tight truncate">{{ flightContext.callsign || 'N/A' }}</p>
               <p class="text-[11px] text-white/55 leading-tight truncate">{{ flightContext.dep }} → {{ flightContext.dest }}</p>
             </div>
-            <div class="hidden xs:flex flex-col gap-1 shrink-0">
+            <div class="hidden sm:flex flex-col gap-1 shrink-0">
               <v-chip :color="flags.in_air ? 'green' : 'grey'" size="x-small" variant="flat">
                 {{ flags.in_air ? 'IN-AIR' : 'GROUND' }}
               </v-chip>
@@ -162,14 +162,25 @@
               <v-icon>mdi-swap-vertical</v-icon>
             </v-btn>
 
-            <div class="hidden sm:flex items-end gap-1 pl-1">
-              <div
-                  v-for="i in 5"
-                  :key="i"
-                  class="signal-bar"
-                  :class="{ 'signal-active': i <= signalStrength }"
-              />
-            </div>
+            <HoldSelect
+                :options="readabilityOptions"
+                placement="down"
+                title="Verständlichkeit"
+                @select="onReadabilitySelect"
+            >
+              <template #default="{ open }">
+                <button type="button" class="signal-chip" :class="{ 'is-open': open }" aria-label="Verständlichkeit einstellen">
+                  <span class="signal-bars">
+                    <span
+                        v-for="i in 5"
+                        :key="i"
+                        class="signal-bar"
+                        :class="{ 'signal-active': i <= signalStrength }"
+                    />
+                  </span>
+                </button>
+              </template>
+            </HoldSelect>
           </div>
         </div>
       </header>
@@ -239,25 +250,31 @@
 
             <!-- Input mode switch: voice / text -->
             <div v-show="activeTab === 'funk'" class="pm-block">
-              <v-btn-toggle v-model="inputMode" color="cyan" mandatory class="flex w-full">
-                <v-btn value="voice" prepend-icon="mdi-microphone" class="flex-1">Sprechen</v-btn>
-                <v-btn value="text" prepend-icon="mdi-keyboard" class="flex-1">Tippen</v-btn>
-              </v-btn-toggle>
+              <div class="pm-seg">
+                <button
+                    type="button"
+                    class="pm-seg-btn"
+                    :class="{ 'is-active': inputMode === 'voice' }"
+                    @click="inputMode = 'voice'"
+                >
+                  <v-icon size="18">mdi-microphone</v-icon>
+                  <span>Sprechen</span>
+                </button>
+                <button
+                    type="button"
+                    class="pm-seg-btn"
+                    :class="{ 'is-active': inputMode === 'text' }"
+                    @click="inputMode = 'text'"
+                >
+                  <v-icon size="18">mdi-keyboard</v-icon>
+                  <span>Tippen</span>
+                </button>
+              </div>
             </div>
 
             <!-- Push to Talk (voice mode) -->
             <div v-show="activeTab === 'funk' && inputMode === 'voice'" class="pm-block">
               <v-sheet class="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/10 to-transparent p-4 shadow-lg">
-                <v-btn-toggle
-                    v-model="radioMode"
-                    color="cyan"
-                    class="mb-4 flex w-full"
-                    mandatory
-                >
-                  <v-btn value="atc" prepend-icon="mdi-radio-handheld" class="flex-1">ATC</v-btn>
-                  <v-btn value="intercom" prepend-icon="mdi-account-voice" class="flex-1">Intercom</v-btn>
-                </v-btn-toggle>
-
                 <v-alert
                     v-if="!micPermission"
                     type="info"
@@ -273,30 +290,29 @@
 
                 <ClientOnly>
                   <div
-                      class="ptt-pad flex h-48 lg:h-56 items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-center transition cursor-pointer"
-                      :class="isRecording ? 'ring-4 ring-cyan-400/70 shadow-2xl bg-cyan-900/20' : 'ring-1 ring-white/5'"
-                      @touchstart.prevent="startRecording(radioMode === 'intercom')"
+                      class="ptt-pad flex h-52 lg:h-60 items-center justify-center rounded-2xl border text-center transition cursor-pointer"
+                      :class="isRecording ? 'border-red-400/40 ring-4 ring-red-400/40 bg-red-500/10' : 'border-white/10 ring-1 ring-white/5 bg-black/40'"
+                      @touchstart.prevent="startRecording(false)"
                       @touchend.prevent="stopRecording"
                       @touchcancel.prevent="stopRecording"
-                      @mousedown.prevent="startRecording(radioMode === 'intercom')"
+                      @mousedown.prevent="startRecording(false)"
                       @mouseup.prevent="stopRecording"
                       @mouseleave="stopRecording"
                   >
-                    <div>
+                    <div class="space-y-1">
                       <v-icon
-                          :icon="isRecording ? 'mdi-record' : (radioMode === 'atc' ? 'mdi-radio-handheld' : 'mdi-headphones')"
-                          size="48"
+                          :icon="isRecording ? 'mdi-access-point' : 'mdi-radio-handheld'"
+                          size="44"
                           :class="isRecording ? 'text-red-400 animate-pulse' : 'text-cyan-300'"
                       />
-                      <p class="text-xs uppercase tracking-[0.35em] text-white/40 mt-2">
-                        {{ isRecording ? 'TRANSMITTING' : 'Hold to transmit' }}
+                      <p
+                          class="text-[11px] uppercase tracking-[0.35em] mt-1"
+                          :class="isRecording ? 'text-red-300' : 'text-white/40'"
+                      >
+                        {{ isRecording ? 'Auf Sendung' : 'Halten zum Senden' }}
                       </p>
-                      <p class="pt-3 text-3xl font-semibold">
-                        {{ radioMode === 'atc' ? 'ATC' : 'INTERCOM' }}
-                      </p>
-                      <p class="mt-2 text-sm text-white/60">
-                        {{ radioMode === 'atc' ? `Transmitting on ${frequencies.active}` : 'Crew Intercom • Checklist' }}
-                      </p>
+                      <p class="pt-2 text-4xl font-bold font-mono tracking-tight">{{ frequencies.active || '---' }}</p>
+                      <p class="text-xs text-white/45">Active frequency</p>
                     </div>
                   </div>
                 </ClientOnly>
@@ -309,7 +325,7 @@
                 <v-card-text class="space-y-3">
                   <div class="flex items-center justify-between">
                     <h3 class="text-lg font-semibold">Text Input</h3>
-                    <v-chip size="small" color="cyan" variant="outlined">{{ radioMode === 'atc' ? 'ATC' : 'Intercom' }}</v-chip>
+                    <v-chip size="small" color="cyan" variant="outlined" class="font-mono">{{ frequencies.active || '---' }}</v-chip>
                   </div>
                   <v-text-field
                       v-model="pilotInput"
@@ -1557,7 +1573,6 @@ const currentScreen = ref<'login' | 'flightselect' | 'monitor'>('login')
 const loading = ref(false)
 const error = ref('')
 const pilotInput = ref('')
-const radioMode = ref<'atc' | 'intercom'>('atc')
 const isRecording = ref(false)
 const micPermission = ref(false)
 const swapAnimation = ref(false)
@@ -2782,6 +2797,18 @@ const onPresetSelectStandby = (opt: { value: string | number }) => {
   if (entry) setStandbyFrequencyFromList(entry)
 }
 
+// Readability / signal strength quick-select (top bar)
+const readabilityOptions = [
+  { value: 5, label: 'Excellent', sublabel: 'Readability 5', color: '#22c55e' },
+  { value: 4, label: 'Good', sublabel: 'Readability 4', color: '#22c55e' },
+  { value: 3, label: 'Fair', sublabel: 'Readability 3', color: '#eab308' },
+  { value: 2, label: 'Poor', sublabel: 'Readability 2', color: '#f97316' },
+  { value: 1, label: 'Weak', sublabel: 'Readability 1', color: '#ef4444' },
+]
+const onReadabilitySelect = (opt: { value: string | number }) => {
+  signalStrength.value = Number(opt.value)
+}
+
 const formatTime = (date: Date): string => {
   return date.toLocaleTimeString('en-US', {
     hour12: false,
@@ -3234,6 +3261,60 @@ watch(() => activeFrequency.value, (newFreq) => {
 }
 .preset-action-chip.is-open {
   transform: scale(0.97);
+}
+
+/* Unified segmented control (voice / text, etc.) */
+.pm-seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+.pm-seg-btn {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.6);
+  transition: color 130ms ease, background 130ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.pm-seg-btn:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+.pm-seg-btn.is-active {
+  color: #050910;
+  background: #22d3ee;
+}
+
+/* Readability / signal trigger in the top bar */
+.signal-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  transition: border-color 120ms ease, background 120ms ease, transform 80ms ease;
+}
+.signal-chip.is-open {
+  border-color: rgba(34, 211, 238, 0.7);
+  background: rgba(34, 211, 238, 0.14);
+  transform: scale(0.97);
+}
+.signal-chip .signal-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
 }
 
 /* Tablet / desktop: use the extra space ----------------------------------- */
