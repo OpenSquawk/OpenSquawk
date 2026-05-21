@@ -137,7 +137,7 @@
             <HoldSelect
                 :options="presetOptions"
                 placement="down"
-                title="Frequenz wählen (Active)"
+                title="Select frequency (active)"
                 @select="onPresetSelectActive"
             >
               <template #default="{ open }">
@@ -165,11 +165,11 @@
             <HoldSelect
                 :options="readabilityOptions"
                 placement="down"
-                title="Verständlichkeit"
+                title="Readability"
                 @select="onReadabilitySelect"
             >
               <template #default="{ open }">
-                <button type="button" class="signal-chip" :class="{ 'is-open': open }" aria-label="Verständlichkeit einstellen">
+                <button type="button" class="signal-chip" :class="{ 'is-open': open }" aria-label="Set readability">
                   <span class="signal-bars">
                     <span
                         v-for="i in 5"
@@ -258,7 +258,7 @@
                     @click="inputMode = 'voice'"
                 >
                   <v-icon size="18">mdi-microphone</v-icon>
-                  <span>Sprechen</span>
+                  <span>Voice</span>
                 </button>
                 <button
                     type="button"
@@ -267,7 +267,7 @@
                     @click="inputMode = 'text'"
                 >
                   <v-icon size="18">mdi-keyboard</v-icon>
-                  <span>Tippen</span>
+                  <span>Text</span>
                 </button>
               </div>
             </div>
@@ -309,7 +309,7 @@
                           class="text-[11px] uppercase tracking-[0.35em] mt-1"
                           :class="isRecording ? 'text-red-300' : 'text-white/40'"
                       >
-                        {{ isRecording ? 'Auf Sendung' : 'Halten zum Senden' }}
+                        {{ isRecording ? 'Transmitting' : 'Hold to transmit' }}
                       </p>
                       <p class="pt-2 text-4xl font-bold font-mono tracking-tight">{{ frequencies.active || '---' }}</p>
                       <p class="text-xs text-white/45">Active frequency</p>
@@ -464,32 +464,32 @@
                   <!-- Presets: hold-to-select gesture -->
                   <div v-if="presetOptions.length" class="space-y-2">
                     <p class="text-[11px] uppercase tracking-[0.25em] text-white/40">
-                      Presets — tippen für Active, halten &amp; ziehen für Auswahl
+                      Presets - tap for active, hold &amp; drag to select
                     </p>
                     <div class="flex flex-wrap gap-2">
                       <HoldSelect
                           :options="presetOptions"
                           placement="auto"
-                          title="Active setzen"
+                          title="Set active"
                           @select="onPresetSelectActive"
                       >
                         <template #default="{ open }">
                           <button type="button" class="preset-action-chip" :class="{ 'is-open': open }">
                             <v-icon size="16">mdi-crosshairs-gps</v-icon>
-                            <span>Active wählen</span>
+                            <span>Select active</span>
                           </button>
                         </template>
                       </HoldSelect>
                       <HoldSelect
                           :options="presetOptions"
                           placement="auto"
-                          title="Standby setzen"
+                          title="Set standby"
                           @select="onPresetSelectStandby"
                       >
                         <template #default="{ open }">
                           <button type="button" class="preset-action-chip standby" :class="{ 'is-open': open }">
                             <v-icon size="16">mdi-timer-sand</v-icon>
-                            <span>Standby wählen</span>
+                            <span>Select standby</span>
                           </button>
                         </template>
                       </HoldSelect>
@@ -753,22 +753,6 @@
 
                   <div class="space-y-4">
                     <div>
-                      <label class="text-xs uppercase tracking-[0.3em] text-white/40 block mb-2">
-                        Signal strength
-                      </label>
-                      <v-slider
-                          v-model="signalStrength"
-                          min="1"
-                          max="5"
-                          step="1"
-                          show-ticks="always"
-                          color="cyan"
-                          thumb-label
-                          hide-details
-                      />
-                    </div>
-
-                    <div>
                       <div class="flex items-center justify-between mb-2">
                         <label class="text-xs uppercase tracking-[0.3em] text-white/40">
                           Speech speed
@@ -805,14 +789,14 @@
                           v-model="learningMode"
                           color="cyan"
                           inset
-                          label="Lernhilfe (Expected comm)"
+                          label="Learning aid (expected comm)"
                           hide-details
                       />
                       <v-switch
                           v-model="debugMode"
                           color="orange"
                           inset
-                          label="Entwickler-Debug"
+                          label="Developer debug"
                           hide-details
                       />
                     </div>
