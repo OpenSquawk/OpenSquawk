@@ -1,9 +1,6 @@
 <template>
   <div class="min-h-screen bg-[#050910] text-white">
-    <div class="mx-auto w-full max-w-[420px] px-4 pb-24 pt-6 sm:px-6">
-      <!-- Header -->
-
-
+    <div v-if="currentScreen !== 'monitor'" class="mx-auto w-full max-w-[420px] px-4 pb-24 pt-6 sm:px-6">
       <!-- Login/Flight Selection Screen -->
       <section v-if="currentScreen === 'login'" class="space-y-6">
         <v-card class="bg-white/5 backdrop-blur border border-white/10">
@@ -116,843 +113,950 @@
         </div>
       </section>
 
-      <!-- Main Monitoring Screen -->
-      <section v-else class="space-y-6">
-        <!-- Flight Info Card -->
-        <v-card class="bg-white/5 backdrop-blur border border-white/10">
-          <v-card-text class="space-y-4">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-xs uppercase tracking-[0.3em] text-white/50">Active flight</p>
-                <h2 class="text-2xl font-semibold">{{ flightContext.callsign || 'N/A' }}</h2>
-                <p class="text-sm text-white/70">{{ flightContext.dep }} → {{ flightContext.dest }}</p>
-              </div>
-              <div class="text-right space-y-1">
-                <v-chip
-                    :color="flags.in_air ? 'green' : 'grey'"
-                    variant="flat"
-                    size="small"
-                >
-                  {{ flags.in_air ? 'IN-AIR' : 'GROUND' }}
-                </v-chip>
-                <div class="flex gap-1">
-                  <v-chip size="x-small" :color="flags.emergency_active ? 'red' : 'grey'" variant="outlined">
-                    EMERG
-                  </v-chip>
-                  <v-chip size="x-small" color="cyan" variant="outlined">
-                    {{ flags.current_unit }}
-                  </v-chip>
-                </div>
-              </div>
+    </div>
+
+    <!-- Main Monitoring Screen (full app shell) -->
+    <section v-else class="pm-shell">
+      <!-- Persistent top bar: status + frequency + swap (always visible) -->
+      <header class="pm-topbar">
+        <div class="pm-topbar-inner">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="min-w-0">
+              <p class="text-base font-semibold leading-tight truncate">{{ flightContext.callsign || 'N/A' }}</p>
+              <p class="text-[11px] text-white/55 leading-tight truncate">{{ flightContext.dep }} → {{ flightContext.dest }}</p>
             </div>
-
-            <!-- Flight Info Grid -->
-            <div class="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p class="text-xs text-white/40 uppercase tracking-wider">Stand</p>
-                <p class="text-white/80 font-mono">{{ vars.stand }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-white/40 uppercase tracking-wider">Runway</p>
-                <p class="text-white/80 font-mono">{{ vars.runway }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-white/40 uppercase tracking-wider">Squawk</p>
-                <p class="text-white/80 font-mono">{{ vars.squawk }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-white/40 uppercase tracking-wider">SID</p>
-                <p class="text-white/80 font-mono">{{ vars.sid }}</p>
-              </div>
-            </div>
-
-            <!-- Stats -->
-            <div class="flex justify-between pt-2 border-t border-white/10">
-              <div class="text-center">
-                <p class="text-lg font-semibold text-cyan-300">{{ flags.radio_checks_done || 0 }}</p>
-                <p class="text-xs text-white/40 uppercase tracking-wider">Radio Checks</p>
-              </div>
-              <div class="text-center">
-                <p class="text-lg font-semibold text-orange-300">{{ flags.off_schema_count || 0 }}</p>
-                <p class="text-xs text-white/40 uppercase tracking-wider">Off-Schema</p>
-              </div>
-              <div class="text-center">
-                <p class="text-lg font-semibold text-white">{{ log.length }}</p>
-                <p class="text-xs text-white/40 uppercase tracking-wider">Transmissions</p>
-              </div>
-            </div>
-
-            <!-- Back to Setup Button -->
-            <v-btn
-                block
-                color="grey"
-                variant="outlined"
-                size="small"
-                @click="backToSetup"
-                prepend-icon="mdi-airplane-off"
-            >
-              Select new flight
-            </v-btn>
-          </v-card-text>
-        </v-card>
-
-        <!-- Frequency Controls -->
-        <v-card class="bg-white/5 backdrop-blur border border-white/10">
-          <v-card-text class="space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold">Radio Setup</h3>
-              <v-chip color="cyan" variant="flat" size="small" class="font-mono">
-                {{ activeFrequency || '---' }}
+            <div class="hidden xs:flex flex-col gap-1 shrink-0">
+              <v-chip :color="flags.in_air ? 'green' : 'grey'" size="x-small" variant="flat">
+                {{ flags.in_air ? 'IN-AIR' : 'GROUND' }}
               </v-chip>
+              <v-chip color="cyan" size="x-small" variant="outlined">{{ flags.current_unit }}</v-chip>
             </div>
+          </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <v-text-field
-                  v-model="frequencies.active"
-                  label="Active"
-                  variant="outlined"
-                  color="cyan"
-                  hide-details
-                  density="comfortable"
-                  class="freq-input-active font-mono"
-              />
-              <v-text-field
-                  v-model="frequencies.standby"
-                  label="Standby"
-                  variant="outlined"
-                  color="cyan"
-                  hide-details
-                  density="comfortable"
-                  class="freq-input-standby font-mono"
-              />
-            </div>
-
-            <v-btn
-                block
-                color="cyan"
-                variant="tonal"
-                prepend-icon="mdi-swap-horizontal"
-                @click="swapFrequencies"
-                :class="{ 'swap-animation': swapAnimation }"
+          <div class="flex items-center gap-2 shrink-0">
+            <HoldSelect
+                :options="presetOptions"
+                placement="down"
+                title="Frequenz wählen (Active)"
+                @select="onPresetSelectActive"
             >
-              Swap frequencies
-            </v-btn>
-
-            <!-- Signal Quality -->
-            <div class="flex items-center justify-between">
-              <span class="text-xs uppercase tracking-[0.3em] text-white/40">Signal</span>
-              <div class="flex items-center gap-1">
-                <div
-                    v-for="i in 5"
-                    :key="i"
-                    class="signal-bar"
-                    :class="{ 'signal-active': i <= signalStrength }"
-                />
-                <span class="text-xs text-white/50 ml-2">{{ radioQuality.text }}</span>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-
-        <!-- Expected Communication — driven by backend session state -->
-        <v-card v-if="displayControllerSay || displayExpectedPhrase" class="bg-white/5 border border-white/10">
-          <v-card-text class="space-y-3">
-            <div class="flex items-center justify-between">
-              <p class="text-xs uppercase tracking-[0.3em] text-white/40">Expected communication</p>
-              <v-tooltip :text="showRadioPronunciation ? 'Switch to plain text' : 'Switch to radio pronunciation'" location="top">
-                <template #activator="{ props: tip }">
-                  <v-btn
-                      v-bind="tip"
-                      :icon="showRadioPronunciation ? 'mdi-text' : 'mdi-radio'"
-                      size="x-small"
-                      variant="text"
-                      :color="showRadioPronunciation ? 'cyan' : 'white'"
-                      @click="showRadioPronunciation = !showRadioPronunciation"
-                  />
-                </template>
-              </v-tooltip>
-            </div>
-
-            <div v-if="displayControllerSay" class="space-y-2 rounded-2xl bg-green-500/10 border border-green-500/20 p-3 text-sm">
-              <div class="flex items-center gap-2 text-green-300">
-                <v-icon size="16">mdi-radio-tower</v-icon>
-                <span class="text-xs uppercase font-semibold">ATC</span>
-              </div>
-              <p class="font-mono text-white">{{ displayControllerSay }}</p>
-            </div>
-
-            <div v-if="displayExpectedPhrase" class="space-y-2 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 text-sm">
-              <div class="flex items-center gap-2 text-blue-300">
-                <v-icon size="16">mdi-account-pilot</v-icon>
-                <span class="text-xs uppercase font-semibold">Pilot (You)</span>
-              </div>
-              <p class="font-mono text-white">{{ displayExpectedPhrase }}</p>
-            </div>
-          </v-card-text>
-        </v-card>
-
-        <!-- Push to Talk -->
-        <div>
-          <p class="mb-2 text-xs uppercase tracking-[0.3em] text-white/40">Push to Talk</p>
-          <v-sheet class="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/10 to-transparent p-4 shadow-lg">
-            <v-btn-toggle
-                v-model="radioMode"
-                color="cyan"
-                class="mb-4 flex w-full"
-                mandatory
-            >
-              <v-btn value="atc" prepend-icon="mdi-radio-handheld" class="flex-1">ATC</v-btn>
-              <v-btn value="intercom" prepend-icon="mdi-account-voice" class="flex-1">Intercom</v-btn>
-            </v-btn-toggle>
-
-            <!-- Microphone Permission Alert -->
-            <v-alert
-                v-if="!micPermission"
-                type="info"
-                variant="tonal"
-                class="bg-cyan-500/10 text-cyan-100 mb-4"
-                density="compact"
-            >
-              Microphone permission required for push-to-talk.
-              <template #append>
-                <v-btn color="cyan" size="small" variant="flat" @click="requestMicAccess">Allow</v-btn>
+              <template #default="{ open }">
+                <button type="button" class="freq-chip" :class="{ 'is-open': open }">
+                  <span class="freq-chip-row">
+                    <span class="freq-chip-tag">ACT</span>
+                    <span class="freq-chip-value">{{ frequencies.active || '---' }}</span>
+                  </span>
+                  <span class="freq-chip-standby">SBY {{ frequencies.standby || '---' }}</span>
+                </button>
               </template>
-            </v-alert>
+            </HoldSelect>
 
-            <ClientOnly>
-              <div
-                  class="ptt-pad flex h-48 items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-center transition cursor-pointer"
-                  :class="isRecording ? 'ring-4 ring-cyan-400/70 shadow-2xl bg-cyan-900/20' : 'ring-1 ring-white/5'"
-                  @touchstart.prevent="startRecording(radioMode === 'intercom')"
-                  @touchend.prevent="stopRecording"
-                  @touchcancel.prevent="stopRecording"
-                  @mousedown.prevent="startRecording(radioMode === 'intercom')"
-                  @mouseup.prevent="stopRecording"
-                  @mouseleave="stopRecording"
-              >
-                <div>
-                  <v-icon
-                      :icon="isRecording ? 'mdi-record' : (radioMode === 'atc' ? 'mdi-radio-handheld' : 'mdi-headphones')"
-                      size="48"
-                      :class="isRecording ? 'text-red-400 animate-pulse' : 'text-cyan-300'"
-                  />
-                  <p class="text-xs uppercase tracking-[0.35em] text-white/40 mt-2">
-                    {{ isRecording ? 'TRANSMITTING' : 'Hold to transmit' }}
-                  </p>
-                  <p class="pt-3 text-3xl font-semibold">
-                    {{ radioMode === 'atc' ? 'ATC' : 'INTERCOM' }}
-                  </p>
-                  <p class="mt-2 text-sm text-white/60">
-                    {{ radioMode === 'atc' ? `Transmitting on ${frequencies.active}` : 'Crew Intercom • Checklist' }}
-                  </p>
-                </div>
-              </div>
-            </ClientOnly>
-          </v-sheet>
-        </div>
-
-        <!-- Frequency Directory -->
-        <v-card class="bg-white/5 border border-white/10">
-          <v-card-text class="space-y-3">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <h3 class="text-lg font-semibold">Frequency overview</h3>
-              <div class="flex items-center gap-2">
-                <v-progress-circular
-                    v-if="airportFrequencyLoading"
-                    indeterminate
-                    color="cyan"
-                    size="18"
-                />
-                <template v-else>
-                  <v-chip
-                      v-for="label in frequencySourceLabels"
-                      :key="label"
-                      size="x-small"
-                      color="cyan"
-                      variant="outlined"
-                  >
-                    {{ label }}
-                  </v-chip>
-                </template>
-              </div>
-            </div>
-
-            <v-expansion-panels variant="accordion" class="bg-transparent">
-              <v-expansion-panel>
-                <v-expansion-panel-title class="text-sm text-white/70">
-                  Frequencies for {{ flightContext.dep || 'departure' }}
-                </v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <div
-                      v-if="airportFrequencyLoading"
-                      class="flex items-center gap-2 text-sm text-white/60"
-                  >
-                    <v-progress-circular indeterminate size="20" color="cyan" />
-                    <span>Loading frequencies from the network…</span>
-                  </div>
-                  <div
-                      v-else-if="airportFrequencies.length === 0"
-                      class="text-xs text-white/50"
-                  >
-                    No frequencies available. Please try again later.
-                  </div>
-                  <div v-else class="space-y-3">
-                    <div
-                        v-for="freq in airportFrequencies"
-                        :key="freq.callsign || `${freq.type}-${freq.frequency}-${freq.source}`"
-                        class="rounded-2xl border border-white/10 bg-black/40 p-3 space-y-2"
-                    >
-                      <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <div class="flex items-center gap-2">
-                            <v-chip size="x-small" color="cyan" variant="outlined">{{ freq.type }}</v-chip>
-                            <span class="text-sm font-semibold text-white">{{ freq.label }}</span>
-                          </div>
-                          <div class="text-xs text-white/50 mt-1" v-if="freq.callsign">
-                            {{ freq.callsign }}
-                          </div>
-                          <div class="text-xs text-white/50 mt-1" v-else>
-                            {{ freq.source === 'vatsim' ? 'VATSIM' : 'OpenAIP' }}
-                          </div>
-                        </div>
-                        <div class="text-right">
-                          <div class="text-lg font-mono text-white">{{ freq.frequency }}</div>
-                          <div class="flex items-center justify-end gap-2 mt-2">
-                            <v-btn
-                                size="x-small"
-                                color="cyan"
-                                variant="tonal"
-                                @click="setActiveFrequencyFromList(freq)"
-                            >
-                              <template #prepend>
-                                <v-icon size="16">mdi-crosshairs-gps</v-icon>
-                              </template>
-                              Active
-                            </v-btn>
-                            <v-btn
-                                size="x-small"
-                                color="orange"
-                                variant="text"
-                                @click="setStandbyFrequencyFromList(freq)"
-                            >
-                              <template #prepend>
-                                <v-icon size="16">mdi-timer-sand</v-icon>
-                              </template>
-                              Standby
-                            </v-btn>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="flex flex-wrap items-center gap-2 text-[11px] text-white/40">
-                        <v-chip
-                            size="x-small"
-                            :color="freq.source === 'vatsim' ? 'green' : 'blue'"
-                            variant="outlined"
-                        >
-                          {{ freq.source.toUpperCase() }}
-                        </v-chip>
-                        <v-chip
-                            v-if="freq.atisCode"
-                            size="x-small"
-                            color="orange"
-                            variant="tonal"
-                        >
-                          ATIS {{ freq.atisCode }}
-                        </v-chip>
-                      </div>
-                    </div>
-                  </div>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
-          </v-card-text>
-        </v-card>
-
-        <!-- Manual Input Fallback -->
-        <v-card class="bg-white/5 border border-white/10">
-          <v-card-text class="space-y-3">
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold">Manual Input</h3>
-              <v-chip size="small" color="cyan" variant="outlined">Fallback</v-chip>
-            </div>
-            <v-text-field
-                v-model="pilotInput"
-                label="Pilot Transmission (Text)"
-                variant="outlined"
-                color="cyan"
-                hide-details
-                @keyup.enter="sendPilotText"
-                append-inner-icon="mdi-send"
-                @click:append-inner="sendPilotText"
-            />
-
-            <!-- Suggested next phrase — sourced from backend (authoritative variables) -->
-            <div v-if="backendExpectedPhrase" class="space-y-1">
-              <p class="text-[11px] uppercase tracking-[0.25em] text-white/40">Suggested phrase</p>
-              <div class="flex flex-wrap gap-2">
-                <v-chip
-                    size="small"
-                    color="cyan"
-                    variant="outlined"
-                    class="cursor-pointer text-xs font-mono"
-                    @click="pilotInput = backendExpectedPhrase"
-                >
-                  {{ backendExpectedPhrase }}
-                </v-chip>
-              </div>
-            </div>
-
-            <p class="text-xs text-white/50">
-              For emergencies when STT fails or for testing
-            </p>
-          </v-card-text>
-        </v-card>
-
-        <!-- Simulation Trace -->
-        <v-card
-            v-if="simulationRunning || simulationTrace.length"
-            class="bg-white/5 border border-white/10"
-        >
-          <v-card-text class="space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <h3 class="text-lg font-semibold">Simulation Trace</h3>
-                <v-chip size="small" color="cyan" variant="outlined">
-                  {{ completedPilotSteps }} / {{ simulationStepCount }}
-                </v-chip>
-              </div>
-              <v-chip size="small" :color="simulationRunning ? 'orange' : 'grey'" variant="tonal">
-                {{ simulationRunning ? 'Running' : 'Ready' }}
-              </v-chip>
-            </div>
-
-            <v-alert
-                v-if="simulationError"
-                type="warning"
+            <v-btn
+                icon
+                size="small"
                 variant="tonal"
-                density="compact"
-                class="bg-amber-500/10 text-amber-200"
+                color="cyan"
+                :class="{ 'swap-animation': swapAnimation }"
+                @click="swapFrequencies"
             >
-              {{ simulationError }}
-            </v-alert>
+              <v-icon>mdi-swap-vertical</v-icon>
+            </v-btn>
 
-            <div
-                v-if="simulationRunning && simulationTrace.length === 0"
-                class="text-sm text-white/60"
-            >
-              Simulation initializing...
-            </div>
-
-            <div
-                v-else
-                class="space-y-2 max-h-64 overflow-y-auto pr-1"
-            >
+            <div class="hidden sm:flex items-end gap-1 pl-1">
               <div
-                  v-for="(entry, idx) in simulationTrace"
-                  :key="idx"
-                  class="rounded-2xl border border-white/10 bg-black/40 p-3 space-y-2"
-              >
-                <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/40">
-                  <span>{{ entry.label }}</span>
-                  <span class="text-white/60">{{ entry.id }}</span>
-                </div>
-                <div v-if="entry.kind === 'pilot' || entry.kind === 'atc'" class="space-y-1">
-                  <p class="text-sm font-mono text-white">{{ entry.payload?.text }}</p>
-                  <p class="text-[11px] text-white/50 font-mono">{{ entry.payload?.normalized }}</p>
-                </div>
-                <pre
-                    v-else-if="entry.payload"
-                    class="text-[11px] text-white/60 font-mono whitespace-pre-wrap"
-                >{{ formatTracePayload(entry.payload) }}</pre>
-              </div>
+                  v-for="i in 5"
+                  :key="i"
+                  class="signal-bar"
+                  :class="{ 'signal-active': i <= signalStrength }"
+              />
             </div>
-          </v-card-text>
-        </v-card>
+          </div>
+        </div>
+      </header>
 
-        <!-- Debug Information -->
-        <v-card v-if="debugMode" class="bg-white/5 border border-white/10">
-          <v-card-text class="space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold">Debug: Flow Insights</h3>
-              <v-chip size="small" color="grey" variant="outlined">LLM</v-chip>
+      <div class="pm-body">
+        <!-- Desktop sidebar nav -->
+        <nav class="pm-sidenav">
+          <button
+              v-for="tab in desktopTabs"
+              :key="tab.id"
+              type="button"
+              class="pm-navbtn"
+              :class="{ 'is-active': activeTab === tab.id }"
+              @click="activeTab = tab.id"
+          >
+            <v-icon size="22">{{ tab.icon }}</v-icon>
+            <span>{{ tab.label }}</span>
+          </button>
+        </nav>
+
+        <!-- Main tab content -->
+        <main class="pm-main">
+          <div class="pm-main-inner">
+            <!-- =============== FUNK TAB =============== -->
+            <!-- Expected Communication (learning aid) -->
+            <div
+                v-show="activeTab === 'funk'"
+                v-if="learningMode && (displayControllerSay || displayExpectedPhrase)"
+                class="pm-block"
+            >
+              <v-card class="bg-white/5 border border-white/10">
+                <v-card-text class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <p class="text-xs uppercase tracking-[0.3em] text-white/40">Expected communication</p>
+                    <v-tooltip :text="showRadioPronunciation ? 'Switch to plain text' : 'Switch to radio pronunciation'" location="top">
+                      <template #activator="{ props: tip }">
+                        <v-btn
+                            v-bind="tip"
+                            :icon="showRadioPronunciation ? 'mdi-text' : 'mdi-radio'"
+                            size="x-small"
+                            variant="text"
+                            :color="showRadioPronunciation ? 'cyan' : 'white'"
+                            @click="showRadioPronunciation = !showRadioPronunciation"
+                        />
+                      </template>
+                    </v-tooltip>
+                  </div>
+
+                  <div v-if="displayControllerSay" class="space-y-2 rounded-2xl bg-green-500/10 border border-green-500/20 p-3 text-sm">
+                    <div class="flex items-center gap-2 text-green-300">
+                      <v-icon size="16">mdi-radio-tower</v-icon>
+                      <span class="text-xs uppercase font-semibold">ATC</span>
+                    </div>
+                    <p class="font-mono text-white">{{ displayControllerSay }}</p>
+                  </div>
+
+                  <div v-if="displayExpectedPhrase" class="space-y-2 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 text-sm">
+                    <div class="flex items-center gap-2 text-blue-300">
+                      <v-icon size="16">mdi-account-pilot</v-icon>
+                      <span class="text-xs uppercase font-semibold">Pilot (You)</span>
+                    </div>
+                    <p class="font-mono text-white">{{ displayExpectedPhrase }}</p>
+                  </div>
+                </v-card-text>
+              </v-card>
             </div>
 
-            <div class="flex items-center justify-between text-[11px] text-white/50">
-              <span>Session: {{ sessionLabel }}</span>
-              <div class="flex flex-wrap gap-2" v-if="traceAutoSelection || (traceFallback?.used) || timelineUsedFallback">
-                <v-chip v-if="traceAutoSelection" size="x-small" color="cyan" variant="outlined">
-                  Auto: {{ traceAutoSelection.id }}
-                </v-chip>
-                <v-chip v-if="timelineUsedFallback" size="x-small" color="orange" variant="tonal">
-                  Fallback candidates
-                </v-chip>
-                <v-chip v-if="traceFallback?.used" size="x-small" color="red" variant="tonal">
-                  Fallback: {{ traceFallback.reason || 'triggered' }}
-                </v-chip>
-              </div>
+            <!-- Input mode switch: voice / text -->
+            <div v-show="activeTab === 'funk'" class="pm-block">
+              <v-btn-toggle v-model="inputMode" color="cyan" mandatory class="flex w-full">
+                <v-btn value="voice" prepend-icon="mdi-microphone" class="flex-1">Sprechen</v-btn>
+                <v-btn value="text" prepend-icon="mdi-keyboard" class="flex-1">Tippen</v-btn>
+              </v-btn-toggle>
             </div>
 
-            <div class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
-              <p class="text-xs uppercase tracking-[0.3em] text-white/40">Current node</p>
-              <p class="font-mono text-sm text-white">{{ debugState?.id || '—' }}</p>
-              <p class="text-[11px] text-white/50">
-                {{ debugState ? `${debugState.role} • ${debugState.phase}` : 'N/A' }}
-                <span v-if="debugState?.frequencyName" class="ml-1 text-white/40">({{ debugState.frequencyName }})</span>
-              </p>
-              <p v-if="debugState?.sayPlain" class="text-xs text-white/70">
-                Auto (LLM): <span class="font-mono text-white">{{ debugState.sayPlain }}</span>
-              </p>
-              <p v-if="debugState?.sayNormalized" class="text-[11px] text-white/40">
-                Radio: {{ debugState.sayNormalized }}
-              </p>
-            </div>
-
-            <div>
-              <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Upcoming decisions</p>
-              <div v-if="debugNextStates.length" class="space-y-2">
-                <div
-                    v-for="state in debugNextStates"
-                    :key="state.id"
-                    class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3"
+            <!-- Push to Talk (voice mode) -->
+            <div v-show="activeTab === 'funk' && inputMode === 'voice'" class="pm-block">
+              <v-sheet class="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/10 to-transparent p-4 shadow-lg">
+                <v-btn-toggle
+                    v-model="radioMode"
+                    color="cyan"
+                    class="mb-4 flex w-full"
+                    mandatory
                 >
-                  <div class="flex items-start justify-between gap-2">
+                  <v-btn value="atc" prepend-icon="mdi-radio-handheld" class="flex-1">ATC</v-btn>
+                  <v-btn value="intercom" prepend-icon="mdi-account-voice" class="flex-1">Intercom</v-btn>
+                </v-btn-toggle>
+
+                <v-alert
+                    v-if="!micPermission"
+                    type="info"
+                    variant="tonal"
+                    class="bg-cyan-500/10 text-cyan-100 mb-4"
+                    density="compact"
+                >
+                  Microphone permission required for push-to-talk.
+                  <template #append>
+                    <v-btn color="cyan" size="small" variant="flat" @click="requestMicAccess">Allow</v-btn>
+                  </template>
+                </v-alert>
+
+                <ClientOnly>
+                  <div
+                      class="ptt-pad flex h-48 lg:h-56 items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-center transition cursor-pointer"
+                      :class="isRecording ? 'ring-4 ring-cyan-400/70 shadow-2xl bg-cyan-900/20' : 'ring-1 ring-white/5'"
+                      @touchstart.prevent="startRecording(radioMode === 'intercom')"
+                      @touchend.prevent="stopRecording"
+                      @touchcancel.prevent="stopRecording"
+                      @mousedown.prevent="startRecording(radioMode === 'intercom')"
+                      @mouseup.prevent="stopRecording"
+                      @mouseleave="stopRecording"
+                  >
                     <div>
-                      <p class="font-mono text-sm text-white">{{ state.id }}</p>
-                      <p class="text-[11px] text-white/50">
-                        {{ state.role || '—' }} • {{ state.phase || '—' }}
-                        <span v-if="state.frequencyName" class="ml-1 text-white/40">({{ state.frequencyName }})</span>
+                      <v-icon
+                          :icon="isRecording ? 'mdi-record' : (radioMode === 'atc' ? 'mdi-radio-handheld' : 'mdi-headphones')"
+                          size="48"
+                          :class="isRecording ? 'text-red-400 animate-pulse' : 'text-cyan-300'"
+                      />
+                      <p class="text-xs uppercase tracking-[0.35em] text-white/40 mt-2">
+                        {{ isRecording ? 'TRANSMITTING' : 'Hold to transmit' }}
+                      </p>
+                      <p class="pt-3 text-3xl font-semibold">
+                        {{ radioMode === 'atc' ? 'ATC' : 'INTERCOM' }}
+                      </p>
+                      <p class="mt-2 text-sm text-white/60">
+                        {{ radioMode === 'atc' ? `Transmitting on ${frequencies.active}` : 'Crew Intercom • Checklist' }}
                       </p>
                     </div>
-                    <v-chip
-                        size="x-small"
-                        color="cyan"
-                        variant="outlined"
-                        class="cursor-pointer"
-                        @click="forceMove(state.id)"
-                    >
-                      Jump
-                    </v-chip>
                   </div>
-                  <p v-if="state.sayPlain" class="text-xs text-white/70">
-                    ATC: <span class="font-mono text-white">{{ state.sayPlain }}</span>
-                  </p>
-                  <p v-if="state.sayNormalized" class="text-[11px] text-white/40">
-                    Radio: {{ state.sayNormalized }}
-                  </p>
-                </div>
-              </div>
-              <p v-else class="text-xs text-white/50">No further decisions available.</p>
+                </ClientOnly>
+              </v-sheet>
             </div>
 
-            <div class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
-              <p class="text-xs uppercase tracking-[0.3em] text-white/40">Decision timeline</p>
-              <div v-if="timelineSteps.length" class="space-y-3">
-                <div
-                  v-for="(step, index) in timelineSteps"
-                  :key="`${step.stage}-${index}`"
-                  class="space-y-2 rounded-xl border border-white/10 bg-black/40 p-3"
-                >
+            <!-- Manual text input (text mode) -->
+            <div v-show="activeTab === 'funk' && inputMode === 'text'" class="pm-block">
+              <v-card class="bg-white/5 border border-white/10">
+                <v-card-text class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold">Text Input</h3>
+                    <v-chip size="small" color="cyan" variant="outlined">{{ radioMode === 'atc' ? 'ATC' : 'Intercom' }}</v-chip>
+                  </div>
+                  <v-text-field
+                      v-model="pilotInput"
+                      label="Pilot Transmission (Text)"
+                      variant="outlined"
+                      color="cyan"
+                      hide-details
+                      @keyup.enter="sendPilotText"
+                      append-inner-icon="mdi-send"
+                      @click:append-inner="sendPilotText"
+                  />
+
+                  <div v-if="backendExpectedPhrase" class="space-y-1">
+                    <p class="text-[11px] uppercase tracking-[0.25em] text-white/40">Suggested phrase</p>
+                    <div class="flex flex-wrap gap-2">
+                      <v-chip
+                          size="small"
+                          color="cyan"
+                          variant="outlined"
+                          class="cursor-pointer text-xs font-mono"
+                          @click="pilotInput = backendExpectedPhrase"
+                      >
+                        {{ backendExpectedPhrase }}
+                      </v-chip>
+                    </div>
+                  </div>
+                </v-card-text>
+              </v-card>
+            </div>
+
+            <!-- Last Transmission (funk) -->
+            <div
+                v-show="activeTab === 'funk'"
+                v-if="lastTransmission"
+                class="pm-block"
+            >
+              <v-card
+                  :class="[
+                    'border backdrop-blur',
+                    lastTransmissionFaulty
+                      ? 'bg-red-500/10 border-red-400/30'
+                      : 'bg-cyan-500/10 border-cyan-400/20'
+                  ]"
+              >
+                <v-card-text class="space-y-3">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                      <v-icon
+                          icon="mdi-microphone-outline"
+                          size="16"
+                          :class="lastTransmissionFaulty ? 'text-red-300' : 'text-cyan-300'"
+                      />
+                      <span
+                          class="text-xs uppercase tracking-[0.3em]"
+                          :class="lastTransmissionFaulty ? 'text-red-300' : 'text-cyan-300'"
+                      >
+                        Last transmission
+                      </span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-1">
+                      <v-chip
+                          v-if="lastTransmissionFaulty"
+                          size="x-small"
+                          color="red"
+                          variant="flat"
+                      >
+                        Faulty
+                      </v-chip>
+                      <v-btn
+                          variant="text"
+                          size="small"
+                          :color="lastTransmissionFaulty ? 'red' : 'amber'"
+                          class="text-[0.65rem] uppercase tracking-[0.3em]"
+                          @click="startTransmissionIssueFlow"
+                      >
+                        <template #prepend>
+                          <v-icon size="16">mdi-alert-circle-outline</v-icon>
+                        </template>
+                        {{ lastTransmissionFaulty ? 'Edit issue' : 'Mark as faulty' }}
+                      </v-btn>
+                      <v-btn
+                          v-if="lastTransmissionFaulty"
+                          variant="text"
+                          size="small"
+                          color="cyan"
+                          class="text-[0.65rem] uppercase tracking-[0.3em]"
+                          @click="resetLastTransmissionFault"
+                      >
+                        <template #prepend>
+                          <v-icon size="16">mdi-restore</v-icon>
+                        </template>
+                        Reset
+                      </v-btn>
+                      <v-btn
+                          variant="text"
+                          size="small"
+                          color="cyan"
+                          class="text-[0.65rem] uppercase tracking-[0.3em]"
+                          @click="clearLastTransmission"
+                      >
+                        <template #prepend>
+                          <v-icon size="16">mdi-close</v-icon>
+                        </template>
+                        Delete
+                      </v-btn>
+                    </div>
+                  </div>
+                  <p class="text-sm text-white font-mono whitespace-pre-line">{{ lastTransmission }}</p>
+                  <div
+                      v-if="lastTransmissionFaulty"
+                      class="space-y-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2"
+                  >
+                    <p class="text-xs uppercase tracking-[0.25em] text-red-200/80">Issue description</p>
+                    <p v-if="lastTransmissionFaultNote" class="text-sm text-red-100">
+                      {{ lastTransmissionFaultNote }}
+                    </p>
+                    <p v-else class="text-xs text-red-200/70">
+                      Marked as faulty.
+                    </p>
+                  </div>
+                </v-card-text>
+              </v-card>
+            </div>
+
+            <!-- =============== FREQ TAB =============== -->
+            <div v-show="activeTab === 'freq'" class="pm-block">
+              <v-card class="bg-white/5 backdrop-blur border border-white/10">
+                <v-card-text class="space-y-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold">Radio Setup</h3>
+                    <v-chip color="cyan" variant="flat" size="small" class="font-mono">
+                      {{ frequencies.active || '---' }}
+                    </v-chip>
+                  </div>
+
+                  <!-- Presets: hold-to-select gesture -->
+                  <div v-if="presetOptions.length" class="space-y-2">
+                    <p class="text-[11px] uppercase tracking-[0.25em] text-white/40">
+                      Presets — tippen für Active, halten &amp; ziehen für Auswahl
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                      <HoldSelect
+                          :options="presetOptions"
+                          placement="auto"
+                          title="Active setzen"
+                          @select="onPresetSelectActive"
+                      >
+                        <template #default="{ open }">
+                          <button type="button" class="preset-action-chip" :class="{ 'is-open': open }">
+                            <v-icon size="16">mdi-crosshairs-gps</v-icon>
+                            <span>Active wählen</span>
+                          </button>
+                        </template>
+                      </HoldSelect>
+                      <HoldSelect
+                          :options="presetOptions"
+                          placement="auto"
+                          title="Standby setzen"
+                          @select="onPresetSelectStandby"
+                      >
+                        <template #default="{ open }">
+                          <button type="button" class="preset-action-chip standby" :class="{ 'is-open': open }">
+                            <v-icon size="16">mdi-timer-sand</v-icon>
+                            <span>Standby wählen</span>
+                          </button>
+                        </template>
+                      </HoldSelect>
+                    </div>
+                    <div class="flex flex-wrap gap-2 pt-1">
+                      <v-chip
+                          v-for="preset in frequencyPresets"
+                          :key="`${preset.type}-${preset.frequency}`"
+                          size="small"
+                          color="cyan"
+                          variant="outlined"
+                          class="cursor-pointer font-mono"
+                          @click="setActiveFrequencyFromList(preset)"
+                      >
+                        {{ presetLabel(preset) }} · {{ preset.frequency }}
+                      </v-chip>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3">
+                    <v-text-field
+                        v-model="frequencies.active"
+                        label="Active"
+                        variant="outlined"
+                        color="cyan"
+                        hide-details
+                        density="comfortable"
+                        class="freq-input-active font-mono"
+                    />
+                    <v-text-field
+                        v-model="frequencies.standby"
+                        label="Standby"
+                        variant="outlined"
+                        color="cyan"
+                        hide-details
+                        density="comfortable"
+                        class="freq-input-standby font-mono"
+                    />
+                  </div>
+
+                  <v-btn
+                      block
+                      color="cyan"
+                      variant="tonal"
+                      prepend-icon="mdi-swap-horizontal"
+                      @click="swapFrequencies"
+                      :class="{ 'swap-animation': swapAnimation }"
+                  >
+                    Swap frequencies
+                  </v-btn>
+                </v-card-text>
+              </v-card>
+            </div>
+
+            <!-- Frequency Directory -->
+            <div v-show="activeTab === 'freq'" class="pm-block">
+              <v-card class="bg-white/5 border border-white/10">
+                <v-card-text class="space-y-3">
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h3 class="text-lg font-semibold">Frequency overview</h3>
+                    <div class="flex items-center gap-2">
+                      <v-progress-circular
+                          v-if="airportFrequencyLoading"
+                          indeterminate
+                          color="cyan"
+                          size="18"
+                      />
+                      <template v-else>
+                        <v-chip
+                            v-for="label in frequencySourceLabels"
+                            :key="label"
+                            size="x-small"
+                            color="cyan"
+                            variant="outlined"
+                        >
+                          {{ label }}
+                        </v-chip>
+                      </template>
+                    </div>
+                  </div>
+
+                  <v-expansion-panels variant="accordion" class="bg-transparent">
+                    <v-expansion-panel>
+                      <v-expansion-panel-title class="text-sm text-white/70">
+                        Frequencies for {{ flightContext.dep || 'departure' }}
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
+                        <div
+                            v-if="airportFrequencyLoading"
+                            class="flex items-center gap-2 text-sm text-white/60"
+                        >
+                          <v-progress-circular indeterminate size="20" color="cyan" />
+                          <span>Loading frequencies from the network…</span>
+                        </div>
+                        <div
+                            v-else-if="airportFrequencies.length === 0"
+                            class="text-xs text-white/50"
+                        >
+                          No frequencies available. Please try again later.
+                        </div>
+                        <div v-else class="space-y-3">
+                          <div
+                              v-for="freq in airportFrequencies"
+                              :key="freq.callsign || `${freq.type}-${freq.frequency}-${freq.source}`"
+                              class="rounded-2xl border border-white/10 bg-black/40 p-3 space-y-2"
+                          >
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <div class="flex items-center gap-2">
+                                  <v-chip size="x-small" color="cyan" variant="outlined">{{ freq.type }}</v-chip>
+                                  <span class="text-sm font-semibold text-white">{{ freq.label }}</span>
+                                </div>
+                                <div class="text-xs text-white/50 mt-1" v-if="freq.callsign">
+                                  {{ freq.callsign }}
+                                </div>
+                                <div class="text-xs text-white/50 mt-1" v-else>
+                                  {{ freq.source === 'vatsim' ? 'VATSIM' : 'OpenAIP' }}
+                                </div>
+                              </div>
+                              <div class="text-right">
+                                <div class="text-lg font-mono text-white">{{ freq.frequency }}</div>
+                                <div class="flex items-center justify-end gap-2 mt-2">
+                                  <v-btn
+                                      size="x-small"
+                                      color="cyan"
+                                      variant="tonal"
+                                      @click="setActiveFrequencyFromList(freq)"
+                                  >
+                                    <template #prepend>
+                                      <v-icon size="16">mdi-crosshairs-gps</v-icon>
+                                    </template>
+                                    Active
+                                  </v-btn>
+                                  <v-btn
+                                      size="x-small"
+                                      color="orange"
+                                      variant="text"
+                                      @click="setStandbyFrequencyFromList(freq)"
+                                  >
+                                    <template #prepend>
+                                      <v-icon size="16">mdi-timer-sand</v-icon>
+                                    </template>
+                                    Standby
+                                  </v-btn>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 text-[11px] text-white/40">
+                              <v-chip
+                                  size="x-small"
+                                  :color="freq.source === 'vatsim' ? 'green' : 'blue'"
+                                  variant="outlined"
+                              >
+                                {{ freq.source.toUpperCase() }}
+                              </v-chip>
+                              <v-chip
+                                  v-if="freq.atisCode"
+                                  size="x-small"
+                                  color="orange"
+                                  variant="tonal"
+                              >
+                                ATIS {{ freq.atisCode }}
+                              </v-chip>
+                            </div>
+                          </div>
+                        </div>
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
+                  </v-expansion-panels>
+                </v-card-text>
+              </v-card>
+            </div>
+
+            <!-- =============== LOG TAB (mobile only) =============== -->
+            <div v-show="activeTab === 'log'" class="pm-block pm-log-tab">
+              <CommLog :entries="log" :limit="20" @clear="clearLog" />
+            </div>
+
+            <!-- =============== FLUG TAB =============== -->
+            <div v-show="activeTab === 'flug'" class="pm-block">
+              <v-card class="bg-white/5 backdrop-blur border border-white/10">
+                <v-card-text class="space-y-4">
                   <div class="flex items-start justify-between gap-3">
                     <div>
-                      <p class="font-semibold text-sm text-white">{{ step.label }}</p>
-                      <p class="text-[11px] text-white/50 uppercase tracking-[0.2em]">{{ step.stage }}</p>
+                      <p class="text-xs uppercase tracking-[0.3em] text-white/50">Active flight</p>
+                      <h2 class="text-2xl font-semibold">{{ flightContext.callsign || 'N/A' }}</h2>
+                      <p class="text-sm text-white/70">{{ flightContext.dep }} → {{ flightContext.dest }}</p>
                     </div>
-                    <v-chip size="x-small" color="cyan" variant="outlined">
-                      {{ step.candidates.length }} candidates
+                    <div class="text-right space-y-1">
+                      <v-chip
+                          :color="flags.in_air ? 'green' : 'grey'"
+                          variant="flat"
+                          size="small"
+                      >
+                        {{ flags.in_air ? 'IN-AIR' : 'GROUND' }}
+                      </v-chip>
+                      <div class="flex gap-1">
+                        <v-chip size="x-small" :color="flags.emergency_active ? 'red' : 'grey'" variant="outlined">
+                          EMERG
+                        </v-chip>
+                        <v-chip size="x-small" color="cyan" variant="outlined">
+                          {{ flags.current_unit }}
+                        </v-chip>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div>
+                      <p class="text-xs text-white/40 uppercase tracking-wider">Stand</p>
+                      <p class="text-white/80 font-mono">{{ vars.stand }}</p>
+                    </div>
+                    <div>
+                      <p class="text-xs text-white/40 uppercase tracking-wider">Runway</p>
+                      <p class="text-white/80 font-mono">{{ vars.runway }}</p>
+                    </div>
+                    <div>
+                      <p class="text-xs text-white/40 uppercase tracking-wider">Squawk</p>
+                      <p class="text-white/80 font-mono">{{ vars.squawk }}</p>
+                    </div>
+                    <div>
+                      <p class="text-xs text-white/40 uppercase tracking-wider">SID</p>
+                      <p class="text-white/80 font-mono">{{ vars.sid }}</p>
+                    </div>
+                  </div>
+
+                  <div class="flex justify-between pt-2 border-t border-white/10">
+                    <div class="text-center">
+                      <p class="text-lg font-semibold text-cyan-300">{{ flags.radio_checks_done || 0 }}</p>
+                      <p class="text-xs text-white/40 uppercase tracking-wider">Radio Checks</p>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-lg font-semibold text-orange-300">{{ flags.off_schema_count || 0 }}</p>
+                      <p class="text-xs text-white/40 uppercase tracking-wider">Off-Schema</p>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-lg font-semibold text-white">{{ log.length }}</p>
+                      <p class="text-xs text-white/40 uppercase tracking-wider">Transmissions</p>
+                    </div>
+                  </div>
+
+                  <v-btn
+                      block
+                      color="grey"
+                      variant="outlined"
+                      size="small"
+                      @click="backToSetup"
+                      prepend-icon="mdi-airplane-off"
+                  >
+                    Select new flight
+                  </v-btn>
+                </v-card-text>
+              </v-card>
+            </div>
+
+            <!-- =============== MORE TAB =============== -->
+            <div v-show="activeTab === 'more'" class="pm-block">
+              <v-card class="bg-white/5 border border-white/10">
+                <v-card-text class="space-y-4">
+                  <h3 class="text-lg font-semibold">Settings</h3>
+
+                  <div class="space-y-4">
+                    <div>
+                      <label class="text-xs uppercase tracking-[0.3em] text-white/40 block mb-2">
+                        Signal strength
+                      </label>
+                      <v-slider
+                          v-model="signalStrength"
+                          min="1"
+                          max="5"
+                          step="1"
+                          show-ticks="always"
+                          color="cyan"
+                          thumb-label
+                          hide-details
+                      />
+                    </div>
+
+                    <div>
+                      <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs uppercase tracking-[0.3em] text-white/40">
+                          Speech speed
+                        </label>
+                        <span class="text-xs font-mono text-white/60">{{ speechSpeedLabel }}</span>
+                      </div>
+                      <v-slider
+                          v-model="speechSpeed"
+                          :min="0.7"
+                          :max="1.3"
+                          :step="0.05"
+                          color="cyan"
+                          thumb-label
+                          hide-details
+                      />
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      <v-switch
+                          v-model="radioEffectsEnabled"
+                          color="cyan"
+                          inset
+                          label="Radio effects"
+                          hide-details
+                      />
+                      <v-switch
+                          v-model="readbackEnabled"
+                          color="cyan"
+                          inset
+                          label="Readback voice"
+                          hide-details
+                      />
+                      <v-switch
+                          v-model="learningMode"
+                          color="cyan"
+                          inset
+                          label="Lernhilfe (Expected comm)"
+                          hide-details
+                      />
+                      <v-switch
+                          v-model="debugMode"
+                          color="orange"
+                          inset
+                          label="Entwickler-Debug"
+                          hide-details
+                      />
+                    </div>
+                  </div>
+                </v-card-text>
+              </v-card>
+            </div>
+
+            <!-- =============== DEBUG TAB =============== -->
+            <div v-show="activeTab === 'debug' && debugMode" class="pm-block">
+              <v-card
+                  v-if="simulationRunning || simulationTrace.length"
+                  class="bg-white/5 border border-white/10 mb-4"
+              >
+                <v-card-text class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <h3 class="text-lg font-semibold">Simulation Trace</h3>
+                      <v-chip size="small" color="cyan" variant="outlined">
+                        {{ completedPilotSteps }} / {{ simulationStepCount }}
+                      </v-chip>
+                    </div>
+                    <v-chip size="small" :color="simulationRunning ? 'orange' : 'grey'" variant="tonal">
+                      {{ simulationRunning ? 'Running' : 'Ready' }}
                     </v-chip>
                   </div>
-                  <p v-if="step.note" class="text-[11px] text-white/50">{{ step.note }}</p>
-                  <div v-if="step.candidates.length" class="space-y-2">
-                    <div
-                      v-for="candidate in step.candidates"
-                      :key="candidate.id"
-                      class="rounded-lg border border-white/10 bg-black/30 p-2"
-                    >
-                      <div class="flex items-center justify-between gap-2">
-                        <span class="font-mono text-sm text-white">{{ candidate.id }}</span>
-                        <span class="text-[11px] text-white/50">{{ candidate.flow || 'current' }}</span>
-                      </div>
-                      <p v-if="candidate.summary" class="text-[11px] text-white/60 mt-1">{{ candidate.summary }}</p>
-                    </div>
-                  </div>
-                  <div v-if="step.eliminated?.length" class="space-y-2">
-                    <p class="text-[11px] text-red-200/80 uppercase tracking-[0.25em]">Eliminated</p>
-                    <div
-                      v-for="elim in step.eliminated"
-                      :key="`${step.stage}-${elim.candidate.id}`"
-                      class="space-y-1 rounded-lg border border-red-400/30 bg-red-500/10 p-2 text-xs text-red-100"
-                    >
-                      <div class="flex items-center justify-between gap-2">
-                        <span class="font-mono text-sm">{{ elim.candidate.id }}</span>
-                        <span class="text-[11px] text-red-200/80">{{ elim.kind }}</span>
-                      </div>
-                      <p class="text-[11px] text-red-100/80">{{ elim.reason }}</p>
-                      <p v-if="describeElimination(elim)" class="text-[10px] text-red-100/70">{{ describeElimination(elim) }}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <p v-else class="text-[11px] text-white/50">No decision timeline available yet.</p>
-            </div>
-          </v-card-text>
-        </v-card>
 
-        <!-- Communication Log -->
-        <v-card class="bg-white/5 border border-white/10">
-          <v-card-text class="space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <h3 class="text-lg font-semibold">Communication Log</h3>
-                <v-chip size="small" color="cyan" variant="outlined">{{ log.length }}</v-chip>
-              </div>
-              <v-btn
-                  size="small"
-                  variant="text"
-                  color="cyan"
-                  class="text-xs uppercase tracking-[0.2em]"
-                  :disabled="log.length === 0"
-                  @click="clearLog"
-              >
-                Clear
-              </v-btn>
-            </div>
-
-            <div class="space-y-2 max-h-64 overflow-y-auto">
-              <div
-                  v-for="entry in log.slice(-8)"
-                  :key="entry.timestamp.getTime()"
-                  class="rounded-2xl border border-white/10 bg-black/40 p-3"
-              >
-                <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/40 mb-1">
-                  <span class="flex items-center gap-2">
-                    <v-icon
-                        :icon="entry.speaker === 'pilot' ? 'mdi-account-pilot' : 'mdi-radio-tower'"
-                        size="12"
-                        :class="entry.speaker === 'pilot' ? 'text-blue-400' : 'text-green-400'"
-                    />
-                    {{ entry.speaker.toUpperCase() }}
-                    <v-chip v-if="entry.radioCheck" size="x-small" color="orange" variant="flat">RADIO CHECK</v-chip>
-                    <v-chip v-if="entry.offSchema" size="x-small" color="red" variant="flat">OFF-SCHEMA</v-chip>
-                  </span>
-                  <span>{{ formatTime(entry.timestamp) }}</span>
-                </div>
-                <p class="text-sm text-white font-mono">{{ entry.message }}</p>
-                <div class="flex items-center gap-2 mt-1">
-                  <v-chip
-                      v-if="entry.flow"
-                      size="x-small"
-                      color="purple"
-                      variant="outlined"
+                  <v-alert
+                      v-if="simulationError"
+                      type="warning"
+                      variant="tonal"
+                      density="compact"
+                      class="bg-amber-500/10 text-amber-200"
                   >
-                    {{ entry.flow }}
-                  </v-chip>
-                  <v-chip size="x-small" color="cyan" variant="outlined">{{ entry.frequency || 'N/A' }}</v-chip>
-                  <span class="text-xs text-white/40">{{ entry.state }}</span>
-                </div>
-              </div>
+                    {{ simulationError }}
+                  </v-alert>
 
-              <p v-if="log.length === 0" class="text-xs text-white/50 text-center py-4">
-                No communications recorded yet.
-              </p>
+                  <div
+                      v-if="simulationRunning && simulationTrace.length === 0"
+                      class="text-sm text-white/60"
+                  >
+                    Simulation initializing...
+                  </div>
+
+                  <div
+                      v-else
+                      class="space-y-2 max-h-64 overflow-y-auto pr-1"
+                  >
+                    <div
+                        v-for="(entry, idx) in simulationTrace"
+                        :key="idx"
+                        class="rounded-2xl border border-white/10 bg-black/40 p-3 space-y-2"
+                    >
+                      <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/40">
+                        <span>{{ entry.label }}</span>
+                        <span class="text-white/60">{{ entry.id }}</span>
+                      </div>
+                      <div v-if="entry.kind === 'pilot' || entry.kind === 'atc'" class="space-y-1">
+                        <p class="text-sm font-mono text-white">{{ entry.payload?.text }}</p>
+                        <p class="text-[11px] text-white/50 font-mono">{{ entry.payload?.normalized }}</p>
+                      </div>
+                      <pre
+                          v-else-if="entry.payload"
+                          class="text-[11px] text-white/60 font-mono whitespace-pre-wrap"
+                      >{{ formatTracePayload(entry.payload) }}</pre>
+                    </div>
+                  </div>
+                </v-card-text>
+              </v-card>
+
+              <v-card class="bg-white/5 border border-white/10">
+                <v-card-text class="space-y-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold">Debug: Flow Insights</h3>
+                    <v-chip size="small" color="grey" variant="outlined">LLM</v-chip>
+                  </div>
+
+                  <div class="flex items-center justify-between text-[11px] text-white/50">
+                    <span>Session: {{ sessionLabel }}</span>
+                    <div class="flex flex-wrap gap-2" v-if="traceAutoSelection || (traceFallback?.used) || timelineUsedFallback">
+                      <v-chip v-if="traceAutoSelection" size="x-small" color="cyan" variant="outlined">
+                        Auto: {{ traceAutoSelection.id }}
+                      </v-chip>
+                      <v-chip v-if="timelineUsedFallback" size="x-small" color="orange" variant="tonal">
+                        Fallback candidates
+                      </v-chip>
+                      <v-chip v-if="traceFallback?.used" size="x-small" color="red" variant="tonal">
+                        Fallback: {{ traceFallback.reason || 'triggered' }}
+                      </v-chip>
+                    </div>
+                  </div>
+
+                  <div class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+                    <p class="text-xs uppercase tracking-[0.3em] text-white/40">Current node</p>
+                    <p class="font-mono text-sm text-white">{{ debugState?.id || '—' }}</p>
+                    <p class="text-[11px] text-white/50">
+                      {{ debugState ? `${debugState.role} • ${debugState.phase}` : 'N/A' }}
+                      <span v-if="debugState?.frequencyName" class="ml-1 text-white/40">({{ debugState.frequencyName }})</span>
+                    </p>
+                    <p v-if="debugState?.sayPlain" class="text-xs text-white/70">
+                      Auto (LLM): <span class="font-mono text-white">{{ debugState.sayPlain }}</span>
+                    </p>
+                    <p v-if="debugState?.sayNormalized" class="text-[11px] text-white/40">
+                      Radio: {{ debugState.sayNormalized }}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Upcoming decisions</p>
+                    <div v-if="debugNextStates.length" class="space-y-2">
+                      <div
+                          v-for="state in debugNextStates"
+                          :key="state.id"
+                          class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3"
+                      >
+                        <div class="flex items-start justify-between gap-2">
+                          <div>
+                            <p class="font-mono text-sm text-white">{{ state.id }}</p>
+                            <p class="text-[11px] text-white/50">
+                              {{ state.role || '—' }} • {{ state.phase || '—' }}
+                              <span v-if="state.frequencyName" class="ml-1 text-white/40">({{ state.frequencyName }})</span>
+                            </p>
+                          </div>
+                          <v-chip
+                              size="x-small"
+                              color="cyan"
+                              variant="outlined"
+                              class="cursor-pointer"
+                              @click="forceMove(state.id)"
+                          >
+                            Jump
+                          </v-chip>
+                        </div>
+                        <p v-if="state.sayPlain" class="text-xs text-white/70">
+                          ATC: <span class="font-mono text-white">{{ state.sayPlain }}</span>
+                        </p>
+                        <p v-if="state.sayNormalized" class="text-[11px] text-white/40">
+                          Radio: {{ state.sayNormalized }}
+                        </p>
+                      </div>
+                    </div>
+                    <p v-else class="text-xs text-white/50">No further decisions available.</p>
+                  </div>
+
+                  <div class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+                    <p class="text-xs uppercase tracking-[0.3em] text-white/40">Decision timeline</p>
+                    <div v-if="timelineSteps.length" class="space-y-3">
+                      <div
+                        v-for="(step, index) in timelineSteps"
+                        :key="`${step.stage}-${index}`"
+                        class="space-y-2 rounded-xl border border-white/10 bg-black/40 p-3"
+                      >
+                        <div class="flex items-start justify-between gap-3">
+                          <div>
+                            <p class="font-semibold text-sm text-white">{{ step.label }}</p>
+                            <p class="text-[11px] text-white/50 uppercase tracking-[0.2em]">{{ step.stage }}</p>
+                          </div>
+                          <v-chip size="x-small" color="cyan" variant="outlined">
+                            {{ step.candidates.length }} candidates
+                          </v-chip>
+                        </div>
+                        <p v-if="step.note" class="text-[11px] text-white/50">{{ step.note }}</p>
+                        <div v-if="step.candidates.length" class="space-y-2">
+                          <div
+                            v-for="candidate in step.candidates"
+                            :key="candidate.id"
+                            class="rounded-lg border border-white/10 bg-black/30 p-2"
+                          >
+                            <div class="flex items-center justify-between gap-2">
+                              <span class="font-mono text-sm text-white">{{ candidate.id }}</span>
+                              <span class="text-[11px] text-white/50">{{ candidate.flow || 'current' }}</span>
+                            </div>
+                            <p v-if="candidate.summary" class="text-[11px] text-white/60 mt-1">{{ candidate.summary }}</p>
+                          </div>
+                        </div>
+                        <div v-if="step.eliminated?.length" class="space-y-2">
+                          <p class="text-[11px] text-red-200/80 uppercase tracking-[0.25em]">Eliminated</p>
+                          <div
+                            v-for="elim in step.eliminated"
+                            :key="`${step.stage}-${elim.candidate.id}`"
+                            class="space-y-1 rounded-lg border border-red-400/30 bg-red-500/10 p-2 text-xs text-red-100"
+                          >
+                            <div class="flex items-center justify-between gap-2">
+                              <span class="font-mono text-sm">{{ elim.candidate.id }}</span>
+                              <span class="text-[11px] text-red-200/80">{{ elim.kind }}</span>
+                            </div>
+                            <p class="text-[11px] text-red-100/80">{{ elim.reason }}</p>
+                            <p v-if="describeElimination(elim)" class="text-[10px] text-red-100/70">{{ describeElimination(elim) }}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <p v-else class="text-[11px] text-white/50">No decision timeline available yet.</p>
+                  </div>
+                </v-card-text>
+              </v-card>
             </div>
-          </v-card-text>
-        </v-card>
+          </div>
+        </main>
 
-        <!-- Last Transmission -->
-        <v-card
-            v-if="lastTransmission"
-            :class="[
-              'border backdrop-blur',
-              lastTransmissionFaulty
-                ? 'bg-red-500/10 border-red-400/30'
-                : 'bg-cyan-500/10 border-cyan-400/20'
-            ]"
+        <!-- Desktop log rail -->
+        <aside class="pm-lograil">
+          <CommLog :entries="log" :limit="30" dense @clear="clearLog" />
+        </aside>
+      </div>
+
+      <!-- Bottom nav (mobile) -->
+      <nav class="pm-bottomnav">
+        <button
+            v-for="tab in visibleTabs"
+            :key="tab.id"
+            type="button"
+            class="pm-navbtn"
+            :class="{ 'is-active': activeTab === tab.id }"
+            @click="activeTab = tab.id"
         >
-          <v-card-text class="space-y-3">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div class="flex items-center gap-2">
-                <v-icon
-                    icon="mdi-microphone-outline"
-                    size="16"
-                    :class="lastTransmissionFaulty ? 'text-red-300' : 'text-cyan-300'"
-                />
-                <span
-                    class="text-xs uppercase tracking-[0.3em]"
-                    :class="lastTransmissionFaulty ? 'text-red-300' : 'text-cyan-300'"
-                >
-                  Last transmission
-                </span>
-              </div>
-              <div class="flex flex-wrap items-center gap-1">
-                <v-chip
-                    v-if="lastTransmissionFaulty"
-                    size="x-small"
-                    color="red"
-                    variant="flat"
-                >
-                  Faulty
-                </v-chip>
-                <v-btn
-                    variant="text"
-                    size="small"
-                    :color="lastTransmissionFaulty ? 'red' : 'amber'"
-                    class="text-[0.65rem] uppercase tracking-[0.3em]"
-                    @click="startTransmissionIssueFlow"
-                >
-                  <template #prepend>
-                    <v-icon size="16">mdi-alert-circle-outline</v-icon>
-                  </template>
-                  {{ lastTransmissionFaulty ? 'Edit issue' : 'Mark as faulty' }}
-                </v-btn>
-                <v-btn
-                    v-if="lastTransmissionFaulty"
-                    variant="text"
-                    size="small"
-                    color="cyan"
-                    class="text-[0.65rem] uppercase tracking-[0.3em]"
-                    @click="resetLastTransmissionFault"
-                >
-                  <template #prepend>
-                    <v-icon size="16">mdi-restore</v-icon>
-                  </template>
-                  Reset
-                </v-btn>
-                <v-btn
-                    variant="text"
-                    size="small"
-                    color="cyan"
-                    class="text-[0.65rem] uppercase tracking-[0.3em]"
-                    @click="clearLastTransmission"
-                >
-                  <template #prepend>
-                    <v-icon size="16">mdi-close</v-icon>
-                  </template>
-                  Delete
-                </v-btn>
-              </div>
-            </div>
-            <p class="text-sm text-white font-mono whitespace-pre-line">{{ lastTransmission }}</p>
-            <div
+          <v-icon size="22">{{ tab.icon }}</v-icon>
+          <span>{{ tab.label }}</span>
+        </button>
+      </nav>
+
+      <!-- Transmission issue dialog -->
+      <v-dialog v-model="showTransmissionIssueDialog" max-width="420">
+        <v-card class="bg-[#0b101d] border border-white/10 text-white">
+          <v-card-title class="flex items-center gap-2 text-base font-semibold">
+            <v-icon icon="mdi-alert-circle-outline" color="#f87171" size="20" />
+            Mark transmission as faulty
+          </v-card-title>
+          <v-card-text class="space-y-4 text-sm text-white/70">
+            <p>
+              Optionally leave a short note so the dev team can follow up on the transmission.
+            </p>
+            <v-textarea
+                v-model="transmissionIssueNote"
+                label="Issue description (optional)"
+                variant="outlined"
+                color="red"
+                rows="3"
+                auto-grow
+            />
+          </v-card-text>
+          <v-card-actions class="justify-end gap-2">
+            <v-btn variant="text" color="grey" @click="cancelTransmissionIssue">
+              Cancel
+            </v-btn>
+            <v-btn
                 v-if="lastTransmissionFaulty"
-                class="space-y-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2"
+                variant="text"
+                color="cyan"
+                @click="removeTransmissionIssue"
             >
-              <p class="text-xs uppercase tracking-[0.25em] text-red-200/80">Issue description</p>
-              <p v-if="lastTransmissionFaultNote" class="text-sm text-red-100">
-                {{ lastTransmissionFaultNote }}
-              </p>
-              <p v-else class="text-xs text-red-200/70">
-                Marked as faulty.
-              </p>
-            </div>
-          </v-card-text>
+              Remove flag
+            </v-btn>
+            <v-btn color="red" variant="flat" @click="confirmTransmissionIssue">
+              Save
+            </v-btn>
+          </v-card-actions>
         </v-card>
-
-        <v-dialog v-model="showTransmissionIssueDialog" max-width="420">
-          <v-card class="bg-[#0b101d] border border-white/10 text-white">
-            <v-card-title class="flex items-center gap-2 text-base font-semibold">
-              <v-icon icon="mdi-alert-circle-outline" color="#f87171" size="20" />
-              Mark transmission as faulty
-            </v-card-title>
-            <v-card-text class="space-y-4 text-sm text-white/70">
-              <p>
-                Optionally leave a short note so the dev team can follow up on the transmission.
-              </p>
-              <v-textarea
-                  v-model="transmissionIssueNote"
-                  label="Issue description (optional)"
-                  variant="outlined"
-                  color="red"
-                  rows="3"
-                  auto-grow
-              />
-            </v-card-text>
-            <v-card-actions class="justify-end gap-2">
-              <v-btn variant="text" color="grey" @click="cancelTransmissionIssue">
-                Cancel
-              </v-btn>
-              <v-btn
-                  v-if="lastTransmissionFaulty"
-                  variant="text"
-                  color="cyan"
-                  @click="removeTransmissionIssue"
-              >
-                Remove flag
-              </v-btn>
-              <v-btn color="red" variant="flat" @click="confirmTransmissionIssue">
-                Save
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
-
-        <!-- Settings -->
-        <v-card class="bg-white/5 border border-white/10">
-          <v-card-text class="space-y-4">
-            <h3 class="text-lg font-semibold">Settings</h3>
-
-            <div class="space-y-4">
-              <div>
-                <label class="text-xs uppercase tracking-[0.3em] text-white/40 block mb-2">
-                  Signal strength
-                </label>
-                <v-slider
-                    v-model="signalStrength"
-                    min="1"
-                    max="5"
-                    step="1"
-                    show-ticks="always"
-                    color="cyan"
-                    thumb-label
-                    hide-details
-                />
-              </div>
-
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">
-                    Speech speed
-                  </label>
-                  <span class="text-xs font-mono text-white/60">{{ speechSpeedLabel }}</span>
-                </div>
-                <v-slider
-                    v-model="speechSpeed"
-                    :min="0.7"
-                    :max="1.3"
-                    :step="0.05"
-                    color="cyan"
-                    thumb-label
-                    hide-details
-                />
-              </div>
-
-              <div class="grid gap-3 sm:grid-cols-3">
-                <v-switch
-                    v-model="radioEffectsEnabled"
-                    color="cyan"
-                    inset
-                    label="Radio effects"
-                    hide-details
-                />
-                <v-switch
-                    v-model="readbackEnabled"
-                    color="cyan"
-                    inset
-                    label="Readback voice"
-                    hide-details
-                />
-                <v-switch
-                    v-model="debugMode"
-                    color="orange"
-                    inset
-                    label="Debug Mode"
-                    hide-details
-                />
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </section>
-    </div>
+      </v-dialog>
+    </section>
   </div>
 </template>
 
@@ -1463,6 +1567,29 @@ const radioCheckLoading = ref(false)
 const radioEffectsEnabled = ref(true)
 const readbackEnabled = ref(false)
 const debugMode = ref(true)
+
+// Layout / view state
+const activeTab = ref<'funk' | 'freq' | 'log' | 'flug' | 'more' | 'debug'>('funk')
+const inputMode = ref<'voice' | 'text'>('voice')
+const learningMode = ref(true)
+
+type PmTab = {
+  id: 'funk' | 'freq' | 'log' | 'flug' | 'more' | 'debug'
+  label: string
+  icon: string
+  mobileOnly?: boolean
+  debugOnly?: boolean
+}
+const TABS: PmTab[] = [
+  { id: 'funk', label: 'Funk', icon: 'mdi-radio-handheld' },
+  { id: 'freq', label: 'Freq', icon: 'mdi-sine-wave' },
+  { id: 'log', label: 'Log', icon: 'mdi-format-list-bulleted', mobileOnly: true },
+  { id: 'flug', label: 'Flug', icon: 'mdi-airplane' },
+  { id: 'more', label: 'Mehr', icon: 'mdi-cog' },
+  { id: 'debug', label: 'Debug', icon: 'mdi-bug', debugOnly: true },
+]
+const visibleTabs = computed(() => TABS.filter((tab) => !tab.debugOnly || debugMode.value))
+const desktopTabs = computed(() => visibleTabs.value.filter((tab) => !tab.mobileOnly))
 
 const simulationRunning = ref(false)
 const simulationTrace = ref<SimulationTraceEntry[]>([])
@@ -2604,6 +2731,57 @@ const swapFrequencies = () => {
   }, 500)
 }
 
+// --- Frequency presets (for the hold-to-select gesture) ---------------------
+const FREQ_ROLE_ORDER = ['ATIS', 'DEL', 'CLD', 'GND', 'TWR', 'DEP', 'APP', 'CTR', 'ACC', 'FSS']
+const FREQ_ROLE_LABEL: Record<string, string> = {
+  ATIS: 'ATIS', DEL: 'Delivery', CLD: 'Delivery', GND: 'Ground', TWR: 'Tower',
+  DEP: 'Departure', APP: 'Approach', CTR: 'Center', ACC: 'Center', FSS: 'Radio',
+}
+
+const frequencyPresets = computed<AirportFrequencyEntry[]>(() => {
+  const byType = new Map<string, AirportFrequencyEntry>()
+  const prioritized = [...airportFrequencies.value].sort((a, b) =>
+    a.source === b.source ? 0 : (a.source === 'vatsim' ? -1 : 1)
+  )
+  for (const entry of prioritized) {
+    if (!entry.frequency || entry.frequency === FREQUENCY_PLACEHOLDER) continue
+    if (!byType.has(entry.type)) byType.set(entry.type, entry)
+  }
+  const result: AirportFrequencyEntry[] = []
+  for (const type of FREQ_ROLE_ORDER) {
+    const entry = byType.get(type)
+    if (entry) result.push(entry)
+  }
+  for (const [type, entry] of byType) {
+    if (!FREQ_ROLE_ORDER.includes(type)) result.push(entry)
+  }
+  return result
+})
+
+const presetKey = (entry: AirportFrequencyEntry) => `${entry.type}-${entry.frequency}`
+const presetLabel = (entry: AirportFrequencyEntry) => FREQ_ROLE_LABEL[entry.type] || entry.type
+
+const presetOptions = computed(() =>
+  frequencyPresets.value.map((entry) => ({
+    value: presetKey(entry),
+    label: presetLabel(entry),
+    sublabel: entry.frequency,
+    color: entry.type === 'ATIS' ? '#f59e0b' : '#22d3ee',
+  }))
+)
+
+const findPreset = (value: string | number) =>
+  frequencyPresets.value.find((entry) => presetKey(entry) === value)
+
+const onPresetSelectActive = (opt: { value: string | number }) => {
+  const entry = findPreset(opt.value)
+  if (entry) setActiveFrequencyFromList(entry)
+}
+const onPresetSelectStandby = (opt: { value: string | number }) => {
+  const entry = findPreset(opt.value)
+  if (entry) setStandbyFrequencyFromList(entry)
+}
+
 const formatTime = (date: Date): string => {
   return date.toLocaleTimeString('en-US', {
     hour12: false,
@@ -2895,5 +3073,207 @@ watch(() => activeFrequency.value, (newFreq) => {
 
 .animate-pulse {
   animation: pulse 1s infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   App shell layout (monitor screen)
+   --------------------------------------------------------------------------- */
+.pm-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.pm-topbar {
+  flex: 0 0 auto;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(5, 9, 16, 0.85);
+  backdrop-filter: blur(10px);
+  padding: calc(env(safe-area-inset-top) + 8px) 12px 8px;
+}
+.pm-topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.pm-body {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.pm-sidenav {
+  display: none;
+}
+
+.pm-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.pm-main-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 14px 24px;
+}
+.pm-block {
+  margin-bottom: 16px;
+}
+.pm-block:last-child {
+  margin-bottom: 0;
+}
+
+.pm-lograil {
+  display: none;
+}
+
+.pm-bottomnav {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  gap: 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(5, 9, 16, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 6px 6px calc(env(safe-area-inset-bottom) + 6px);
+}
+
+.pm-navbtn {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: color 120ms ease, background 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.pm-navbtn:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+.pm-navbtn.is-active {
+  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.12);
+}
+
+/* Frequency chip in the top bar (also the hold-select trigger) */
+.freq-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  background: rgba(34, 211, 238, 0.1);
+  line-height: 1.1;
+  transition: border-color 120ms ease, background 120ms ease, transform 80ms ease;
+}
+.freq-chip.is-open {
+  border-color: rgba(34, 211, 238, 0.8);
+  background: rgba(34, 211, 238, 0.18);
+  transform: scale(0.98);
+}
+.freq-chip-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.freq-chip-tag {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.5);
+}
+.freq-chip-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+.freq-chip-standby {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: rgba(245, 158, 11, 0.9);
+}
+
+/* Preset hold-select trigger buttons (freq tab) */
+.preset-action-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 211, 238, 0.4);
+  background: rgba(34, 211, 238, 0.1);
+  color: #67e8f9;
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 120ms ease, background 120ms ease, transform 80ms ease;
+}
+.preset-action-chip.standby {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+}
+.preset-action-chip.is-open {
+  transform: scale(0.97);
+}
+
+/* Tablet / desktop: use the extra space ----------------------------------- */
+@media (min-width: 1024px) {
+  .pm-sidenav {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 6px;
+    width: 132px;
+    padding: 16px 10px;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-y: auto;
+  }
+  .pm-sidenav .pm-navbtn {
+    flex: 0 0 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+  .pm-lograil {
+    display: block;
+    flex: 0 0 360px;
+    width: 360px;
+    overflow-y: auto;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 16px 14px;
+  }
+  .pm-bottomnav {
+    display: none;
+  }
+  .pm-main-inner {
+    max-width: 760px;
+    padding: 20px 20px 28px;
+  }
+  /* Log lives in the right rail on desktop, so its tab body is redundant */
+  .pm-log-tab {
+    display: none !important;
+  }
 }
 </style>
