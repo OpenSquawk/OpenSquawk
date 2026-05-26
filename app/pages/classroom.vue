@@ -1077,6 +1077,10 @@
                             :placeholder="fieldPlaceholder(segment.key)"
                             :inputmode="fieldInputmode(segment.key)"
                             :ref="el => assignReadbackFieldRef(segment.key, el as HTMLInputElement | null)"
+                            autocomplete="off"
+                            autocorrect="off"
+                            autocapitalize="none"
+                            spellcheck="false"
                         />
                         <v-icon v-if="fieldPass(segment.key)" size="16" class="blank-status ok">mdi-check</v-icon>
                         <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert
@@ -1100,6 +1104,17 @@
                   <button class="btn ghost" type="button" @click="fillSolution">
                     <v-icon size="18">mdi-auto-fix</v-icon>
                     Auto-fill
+                  </button>
+                  <button
+                      v-if="correctReadbackText"
+                      class="btn ghost"
+                      type="button"
+                      :disabled="ttsLoading"
+                      @click="speakCorrectReadback"
+                      title="Speak correct readback"
+                  >
+                    <v-icon size="18">mdi-volume-high</v-icon>
+                    Speak answer
                   </button>
                 </div>
                 <div v-if="result" class="score">
@@ -3351,6 +3366,22 @@ const targetPhrase = computed(() => {
   if (!activeLesson.value || !scenario.value) return ''
   return displayCallsign(activeLesson.value.phrase(scenario.value), scenario.value)
 })
+
+const correctReadbackText = computed(() => {
+  if (!activeLesson.value || !scenario.value) return ''
+  return activeLesson.value.readback.map(seg => {
+    if (seg.type === 'text') return typeof seg.text === 'function' ? seg.text(scenario.value!) : seg.text
+    const field = activeLesson.value!.fields.find(f => f.key === seg.key)
+    return field ? field.expected(scenario.value!) : ''
+  }).join('').trim()
+})
+
+async function speakCorrectReadback() {
+  const text = correctReadbackText.value
+  if (!text || ttsLoading.value) return
+  await say(text)
+}
+
 const lessonInfo = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.info(scenario.value) : []))
 
 const lessonReference = computed(() => {

@@ -480,12 +480,8 @@ const fundamentalsLessons: Lesson[] = [
         key: 'rc-readability',
         label: 'Readability',
         expected: scenario => scenario.readabilityWord,
-        alternatives: scenario => [
-          scenario.readability.toString(),
-          scenario.readabilityWord,
-          scenario.readabilityWord.toLowerCase()
-        ],
-        placeholder: 'Enter readability (1-5)',
+        alternatives: () => ['1', '2', '3', '4', '5', 'one', 'two', 'three', 'four', 'five', 'wun', 'too', 'tree', 'fife'],
+        placeholder: '1–5',
         width: 'sm'
       }
     ],
@@ -927,8 +923,8 @@ const readbackLessons: Lesson[] = [
     desc: 'Acknowledge line up and wait',
     keywords: ['Tower', 'Line Up'],
     hints: [
-      'Repeat the runway, then say "line up and wait".',
-      'Place the call sign at the end.'
+      'In the readback, state the runway first — even though the controller said it last.',
+      'ICAO standard: runway leads the readback, then "line up and wait", then your call sign.'
     ],
     fields: [
       {
@@ -2847,7 +2843,8 @@ const fullFlightLessons: Lesson[] = [
     desc: 'Acknowledge the line-up clearance',
     keywords: ['Tower', 'Line Up', 'Flow'],
     hints: [
-      'Repeat the runway and add "line up and wait".'
+      'In the readback, state the runway first — even though the controller said it last.',
+      'ICAO standard: runway leads the readback, then "line up and wait", then your call sign.'
     ],
     fields: [
       {

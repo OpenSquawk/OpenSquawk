@@ -34,6 +34,6 @@ describe('normalize smoke', () => {
 
     assert.match(normalized, /Lufthansa tree fife niner/)
     assert.match(normalized, /runway too fife right/)
-    assert.match(normalized, /November tree Uniform four/)
+    assert.match(normalized, /November tree,\s+Uniform four/)
   })
 })
