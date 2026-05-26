@@ -74,17 +74,40 @@ const METAR_CLOUD: Record<string, string> = {
     'FEW': 'few', 'SCT': 'scattered', 'BKN': 'broken', 'OVC': 'overcast',
 };
 
+// Uppercase ATC/English tokens of 5-6 chars that must NOT be spelled phonetically
+// when `expandWaypoints` is active. Waypoints (SUGOL, UNOKO, ANEKI, ...) are not in this set.
+const WAYPOINT_SKIP: Set<string> = new Set([
+    'MAYDAY', 'PANPAN', 'CLEAR', 'CHECK', 'RIGHT', 'LIGHT', 'EIGHT', 'THREE',
+    'SEVEN', 'NINER', 'AFTER', 'BEFORE', 'CROSS', 'SHORT', 'ABEAM',
+    'BELOW', 'ABOVE', 'TOWER', 'GROUND', 'APRON', 'RAMP',
+    'NORTH', 'SOUTH', 'WINDS', 'GUSTS', 'HEAVY',
+    'WHEN', 'WITH', 'YOUR', 'THEN', 'THIS', 'THAT', 'WILL', 'OVER',
+    'TAXI', 'STAND', 'PUSH', 'START', 'INTO', 'FROM', 'ONTO', 'GATE',
+    'FINAL', 'TURN', 'CLIMB', 'DESCEND', 'MAINTAIN', 'CONTACT',
+    'SQUAWK', 'IDENT', 'ROGER', 'WILCO', 'AFFIRM', 'NEGATIVE', 'STANDBY',
+    'INBOUND', 'OUTBOUND', 'APPROACH', 'DEPARTURE', 'ARRIVAL', 'CLEARED',
+    'EXPECT', 'REPORT', 'REQUEST', 'CONFIRM', 'PROCEED', 'CONTINUE',
+    'DIRECT', 'VECTOR', 'HEADING', 'COURSE', 'INTERCEPT', 'ESTABLISHED',
+    'RUNWAY', 'ACTIVE', 'CLOSED', 'LOOSE', 'BEHIND',
+    'LANDING', 'TAKEOFF', 'HOLDING',
+    'INDIA', 'ALPHA', 'BRAVO', 'DELTA', 'JULIET', 'OSCAR',
+    'ROMEO', 'SIERRA', 'TANGO', 'VICTOR', 'YANKEE',
+    'FOXTROT', 'WHISKEY',
+]);
+
 export interface NormalizeRadioOptions {
     airlineMap?: AirlineTelephonyMap;
     expandCallsigns?: boolean;
     expandAirports?: boolean;
     sidSuffixIcao?: boolean;
+    expandWaypoints?: boolean;
 }
 
 const DEFAULT_OPTIONS: Required<Omit<NormalizeRadioOptions, 'airlineMap'>> = {
     expandAirports: false,
     expandCallsigns: false,
     sidSuffixIcao: true,
+    expandWaypoints: true,
 };
 
 export function spellIcaoDigits(value: string, separator = ' '): string {
@@ -184,14 +207,10 @@ function speakTaxiSegment(segment: string): string {
 }
 
 function speakTaxiRoute(route: string): string {
-    const parts = route.trim().split(/(\s+)/);
-    if (!parts.length) return route.trim();
-    const spokenParts = parts.map((part) => {
-        if (!part.trim()) return part;
-        const spoken = speakTaxiSegment(part);
-        return spoken || part;
-    });
-    return spokenParts.join('').replace(/\s+/g, ' ').trim();
+    const tokens = route.trim().split(/\s+/).filter(Boolean);
+    if (!tokens.length) return route.trim();
+    const spokenTokens = tokens.map(token => speakTaxiSegment(token) || token);
+    return spokenTokens.join(', ');
 }
 
 function applyTaxiRoutePhonetics(text: string): string {
@@ -264,7 +283,7 @@ function icaoAirportSpeak(raw: string): string {
 }
 
 function sidSuffixSpeak(prefix: string, digit: string, letter: string): string {
-    return `${prefix} ${spellIcaoDigits(digit)} ${spellIcaoLetters(letter)}`;
+    return `${toIcaoPhonetic(prefix)} ${spellIcaoDigits(digit)} ${spellIcaoLetters(letter)}`;
 }
 
 function approachSpeak(type: string, runway: string, suffix: string): string {
@@ -362,10 +381,26 @@ export function normalizeRadioPhrase(text: string, options: NormalizeRadioOption
         });
     }
 
+    // ILS/VOR variant letter before runway: "ILS Z 25C" → "ILS Zulu runway two five center"
+    out = out.replace(
+        /\b(ILS|VOR|RNAV|LOC|RNP)\s+([A-Z])\s+(\d{2}[LCR]?)\b/gi,
+        (_match, type: string, variant: string, runway: string) =>
+            `${type.toUpperCase()} ${ICAO_LETTERS[variant.toUpperCase()] ?? variant} ${runwaySpeak(runway)}`
+    );
+    // ILS/VOR suffix after runway: "ILS 25C Z" → legacy format
     out = out.replace(
         /\b(ILS|VOR|RNAV|LOC|RNP)\s+(\d{2}[LCR]?)\s+([A-Z])\b/gi,
         (_match, type: string, runway: string, suffix: string) => approachSpeak(type.toUpperCase(), runway, suffix)
     );
+
+    if (opts.expandWaypoints) {
+        // Expand standalone 5-6-char uppercase waypoint names (not already expanded by sidSuffixIcao)
+        // Skip common ATC English words that may appear uppercase.
+        out = out.replace(/\b([A-Z]{5,6})\b/g, (match, wp: string) => {
+            if (WAYPOINT_SKIP.has(wp)) return match;
+            return toIcaoPhonetic(wp);
+        });
+    }
 
     if (opts.expandAirports) {
         out = out.replace(/\b([A-Z]{4})\b/g, (_match, code: string) => icaoAirportSpeak(code));

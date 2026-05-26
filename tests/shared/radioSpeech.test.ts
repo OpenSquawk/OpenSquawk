@@ -25,14 +25,15 @@ describe('radioSpeech', () => {
     assert.match(normalized, /Lufthansa tree fife niner/)
     assert.match(normalized, /wun too wun decimal eight zero zero/)
     assert.match(normalized, /runway too fife right/)
-    assert.match(normalized, /November tree Uniform four/)
+    assert.match(normalized, /November tree,\s+Uniform four/)
   })
 
   it('normalizes SID suffix and METAR data', () => {
     const sid = normalizeRadioPhrase('MARUN 7F')
     const metar = normalizeMetarPhrase('EDDF 171450Z 28015G25KT 9999 -RA SCT025 BKN040 15/08 Q1013')
 
-    assert.equal(sid, 'MARUN seven Foxtrot')
+    // SID prefix is spelled phonetically so TTS pronounces unfamiliar waypoint names correctly
+    assert.equal(sid, 'Mike Alfa Romeo Uniform November seven Foxtrot')
     assert.match(metar, /wind too eight zero degrees/)
     assert.match(metar, /gusting too fife knots/)
     assert.match(metar, /QNH wun zero wun tree/)
