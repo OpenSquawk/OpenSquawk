@@ -1118,6 +1118,37 @@
                     <v-icon size="18">mdi-volume-high</v-icon>
                     Speak answer
                   </button>
+                  <button
+                      v-if="sttFeatureVisible"
+                      class="btn"
+                      :class="sttRecording ? 'danger' : 'ghost'"
+                      type="button"
+                      :disabled="sttTranscribing"
+                      @click="toggleSTTRecording"
+                      :title="sttRecording ? 'Stop recording' : 'Speak your readback into the mic'"
+                  >
+                    <v-icon size="18" :class="{ spin: sttTranscribing }">
+                      {{ sttTranscribing ? 'mdi-loading' : (sttRecording ? 'mdi-stop-circle' : 'mdi-microphone') }}
+                    </v-icon>
+                    {{ sttTranscribing ? 'Transcribing…' : (sttRecording ? 'Stop' : 'Speak readback') }}
+                  </button>
+                  <span
+                      v-else-if="sttSupported && !sttServerAvailable"
+                      class="muted small stt-hint"
+                  >
+                    <v-icon size="14">mdi-microphone-off</v-icon>
+                    Speech server unavailable
+                  </span>
+                </div>
+                <div v-if="sttLastTranscription || sttError" class="stt-feedback">
+                  <div v-if="sttError" class="stt-error">
+                    <v-icon size="14">mdi-alert</v-icon>
+                    {{ sttError }}
+                  </div>
+                  <div v-else-if="sttLastTranscription" class="stt-transcription">
+                    <span class="stt-label">Heard:</span>
+                    <span class="stt-text">{{ sttLastTranscription }}</span>
+                  </div>
                 </div>
                 <div v-if="result" class="score">
                   <div class="score-num">{{ result.score }}%</div>
@@ -2790,6 +2821,23 @@ const toast = ref({show: false, text: ''})
 const showSettings = ref(false)
 const showSpeechServerWarning = ref(false)
 const showOnlineTtsSuggestion = ref(false)
+
+// STT (Speech-to-Text) for the readback — pilot speaks the readback into a mic,
+// transcription is mapped onto the input fields. Driven by /api/atc/ptt.
+const sttSupported = isClient && typeof window !== 'undefined'
+    && typeof navigator !== 'undefined'
+    && Boolean(navigator.mediaDevices?.getUserMedia)
+    && typeof window.MediaRecorder !== 'undefined'
+const sttServerAvailable = ref(true)
+const sttRecording = ref(false)
+const sttTranscribing = ref(false)
+const sttError = ref('')
+const sttLastTranscription = ref('')
+const sttMediaRecorder = ref<MediaRecorder | null>(null)
+const sttChunks = ref<Blob[]>([])
+const sttStream = ref<MediaStream | null>(null)
+const sttFeatureVisible = computed(() => sttSupported && sttServerAvailable.value)
+
 const api = useApi()
 const isClient = typeof window !== 'undefined'
 const auth = useAuthStore()
@@ -2861,8 +2909,12 @@ async function checkSpeechServerAvailability() {
     const hasOnlineTts = Boolean(health.configured && health.reachable)
     showSpeechServerWarning.value = Boolean(health.configured && !health.reachable)
     showOnlineTtsSuggestion.value = Boolean(hasOnlineTts && cfg.value.tts)
+    // STT: if a Speaches server is configured but down, hide the feature.
+    // If no Speaches is configured we assume OpenAI Whisper cloud is reachable.
+    sttServerAvailable.value = !health.configured || health.reachable
   } catch (error) {
     console.error('Failed to check speech server availability', error)
+    sttServerAvailable.value = false
   }
 }
 
@@ -3411,6 +3463,171 @@ async function speakCorrectReadback() {
   await say(text)
 }
 
+// ---------------------------------------------------------------------------
+// STT — pilot speaks the readback into the mic, transcription is mapped onto
+// the input fields.  Callsigns are notoriously misrecognized by Whisper, so we
+// run fuzzy substring matching with the existing alternative-list for each
+// field; for callsign-flagged fields we additionally allow a sliding-window
+// Levenshtein match against the transcription.
+// ---------------------------------------------------------------------------
+
+function fuzzyContains(haystack: string, needle: string): boolean {
+  if (!needle || !haystack) return false
+  if (haystack.includes(needle)) return true
+  const tolerance = allowedDistance(needle.length) + 1
+  const minLen = Math.max(3, needle.length - 2)
+  const maxLen = needle.length + 3
+  for (let start = 0; start <= haystack.length - minLen; start++) {
+    for (let len = minLen; len <= maxLen; len++) {
+      if (start + len > haystack.length) break
+      const window = haystack.slice(start, start + len)
+      if (lev(window, needle) <= tolerance) return true
+    }
+  }
+  return false
+}
+
+function looksLikeCallsignKey(key: string, label?: string): boolean {
+  const probe = `${key} ${label || ''}`.toLowerCase()
+  return /\b(callsign|call sign|callup)\b/.test(probe) || /callsign$/.test(key) || /-callsign\b/.test(key)
+}
+
+function mapTranscriptionToFields(transcription: string): { filled: number; total: number } {
+  if (!activeLesson.value || !scenario.value) return { filled: 0, total: 0 }
+  const normalized = norm(transcription)
+  if (!normalized) return { filled: 0, total: activeLesson.value.fields.length }
+  let filled = 0
+  for (const field of activeLesson.value.fields) {
+    const expectedRaw = (field.expected(scenario.value) || '').trim()
+    if (!expectedRaw) continue
+    const altList = field.alternatives ? (field.alternatives(scenario.value) || []) : []
+    const candidates = Array.from(new Set([expectedRaw, ...altList]
+      .map(c => (c || '').trim())
+      .filter(Boolean)
+      .map(norm)
+      .filter(c => c.length >= 1)))
+
+    const isCallsign = looksLikeCallsignKey(field.key, field.label)
+    let matched = false
+    for (const cand of candidates) {
+      if (!cand) continue
+      if (normalized.includes(cand)) { matched = true; break }
+      if (isCallsign && cand.length >= 4 && fuzzyContains(normalized, cand)) { matched = true; break }
+    }
+    if (matched) {
+      userAnswers[field.key] = expectedRaw
+      filled++
+    }
+  }
+  return { filled, total: activeLesson.value.fields.length }
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buf = await blob.arrayBuffer()
+  const bytes = new Uint8Array(buf)
+  let bin = ''
+  const chunkSize = 0x8000
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)))
+  }
+  return btoa(bin)
+}
+
+async function processSTTAudio(blob: Blob) {
+  if (!activeLesson.value) return
+  sttTranscribing.value = true
+  sttError.value = ''
+  try {
+    if (!blob.size) {
+      sttError.value = 'No audio captured'
+      return
+    }
+    const base64 = await blobToBase64(blob)
+    const result = await api.post<{ success: boolean; transcription: string }>('/api/atc/ptt', {
+      audio: base64,
+      moduleId: current.value?.id || 'classroom',
+      lessonId: activeLesson.value.id,
+      format: 'webm',
+    })
+    if (result?.success && result.transcription) {
+      sttLastTranscription.value = result.transcription
+      const summary = mapTranscriptionToFields(result.transcription)
+      toast.value = {
+        show: true,
+        text: summary.filled
+          ? `Filled ${summary.filled}/${summary.total} field${summary.total === 1 ? '' : 's'} from your readback`
+          : 'Transcribed, but couldn’t map any field. Edit manually below.'
+      }
+      setTimeout(() => { toast.value.show = false }, 3500)
+    } else {
+      sttError.value = 'No speech detected'
+    }
+  } catch (err: any) {
+    console.error('STT failed', err)
+    const msg = err?.data?.statusMessage || err?.statusMessage || err?.message || 'Transcription failed'
+    sttError.value = String(msg)
+  } finally {
+    sttTranscribing.value = false
+  }
+}
+
+async function startSTTRecording() {
+  if (sttRecording.value || sttTranscribing.value) return
+  if (!sttSupported) {
+    sttError.value = 'Your browser does not support microphone recording'
+    return
+  }
+  sttError.value = ''
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
+    })
+    sttStream.value = stream
+    const recorder = new MediaRecorder(stream)
+    sttMediaRecorder.value = recorder
+    sttChunks.value = []
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) sttChunks.value.push(e.data)
+    }
+    recorder.onstop = async () => {
+      const blob = new Blob(sttChunks.value, { type: recorder.mimeType || 'audio/webm' })
+      sttStream.value?.getTracks().forEach(t => t.stop())
+      sttStream.value = null
+      sttMediaRecorder.value = null
+      sttChunks.value = []
+      await processSTTAudio(blob)
+    }
+    recorder.start()
+    sttRecording.value = true
+  } catch (err: any) {
+    console.error('STT start failed', err)
+    sttError.value = err?.name === 'NotAllowedError'
+      ? 'Microphone access denied — please allow it in your browser'
+      : 'Could not start recording'
+    sttRecording.value = false
+    sttStream.value?.getTracks().forEach(t => t.stop())
+    sttStream.value = null
+  }
+}
+
+function stopSTTRecording() {
+  if (!sttRecording.value || !sttMediaRecorder.value) return
+  try {
+    sttMediaRecorder.value.stop()
+  } catch (err) {
+    console.warn('STT stop failed', err)
+  }
+  sttRecording.value = false
+}
+
+function toggleSTTRecording() {
+  if (sttRecording.value) {
+    stopSTTRecording()
+  } else {
+    startSTTRecording()
+  }
+}
+
 const lessonInfo = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.info(scenario.value) : []))
 
 const lessonReference = computed(() => {
@@ -3806,6 +4023,9 @@ function resetAnswers(clearResult = false) {
   if (clearResult) {
     result.value = null
   }
+  // Clear stale STT feedback so it doesn't bleed into the next attempt.
+  sttLastTranscription.value = ''
+  sttError.value = ''
 }
 
 function clearAnswers() {
@@ -4727,6 +4947,15 @@ onMounted(() => {
     }
   }
   void checkSpeechServerAvailability()
+})
+
+onBeforeUnmount(() => {
+  if (sttMediaRecorder.value && sttRecording.value) {
+    try { sttMediaRecorder.value.stop() } catch { /* ignore */ }
+  }
+  sttStream.value?.getTracks().forEach(t => t.stop())
+  sttStream.value = null
+  sttMediaRecorder.value = null
 })
 </script>
 
@@ -6616,6 +6845,64 @@ onMounted(() => {
 
 .controls {
   margin-top: 12px;
+}
+
+.btn.danger {
+  background: color-mix(in srgb, #ef4444 18%, transparent);
+  border-color: color-mix(in srgb, #ef4444 55%, transparent);
+  color: #fecaca;
+  animation: sttPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes sttPulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, #ef4444 35%, transparent); }
+  50%      { box-shadow: 0 0 0 8px color-mix(in srgb, #ef4444 0%, transparent); }
+}
+
+.stt-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stt-feedback {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.stt-transcription {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.stt-label {
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 11px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--accent) 80%, var(--text));
+}
+
+.stt-text {
+  color: var(--text);
+}
+
+.stt-error {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: #fca5a5;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #ef4444 10%, transparent);
+  border: 1px solid color-mix(in srgb, #ef4444 30%, transparent);
 }
 
 
