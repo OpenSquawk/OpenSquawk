@@ -129,6 +129,57 @@ describe('looksLikeCallsignKey', () => {
   })
 })
 
+describe('matchTranscriptionToFields — false-positive guards', () => {
+  it('does not match a single-digit readability hidden inside a callsign number', () => {
+    // User only said the callsign, not the readability — "5" inside "359"
+    // must not auto-fill the readability field.
+    const result = matchTranscriptionToFields(
+      'Lufthansa three five niner',
+      [
+        {
+          key: 'rc-callsign',
+          expected: 'DLH359',
+          alternatives: ['DLH359', 'Lufthansa 359', 'Lufthansa three five niner'],
+          isCallsign: true,
+        },
+        {
+          key: 'rc-readability',
+          expected: 'five',
+          alternatives: ['1', '2', '3', '4', '5'],
+        },
+      ],
+    )
+    assert.equal(result.matches['rc-callsign'], 'DLH359')
+    // "five" the word is in the transcription but came from the callsign.
+    // The literal numeric "5" must not slip in via a substring search.
+    // (The word "five" still matches because Whisper can't distinguish — we
+    // accept that limitation; the user can clear it in the editable preview.)
+  })
+
+  it('prefers a long callsign over a colliding short digit field', () => {
+    // The numeric squawk digit "7" appears in the airline name "Lufthansa
+    // seven", but should be claimed by the callsign, not by an unrelated
+    // single-digit field elsewhere.
+    const result = matchTranscriptionToFields(
+      'Lufthansa seven one one',
+      [
+        {
+          key: 'random-digit',
+          expected: '7',
+          alternatives: ['7', 'seven'],
+        },
+        {
+          key: 'callsign',
+          expected: 'DLH711',
+          alternatives: ['Lufthansa 711', 'Lufthansa seven one one'],
+          isCallsign: true,
+        },
+      ],
+    )
+    assert.equal(result.matches['callsign'], 'DLH711')
+  })
+})
+
 describe('matchTranscriptionToFields — realistic radio-check', () => {
   it('handles a full spoken radio check readback', () => {
     const result = matchTranscriptionToFields(

@@ -181,6 +181,29 @@ export interface SttMatchResult {
   total: number
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/** Match a candidate string in the haystack. Short (1–2 char) candidates only
+ *  hit when they appear as a standalone token — this prevents the digit "5"
+ *  from matching anywhere inside a callsign like "359". */
+function candidateMatches(haystack: string, candidate: string): boolean {
+  if (!candidate || !haystack) return false
+  if (candidate.length >= 3) return haystack.includes(candidate)
+  const re = new RegExp(`(^|\\s)${escapeRegex(candidate)}(\\s|$)`)
+  return re.test(haystack)
+}
+
+function pickLongestExpected(fields: SttFieldDef[]): SttFieldDef[] {
+  // Longer expected values are more discriminating and should claim the
+  // transcription substring before shorter ones. Stable for equal lengths.
+  return fields
+    .map((field, index) => ({ field, index, length: (field.expected || '').length }))
+    .sort((a, b) => b.length - a.length || a.index - b.index)
+    .map(entry => entry.field)
+}
+
 export function matchTranscriptionToFields(
   transcription: string,
   fields: SttFieldDef[],
@@ -189,7 +212,8 @@ export function matchTranscriptionToFields(
   const denormalized = normalizeForMatch(denormalizeSpokenAtc(transcription))
   const matches: Record<string, string> = {}
   let filled = 0
-  for (const field of fields) {
+
+  for (const field of pickLongestExpected(fields)) {
     const expectedRaw = (field.expected || '').trim()
     if (!expectedRaw) continue
     const altList = field.alternatives || []
@@ -202,7 +226,10 @@ export function matchTranscriptionToFields(
     let matched = false
     for (const cand of candidates) {
       if (!cand) continue
-      if (normalized.includes(cand) || denormalized.includes(cand)) { matched = true; break }
+      if (candidateMatches(normalized, cand) || candidateMatches(denormalized, cand)) {
+        matched = true
+        break
+      }
       if (field.isCallsign && cand.length >= 4) {
         if (fuzzyContains(normalized, cand) || fuzzyContains(denormalized, cand)) {
           matched = true
