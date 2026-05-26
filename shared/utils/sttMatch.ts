@@ -151,11 +151,11 @@ function allowedDistance(length: number): number {
 }
 
 /** Loose substring search using a sliding Levenshtein window. */
-export function fuzzyContains(haystack: string, needle: string): boolean {
+export function fuzzyContains(haystack: string, needle: string, extraTolerance = 1): boolean {
   if (!needle) return false
   if (!haystack) return false
   if (haystack.includes(needle)) return true
-  const tolerance = allowedDistance(needle.length) + 1
+  const tolerance = allowedDistance(needle.length) + extraTolerance
   const minLen = Math.max(3, needle.length - 2)
   const maxLen = needle.length + 3
   for (let start = 0; start + minLen <= haystack.length; start++) {
@@ -166,6 +166,60 @@ export function fuzzyContains(haystack: string, needle: string): boolean {
     }
   }
   return false
+}
+
+/** Split a callsign-style candidate ("lufthansa 359", "dlh 359", "baw27") into
+ *  its alphabetic prefix and trailing digit run.  If either side is missing we
+ *  return null and fall back to whole-string matching. */
+function splitCallsignParts(candidate: string): { alpha: string; digits: string } | null {
+  // Accept either "alpha digits" with a space or "alphaDigits" glued together.
+  const spaced = candidate.match(/^([a-z][a-z ]*?)\s+(\d{1,5})[a-z]?$/i)
+  if (spaced) {
+    const alpha = spaced[1]!.trim()
+    const digits = spaced[2]!
+    if (alpha.length >= 3 && digits.length >= 2) return { alpha, digits }
+  }
+  const glued = candidate.match(/^([a-z]{2,})(\d{1,5})[a-z]?$/i)
+  if (glued) {
+    const alpha = glued[1]!
+    const digits = glued[2]!
+    if (alpha.length >= 3 && digits.length >= 2) return { alpha, digits }
+  }
+  return null
+}
+
+/** Callsign-tolerant match: try the candidate whole, then split into the
+ *  airline prefix + flight number and require BOTH parts to appear (with fuzz)
+ *  in the haystack.  This rescues common Whisper errors like:
+ *    - "Loftansa three five niner"  → matches "Lufthansa 359"
+ *    - "Speed bird 27"              → matches "Speedbird 27"
+ *    - "Lufthana 359"               → matches "Lufthansa 359" (typo)
+ *    - "easy 25"                    → matches "EZY25" via alts
+ */
+function callsignMatches(haystack: string, candidate: string): boolean {
+  if (!candidate || !haystack) return false
+  if (candidate.length >= 3 && haystack.includes(candidate)) return true
+  // Generous whole-string fuzzy (alphabetic typos in airline name).
+  if (fuzzyContains(haystack, candidate, 3)) return true
+
+  const parts = splitCallsignParts(candidate)
+  if (!parts) return false
+  const { alpha, digits } = parts
+
+  // Digit part is the strong anchor — it must be present, allowing a single
+  // typo on longer flight numbers.
+  const digitsOk = haystack.includes(digits)
+    || (digits.length >= 3 && fuzzyContains(haystack, digits, 1))
+  if (!digitsOk) return false
+
+  // Alpha part may be misspelled by Whisper or split across whitespace; we
+  // allow ~25% character distance plus the base allowance.
+  const alphaCompact = alpha.replace(/\s+/g, '')
+  const alphaTolerance = Math.max(2, Math.floor(alphaCompact.length / 4))
+  if (haystack.includes(alpha)) return true
+  if (alphaCompact.length >= 4 && haystack.replace(/\s+/g, '').includes(alphaCompact)) return true
+  return fuzzyContains(haystack, alpha, alphaTolerance)
+      || fuzzyContains(haystack.replace(/\s+/g, ''), alphaCompact, alphaTolerance)
 }
 
 export interface SttFieldDef {
@@ -231,7 +285,7 @@ export function matchTranscriptionToFields(
         break
       }
       if (field.isCallsign && cand.length >= 4) {
-        if (fuzzyContains(normalized, cand) || fuzzyContains(denormalized, cand)) {
+        if (callsignMatches(normalized, cand) || callsignMatches(denormalized, cand)) {
           matched = true
           break
         }

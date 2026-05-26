@@ -180,6 +180,77 @@ describe('matchTranscriptionToFields — false-positive guards', () => {
   })
 })
 
+describe('matchTranscriptionToFields — callsign tolerance', () => {
+  const lufthansa = {
+    key: 'callsign',
+    expected: 'DLH359',
+    alternatives: ['DLH359', 'DLH 359', 'Lufthansa 359', 'Lufthansa three five niner'],
+    isCallsign: true,
+  } as const
+
+  it('tolerates a misspelled airline name (Whisper: Loftansa)', () => {
+    const result = matchTranscriptionToFields('Loftansa three five niner', [lufthansa])
+    assert.equal(result.matches['callsign'], 'DLH359')
+  })
+
+  it('tolerates a typo in the airline name (Lufthana)', () => {
+    const result = matchTranscriptionToFields('Lufthana 359', [lufthansa])
+    assert.equal(result.matches['callsign'], 'DLH359')
+  })
+
+  it('tolerates "Speed bird" split into two words instead of Speedbird', () => {
+    const result = matchTranscriptionToFields('Speed bird two seven', [
+      {
+        key: 'callsign',
+        expected: 'BAW27',
+        alternatives: ['BAW27', 'BAW 27', 'Speedbird 27', 'Speedbird two seven'],
+        isCallsign: true,
+      },
+    ])
+    assert.equal(result.matches['callsign'], 'BAW27')
+  })
+
+  it('matches even when the airline name is completely absent but the flight number is right', () => {
+    const result = matchTranscriptionToFields('three five niner runway two five right', [
+      lufthansa,
+    ])
+    // Without the airline portion we should NOT claim the callsign — too
+    // weak a signal on its own.
+    assert.equal(result.matches['callsign'], undefined)
+  })
+
+  it('matches when both airline and number are present but in odd word order', () => {
+    const result = matchTranscriptionToFields(
+      'this is Lufthansa flight three five niner inbound',
+      [lufthansa],
+    )
+    assert.equal(result.matches['callsign'], 'DLH359')
+  })
+
+  it('matches a Easy 25 → EZY25 collapse', () => {
+    const result = matchTranscriptionToFields('Easy two five cleared to land', [
+      {
+        key: 'callsign',
+        expected: 'EZY25',
+        alternatives: ['EZY25', 'EZY 25', 'Easy 25', 'Easy two five'],
+        isCallsign: true,
+      },
+    ])
+    assert.equal(result.matches['callsign'], 'EZY25')
+  })
+
+  it('matches a Whisper-mangled airline name via the ICAO alternative', () => {
+    // Whisper sometimes outputs the raw ICAO code letters even when the
+    // pilot said the telephony name. The "delta lima hotel" alternative
+    // gives us the catch.
+    const result = matchTranscriptionToFields(
+      'delta lima hotel three five niner',
+      [lufthansa],
+    )
+    assert.equal(result.matches['callsign'], 'DLH359')
+  })
+})
+
 describe('matchTranscriptionToFields — realistic radio-check', () => {
   it('handles a full spoken radio check readback', () => {
     const result = matchTranscriptionToFields(
