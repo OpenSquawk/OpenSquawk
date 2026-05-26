@@ -1086,6 +1086,14 @@
                           <v-icon v-if="fieldPass(segment.key)" size="16" class="blank-status ok">mdi-check</v-icon>
                           <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert
                           </v-icon>
+                          <v-icon
+                              v-if="sttFilledFields[segment.key]"
+                              size="14"
+                              class="blank-status stt-marker"
+                              title="Filled by mic"
+                          >
+                            mdi-microphone
+                          </v-icon>
                           <small v-if="result" class="blank-feedback">
                             Expected: {{ fieldExpectedValue(segment.key) }}
                           </small>
@@ -1130,7 +1138,9 @@
                     <v-icon size="18" :class="{ spin: sttTranscribing }">
                       {{ sttTranscribing ? 'mdi-loading' : (sttRecording ? 'mdi-stop-circle' : 'mdi-microphone') }}
                     </v-icon>
-                    {{ sttTranscribing ? 'Transcribing…' : (sttRecording ? 'Stop' : 'Speak readback') }}
+                    <template v-if="sttTranscribing">Transcribing…</template>
+                    <template v-else-if="sttRecording">Stop ({{ formatSttDuration(sttRecordingSeconds) }})</template>
+                    <template v-else>Speak readback</template>
                   </button>
                   <span
                       v-else-if="sttSupported && !sttServerAvailable"
@@ -1141,15 +1151,63 @@
                     Speech server unavailable
                   </span>
                 </div>
-                <div v-if="sttLastTranscription || sttError" class="stt-feedback">
-                  <div v-if="sttError" class="stt-error">
-                    <v-icon size="14">mdi-alert</v-icon>
-                    {{ sttError }}
+
+                <!-- STT panel: shown once we have a transcription, an error, or
+                     are actively recording. Lets the pilot review what Whisper
+                     heard, edit any mistakes, and re-apply the mapping. -->
+                <div
+                    v-if="sttFeatureVisible && (sttRecording || sttTranscribing || sttLastTranscription || sttError)"
+                    class="stt-panel"
+                    :class="{ 'is-recording': sttRecording, 'is-error': !!sttError }"
+                >
+                  <div class="stt-panel-head">
+                    <div class="stt-panel-title">
+                      <v-icon size="16" :class="{ spin: sttTranscribing }">
+                        {{ sttRecording ? 'mdi-microphone' : (sttTranscribing ? 'mdi-loading' : (sttError ? 'mdi-alert-circle' : 'mdi-microphone-message')) }}
+                      </v-icon>
+                      <template v-if="sttRecording">Recording — {{ formatSttDuration(sttRecordingSeconds) }}</template>
+                      <template v-else-if="sttTranscribing">Transcribing your readback…</template>
+                      <template v-else-if="sttError">Couldn't transcribe</template>
+                      <template v-else>Whisper heard</template>
+                    </div>
+                    <div v-if="sttLastFillSummary" class="stt-summary">
+                      Filled {{ sttLastFillSummary.filled }} / {{ sttLastFillSummary.total }} field{{ sttLastFillSummary.total === 1 ? '' : 's' }}
+                    </div>
                   </div>
-                  <div v-else-if="sttLastTranscription" class="stt-transcription">
-                    <span class="stt-label">Heard:</span>
-                    <span class="stt-text">{{ sttLastTranscription }}</span>
+
+                  <div v-if="sttError" class="stt-error-body">{{ sttError }}</div>
+
+                  <div v-else-if="sttRecording || sttTranscribing" class="stt-waiting">
+                    <span v-if="sttRecording" class="stt-rec-dot" aria-hidden="true"></span>
+                    <span v-if="sttRecording">Speak clearly into your microphone. Click <strong>Stop</strong> when done.</span>
+                    <span v-else>Sending audio to the speech server…</span>
                   </div>
+
+                  <template v-else-if="sttLastTranscription">
+                    <textarea
+                        v-model="sttEditableTranscription"
+                        class="stt-textarea"
+                        rows="2"
+                        aria-label="Transcribed readback (editable)"
+                        spellcheck="false"
+                        autocorrect="off"
+                        autocapitalize="none"
+                    />
+                    <div class="stt-panel-actions">
+                      <button class="btn primary" type="button" @click="applySttTranscription">
+                        <v-icon size="16">mdi-arrow-down-bold-circle</v-icon>
+                        Apply to fields
+                      </button>
+                      <button class="btn ghost" type="button" @click="toggleSTTRecording" :disabled="sttTranscribing">
+                        <v-icon size="16">mdi-microphone</v-icon>
+                        Record again
+                      </button>
+                      <button class="btn ghost" type="button" @click="clearSttResult">
+                        <v-icon size="16">mdi-close</v-icon>
+                        Dismiss
+                      </button>
+                    </div>
+                  </template>
                 </div>
                 <div v-if="result" class="score">
                   <div class="score-num">{{ result.score }}%</div>
@@ -2839,10 +2897,24 @@ const sttRecording = ref(false)
 const sttTranscribing = ref(false)
 const sttError = ref('')
 const sttLastTranscription = ref('')
+const sttEditableTranscription = ref('')
+const sttFilledFields = reactive<Record<string, boolean>>({})
+const sttLastFillSummary = ref<{ filled: number; total: number } | null>(null)
+const sttRecordingSeconds = ref(0)
 const sttMediaRecorder = ref<MediaRecorder | null>(null)
 const sttChunks = ref<Blob[]>([])
 const sttStream = ref<MediaStream | null>(null)
+let sttRecordingTimer: ReturnType<typeof setInterval> | null = null
+let sttRecordingAutoStop: ReturnType<typeof setTimeout> | null = null
+const STT_MAX_RECORDING_SECONDS = 45
 const sttFeatureVisible = computed(() => sttSupported.value && sttServerAvailable.value)
+
+function formatSttDuration(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds))
+  const mm = Math.floor(s / 60).toString().padStart(2, '0')
+  const ss = (s % 60).toString().padStart(2, '0')
+  return `${mm}:${ss}`
+}
 
 type SpeechServerHealth = {
   configured: boolean
@@ -3492,10 +3564,29 @@ function mapTranscriptionToFields(transcription: string): { filled: number; tota
   if (!activeLesson.value || !scenario.value) return { filled: 0, total: 0 }
   const defs = buildSttFieldDefs()
   const result = matchTranscriptionToFields(transcription, defs)
+  // Clear stale mic markers for fields not in this match round
+  Object.keys(sttFilledFields).forEach(k => { delete sttFilledFields[k] })
   for (const [key, value] of Object.entries(result.matches)) {
     userAnswers[key] = value
+    sttFilledFields[key] = true
   }
   return { filled: result.filled, total: result.total }
+}
+
+function applySttTranscription() {
+  const text = sttEditableTranscription.value.trim()
+  if (!text) return
+  sttLastTranscription.value = text
+  const summary = mapTranscriptionToFields(text)
+  sttLastFillSummary.value = summary
+}
+
+function clearSttResult() {
+  sttLastTranscription.value = ''
+  sttEditableTranscription.value = ''
+  sttLastFillSummary.value = null
+  sttError.value = ''
+  Object.keys(sttFilledFields).forEach(k => { delete sttFilledFields[k] })
 }
 
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -3515,7 +3606,7 @@ async function processSTTAudio(blob: Blob) {
   sttError.value = ''
   try {
     if (!blob.size) {
-      sttError.value = 'No audio captured'
+      sttError.value = 'No audio was captured — check that your microphone is connected and unmuted.'
       return
     }
     const base64 = await blobToBase64(blob)
@@ -3526,24 +3617,38 @@ async function processSTTAudio(blob: Blob) {
       format: 'webm',
     })
     if (result?.success && result.transcription) {
-      sttLastTranscription.value = result.transcription
-      const summary = mapTranscriptionToFields(result.transcription)
-      toast.value = {
-        show: true,
-        text: summary.filled
-          ? `Filled ${summary.filled}/${summary.total} field${summary.total === 1 ? '' : 's'} from your readback`
-          : 'Transcribed, but couldn’t map any field. Edit manually below.'
-      }
-      setTimeout(() => { toast.value.show = false }, 3500)
+      const text = result.transcription.trim()
+      sttLastTranscription.value = text
+      sttEditableTranscription.value = text
+      // Auto-apply on first transcription so common cases "just work".
+      // The user can still edit the text and re-apply, or dismiss entirely.
+      const summary = mapTranscriptionToFields(text)
+      sttLastFillSummary.value = summary
     } else {
-      sttError.value = 'No speech detected'
+      sttError.value = 'No speech detected. Try recording again, a bit closer to the mic.'
     }
   } catch (err: any) {
     console.error('STT failed', err)
     const msg = err?.data?.statusMessage || err?.statusMessage || err?.message || 'Transcription failed'
     sttError.value = String(msg)
+    // If the server explicitly rejected the request, flip availability so the
+    // mic button shows the "unavailable" hint next time around.
+    if (err?.statusCode === 503 || /unreachable|unavailable/i.test(String(msg))) {
+      sttServerAvailable.value = false
+    }
   } finally {
     sttTranscribing.value = false
+  }
+}
+
+function stopSttRecordingTimers() {
+  if (sttRecordingTimer) {
+    clearInterval(sttRecordingTimer)
+    sttRecordingTimer = null
+  }
+  if (sttRecordingAutoStop) {
+    clearTimeout(sttRecordingAutoStop)
+    sttRecordingAutoStop = null
   }
 }
 
@@ -3553,7 +3658,16 @@ async function startSTTRecording() {
     sttError.value = 'Your browser does not support microphone recording'
     return
   }
+  if (!sttServerAvailable.value) {
+    sttError.value = 'The speech server is currently unavailable.'
+    return
+  }
   sttError.value = ''
+  // Drop any previous transcription so the panel doesn't show stale text
+  // alongside the new recording state.
+  sttLastTranscription.value = ''
+  sttEditableTranscription.value = ''
+  sttLastFillSummary.value = null
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
@@ -3566,6 +3680,7 @@ async function startSTTRecording() {
       if (e.data && e.data.size > 0) sttChunks.value.push(e.data)
     }
     recorder.onstop = async () => {
+      stopSttRecordingTimers()
       const blob = new Blob(sttChunks.value, { type: recorder.mimeType || 'audio/webm' })
       sttStream.value?.getTracks().forEach(t => t.stop())
       sttStream.value = null
@@ -3575,12 +3690,22 @@ async function startSTTRecording() {
     }
     recorder.start()
     sttRecording.value = true
+    sttRecordingSeconds.value = 0
+    sttRecordingTimer = setInterval(() => {
+      sttRecordingSeconds.value += 1
+    }, 1000)
+    // Hard limit so a forgotten recording doesn't run forever and exceed
+    // the server's 2 MB upload cap (~60s at 16kHz mono).
+    sttRecordingAutoStop = setTimeout(() => {
+      if (sttRecording.value) stopSTTRecording()
+    }, STT_MAX_RECORDING_SECONDS * 1000)
   } catch (err: any) {
     console.error('STT start failed', err)
     sttError.value = err?.name === 'NotAllowedError'
-      ? 'Microphone access denied — please allow it in your browser'
-      : 'Could not start recording'
+      ? 'Microphone access denied. Please allow microphone access in your browser settings.'
+      : 'Could not start recording. Check that no other application is using the mic.'
     sttRecording.value = false
+    stopSttRecordingTimers()
     sttStream.value?.getTracks().forEach(t => t.stop())
     sttStream.value = null
   }
@@ -4001,7 +4126,10 @@ function resetAnswers(clearResult = false) {
   }
   // Clear stale STT feedback so it doesn't bleed into the next attempt.
   sttLastTranscription.value = ''
+  sttEditableTranscription.value = ''
+  sttLastFillSummary.value = null
   sttError.value = ''
+  Object.keys(sttFilledFields).forEach(k => { delete sttFilledFields[k] })
 }
 
 function clearAnswers() {
@@ -4930,6 +5058,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  stopSttRecordingTimers()
   if (sttMediaRecorder.value && sttRecording.value) {
     try { sttMediaRecorder.value.stop() } catch { /* ignore */ }
   }
@@ -6845,44 +6974,128 @@ onBeforeUnmount(() => {
   gap: 6px;
 }
 
-.stt-feedback {
-  margin-top: 10px;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.stt-transcription {
+.stt-panel {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  background: linear-gradient(160deg,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      color-mix(in srgb, var(--bg2) 75%, transparent));
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: baseline;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  flex-direction: column;
+  gap: 10px;
 }
 
-.stt-label {
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  font-size: 11px;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--accent) 80%, var(--text));
+.stt-panel.is-recording {
+  border-color: color-mix(in srgb, #ef4444 55%, transparent);
+  background: linear-gradient(160deg,
+      color-mix(in srgb, #ef4444 14%, transparent),
+      color-mix(in srgb, var(--bg2) 75%, transparent));
 }
 
-.stt-text {
-  color: var(--text);
+.stt-panel.is-error {
+  border-color: color-mix(in srgb, #ef4444 40%, transparent);
 }
 
-.stt-error {
-  display: inline-flex;
-  gap: 6px;
+.stt-panel-head {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stt-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent) 78%, var(--text));
+}
+
+.stt-panel.is-recording .stt-panel-title {
   color: #fca5a5;
-  padding: 8px 12px;
+}
+
+.stt-panel.is-error .stt-panel-title {
+  color: #fca5a5;
+}
+
+.stt-summary {
+  font-size: 12px;
+  color: var(--t2);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  padding: 3px 9px;
+  border-radius: 999px;
+  letter-spacing: .02em;
+}
+
+.stt-waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--t2);
+}
+
+.stt-rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, .6);
+  animation: sttDot 1.1s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes sttDot {
+  0%, 100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(239, 68, 68, .55); }
+  50%      { transform: scale(1.2); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+
+.stt-error-body {
+  color: #fca5a5;
+  font-size: 14px;
+  padding: 10px 12px;
   border-radius: 10px;
   background: color-mix(in srgb, #ef4444 10%, transparent);
   border: 1px solid color-mix(in srgb, #ef4444 30%, transparent);
+}
+
+.stt-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 56px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+  font-family: inherit;
+  outline: none;
+}
+
+.stt-textarea:focus {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.stt-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.blank-status.stt-marker {
+  top: 8px;
+  right: 28px;
+  color: color-mix(in srgb, var(--accent) 80%, var(--text));
+  opacity: .85;
 }
 
 
