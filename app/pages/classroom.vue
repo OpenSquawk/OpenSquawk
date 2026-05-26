@@ -1058,38 +1058,40 @@
                 <div class="label">Your readback</div>
                 <div class="panel readback-panel">
                   <div class="cloze">
-                    <template v-for="(segment, idx) in activeLesson.readback"
-                              :key="segment.type === 'field' ? `f-${segment.key}` : `t-${idx}`">
-                      <span v-if="segment.type === 'text'" class="cloze-chunk cloze-text">
-                        {{
-                          displayCallsign(typeof segment.text === 'function' ? (scenario ? segment.text(scenario) : '') : segment.text)
-                        }}
-                      </span>
-                      <label
-                          v-else
-                          class="blank cloze-chunk"
-                          :class="[blankSizeClass(segment.key, segment.width), blankStateClass(segment.key)]"
-                      >
-                        <span class="sr-only">{{ fieldLabel(segment.key) }}</span>
-                        <input
-                            v-model="userAnswers[segment.key]"
-                            :aria-label="fieldLabel(segment.key)"
-                            :placeholder="fieldPlaceholder(segment.key)"
-                            :inputmode="fieldInputmode(segment.key)"
-                            :ref="el => assignReadbackFieldRef(segment.key, el as HTMLInputElement | null)"
-                            autocomplete="off"
-                            autocorrect="off"
-                            autocapitalize="none"
-                            spellcheck="false"
-                        />
-                        <v-icon v-if="fieldPass(segment.key)" size="16" class="blank-status ok">mdi-check</v-icon>
-                        <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert
-                        </v-icon>
-                        <small v-if="result" class="blank-feedback">
-                          Expected: {{ fieldExpectedValue(segment.key) }}
-                        </small>
-                      </label>
-                    </template>
+                    <div v-for="group in clozeGroups" :key="group.id" class="cloze-group">
+                      <template v-for="(segment, idx) in group.segments"
+                                :key="segment.type === 'field' ? `f-${segment.key}` : `${group.id}-t-${idx}`">
+                        <span v-if="segment.type === 'text'" class="cloze-chunk cloze-text">
+                          {{
+                            displayCallsign(typeof segment.text === 'function' ? (scenario ? segment.text(scenario) : '') : segment.text)
+                          }}
+                        </span>
+                        <label
+                            v-else
+                            class="blank cloze-chunk"
+                            :class="[blankSizeClass(segment.key, segment.width), blankStateClass(segment.key)]"
+                        >
+                          <span class="sr-only">{{ fieldLabel(segment.key) }}</span>
+                          <input
+                              v-model="userAnswers[segment.key]"
+                              :aria-label="fieldLabel(segment.key)"
+                              :placeholder="fieldPlaceholder(segment.key)"
+                              :inputmode="fieldInputmode(segment.key)"
+                              :ref="el => assignReadbackFieldRef(segment.key, el as HTMLInputElement | null)"
+                              autocomplete="off"
+                              autocorrect="off"
+                              autocapitalize="none"
+                              spellcheck="false"
+                          />
+                          <v-icon v-if="fieldPass(segment.key)" size="16" class="blank-status ok">mdi-check</v-icon>
+                          <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert
+                          </v-icon>
+                          <small v-if="result" class="blank-feedback">
+                            Expected: {{ fieldExpectedValue(segment.key) }}
+                          </small>
+                        </label>
+                      </template>
+                    </div>
                   </div>
                 </div>
                 <div class="row wrap controls">
@@ -1423,7 +1425,7 @@ import {
   altitudeToWords,
   minutesToWords
 } from '~~/shared/learn/scenario'
-import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, Scenario} from '~~/shared/learn/types'
+import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, ReadbackSegment, Scenario} from '~~/shared/learn/types'
 import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
@@ -3374,6 +3376,33 @@ const correctReadbackText = computed(() => {
     const field = activeLesson.value!.fields.find(f => f.key === seg.key)
     return field ? field.expected(scenario.value!) : ''
   }).join('').trim()
+})
+
+// Pair each input field with its preceding text label so they wrap together
+// as a single visual unit — otherwise the label (e.g. "runway") can land on
+// one line while the input lands on the next, forcing the user to look up to
+// remember what they're typing. Reported by Detlef (FSC e.V.).
+type ClozeGroup = { id: string; segments: ReadbackSegment[] }
+const clozeGroups = computed<ClozeGroup[]>(() => {
+  if (!activeLesson.value) return []
+  const segments = activeLesson.value.readback
+  const groups: ClozeGroup[] = []
+  let i = 0
+  while (i < segments.length) {
+    const seg = segments[i]!
+    const next = segments[i + 1]
+    if (seg.type === 'text' && next && next.type === 'field') {
+      groups.push({ id: `g-${next.key}`, segments: [seg, next] })
+      i += 2
+    } else if (seg.type === 'field') {
+      groups.push({ id: `g-${seg.key}`, segments: [seg] })
+      i += 1
+    } else {
+      groups.push({ id: `g-t-${i}`, segments: [seg] })
+      i += 1
+    }
+  }
+  return groups
 })
 
 async function speakCorrectReadback() {
@@ -6605,10 +6634,26 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  align-items: stretch;
+  align-items: flex-start;
   line-height: 1.4;
   text-transform: uppercase;
   letter-spacing: .08em;
+}
+
+/* Each label/text + its input field travel together as one wrap-unit so the
+   user always sees the prompt next to the blank they're filling. */
+.cloze-group {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  align-items: stretch;
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .cloze-group {
+    flex-wrap: wrap;
+  }
 }
 
 .cloze-chunk {
