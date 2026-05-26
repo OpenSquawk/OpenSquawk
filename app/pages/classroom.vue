@@ -1135,6 +1135,7 @@
                   <span
                       v-else-if="sttSupported && !sttServerAvailable"
                       class="muted small stt-hint"
+                      title="The speech-to-text backend is currently unreachable"
                   >
                     <v-icon size="14">mdi-microphone-off</v-icon>
                     Speech server unavailable
@@ -1457,6 +1458,7 @@ import {
   minutesToWords
 } from '~~/shared/learn/scenario'
 import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, ReadbackSegment, Scenario} from '~~/shared/learn/types'
+import {looksLikeCallsignKey, matchTranscriptionToFields, type SttFieldDef} from '~~/shared/utils/sttMatch'
 import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
@@ -2822,12 +2824,16 @@ const showSettings = ref(false)
 const showSpeechServerWarning = ref(false)
 const showOnlineTtsSuggestion = ref(false)
 
+const api = useApi()
+const isClient = typeof window !== 'undefined'
+const auth = useAuthStore()
+const browserTtsAvailable = computed(() => isClient && 'speechSynthesis' in window)
+
 // STT (Speech-to-Text) for the readback — pilot speaks the readback into a mic,
 // transcription is mapped onto the input fields. Driven by /api/atc/ptt.
-const sttSupported = isClient && typeof window !== 'undefined'
-    && typeof navigator !== 'undefined'
-    && Boolean(navigator.mediaDevices?.getUserMedia)
-    && typeof window.MediaRecorder !== 'undefined'
+// `sttSupported` is a ref (not const) so it can be set after onMounted; this
+// avoids SSR/hydration mismatches around the mic button visibility.
+const sttSupported = ref(false)
 const sttServerAvailable = ref(true)
 const sttRecording = ref(false)
 const sttTranscribing = ref(false)
@@ -2836,12 +2842,7 @@ const sttLastTranscription = ref('')
 const sttMediaRecorder = ref<MediaRecorder | null>(null)
 const sttChunks = ref<Blob[]>([])
 const sttStream = ref<MediaStream | null>(null)
-const sttFeatureVisible = computed(() => sttSupported && sttServerAvailable.value)
-
-const api = useApi()
-const isClient = typeof window !== 'undefined'
-const auth = useAuthStore()
-const browserTtsAvailable = computed(() => isClient && 'speechSynthesis' in window)
+const sttFeatureVisible = computed(() => sttSupported.value && sttServerAvailable.value)
 
 type SpeechServerHealth = {
   configured: boolean
@@ -3465,61 +3466,36 @@ async function speakCorrectReadback() {
 
 // ---------------------------------------------------------------------------
 // STT — pilot speaks the readback into the mic, transcription is mapped onto
-// the input fields.  Callsigns are notoriously misrecognized by Whisper, so we
-// run fuzzy substring matching with the existing alternative-list for each
-// field; for callsign-flagged fields we additionally allow a sliding-window
-// Levenshtein match against the transcription.
+// the input fields.  Whisper returns natural spoken ATC ("two five right",
+// "lufthansa three five niner"), while fields store the canonical written
+// form ("25R", "DLH359").  The actual matching lives in shared/utils/sttMatch
+// where it can be unit-tested; here we just feed it the per-lesson candidates.
 // ---------------------------------------------------------------------------
 
-function fuzzyContains(haystack: string, needle: string): boolean {
-  if (!needle || !haystack) return false
-  if (haystack.includes(needle)) return true
-  const tolerance = allowedDistance(needle.length) + 1
-  const minLen = Math.max(3, needle.length - 2)
-  const maxLen = needle.length + 3
-  for (let start = 0; start <= haystack.length - minLen; start++) {
-    for (let len = minLen; len <= maxLen; len++) {
-      if (start + len > haystack.length) break
-      const window = haystack.slice(start, start + len)
-      if (lev(window, needle) <= tolerance) return true
+function buildSttFieldDefs(): SttFieldDef[] {
+  if (!activeLesson.value || !scenario.value) return []
+  return activeLesson.value.fields.map((field): SttFieldDef => {
+    const expected = (field.expected(scenario.value!) || '').trim()
+    const alternatives = field.alternatives
+      ? field.alternatives(scenario.value!).map(a => (a || '').trim()).filter(Boolean)
+      : []
+    return {
+      key: field.key,
+      expected,
+      alternatives,
+      isCallsign: looksLikeCallsignKey(field.key, field.label),
     }
-  }
-  return false
-}
-
-function looksLikeCallsignKey(key: string, label?: string): boolean {
-  const probe = `${key} ${label || ''}`.toLowerCase()
-  return /\b(callsign|call sign|callup)\b/.test(probe) || /callsign$/.test(key) || /-callsign\b/.test(key)
+  })
 }
 
 function mapTranscriptionToFields(transcription: string): { filled: number; total: number } {
   if (!activeLesson.value || !scenario.value) return { filled: 0, total: 0 }
-  const normalized = norm(transcription)
-  if (!normalized) return { filled: 0, total: activeLesson.value.fields.length }
-  let filled = 0
-  for (const field of activeLesson.value.fields) {
-    const expectedRaw = (field.expected(scenario.value) || '').trim()
-    if (!expectedRaw) continue
-    const altList = field.alternatives ? (field.alternatives(scenario.value) || []) : []
-    const candidates = Array.from(new Set([expectedRaw, ...altList]
-      .map(c => (c || '').trim())
-      .filter(Boolean)
-      .map(norm)
-      .filter(c => c.length >= 1)))
-
-    const isCallsign = looksLikeCallsignKey(field.key, field.label)
-    let matched = false
-    for (const cand of candidates) {
-      if (!cand) continue
-      if (normalized.includes(cand)) { matched = true; break }
-      if (isCallsign && cand.length >= 4 && fuzzyContains(normalized, cand)) { matched = true; break }
-    }
-    if (matched) {
-      userAnswers[field.key] = expectedRaw
-      filled++
-    }
+  const defs = buildSttFieldDefs()
+  const result = matchTranscriptionToFields(transcription, defs)
+  for (const [key, value] of Object.entries(result.matches)) {
+    userAnswers[key] = value
   }
-  return { filled, total: activeLesson.value.fields.length }
+  return { filled: result.filled, total: result.total }
 }
 
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -3573,7 +3549,7 @@ async function processSTTAudio(blob: Blob) {
 
 async function startSTTRecording() {
   if (sttRecording.value || sttTranscribing.value) return
-  if (!sttSupported) {
+  if (!sttSupported.value) {
     sttError.value = 'Your browser does not support microphone recording'
     return
   }
@@ -4945,6 +4921,10 @@ onMounted(() => {
     if (storedId) {
       simbriefForm.userId = storedId
     }
+    // Detect mic + MediaRecorder support on the client only to keep SSR/CSR
+    // markup consistent until the page is hydrated.
+    sttSupported.value = Boolean(navigator.mediaDevices?.getUserMedia)
+        && typeof window.MediaRecorder !== 'undefined'
   }
   void checkSpeechServerAvailability()
 })
