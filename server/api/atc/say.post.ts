@@ -25,6 +25,14 @@ function isFlightLabTag(tag?: string) {
     return (tag || "").trim().toLowerCase() === "flightlab";
 }
 
+function isAtisTag(tag?: string) {
+    return (tag || "").trim().toLowerCase() === "atis";
+}
+
+function isCacheableTag(tag?: string) {
+    return isFlightLabTag(tag) || isAtisTag(tag);
+}
+
 type TTSProvider = "openai" | "speaches" | "piper";
 
 function resolveTtsProvider(useSpeaches: boolean, usePiper: boolean): TTSProvider {
@@ -196,7 +204,8 @@ export default defineEventHandler(async (event) => {
     const ext = fmtToExt(fmt);
     const outputExt = (provider === "openai" || provider === "piper") ? "wav" : ext;
     const flightlabRequest = isFlightLabTag(body?.tag);
-    const flightlabCacheKey = flightlabRequest
+    const cacheableRequest = isCacheableTag(body?.tag);
+    const flightlabCacheKey = cacheableRequest
         ? buildFlightLabCacheKey({
             normalized,
             level,
@@ -207,7 +216,7 @@ export default defineEventHandler(async (event) => {
             model: providerModel
         })
         : null;
-    const flightlabCacheBaseDir = flightlabRequest ? flightLabCacheDir() : null;
+    const flightlabCacheBaseDir = cacheableRequest ? flightLabCacheDir() : null;
     const flightlabCachedAudioPath = (flightlabCacheBaseDir && flightlabCacheKey)
         ? join(flightlabCacheBaseDir, `${flightlabCacheKey}.${outputExt}`)
         : null;
@@ -286,7 +295,7 @@ export default defineEventHandler(async (event) => {
                         {
                             key: flightlabCacheKey,
                             createdAt: timestamp,
-                            tag: "flightlab",
+                            tag: (body?.tag || "").trim().toLowerCase() || "flightlab",
                             voice,
                             speed,
                             level,
