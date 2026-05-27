@@ -983,7 +983,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
 import { normalizeRadioPhrase, DEFAULT_AIRLINE_TELEPHONY } from '../../shared/utils/radioSpeech';
@@ -1526,6 +1526,9 @@ const airportFrequencies = ref<AirportFrequencyEntry[]>([])
 const airportFrequencyLoading = ref(false)
 const frequencySources = ref({ vatsim: false, openaip: false })
 const atisPlaybackLoading = ref(false)
+const atisLoopAudio = ref<HTMLAudioElement | null>(null)
+const atisLoopKey = ref<string | null>(null)
+let atisLoopSeq = 0
 
 onMounted(async () => {
   try {
@@ -2649,40 +2652,118 @@ const buildAtisAnnouncement = (entry: AirportFrequencyEntry, fallback?: string):
     .replace(/\s+/g, ' ')
 }
 
-const playAtisBroadcast = async () => {
-  const atisEntry = atisFrequencyEntry.value
-  if (!atisEntry) return
+const buildAtisLoopKey = (entry: AirportFrequencyEntry): string => {
+  const icao = (flightContext.value.dep || 'XXXX').toUpperCase()
+  const code = entry.atisCode || '-'
+  const text = (entry.atisText || '').trim()
+  return `${icao}|${code}|${text.length}`
+}
 
-  setActiveFrequencyFromList(atisEntry)
+const resolveAtisEpoch = (entry: AirportFrequencyEntry): number => {
+  if (entry.lastUpdated) {
+    const parsed = Date.parse(entry.lastUpdated)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return Date.now()
+}
+
+const stopAtisLoop = () => {
+  const audio = atisLoopAudio.value
+  if (audio) {
+    try {
+      audio.pause()
+      audio.removeAttribute('src')
+      audio.load()
+    } catch (err) {
+      pmLog.warn('ATIS loop stop failed', err)
+    }
+  }
+  atisLoopAudio.value = null
+  atisLoopKey.value = null
+  atisLoopSeq += 1
+}
+
+const startAtisLoop = async (entry: AirportFrequencyEntry) => {
+  if (!entry) return
+
+  const desiredKey = buildAtisLoopKey(entry)
+  if (atisLoopAudio.value && atisLoopKey.value === desiredKey) {
+    return
+  }
+
+  stopAtisLoop()
+
+  let content = (entry.atisText || '').trim()
+  if (!content) {
+    const metar = await fetchMetarText(flightContext.value.dep)
+    if (metar) {
+      content = `METAR ${metar}`
+    }
+  }
+
+  if (!content) {
+    setLastTransmission('ATIS: No current information available')
+    return
+  }
+
+  const announcement = buildAtisAnnouncement({ ...entry, atisText: content })
+  const epoch = resolveAtisEpoch(entry)
+  const requestSeq = ++atisLoopSeq
   atisPlaybackLoading.value = true
 
   try {
-    let content = atisEntry.atisText || ''
-    if (!content) {
-      const metar = await fetchMetarText(flightContext.value.dep)
-      if (metar) {
-        content = `METAR ${metar}`
-      }
-    }
-
-    if (!content) {
-      setLastTransmission('ATIS: No current information available')
-      return
-    }
-
-    const announcement = buildAtisAnnouncement({ ...atisEntry, atisText: content })
-    await speakPlainText(announcement, {
+    const response = await api.post('/api/atc/say', {
+      text: announcement,
+      level: signalStrength.value,
       voice: 'verse',
       speed: 0.9,
-      tag: 'atis-broadcast',
+      moduleId: 'pilot-monitoring',
       lessonId: 'atis',
-      lastTransmissionLabel: `ATIS: ${announcement}`
+      tag: 'atis',
+      sessionId: engineSessionId.value || flags.value.session_id || undefined,
     })
+
+    if (requestSeq !== atisLoopSeq) return
+    if (!response?.success || !response.audio) return
+
+    const dataUrl = `data:${response.audio.mime || 'audio/wav'};base64,${response.audio.base64}`
+    const audio = new Audio(dataUrl)
+    audio.loop = true
+    audio.preload = 'auto'
+
+    audio.addEventListener('loadedmetadata', () => {
+      if (requestSeq !== atisLoopSeq) return
+      const duration = audio.duration
+      if (!Number.isFinite(duration) || duration <= 0) {
+        audio.play().catch(err => pmLog.warn('ATIS loop play failed', err))
+        return
+      }
+      const offset = ((Date.now() - epoch) / 1000) % duration
+      audio.currentTime = offset < 0 ? offset + duration : offset
+      audio.play().catch(err => pmLog.warn('ATIS loop play failed', err))
+    }, { once: true })
+
+    audio.addEventListener('error', (err) => {
+      pmLog.warn('ATIS loop audio error', err)
+    })
+
+    atisLoopAudio.value = audio
+    atisLoopKey.value = desiredKey
+    setLastTransmission(`ATIS: ${announcement}`)
   } catch (err) {
-    console.error('ATIS playback failed:', err)
+    pmLog.error('ATIS loop TTS failed', err)
   } finally {
-    atisPlaybackLoading.value = false
+    if (requestSeq === atisLoopSeq) {
+      atisPlaybackLoading.value = false
+    }
   }
+}
+
+const playAtisBroadcast = async () => {
+  const atisEntry = atisFrequencyEntry.value
+  if (!atisEntry) return
+  setActiveFrequencyFromList(atisEntry)
+  await startAtisLoop(atisEntry)
 }
 
 const performRadioCheck = async () => {
@@ -3018,6 +3099,34 @@ watch(() => activeFrequency.value, (newFreq) => {
   if (newFreq && newFreq !== frequencies.value.active) {
     frequencies.value.active = newFreq
   }
+})
+
+// ATIS loop: start when ATIS frequency is tuned, stop otherwise, restart on info-letter change
+watch(
+  () => {
+    const entry = atisFrequencyEntry.value
+    if (!entry?.frequency || entry.frequency === FREQUENCY_PLACEHOLDER) return null
+    const active = normalizedFrequencyValue(frequencies.value.active)
+    const atisFreq = normalizedFrequencyValue(entry.frequency)
+    if (!active || active !== atisFreq) return null
+    return {
+      entry,
+      key: buildAtisLoopKey(entry),
+    }
+  },
+  (next, prev) => {
+    if (!next) {
+      if (atisLoopAudio.value) stopAtisLoop()
+      return
+    }
+    if (prev && prev.key === next.key && atisLoopAudio.value) return
+    startAtisLoop(next.entry)
+  },
+  { immediate: true }
+)
+
+onUnmounted(() => {
+  stopAtisLoop()
 })
 </script>
 
