@@ -82,4 +82,87 @@ describe('radioSpeech', () => {
     assert.match(out, /fife thousand meters/)
     assert.match(out, /wun thousand five hundred meters/)
   })
+
+  it('normalizes a full METAR-form ATIS with EDDF (user report sample)', () => {
+    const input = 'EDDF ATIS. METAR EDDF 281050Z AUTO 02008KT 320V070 CAVOK 24/02 Q1025 NOSIG. Frequency 118.030'
+    const out = normalizeAtisForSpeech(input, {
+      airportIcao: 'EDDF',
+      airportName: 'Frankfurt am Main',
+    })
+
+    // Airport code → city name
+    assert.match(out, /Frankfurt am Main atis/)
+    assert.doesNotMatch(out, /\bEDDF\b/)
+    // ATIS / METAR lowercased so TTS reads as word
+    assert.match(out, /\batis\b/)
+    assert.match(out, /\bmetar\b/)
+    // Date/time DDHHMMZ
+    assert.match(out, /on the too eight at wun zero fife zero zulu/)
+    // AUTO
+    assert.match(out, /automatic observation/)
+    // Wind 02008KT
+    assert.match(out, /wind zero too zero degrees at zero eight knots/)
+    // Wind variability 320V070
+    assert.match(out, /variable between tree too zero and zero seven zero degrees/)
+    // CAVOK stays as a word
+    assert.match(out, /\bCAVOK\b/)
+    // Temp/Dewpoint slash form
+    assert.match(out, /temperature too four, dewpoint zero too/)
+    // QNH Q-form
+    assert.match(out, /QNH wun zero too fife/)
+    // NOSIG expanded
+    assert.match(out, /no significant change/)
+    // Frequency normalized
+    assert.match(out, /wun wun eight decimal zero tree zero/)
+  })
+
+  it('handles wind edge cases (calm, VRB, gusts)', () => {
+    assert.match(normalizeAtisForSpeech('00000KT'), /wind calm/)
+    assert.match(normalizeAtisForSpeech('VRB05KT'), /wind variable at zero fife knots/)
+    assert.match(normalizeAtisForSpeech('28015G25KT'), /wind too eight zero degrees at wun fife knots, gusting too fife knots/)
+  })
+
+  it('expands METAR weather phenomena', () => {
+    const out = normalizeAtisForSpeech('-RA +TSRA VCSH RERA FZRA BR FG')
+    assert.match(out, /light rain/)
+    assert.match(out, /heavy thunderstorm rain/)
+    assert.match(out, /in the vicinity shower/)
+    assert.match(out, /recent rain/)
+    assert.match(out, /freezing rain/)
+    assert.match(out, /mist/)
+    assert.match(out, /fog/)
+  })
+
+  it('expands RVR and wind shear', () => {
+    const out = normalizeAtisForSpeech('R25L/1500N R07/P2000U R34/M0050 WS R25')
+    assert.match(out, /runway too fife left visibility wun fife zero zero meters/)
+    assert.match(out, /runway zero seven visibility more than too zero zero zero meters, increasing/)
+    assert.match(out, /runway tree four visibility less than zero zero fife zero meters/)
+    assert.match(out, /wind shear runway too fife/)
+  })
+
+  it('handles cloud cover special codes', () => {
+    const out = normalizeAtisForSpeech('NSC SKC CLR NCD VV003')
+    assert.match(out, /no significant cloud/)
+    assert.match(out, /sky clear/)
+    assert.match(out, /no cloud detected/)
+    assert.match(out, /vertical visibility tree hundred feet/)
+  })
+
+  it('handles trend forecasts and altimeter', () => {
+    const out = normalizeAtisForSpeech('BECMG TEMPO FM1230 TL1500 A2992')
+    assert.match(out, /becoming/)
+    assert.match(out, /temporary/)
+    assert.match(out, /from wun too tree zero zulu/)
+    assert.match(out, /until wun fife zero zero zulu/)
+    assert.match(out, /altimeter too niner niner too/)
+  })
+
+  it('strips RMK remarks', () => {
+    const out = normalizeAtisForSpeech('Q1013 NOSIG RMK AO2 SLP188 T01510092')
+    assert.match(out, /QNH wun zero wun tree/)
+    assert.match(out, /no significant change/)
+    assert.doesNotMatch(out, /\bRMK\b/)
+    assert.doesNotMatch(out, /SLP188/)
+  })
 })
