@@ -14,6 +14,7 @@ interface FrequencyEntry {
 
 interface FrequencyResponse {
   icao: string
+  airportName?: string
   sources: {
     vatsim: boolean
     openaip: boolean
@@ -124,6 +125,7 @@ export default defineEventHandler(async (event): Promise<FrequencyResponse> => {
 
   const icao = icaoParam.toUpperCase()
   const frequencyMap = new Map<string, FrequencyEntry>()
+  let airportName: string | undefined
   let vatsimSuccess = false
   let openaipSuccess = false
 
@@ -205,6 +207,12 @@ export default defineEventHandler(async (event): Promise<FrequencyResponse> => {
       for (const airport of items) {
         // Real field is `icaoCode`, not `icao`
         if ((airport?.icaoCode || '').toUpperCase() !== icao) continue
+        // Airport-level metadata: `name` (e.g. "Frankfurt am Main"), `municipality` (city only)
+        if (!airportName) {
+          const name = typeof airport?.name === 'string' ? airport.name.trim() : ''
+          const muni = typeof airport?.municipality === 'string' ? airport.municipality.trim() : ''
+          airportName = name || muni || undefined
+        }
         // Frequencies live under `airport.frequencies[]`; each item has:
         //   value  (MHz string, e.g. "122.035")
         //   type   (numeric code, e.g. 5 for Delivery)
@@ -253,6 +261,7 @@ export default defineEventHandler(async (event): Promise<FrequencyResponse> => {
 
   return {
     icao,
+    airportName,
     sources: {
       vatsim: vatsimSuccess,
       openaip: openaipSuccess

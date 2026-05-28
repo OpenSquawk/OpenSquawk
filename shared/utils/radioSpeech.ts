@@ -70,6 +70,28 @@ const METAR_WEATHER: Record<string, string> = {
     'GR': 'hail', 'GS': 'small hail',
 };
 
+// METAR weather code components (intensity / descriptor / precipitation / obscuration / other)
+// used by the inline weather-token parser. Source: WMO Code Form FM 15-XV / ICAO Annex 3.
+const WX_INTENSITY: Record<string, string> = {
+    '-': 'light', '+': 'heavy', 'VC': 'in the vicinity',
+};
+const WX_DESCRIPTOR: Record<string, string> = {
+    MI: 'shallow', BC: 'patches', DR: 'low drifting', BL: 'blowing',
+    SH: 'shower', TS: 'thunderstorm', FZ: 'freezing', PR: 'partial',
+};
+const WX_PHENOMENON: Record<string, string> = {
+    // Precipitation
+    DZ: 'drizzle', RA: 'rain', SN: 'snow', SG: 'snow grains',
+    IC: 'ice crystals', PL: 'ice pellets', GR: 'hail', GS: 'small hail',
+    UP: 'unknown precipitation',
+    // Obscuration
+    BR: 'mist', FG: 'fog', FU: 'smoke', VA: 'volcanic ash',
+    DU: 'widespread dust', SA: 'sand', HZ: 'haze',
+    // Other
+    PO: 'dust devils', SQ: 'squall', FC: 'funnel cloud',
+    SS: 'sandstorm', DS: 'duststorm',
+};
+
 const METAR_CLOUD: Record<string, string> = {
     'FEW': 'few', 'SCT': 'scattered', 'BKN': 'broken', 'OVC': 'overcast',
 };
@@ -378,31 +400,172 @@ function cloudHeightWords(heightCodeHundreds: number): string {
     return parts.join(' ').trim() || spellIcaoDigits(String(feet));
 }
 
+function spellWeatherCode(code: string): string | null {
+    let remaining = code;
+    let intensity = '';
+    // Strip intensity prefix
+    const intensityMatch = remaining.match(/^(VC|\+|-)(.+)$/);
+    if (intensityMatch) {
+        intensity = WX_INTENSITY[intensityMatch[1]!] ?? '';
+        remaining = intensityMatch[2]!;
+    }
+    // Walk through the remaining string in 2-char chunks
+    const parts: string[] = [];
+    let i = 0;
+    while (i < remaining.length) {
+        const chunk = remaining.slice(i, i + 2);
+        const descr = WX_DESCRIPTOR[chunk];
+        const phen = WX_PHENOMENON[chunk];
+        if (!descr && !phen) {
+            return null; // unrecognized — bail
+        }
+        parts.push(descr ?? phen!);
+        i += 2;
+    }
+    if (i !== remaining.length || parts.length === 0) return null;
+    return [intensity, ...parts].filter(Boolean).join(' ');
+}
+
+interface NormalizeAtisOptions {
+    /** Current airport ICAO — its 4-letter code in the text is substituted with airportName. */
+    airportIcao?: string;
+    /** Display name for the current airport (e.g. "Frankfurt am Main"). */
+    airportName?: string;
+}
+
 /**
- * Normalize VATSIM-style expanded ATIS text into ICAO-radiotelephony spoken form.
- * Applies ATIS-specific rules (info-letter phonetic, wind/temp/time digit-by-digit,
- * cloud layers, transition-level, NOSIG expansion, bare runway designators) and
- * then runs the general normalizeRadioPhrase to catch QNH/RWY/FL/freq.
- *
- * Designed for the VATSIM `text_atis` field which is already expanded English,
- * not raw METAR code.
+ * Normalize ATIS text (expanded VATSIM form OR compressed METAR form) into ICAO
+ * radiotelephony spoken form. Handles:
+ *   - ICAO airport-code substitution (with caller-provided name)
+ *   - METAR inline tokens (date/time, wind, RVR, weather, clouds, pressure, trends)
+ *   - Expanded ATIS rules (info letter, wind/temp/time digit-by-digit, NOSIG, ...)
+ *   - General radio phrases via normalizeRadioPhrase (QNH/RWY/FL/freq)
+ *   - Acronym lowercasing (ATIS/METAR/SPECI) so TTS reads them as words
  */
-export function normalizeAtisForSpeech(text: string): string {
+export function normalizeAtisForSpeech(text: string, opts: NormalizeAtisOptions = {}): string {
     if (!text) return text;
     let out = text.replace(/\s+/g, ' ').trim();
 
-    // Run the general radio normalizer first so explicit "RUNWAY 08L", "QNH 1024",
-    // "FL250", "ft", "HDG", and frequencies get rewritten before our ATIS-specific
-    // rules touch raw digits. Otherwise our bare-runway regex would consume the digit
-    // pair before normalizeRadioPhrase's `RUNWAY \d{2}[LCR]?` rule could fire,
-    // leaving "RUNWAY" stuck in caps without lowercase normalization.
+    // 1. Airport-code substitution. Done before METAR expansion so a station code
+    //    like "EDDF" before a "281050Z" date stamp is replaced with "Frankfurt".
+    if (opts.airportIcao && opts.airportName) {
+        const icaoRe = new RegExp(`\\b${opts.airportIcao.toUpperCase()}\\b`, 'g');
+        out = out.replace(icaoRe, opts.airportName);
+    }
+
+    // 2. METAR-coded inline tokens.
+
+    // Date/Time: DDHHMMZ (e.g. "281050Z" → "on the too eight at wun zero five zero zulu")
+    out = out.replace(/\b(\d{2})(\d{2})(\d{2})Z\b/g, (_m, d: string, h: string, mi: string) =>
+        `on the ${spellIcaoDigits(d)} at ${spellIcaoDigits(h)} ${spellIcaoDigits(mi)} zulu`);
+
+    // Modifier
+    out = out.replace(/\bAUTO\b/g, 'automatic observation');
+    out = out.replace(/\bCOR\b/g, 'correction');
+
+    // Wind variability "320V070" → "variable between three two zero and zero seven zero degrees"
+    // (must run BEFORE wind regex so it doesn't get confused by the surrounding digits)
+    out = out.replace(/\b(\d{3})V(\d{3})\b/g, (_m, a: string, b: string) =>
+        `variable between ${spellIcaoDigits(a)} and ${spellIcaoDigits(b)} degrees`);
+
+    // Calm wind: 00000KT
+    out = out.replace(/\b00000KT\b/g, 'wind calm');
+
+    // Wind: VRB05KT / 28015KT / 28015G25KT
+    out = out.replace(/\b(VRB|\d{3})(\d{2,3})(?:G(\d{2,3}))?KT\b/g,
+        (_m, dir: string, spd: string, gust?: string) => {
+            const dirSpeech = dir === 'VRB' ? 'variable' : `${spellIcaoDigits(dir)} degrees`;
+            const spdSpeech = `${spellIcaoDigits(spd)} knots`;
+            const gustSpeech = gust ? `, gusting ${spellIcaoDigits(gust)} knots` : '';
+            return `wind ${dirSpeech} at ${spdSpeech}${gustSpeech}`;
+        });
+
+    // Runway Visual Range: R25/1500N, R25L/P2000, R25/M0050U
+    out = out.replace(/\bR(\d{2}[LCR]?)\/([MP]?)(\d{4})([UDN]?)\b/g,
+        (_m, rwy: string, mp: string, dist: string, trend: string) => {
+            const rwSpoken = runwaySpeak(rwy);
+            const prefix = mp === 'M' ? 'less than ' : mp === 'P' ? 'more than ' : '';
+            const trendWord = trend === 'U' ? ', increasing' : trend === 'D' ? ', decreasing' : '';
+            return `${rwSpoken} visibility ${prefix}${spellIcaoDigits(dist)} meters${trendWord}`;
+        });
+
+    // Wind shear: WS R25L
+    out = out.replace(/\bWS\s+R(\d{2}[LCR]?)\b/g, (_m, rwy: string) => `wind shear ${runwaySpeak(rwy)}`);
+
+    // Visibility 9999 (≥10 km)
+    out = out.replace(/\b9999\b/g, 'visibility wun zero kilometers or more');
+
+    // METAR temp/dewpoint with slash: "24/02" or "M02/M05" or "02/M01"
+    out = out.replace(/\b(M?\d{2})\/(M?\d{2})\b/g, (_m, t: string, d: string) => {
+        const speakTemp = (raw: string) => raw.startsWith('M')
+            ? `minus ${spellIcaoDigits(raw.slice(1))}`
+            : spellIcaoDigits(raw);
+        return `temperature ${speakTemp(t)}, dewpoint ${speakTemp(d)}`;
+    });
+
+    // QNH: Q1025 (hPa)
+    out = out.replace(/\bQ(\d{4})\b/g, (_m, q: string) => `QNH ${spellIcaoDigits(q)}`);
+    // Altimeter: A2992 (inches Hg, US-style)
+    out = out.replace(/\bA(\d{4})\b/g, (_m, a: string) => `altimeter ${spellIcaoDigits(a)}`);
+
+    // Cloud cover special codes
+    out = out.replace(/\bNSC\b/g, 'no significant cloud');
+    out = out.replace(/\bSKC\b/g, 'sky clear');
+    out = out.replace(/\bCLR\b/g, 'sky clear');
+    out = out.replace(/\bNCD\b/g, 'no cloud detected');
+    // Vertical visibility VV003 → "vertical visibility three hundred feet"
+    out = out.replace(/\bVV(\d{3})\b/g, (_m, h: string) => {
+        const ft = parseInt(h, 10) * 100;
+        const thousands = Math.floor(ft / 1000);
+        const hundreds = Math.round((ft % 1000) / 100) * 100;
+        const parts: string[] = [];
+        if (thousands) parts.push(`${spellIcaoDigits(String(thousands))} thousand`);
+        if (hundreds) parts.push(HUNDRED_WORDS[hundreds] ?? spellIcaoDigits(String(hundreds)));
+        return `vertical visibility ${parts.join(' ').trim()} feet`;
+    });
+
+    // Recent weather: REtype (e.g. RERA → "recent rain")
+    out = out.replace(/\bRE([A-Z]{2,8})\b/g, (m, code: string) => {
+        const spoken = spellWeatherCode(code);
+        return spoken ? `recent ${spoken}` : m;
+    });
+
+    // Weather phenomena (intensity + descriptor + 1-2 codes). Match conservative:
+    // optional intensity prefix, then 2-8 uppercase letters.
+    out = out.replace(/(?:^|\s)([+\-]|VC)?([A-Z]{2,8})(?=\s|$)/g, (match, intensity: string | undefined, code: string) => {
+        // Skip if it's a known non-weather token. We're greedy; let unknown codes pass.
+        const full = `${intensity ?? ''}${code}`;
+        const spoken = spellWeatherCode(full);
+        if (!spoken) return match;
+        // Don't accidentally swallow words like "DEW", "POINT", "WIND" — must look like a weather code (2-char chunks)
+        if (code.length % 2 !== 0) return match;
+        return match.replace(full, spoken);
+    });
+
+    // Trend forecasts
+    out = out.replace(/\bNOSIG\b/g, 'no significant change');
+    out = out.replace(/\bBECMG\b/g, 'becoming');
+    out = out.replace(/\bTEMPO\b/g, 'temporary');
+    // Trend time: FM1230 / TL1500 / AT1100
+    out = out.replace(/\b(FM|TL|AT)(\d{2})(\d{2})\b/g, (_m, prefix: string, h: string, mi: string) => {
+        const word = prefix === 'FM' ? 'from' : prefix === 'TL' ? 'until' : 'at';
+        return `${word} ${spellIcaoDigits(h)} ${spellIcaoDigits(mi)} zulu`;
+    });
+
+    // Strip RMK section (remarks — operator notes, not for pilots)
+    out = out.replace(/\bRMK\b.*$/g, '').trim();
+
+    // 3. Run the general radio normalizer so RUNWAY/QNH/FL/HDG/freq (digits still
+    //    intact in expanded ATIS text) get spoken correctly. Order matters:
+    //    this runs BEFORE our bare-runway rule so the explicit RUNWAY prefix is
+    //    consumed before bare designators get rewritten.
     out = normalizeRadioPhrase(out, {
         expandAirports: false,
         expandCallsigns: false,
         expandWaypoints: false,
     });
 
-    // INFORMATION letter → phonetic alphabet
+    // 4. Expanded-ATIS rules. INFORMATION letter → phonetic alphabet
     out = out.replace(/\binformation\s+([A-Z])\b/gi, (_match, l: string) => {
         const phonetic = ICAO_LETTERS[l.toUpperCase()] ?? l;
         return `Information ${phonetic}`;
@@ -483,6 +646,13 @@ export function normalizeAtisForSpeech(text: string): string {
                 : side.toUpperCase() === 'R' ? 'right' : 'center';
             return `${spellIcaoDigits(digits)} ${sideWord}`;
         });
+
+    // 6. Acronyms TTS spells letter-by-letter unless given as a word. Lowercase the
+    //    ones pilots SAY as a word (ATIS, METAR, SPECI). Leave others uppercase —
+    //    pilots actually spell ILS/VOR/QNH/DME letter-by-letter in radiotelephony.
+    out = out.replace(/\bATIS\b/g, 'atis');
+    out = out.replace(/\bMETAR\b/g, 'metar');
+    out = out.replace(/\bSPECI\b/g, 'speci');
 
     return out.replace(/\s+/g, ' ').trim();
 }

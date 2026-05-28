@@ -1524,6 +1524,7 @@ const frequencies = ref({
 })
 
 const airportFrequencies = ref<AirportFrequencyEntry[]>([])
+const airportName = ref<string | undefined>(undefined)
 const airportFrequencyLoading = ref(false)
 const frequencySources = ref({ vatsim: false, openaip: false })
 const atisPlaybackLoading = ref(false)
@@ -2566,12 +2567,14 @@ const fetchAirportFrequencies = async (icao: string | undefined) => {
 
   airportFrequencyLoading.value = true
   airportFrequencies.value = []
+  airportName.value = undefined
   frequencySources.value = { vatsim: false, openaip: false }
 
   try {
     const response = await api.get(`/api/airports/${encodeURIComponent(icao)}/frequencies`)
     const entries = Array.isArray(response?.frequencies) ? response.frequencies as AirportFrequencyEntry[] : []
     airportFrequencies.value = entries
+    airportName.value = typeof response?.airportName === 'string' ? response.airportName : undefined
     frequencySources.value = {
       vatsim: Boolean(response?.sources?.vatsim),
       openaip: Boolean(response?.sources?.openaip)
@@ -2581,6 +2584,7 @@ const fetchAirportFrequencies = async (icao: string | undefined) => {
   } catch (err) {
     console.error('Failed to load airport frequencies:', err)
     airportFrequencies.value = []
+    airportName.value = undefined
     frequencySources.value = { vatsim: false, openaip: false }
   } finally {
     airportFrequencyLoading.value = false
@@ -2724,7 +2728,10 @@ const startAtisLoop = async (entry: AirportFrequencyEntry) => {
   }
 
   const announcement = buildAtisAnnouncement({ ...entry, atisText: content })
-  const spokenAnnouncement = normalizeAtisForSpeech(announcement)
+  const spokenAnnouncement = normalizeAtisForSpeech(announcement, {
+    airportIcao: flightContext.value.dep,
+    airportName: airportName.value,
+  })
   const epoch = resolveAtisEpoch(entry)
   const requestSeq = ++atisLoopSeq
   atisPlaybackLoading.value = true
