@@ -116,16 +116,63 @@
     </div>
 
     <!-- Main Monitoring Screen (full app shell) -->
-    <section v-else class="pm-shell">
-      <!-- Persistent top bar: status + frequency + swap (always visible) -->
-      <header class="pm-topbar">
-        <div class="pm-topbar-inner">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="min-w-0">
-              <p class="text-base font-semibold leading-tight truncate">{{ flightContext.callsign || 'N/A' }}</p>
-              <p class="text-[11px] text-white/55 leading-tight truncate">{{ flightContext.dep }} → {{ flightContext.dest }}</p>
+    <section v-else class="pm-shell learn-theme">
+      <!-- Persistent top bar (HUD): brand + freq controls + actions -->
+      <header class="hud" role="banner">
+        <nav class="hud-inner" aria-label="Global">
+          <div class="hud-left">
+            <NuxtLink class="hud-logo" to="/bridge" title="Back to bridge">
+              <v-icon size="22" class="hud-logo-icon">mdi-radar</v-icon>
+            </NuxtLink>
+            <div class="hud-divider" aria-hidden="true"></div>
+            <span class="brand">OpenSquawk</span>
+            <span class="sep">|</span>
+            <v-menu v-model="experienceMenu" :offset="[0, 8]" location="bottom start" transition="scale-transition">
+              <template #activator="{ props }">
+                <button
+                    class="mode-switch"
+                    type="button"
+                    v-bind="props"
+                    aria-haspopup="menu"
+                    :aria-expanded="experienceMenu ? 'true' : 'false'"
+                >
+                  <span class="mode-switch-label">Live ATC</span>
+                  <v-icon size="16" class="mode-switch-icon">mdi-chevron-down</v-icon>
+                </button>
+              </template>
+              <div class="experience-menu" role="menu" aria-label="Select experience">
+                <NuxtLink
+                    to="/classroom"
+                    role="menuitemradio"
+                    class="experience-option"
+                    aria-checked="false"
+                >
+                  <v-icon size="18" class="experience-option-icon">mdi-school</v-icon>
+                  <div class="experience-option-body">
+                    <div class="experience-option-title">Classroom</div>
+                    <div class="experience-option-sub">Mission hub & drills</div>
+                  </div>
+                </NuxtLink>
+                <div
+                    role="menuitemradio"
+                    class="experience-option is-active"
+                    aria-checked="true"
+                >
+                  <v-icon size="18" class="experience-option-icon">mdi-radio-handheld</v-icon>
+                  <div class="experience-option-body">
+                    <div class="experience-option-title">Live ATC</div>
+                    <div class="experience-option-sub">Live radio with AI controllers</div>
+                  </div>
+                  <v-icon size="16" class="experience-option-check">mdi-check</v-icon>
+                </div>
+              </div>
+            </v-menu>
+
+            <div class="hud-context">
+              <p class="hud-context-callsign">{{ flightContext.callsign || 'N/A' }}</p>
+              <p class="hud-context-route">{{ flightContext.dep }} → {{ flightContext.dest }}</p>
             </div>
-            <div class="hidden sm:flex flex-col gap-1 shrink-0">
+            <div class="hud-status">
               <v-chip :color="flags.in_air ? 'green' : 'grey'" size="x-small" variant="flat">
                 {{ flags.in_air ? 'IN-AIR' : 'GROUND' }}
               </v-chip>
@@ -133,7 +180,7 @@
             </div>
           </div>
 
-          <div class="flex items-center gap-2 shrink-0">
+          <div class="hud-center">
             <div class="freq-control-group" aria-label="Frequency controls">
               <HoldSelect
                   :options="presetOptions"
@@ -182,7 +229,18 @@
               </template>
             </HoldSelect>
           </div>
-        </div>
+
+          <div class="hud-right">
+            <NuxtLink class="btn ghost" to="/feedback" title="Share feedback or ideas">
+              <v-icon size="18">mdi-message-draw</v-icon>
+              <span class="btn-label">Feedback</span>
+            </NuxtLink>
+            <NuxtLink class="btn ghost" to="/logout" title="Logout">
+              <v-icon size="18">mdi-logout</v-icon>
+              <span class="btn-label">Logout</span>
+            </NuxtLink>
+          </div>
+        </nav>
       </header>
 
       <div class="pm-body">
@@ -1492,6 +1550,7 @@ const debugMode = ref(true)
 
 // Layout / view state
 const activeTab = ref<'funk' | 'freq' | 'log' | 'flug' | 'more' | 'debug'>('funk')
+const experienceMenu = ref(false)
 const inputMode = ref<'voice' | 'text'>('voice')
 const learningMode = ref(true)
 
@@ -3210,21 +3269,219 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.pm-topbar {
+/* HUD top bar (matches classroom design) */
+.hud {
   flex: 0 0 auto;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(5, 9, 16, 0.85);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
   backdrop-filter: blur(10px);
-  padding: calc(env(safe-area-inset-top) + 8px) 12px 8px;
+  padding-top: env(safe-area-inset-top);
 }
-.pm-topbar-inner {
+.hud-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
+  padding: 10px 12px;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+}
+.hud-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.hud-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 8px;
+}
+.hud-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+.hud-right .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+.hud-right .btn-label {
+  white-space: nowrap;
+}
+.hud-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+.hud-logo:hover {
+  border-color: color-mix(in srgb, var(--accent) 54%, transparent);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.hud-logo-icon {
+  color: currentColor;
+}
+.hud-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--border);
+  border-radius: 999px;
+}
+.brand {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sep {
+  color: var(--t3);
+}
+.mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--t2);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color .2s ease, background .2s ease, border-color .2s ease;
+}
+.mode-switch:hover,
+.mode-switch:focus-visible {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  outline: none;
+}
+.mode-switch-icon { color: currentColor; }
+
+:global(.experience-menu) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 240px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, .4);
+}
+:global(.experience-option) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--t2);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+:global(.experience-option:hover),
+:global(.experience-option:focus-visible) {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 26%, transparent);
+  color: var(--accent);
+  outline: none;
+}
+:global(.experience-option.is-active) {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+  color: var(--accent);
+}
+:global(.experience-option-body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+:global(.experience-option-title) {
+  font-weight: 600;
+  line-height: 1.2;
+}
+:global(.experience-option-sub) {
+  font-size: 12px;
+  color: var(--t3);
+}
+
+.hud-context {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-left: 4px;
+  line-height: 1.15;
+}
+.hud-context-callsign {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hud-context-route {
+  font-size: 11px;
+  color: var(--t3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hud-status {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1180px) {
+  .hud-context,
+  .hud-status,
+  .sep,
+  .mode-switch,
+  .hud-divider,
+  .brand {
+    display: none;
+  }
+}
+@media (max-width: 860px) {
+  .hud-inner {
+    gap: 8px;
+    padding: 8px 10px;
+  }
+  .hud-right { gap: 6px; }
+  .hud-right .btn {
+    padding: 8px;
+    min-width: 40px;
+    justify-content: center;
+  }
+  .hud-right .btn-label { display: none; }
+  .hud-center { padding: 0; }
 }
 
 .pm-body {
@@ -3283,19 +3540,26 @@ onUnmounted(() => {
   gap: 2px;
   padding: 6px 4px;
   border-radius: 12px;
-  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid transparent;
+  color: var(--t2);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  transition: color 120ms ease, background 120ms ease;
+  background: transparent;
+  transition: color .2s ease, background .2s ease, border-color .2s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.pm-navbtn:hover {
-  color: rgba(255, 255, 255, 0.85);
+.pm-navbtn:hover,
+.pm-navbtn:focus-visible {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  outline: none;
 }
 .pm-navbtn.is-active {
-  color: #22d3ee;
-  background: rgba(34, 211, 238, 0.12);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
 /* Frequency control group in the top bar */
@@ -3528,9 +3792,10 @@ onUnmounted(() => {
     flex: 0 0 auto;
     flex-direction: column;
     gap: 6px;
-    width: 132px;
-    padding: 16px 10px;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    width: 168px;
+    padding: 16px 12px;
+    border-right: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
     overflow-y: auto;
   }
   .pm-sidenav .pm-navbtn {
@@ -3538,8 +3803,11 @@ onUnmounted(() => {
     flex-direction: row;
     justify-content: flex-start;
     gap: 10px;
-    padding: 12px 14px;
+    padding: 11px 14px;
+    border-radius: 12px;
     font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
   }
   .pm-lograil {
     display: block;
