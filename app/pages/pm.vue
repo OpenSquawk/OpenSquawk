@@ -986,7 +986,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
-import { normalizeRadioPhrase, DEFAULT_AIRLINE_TELEPHONY } from '../../shared/utils/radioSpeech';
+import { normalizeRadioPhrase, normalizeAtisForSpeech, DEFAULT_AIRLINE_TELEPHONY } from '../../shared/utils/radioSpeech';
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { loadPizzicatoLite } from '../../shared/utils/pizzicatoLite'
@@ -2707,13 +2707,14 @@ const startAtisLoop = async (entry: AirportFrequencyEntry) => {
   }
 
   const announcement = buildAtisAnnouncement({ ...entry, atisText: content })
+  const spokenAnnouncement = normalizeAtisForSpeech(announcement)
   const epoch = resolveAtisEpoch(entry)
   const requestSeq = ++atisLoopSeq
   atisPlaybackLoading.value = true
 
   try {
     const response = await api.post('/api/atc/say', {
-      text: announcement,
+      text: spokenAnnouncement,
       level: signalStrength.value,
       voice: 'verse',
       speed: 0.9,
