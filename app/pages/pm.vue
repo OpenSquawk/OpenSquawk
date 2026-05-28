@@ -992,6 +992,7 @@ import { useApi } from '~/composables/useApi'
 import { loadPizzicatoLite } from '../../shared/utils/pizzicatoLite'
 import type { PizzicatoLite } from '../../shared/utils/pizzicatoLite'
 import { createNoiseGenerators, getReadabilityProfile } from '../../shared/utils/radioEffects'
+import { createAtisAudioLoop, type AtisAudioLoop } from '../../shared/utils/atisAudioLoop'
 import type {
   CandidateTraceElimination,
   CandidateTraceEntry,
@@ -1526,8 +1527,9 @@ const airportFrequencies = ref<AirportFrequencyEntry[]>([])
 const airportFrequencyLoading = ref(false)
 const frequencySources = ref({ vatsim: false, openaip: false })
 const atisPlaybackLoading = ref(false)
-const atisLoopAudio = ref<HTMLAudioElement | null>(null)
 const atisLoopKey = ref<string | null>(null)
+let atisAudioLoop: AtisAudioLoop | null = null
+let atisLoopActive = false
 let atisLoopSeq = 0
 
 onMounted(async () => {
@@ -2667,31 +2669,45 @@ const resolveAtisEpoch = (entry: AirportFrequencyEntry): number => {
   return Date.now()
 }
 
+const ensureAtisAudioLoop = (): AtisAudioLoop => {
+  if (!atisAudioLoop) {
+    atisAudioLoop = createAtisAudioLoop()
+  }
+  return atisAudioLoop
+}
+
 const stopAtisLoop = () => {
-  const audio = atisLoopAudio.value
-  if (audio) {
+  atisLoopSeq += 1
+  atisLoopActive = false
+  atisLoopKey.value = null
+  if (atisAudioLoop) {
     try {
-      audio.pause()
-      audio.removeAttribute('src')
-      audio.load()
+      atisAudioLoop.stop()
     } catch (err) {
       pmLog.warn('ATIS loop stop failed', err)
     }
   }
-  atisLoopAudio.value = null
-  atisLoopKey.value = null
-  atisLoopSeq += 1
 }
 
 const startAtisLoop = async (entry: AirportFrequencyEntry) => {
   if (!entry) return
 
   const desiredKey = buildAtisLoopKey(entry)
-  if (atisLoopAudio.value && atisLoopKey.value === desiredKey) {
+  if (atisLoopActive && atisLoopKey.value === desiredKey) {
     return
   }
 
   stopAtisLoop()
+
+  // Carrier-Noise SOFORT — user gets feedback before TTS is back
+  const loop = ensureAtisAudioLoop()
+  try {
+    loop.startLoading()
+  } catch (err) {
+    pmLog.warn('ATIS carrier start failed', err)
+  }
+  atisLoopActive = true
+  atisLoopKey.value = desiredKey
 
   let content = (entry.atisText || '').trim()
   if (!content) {
@@ -2703,6 +2719,7 @@ const startAtisLoop = async (entry: AirportFrequencyEntry) => {
 
   if (!content) {
     setLastTransmission('ATIS: No current information available')
+    // Lass den Carrier laufen — Pilot hört dass die Frequenz aktiv ist, nur keine Ansage
     return
   }
 
@@ -2727,29 +2744,26 @@ const startAtisLoop = async (entry: AirportFrequencyEntry) => {
     if (requestSeq !== atisLoopSeq) return
     if (!response?.success || !response.audio) return
 
-    const dataUrl = `data:${response.audio.mime || 'audio/wav'};base64,${response.audio.base64}`
-    const audio = new Audio(dataUrl)
-    audio.loop = true
-    audio.preload = 'auto'
-
-    audio.addEventListener('loadedmetadata', () => {
-      if (requestSeq !== atisLoopSeq) return
-      const duration = audio.duration
-      if (!Number.isFinite(duration) || duration <= 0) {
-        audio.play().catch(err => pmLog.warn('ATIS loop play failed', err))
-        return
-      }
-      const offset = ((Date.now() - epoch) / 1000) % duration
-      audio.currentTime = offset < 0 ? offset + duration : offset
-      audio.play().catch(err => pmLog.warn('ATIS loop play failed', err))
-    }, { once: true })
-
-    audio.addEventListener('error', (err) => {
-      pmLog.warn('ATIS loop audio error', err)
+    const result = await loop.startBroadcast({
+      audioBase64: response.audio.base64,
+      mime: response.audio.mime,
+      epochMs: epoch,
     })
 
-    atisLoopAudio.value = audio
-    atisLoopKey.value = desiredKey
+    if (requestSeq !== atisLoopSeq) return
+    if (!result) {
+      pmLog.warn('ATIS loop broadcast start returned null (decode failed?)')
+      return
+    }
+
+    pmLog.info('ATIS loop start', {
+      icao: flightContext.value.dep,
+      atisCode: entry.atisCode,
+      duration: result.duration,
+      requestedOffset: result.requestedOffset,
+      epochAgeSec: (Date.now() - epoch) / 1000,
+    })
+
     setLastTransmission(`ATIS: ${announcement}`)
   } catch (err) {
     pmLog.error('ATIS loop TTS failed', err)
@@ -3117,10 +3131,10 @@ watch(
   },
   (next, prev) => {
     if (!next) {
-      if (atisLoopAudio.value) stopAtisLoop()
+      if (atisLoopActive) stopAtisLoop()
       return
     }
-    if (prev && prev.key === next.key && atisLoopAudio.value) return
+    if (prev && prev.key === next.key && atisLoopActive) return
     startAtisLoop(next.entry)
   },
   { immediate: true }
