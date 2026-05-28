@@ -363,6 +363,130 @@ export function normalizeMetarPhrase(metar: string): string {
     return parts.join(', ');
 }
 
+/**
+ * Cloud-layer height words (no trailing "feet"): 30 → "tree thousand", 5 → "five hundred",
+ * 35 → "tree thousand five hundred". Input is the 3-digit METAR-cloud code interpreted
+ * as hundreds-of-feet.
+ */
+function cloudHeightWords(heightCodeHundreds: number): string {
+    const feet = heightCodeHundreds * 100;
+    const thousands = Math.floor(feet / 1000);
+    const hundreds = Math.round((feet % 1000) / 100) * 100;
+    const parts: string[] = [];
+    if (thousands) parts.push(`${spellIcaoDigits(String(thousands))} thousand`);
+    if (hundreds) parts.push(HUNDRED_WORDS[hundreds] ?? spellIcaoDigits(String(hundreds)));
+    return parts.join(' ').trim() || spellIcaoDigits(String(feet));
+}
+
+/**
+ * Normalize VATSIM-style expanded ATIS text into ICAO-radiotelephony spoken form.
+ * Applies ATIS-specific rules (info-letter phonetic, wind/temp/time digit-by-digit,
+ * cloud layers, transition-level, NOSIG expansion, bare runway designators) and
+ * then runs the general normalizeRadioPhrase to catch QNH/RWY/FL/freq.
+ *
+ * Designed for the VATSIM `text_atis` field which is already expanded English,
+ * not raw METAR code.
+ */
+export function normalizeAtisForSpeech(text: string): string {
+    if (!text) return text;
+    let out = text.replace(/\s+/g, ' ').trim();
+
+    // Run the general radio normalizer first so explicit "RUNWAY 08L", "QNH 1024",
+    // "FL250", "ft", "HDG", and frequencies get rewritten before our ATIS-specific
+    // rules touch raw digits. Otherwise our bare-runway regex would consume the digit
+    // pair before normalizeRadioPhrase's `RUNWAY \d{2}[LCR]?` rule could fire,
+    // leaving "RUNWAY" stuck in caps without lowercase normalization.
+    out = normalizeRadioPhrase(out, {
+        expandAirports: false,
+        expandCallsigns: false,
+        expandWaypoints: false,
+    });
+
+    // INFORMATION letter → phonetic alphabet
+    out = out.replace(/\binformation\s+([A-Z])\b/gi, (_match, l: string) => {
+        const phonetic = ICAO_LETTERS[l.toUpperCase()] ?? l;
+        return `Information ${phonetic}`;
+    });
+
+    // Time HHMM (TIME 0620, AT 0620Z)
+    out = out.replace(/\b(time|at)\s+(\d{4})z?\b/gi, (_m, prefix: string, t: string) =>
+        `${prefix.toLowerCase()} ${spellIcaoDigits(t)}`);
+
+    // Wind direction (3 digits, optionally followed by DEGREES)
+    out = out.replace(/\bwind\s+(\d{3})(?=\s+(?:degrees?\b|\d))/gi, (_m, d: string) =>
+        `wind ${spellIcaoDigits(d)}`);
+
+    // Wind variability ranges: "BETWEEN 340 AND 060 DEGREES"
+    out = out.replace(/\bbetween\s+(\d{3})\s+and\s+(\d{3})\s+degrees\b/gi,
+        (_m, a: string, b: string) =>
+            `between ${spellIcaoDigits(a)} and ${spellIcaoDigits(b)} degrees`);
+
+    // Wind/gust speed in knots (digit-by-digit per ICAO)
+    out = out.replace(/\b(\d{1,3})\s*(knots?|kt)\b/gi, (_m, n: string) =>
+        `${spellIcaoDigits(n)} knots`);
+
+    // Negative temperature: "TEMPERATURE -5" or "TEMPERATURE MINUS 5"
+    out = out.replace(/\btemperature\s+(?:-|minus\s+)(\d{1,3})\b/gi, (_m, n: string) =>
+        `temperature minus ${spellIcaoDigits(n)}`);
+    out = out.replace(/\bdew\s*point\s+(?:-|minus\s+)(\d{1,3})\b/gi, (_m, n: string) =>
+        `dew point minus ${spellIcaoDigits(n)}`);
+
+    // Positive temperature / dewpoint
+    out = out.replace(/\btemperature\s+(\d{1,3})\b/gi, (_m, n: string) =>
+        `temperature ${spellIcaoDigits(n)}`);
+    out = out.replace(/\bdew\s*point\s+(\d{1,3})\b/gi, (_m, n: string) =>
+        `dew point ${spellIcaoDigits(n)}`);
+
+    // Transition level: "TRL 60", "TL 60", "TRANSITION LEVEL 60"
+    out = out.replace(/\b(?:TRL|TL|TRANSITION\s+LEVEL)\s+(\d{2,3})\b/gi,
+        (_m, fl: string) => `transition level ${spellIcaoDigits(fl)}`);
+
+    // NOSIG expansion
+    out = out.replace(/\bNOSIG\b/g, 'no significant change');
+
+    // METAR-style cloud layers: BKN030, FEW005 CB, SCT025, OVC100 TCU
+    out = out.replace(/\b(FEW|SCT|BKN|OVC|NSC)(\d{3})(?:\s*(CB|TCU))?\b/gi,
+        (_m, cover: string, height: string, type?: string) => {
+            const coverWord = METAR_CLOUD[cover.toUpperCase()] ?? cover.toLowerCase();
+            const heightWords = cloudHeightWords(parseInt(height, 10));
+            const typeSuffix = type
+                ? ` ${type.toUpperCase() === 'CB' ? 'cumulonimbus' : 'towering cumulus'}`
+                : '';
+            return `${coverWord} ${heightWords}${typeSuffix}`;
+        });
+
+    // Visibility in kilometers / meters
+    out = out.replace(/\b(?:VIS|VISIBILITY)\s+(\d+)\s*(KM|M)\b/gi,
+        (_m, val: string, unit: string) => {
+            const u = unit.toUpperCase();
+            if (u === 'KM') {
+                return `visibility ${spellIcaoDigits(val)} kilometers`;
+            }
+            // Meters: 5000 → "five thousand", 1500 → "one thousand five hundred"
+            const v = parseInt(val, 10);
+            if (Number.isFinite(v) && v >= 1000 && v % 100 === 0) {
+                const thousands = Math.floor(v / 1000);
+                const hundreds = Math.round((v % 1000) / 100) * 100;
+                const parts: string[] = [];
+                if (thousands) parts.push(`${spellIcaoDigits(String(thousands))} thousand`);
+                if (hundreds) parts.push(HUNDRED_WORDS[hundreds] ?? spellIcaoDigits(String(hundreds)));
+                return `visibility ${parts.join(' ')} meters`;
+            }
+            return `visibility ${spellIcaoDigits(val)} meters`;
+        });
+
+    // Bare runway designators (without "RUNWAY" prefix), e.g. "AND 08R", "USE 08L".
+    // Excludes patterns preceded by "flight level" or "FL " (already normalized).
+    out = out.replace(/(?<!flight\s+level\s+|FL\s*)\b(\d{2})([LCR])\b/gi,
+        (_m, digits: string, side: string) => {
+            const sideWord = side.toUpperCase() === 'L' ? 'left'
+                : side.toUpperCase() === 'R' ? 'right' : 'center';
+            return `${spellIcaoDigits(digits)} ${sideWord}`;
+        });
+
+    return out.replace(/\s+/g, ' ').trim();
+}
+
 export function normalizeRadioPhrase(text: string, options: NormalizeRadioOptions = {}): string {
     const opts = { ...DEFAULT_OPTIONS, ...options };
     let out = text;
