@@ -1,0 +1,20 @@
+# Nixpacks build config for OpenSquawk (Nuxt 4 + Yarn 4.9.4 via Corepack).
+# This file MUST be named `nixpacks.toml` (no leading dot) — otherwise Nixpacks
+# falls back to its default Node provider, which pulls in yarn-1.x and silently
+# fails on our Yarn 4 lockfile (resulting in an empty .output and a container
+# that crashes on start with "Cannot find module '/app/.output/server/index.mjs'").
+
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = [
+  "corepack enable",
+  "yarn install --immutable"
+]
+
+[phases.build]
+cmds = ["yarn build"]
+
+[start]
+cmd = "node .output/server/index.mjs"
