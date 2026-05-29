@@ -780,6 +780,40 @@
                           hide-details
                       />
                     </div>
+
+                    <div class="pt-2 border-t border-white/10 space-y-3">
+                      <div>
+                        <p class="text-xs uppercase tracking-[0.3em] text-white/40">Voice input</p>
+                        <p class="text-[11px] text-white/50 mt-1">
+                          Pre-recording keeps the mic listening in the background so the start of your transmission isn't clipped.
+                        </p>
+                      </div>
+                      <v-switch
+                          v-model="prerecEnabled"
+                          color="cyan"
+                          inset
+                          label="Pre-recording (rolling buffer)"
+                          hide-details
+                      />
+                      <div :class="{ 'opacity-50 pointer-events-none': !prerecEnabled }">
+                        <div class="flex items-center justify-between mb-2">
+                          <label class="text-xs uppercase tracking-[0.3em] text-white/40">
+                            Pre-recording lead-in
+                          </label>
+                          <span class="text-xs font-mono text-white/60">{{ prerecSeconds.toFixed(1) }}s</span>
+                        </div>
+                        <v-slider
+                            v-model="prerecSeconds"
+                            :min="0.3"
+                            :max="2.5"
+                            :step="0.1"
+                            color="cyan"
+                            thumb-label
+                            hide-details
+                            :disabled="!prerecEnabled"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </v-card-text>
               </v-card>
@@ -1097,7 +1131,9 @@ const config = useRuntimeConfig()
 
 const STORAGE_KEYS = {
   selectedPlan: 'pm_selected_plan',
-  vatsimId: 'pm_vatsim_id'
+  vatsimId: 'pm_vatsim_id',
+  prerecEnabled: 'pm_prerec_enabled',
+  prerecSeconds: 'pm_prerec_seconds',
 } as const
 
 let restoringFromStorage = true
@@ -1548,6 +1584,10 @@ const radioEffectsEnabled = ref(true)
 const readbackEnabled = ref(false)
 const debugMode = ref(true)
 
+// Pre-recording (rolling mic buffer) so the first ~1s of PTT speech isn't clipped
+const prerecEnabled = ref(true)
+const prerecSeconds = ref(1.0)
+
 // Layout / view state
 const activeTab = ref<'funk' | 'freq' | 'log' | 'flug' | 'more' | 'debug'>('funk')
 const experienceMenu = ref(false)
@@ -1621,6 +1661,18 @@ onMounted(async () => {
       const storedVatsimId = window.localStorage.getItem(STORAGE_KEYS.vatsimId)
       if (storedVatsimId) {
         vatsimId.value = storedVatsimId
+      }
+
+      const storedPrerecEnabled = window.localStorage.getItem(STORAGE_KEYS.prerecEnabled)
+      if (storedPrerecEnabled !== null) {
+        prerecEnabled.value = storedPrerecEnabled === '1'
+      }
+      const storedPrerecSeconds = window.localStorage.getItem(STORAGE_KEYS.prerecSeconds)
+      if (storedPrerecSeconds !== null) {
+        const parsed = Number.parseFloat(storedPrerecSeconds)
+        if (Number.isFinite(parsed) && parsed >= 0.2 && parsed <= 3) {
+          prerecSeconds.value = parsed
+        }
       }
 
       const storedPlanRaw = window.localStorage.getItem(STORAGE_KEYS.selectedPlan)
@@ -2423,10 +2475,181 @@ const requestMicAccess = async () => {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Pre-recording: continuously capture mic into a PCM ring buffer so the start
+// of a PTT transmission isn't clipped. On PTT release we prepend the rolling
+// buffer to the actively-captured frames and ship as WAV.
+// ---------------------------------------------------------------------------
+let prerecCtx: AudioContext | null = null
+let prerecStream: MediaStream | null = null
+let prerecSource: MediaStreamAudioSourceNode | null = null
+let prerecNode: ScriptProcessorNode | null = null
+let prerecSampleRate = 16000
+let prerecRing: Float32Array | null = null
+let prerecRingWrite = 0
+let prerecRingFilled = false
+let prerecLiveChunks: Float32Array[] = []
+let prerecLiveCapture = false
+let prerecLiveIntercom = false
+let prerecStarting = false
+let prerecLivePrebuffer: Float32Array = new Float32Array(0)
+
+const snapshotPrerecPCM = (): Float32Array => {
+  if (!prerecRing) return new Float32Array(0)
+  const rb = prerecRing
+  if (!prerecRingFilled) return rb.slice(0, prerecRingWrite)
+  const out = new Float32Array(rb.length)
+  const tail = rb.length - prerecRingWrite
+  out.set(rb.subarray(prerecRingWrite), 0)
+  out.set(rb.subarray(0, prerecRingWrite), tail)
+  return out
+}
+
+const encodeWav = (pcm: Float32Array, sampleRate: number): Blob => {
+  const length = pcm.length
+  const buffer = new ArrayBuffer(44 + length * 2)
+  const view = new DataView(buffer)
+  const writeStr = (off: number, s: string) => {
+    for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i))
+  }
+  writeStr(0, 'RIFF')
+  view.setUint32(4, 36 + length * 2, true)
+  writeStr(8, 'WAVE')
+  writeStr(12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, 1, true)
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, sampleRate * 2, true)
+  view.setUint16(32, 2, true)
+  view.setUint16(34, 16, true)
+  writeStr(36, 'data')
+  view.setUint32(40, length * 2, true)
+  let off = 44
+  for (let i = 0; i < length; i++) {
+    const s = Math.max(-1, Math.min(1, pcm[i]))
+    view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true)
+    off += 2
+  }
+  return new Blob([buffer], { type: 'audio/wav' })
+}
+
+const stopPrerecCapture = () => {
+  prerecLiveCapture = false
+  prerecLiveChunks = []
+  try { prerecNode?.disconnect() } catch {}
+  try { prerecSource?.disconnect() } catch {}
+  if (prerecCtx) {
+    try { void prerecCtx.close() } catch {}
+  }
+  if (prerecStream) {
+    prerecStream.getTracks().forEach(t => t.stop())
+  }
+  prerecCtx = null
+  prerecStream = null
+  prerecSource = null
+  prerecNode = null
+  prerecRing = null
+  prerecRingWrite = 0
+  prerecRingFilled = false
+}
+
+const startPrerecCapture = async () => {
+  if (typeof window === 'undefined') return
+  if (prerecCtx || prerecStarting) return
+  if (!prerecEnabled.value) return
+  if (inputMode.value !== 'voice') return
+  if (!micPermission.value) return
+
+  prerecStarting = true
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      }
+    })
+    const AC = window.AudioContext || (window as any).webkitAudioContext
+    if (!AC) {
+      stream.getTracks().forEach(t => t.stop())
+      return
+    }
+    const ctx = new AC()
+    prerecCtx = ctx
+    prerecStream = stream
+    prerecSampleRate = ctx.sampleRate
+    prerecSource = ctx.createMediaStreamSource(stream)
+    const node = ctx.createScriptProcessor(2048, 1, 1)
+    prerecNode = node
+    const ringSize = Math.max(1, Math.ceil(prerecSampleRate * Math.max(0.2, prerecSeconds.value)))
+    prerecRing = new Float32Array(ringSize)
+    prerecRingWrite = 0
+    prerecRingFilled = false
+    prerecLiveChunks = []
+    prerecLiveCapture = false
+
+    node.onaudioprocess = (e) => {
+      const input = e.inputBuffer.getChannelData(0)
+      const rb = prerecRing
+      if (!rb) return
+      const len = input.length
+      for (let i = 0; i < len; i++) {
+        rb[prerecRingWrite++] = input[i]
+        if (prerecRingWrite >= rb.length) {
+          prerecRingWrite = 0
+          prerecRingFilled = true
+        }
+      }
+      if (prerecLiveCapture) {
+        prerecLiveChunks.push(new Float32Array(input))
+      }
+    }
+
+    prerecSource.connect(node)
+    // ScriptProcessor only emits events while connected to destination.
+    // Mute via a zero-gain node so we don't echo mic to speakers.
+    const muteGain = ctx.createGain()
+    muteGain.gain.value = 0
+    node.connect(muteGain)
+    muteGain.connect(ctx.destination)
+  } catch (err) {
+    console.warn('[PM] prerec capture failed', err)
+    stopPrerecCapture()
+  } finally {
+    prerecStarting = false
+  }
+}
+
+const restartPrerecCapture = async () => {
+  stopPrerecCapture()
+  await startPrerecCapture()
+}
+
 const startRecording = async (isIntercom = false) => {
   if (!micPermission.value) {
     await requestMicAccess()
     return
+  }
+
+  // Pre-recording path: ring buffer + active capture, encoded to WAV on release
+  if (prerecEnabled.value) {
+    if (!prerecCtx) {
+      await startPrerecCapture()
+    }
+    if (prerecCtx && prerecNode) {
+      prerecLivePrebuffer = snapshotPrerecPCM()
+      prerecLiveChunks = []
+      prerecLiveIntercom = isIntercom
+      prerecLiveCapture = true
+      isRecording.value = true
+      if (radioEffectsEnabled.value) {
+        playPTTBeep(true)
+      }
+      return
+    }
+    // Fall through to MediaRecorder if prerec init failed
   }
 
   try {
@@ -2450,7 +2673,7 @@ const startRecording = async (isIntercom = false) => {
 
     mediaRecorder.value.onstop = () => {
       const audioBlob = new Blob(audioChunks.value, { type: 'audio/wav' })
-      processTransmission(audioBlob, isIntercom)
+      processTransmission(audioBlob, isIntercom, 'webm')
       stream.getTracks().forEach(track => track.stop())
     }
 
@@ -2467,6 +2690,29 @@ const startRecording = async (isIntercom = false) => {
 }
 
 const stopRecording = () => {
+  if (prerecLiveCapture) {
+    prerecLiveCapture = false
+    isRecording.value = false
+    if (radioEffectsEnabled.value) {
+      playPTTBeep(false)
+    }
+    const prebuffer = prerecLivePrebuffer
+    const liveLen = prerecLiveChunks.reduce((sum, c) => sum + c.length, 0)
+    const combined = new Float32Array(prebuffer.length + liveLen)
+    combined.set(prebuffer, 0)
+    let off = prebuffer.length
+    for (const c of prerecLiveChunks) {
+      combined.set(c, off)
+      off += c.length
+    }
+    prerecLiveChunks = []
+    prerecLivePrebuffer = new Float32Array(0)
+    if (combined.length === 0) return
+    const blob = encodeWav(combined, prerecSampleRate)
+    processTransmission(blob, prerecLiveIntercom, 'wav')
+    return
+  }
+
   if (mediaRecorder.value && isRecording.value) {
     mediaRecorder.value.stop()
     isRecording.value = false
@@ -2477,9 +2723,9 @@ const stopRecording = () => {
   }
 }
 
-const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
+const processTransmission = async (audioBlob: Blob, isIntercom: boolean, format: 'wav' | 'webm' = 'webm') => {
   const channel = isIntercom ? 'INTERCOM' : 'RADIO'
-  pmLog.info(`PTT ▶ ${channel}  blob=${(audioBlob.size / 1024).toFixed(1)}KB  session=${backendSessionId.value?.slice(0,8) ?? 'none'}`)
+  pmLog.info(`PTT ▶ ${channel}  blob=${(audioBlob.size / 1024).toFixed(1)}KB  fmt=${format}  session=${backendSessionId.value?.slice(0,8) ?? 'none'}`)
   try {
     const arrayBuffer = await audioBlob.arrayBuffer()
     const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
@@ -2489,7 +2735,7 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
         audio: base64Audio,
         moduleId: 'pilot-monitoring-intercom',
         lessonId: 'intercom',
-        format: 'webm',
+        format,
         sessionId: backendSessionId.value || undefined,
       })
 
@@ -2511,7 +2757,7 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean) => {
         audio: base64Audio,
         moduleId: 'pilot-monitoring',
         lessonId: currentState.value?.id || 'general',
-        format: 'webm',
+        format,
         sessionId: backendSessionId.value || undefined,
       })
 
@@ -3206,8 +3452,33 @@ watch(
   { immediate: true }
 )
 
+// Pre-recording: manage continuous mic capture lifecycle
+watch([inputMode, micPermission, prerecEnabled], ([mode, mic, enabled]) => {
+  if (mode === 'voice' && mic && enabled) {
+    void startPrerecCapture()
+  } else {
+    stopPrerecCapture()
+  }
+}, { immediate: true })
+
+watch(prerecSeconds, (val) => {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(STORAGE_KEYS.prerecSeconds, String(val))
+  }
+  if (prerecCtx) {
+    void restartPrerecCapture()
+  }
+})
+
+watch(prerecEnabled, (val) => {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(STORAGE_KEYS.prerecEnabled, val ? '1' : '0')
+  }
+})
+
 onUnmounted(() => {
   stopAtisLoop()
+  stopPrerecCapture()
 })
 </script>
 
