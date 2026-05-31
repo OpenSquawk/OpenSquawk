@@ -7,6 +7,9 @@ export interface HoldSelectOption {
   sublabel?: string
   color?: string
   disabled?: boolean
+  // Allow callers to attach extra metadata that custom #option slots can read
+  // (e.g. tooltip source labels, badges) without widening the contract here.
+  [key: string]: unknown
 }
 
 const props = withDefaults(defineProps<{
@@ -14,10 +17,14 @@ const props = withDefaults(defineProps<{
   placement?: 'auto' | 'up' | 'down'
   disabled?: boolean
   title?: string
+  dense?: boolean
+  menuClass?: string
 }>(), {
   placement: 'auto',
   disabled: false,
   title: '',
+  dense: false,
+  menuClass: '',
 })
 
 const emit = defineEmits<{
@@ -211,6 +218,7 @@ onBeforeUnmount(() => {
           v-if="open"
           ref="menuRef"
           class="hold-select-menu"
+          :class="[{ 'is-dense': dense }, menuClass]"
           :style="menuStyle"
       >
         <p v-if="title" class="hs-title">{{ title }}</p>
@@ -289,6 +297,11 @@ onBeforeUnmount(() => {
   cursor: pointer;
   border: 1px solid transparent;
   transition: background 90ms ease, border-color 90ms ease;
+}
+.hold-select-menu.is-dense .hs-option {
+  padding: 6px 10px;
+  gap: 1px;
+  border-radius: 10px;
 }
 .hs-option.is-highlight {
   background: color-mix(in srgb, var(--hs-accent) 22%, transparent);

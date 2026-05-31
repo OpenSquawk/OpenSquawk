@@ -168,36 +168,128 @@
               </div>
             </v-menu>
 
-            <div class="hud-context">
-              <p class="hud-context-callsign">{{ flightContext.callsign || 'N/A' }}</p>
-              <p class="hud-context-route">{{ flightContext.dep }} → {{ flightContext.dest }}</p>
-            </div>
-            <div class="hud-status">
-              <v-chip :color="flags.in_air ? 'green' : 'grey'" size="x-small" variant="flat">
-                {{ flags.in_air ? 'IN-AIR' : 'GROUND' }}
-              </v-chip>
-              <v-chip color="cyan" size="x-small" variant="outlined">{{ flags.current_unit }}</v-chip>
+            <div class="hud-context-group" aria-label="Flight context">
+              <button
+                  type="button"
+                  class="hud-context-btn"
+                  title="Edit flight"
+                  @click="showFlightSheet = true"
+              >
+                <span class="hud-context-callsign">{{ flightContext.callsign || 'N/A' }}</span>
+                <span class="hud-context-route">{{ flightContext.dep }} → {{ flightContext.dest }}</span>
+              </button>
+              <v-menu
+                  v-model="hudStatusMenu"
+                  :offset="[8, 0]"
+                  location="bottom end"
+                  :close-on-content-click="false"
+              >
+                <template #activator="{ props }">
+                  <button
+                      type="button"
+                      class="hud-context-toggle"
+                      :class="{ 'is-open': hudStatusMenu }"
+                      :aria-expanded="hudStatusMenu ? 'true' : 'false'"
+                      aria-label="Show flight status"
+                      v-bind="props"
+                  >
+                    <v-icon size="16">mdi-chevron-down</v-icon>
+                  </button>
+                </template>
+                <div class="hud-status-panel" role="menu">
+                  <div class="hud-status-row">
+                    <span class="hud-status-key">State</span>
+                    <v-chip :color="flags.in_air ? 'green' : 'grey'" size="x-small" variant="flat">
+                      {{ flags.in_air ? 'IN-AIR' : 'GROUND' }}
+                    </v-chip>
+                  </div>
+                  <div class="hud-status-row">
+                    <span class="hud-status-key">Unit</span>
+                    <v-chip color="cyan" size="x-small" variant="outlined">{{ flags.current_unit }}</v-chip>
+                  </div>
+                  <div class="hud-status-row">
+                    <span class="hud-status-key">Emergency</span>
+                    <v-chip :color="flags.emergency_active ? 'red' : 'grey'" size="x-small" variant="outlined">
+                      {{ flags.emergency_active ? 'ACTIVE' : 'NONE' }}
+                    </v-chip>
+                  </div>
+                  <div class="hud-status-row">
+                    <span class="hud-status-key">Radio checks</span>
+                    <span class="hud-status-val">{{ flags.radio_checks_done || 0 }}</span>
+                  </div>
+                  <div class="hud-status-row">
+                    <span class="hud-status-key">Off-schema</span>
+                    <span class="hud-status-val">{{ flags.off_schema_count || 0 }}</span>
+                  </div>
+                </div>
+              </v-menu>
             </div>
           </div>
 
           <div class="hud-center">
             <div class="freq-control-group" aria-label="Frequency controls">
-              <HoldSelect
-                  :options="presetOptions"
-                  placement="down"
-                  title="Select frequency (active)"
-                  @select="onPresetSelectActive"
-              >
-                <template #default="{ open }">
-                  <button type="button" class="freq-chip" :class="{ 'is-open': open }">
-                    <span class="freq-chip-row">
+              <div class="freq-stack">
+                <HoldSelect
+                    :options="presetOptions"
+                    placement="down"
+                    title="Select standby frequency"
+                    dense
+                    menu-class="freq-hold-menu"
+                    @select="onPresetSelectStandby"
+                >
+                  <template #default="{ open }">
+                    <button type="button" class="freq-chip freq-chip-sby" :class="{ 'is-open': open }">
+                      <span class="freq-chip-tag">SBY</span>
+                      <span class="freq-chip-value-sm">{{ frequencies.standby || '---' }}</span>
+                    </button>
+                  </template>
+                  <template #option="{ option }">
+                    <v-tooltip :text="`Source: ${option.sourceLabel}`" location="end" open-delay="200">
+                      <template #activator="{ props: tip }">
+                        <div v-bind="tip" class="freq-option">
+                          <div class="freq-option-main">
+                            <span class="freq-option-label">{{ option.label }}</span>
+                            <span class="freq-option-sub">{{ option.sublabel }}</span>
+                          </div>
+                          <span class="freq-option-source" :aria-label="`Source ${option.sourceLabel}`">
+                            {{ option.sourceLabel }}
+                          </span>
+                        </div>
+                      </template>
+                    </v-tooltip>
+                  </template>
+                </HoldSelect>
+                <HoldSelect
+                    :options="presetOptions"
+                    placement="down"
+                    title="Select active frequency"
+                    dense
+                    menu-class="freq-hold-menu"
+                    @select="onPresetSelectActive"
+                >
+                  <template #default="{ open }">
+                    <button type="button" class="freq-chip freq-chip-act" :class="{ 'is-open': open }">
                       <span class="freq-chip-tag">ACT</span>
                       <span class="freq-chip-value">{{ frequencies.active || '---' }}</span>
-                    </span>
-                    <span class="freq-chip-standby">SBY {{ frequencies.standby || '---' }}</span>
-                  </button>
-                </template>
-              </HoldSelect>
+                    </button>
+                  </template>
+                  <template #option="{ option }">
+                    <v-tooltip :text="`Source: ${option.sourceLabel}`" location="end" open-delay="200">
+                      <template #activator="{ props: tip }">
+                        <div v-bind="tip" class="freq-option">
+                          <div class="freq-option-main">
+                            <span class="freq-option-label">{{ option.label }}</span>
+                            <span class="freq-option-sub">{{ option.sublabel }}</span>
+                          </div>
+                          <span class="freq-option-source" :aria-label="`Source ${option.sourceLabel}`">
+                            {{ option.sourceLabel }}
+                          </span>
+                        </div>
+                      </template>
+                    </v-tooltip>
+                  </template>
+                </HoldSelect>
+              </div>
 
               <button
                   type="button"
@@ -235,6 +327,15 @@
               <v-icon size="18">mdi-message-draw</v-icon>
               <span class="btn-label">Feedback</span>
             </NuxtLink>
+            <button
+                type="button"
+                class="btn ghost"
+                title="Settings"
+                @click="showSettingsSheet = true"
+            >
+              <v-icon size="18">mdi-cog</v-icon>
+              <span class="btn-label">Settings</span>
+            </button>
             <NuxtLink class="btn ghost" to="/logout" title="Logout">
               <v-icon size="18">mdi-logout</v-icon>
               <span class="btn-label">Logout</span>
@@ -244,21 +345,6 @@
       </header>
 
       <div class="pm-body">
-        <!-- Desktop sidebar nav -->
-        <nav class="pm-sidenav">
-          <button
-              v-for="tab in desktopTabs"
-              :key="tab.id"
-              type="button"
-              class="pm-navbtn"
-              :class="{ 'is-active': activeTab === tab.id }"
-              @click="activeTab = tab.id"
-          >
-            <v-icon size="22">{{ tab.icon }}</v-icon>
-            <span>{{ tab.label }}</span>
-          </button>
-        </nav>
-
         <!-- Main tab content -->
         <main class="pm-main">
           <div class="pm-main-inner">
@@ -508,506 +594,11 @@
               </v-card>
             </div>
 
-            <!-- =============== FREQ TAB =============== -->
-            <div v-show="activeTab === 'freq'" class="pm-block">
-              <v-card class="bg-white/5 backdrop-blur border border-white/10">
-                <v-card-text class="space-y-4">
-                  <h3 class="text-lg font-semibold">Radio Setup</h3>
-
-                  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                    <v-text-field
-                        v-model="frequencies.active"
-                        label="Active"
-                        variant="outlined"
-                        color="cyan"
-                        hide-details
-                        density="comfortable"
-                        class="freq-input-active font-mono"
-                    />
-                    <v-btn
-                        icon="mdi-swap-horizontal"
-                        color="cyan"
-                        variant="tonal"
-                        size="small"
-                        aria-label="Swap frequencies"
-                        :class="{ 'swap-animation': swapAnimation }"
-                        @click="swapFrequencies"
-                    />
-                    <v-text-field
-                        v-model="frequencies.standby"
-                        label="Standby"
-                        variant="outlined"
-                        color="cyan"
-                        hide-details
-                        density="comfortable"
-                        class="freq-input-standby font-mono"
-                    />
-                  </div>
-                </v-card-text>
-              </v-card>
-            </div>
-
-            <!-- Frequency Directory -->
-            <div v-show="activeTab === 'freq'" class="pm-block">
-              <v-card class="bg-white/5 border border-white/10">
-                <v-card-text class="space-y-3">
-                  <div class="flex flex-wrap items-center justify-between gap-3">
-                    <h3 class="text-lg font-semibold">Frequency overview</h3>
-                    <div class="flex items-center gap-2">
-                      <v-progress-circular
-                          v-if="airportFrequencyLoading"
-                          indeterminate
-                          color="cyan"
-                          size="18"
-                      />
-                      <template v-else>
-                        <v-chip
-                            v-for="label in frequencySourceLabels"
-                            :key="label"
-                            size="x-small"
-                            color="cyan"
-                            variant="outlined"
-                        >
-                          {{ label }}
-                        </v-chip>
-                      </template>
-                    </div>
-                  </div>
-
-                  <div
-                      v-if="airportFrequencyLoading"
-                      class="flex items-center gap-2 text-sm text-white/60"
-                  >
-                    <v-progress-circular indeterminate size="20" color="cyan" />
-                    <span>Loading frequencies from the network...</span>
-                  </div>
-                  <div
-                      v-else-if="displayAirportFrequencies.length === 0"
-                      class="text-xs text-white/50"
-                  >
-                    No frequencies available. Please try again later.
-                  </div>
-                  <div v-else class="frequency-grid">
-                    <div
-                        v-for="freq in displayAirportFrequencies"
-                        :key="freq.displayKey"
-                        class="frequency-card"
-                    >
-                      <div class="frequency-card-content">
-                        <div class="frequency-card-topline">
-                          <v-chip size="x-small" color="cyan" variant="outlined">{{ freq.type }}</v-chip>
-                          <v-tooltip :text="`Source: ${freq.sourceLabel}`" location="top">
-                            <template #activator="{ props: tip }">
-                              <v-btn
-                                  v-bind="tip"
-                                  icon="mdi-information-outline"
-                                  size="x-small"
-                                  variant="text"
-                                  color="cyan"
-                                  aria-label="Show frequency source"
-                              />
-                            </template>
-                          </v-tooltip>
-                        </div>
-
-                        <div class="frequency-value">
-                          {{ freq.frequency }}
-                        </div>
-
-                        <div class="frequency-description">
-                          <span>{{ freq.label }}</span>
-                          <span v-if="freq.callsign"> · {{ freq.callsign }}</span>
-                          <span v-if="freq.atisCode"> · ATIS {{ freq.atisCode }}</span>
-                        </div>
-                      </div>
-
-                      <div class="frequency-actions" role="group" aria-label="Frequency actions">
-                        <button
-                            type="button"
-                            class="frequency-action-btn"
-                            @click="setActiveFrequencyFromList(freq)"
-                        >
-                          ACT
-                        </button>
-                        <button
-                            type="button"
-                            class="frequency-action-btn"
-                            @click="setStandbyFrequencyFromList(freq)"
-                        >
-                          SBY
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </v-card-text>
-              </v-card>
-            </div>
-
             <!-- =============== LOG TAB (mobile only) =============== -->
             <div v-show="activeTab === 'log'" class="pm-block pm-log-tab">
               <CommLog :entries="log" :limit="20" @clear="clearLog" />
             </div>
 
-            <!-- =============== FLUG TAB =============== -->
-            <div v-show="activeTab === 'flug'" class="pm-block">
-              <v-card class="bg-white/5 backdrop-blur border border-white/10">
-                <v-card-text class="space-y-4">
-                  <div class="flex items-start justify-between gap-3">
-                    <div>
-                      <p class="text-xs uppercase tracking-[0.3em] text-white/50">Active flight</p>
-                      <h2 class="text-2xl font-semibold">{{ flightContext.callsign || 'N/A' }}</h2>
-                      <p class="text-sm text-white/70">{{ flightContext.dep }} → {{ flightContext.dest }}</p>
-                    </div>
-                    <div class="text-right space-y-1">
-                      <v-chip
-                          :color="flags.in_air ? 'green' : 'grey'"
-                          variant="flat"
-                          size="small"
-                      >
-                        {{ flags.in_air ? 'IN-AIR' : 'GROUND' }}
-                      </v-chip>
-                      <div class="flex gap-1">
-                        <v-chip size="x-small" :color="flags.emergency_active ? 'red' : 'grey'" variant="outlined">
-                          EMERG
-                        </v-chip>
-                        <v-chip size="x-small" color="cyan" variant="outlined">
-                          {{ flags.current_unit }}
-                        </v-chip>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                    <div>
-                      <p class="text-xs text-white/40 uppercase tracking-wider">Stand</p>
-                      <p class="text-white/80 font-mono">{{ vars.stand }}</p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-white/40 uppercase tracking-wider">Runway</p>
-                      <p class="text-white/80 font-mono">{{ vars.runway }}</p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-white/40 uppercase tracking-wider">Squawk</p>
-                      <p class="text-white/80 font-mono">{{ vars.squawk }}</p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-white/40 uppercase tracking-wider">SID</p>
-                      <p class="text-white/80 font-mono">{{ vars.sid }}</p>
-                    </div>
-                  </div>
-
-                  <div class="flex justify-between pt-2 border-t border-white/10">
-                    <div class="text-center">
-                      <p class="text-lg font-semibold text-cyan-300">{{ flags.radio_checks_done || 0 }}</p>
-                      <p class="text-xs text-white/40 uppercase tracking-wider">Radio Checks</p>
-                    </div>
-                    <div class="text-center">
-                      <p class="text-lg font-semibold text-orange-300">{{ flags.off_schema_count || 0 }}</p>
-                      <p class="text-xs text-white/40 uppercase tracking-wider">Off-Schema</p>
-                    </div>
-                    <div class="text-center">
-                      <p class="text-lg font-semibold text-white">{{ log.length }}</p>
-                      <p class="text-xs text-white/40 uppercase tracking-wider">Transmissions</p>
-                    </div>
-                  </div>
-
-                  <v-btn
-                      block
-                      color="grey"
-                      variant="outlined"
-                      size="small"
-                      @click="backToSetup"
-                      prepend-icon="mdi-airplane-off"
-                  >
-                    Select new flight
-                  </v-btn>
-                </v-card-text>
-              </v-card>
-            </div>
-
-            <!-- =============== MORE TAB =============== -->
-            <div v-show="activeTab === 'more'" class="pm-block">
-              <v-card class="bg-white/5 border border-white/10">
-                <v-card-text class="space-y-4">
-                  <h3 class="text-lg font-semibold">Settings</h3>
-
-                  <div class="space-y-4">
-                    <div>
-                      <div class="flex items-center justify-between mb-2">
-                        <label class="text-xs uppercase tracking-[0.3em] text-white/40">
-                          Speech speed
-                        </label>
-                        <span class="text-xs font-mono text-white/60">{{ speechSpeedLabel }}</span>
-                      </div>
-                      <v-slider
-                          v-model="speechSpeed"
-                          :min="0.7"
-                          :max="1.3"
-                          :step="0.05"
-                          color="cyan"
-                          thumb-label
-                          hide-details
-                      />
-                    </div>
-
-                    <div class="grid gap-3 sm:grid-cols-2">
-                      <v-switch
-                          v-model="radioEffectsEnabled"
-                          color="cyan"
-                          inset
-                          label="Radio effects"
-                          hide-details
-                      />
-                      <v-switch
-                          v-model="readbackEnabled"
-                          color="cyan"
-                          inset
-                          label="Readback voice"
-                          hide-details
-                      />
-                      <v-switch
-                          v-model="learningMode"
-                          color="cyan"
-                          inset
-                          label="Learning aid (expected comm)"
-                          hide-details
-                      />
-                      <v-switch
-                          v-model="debugMode"
-                          color="orange"
-                          inset
-                          label="Developer debug"
-                          hide-details
-                      />
-                    </div>
-
-                    <div class="pt-2 border-t border-white/10 space-y-3">
-                      <div>
-                        <p class="text-xs uppercase tracking-[0.3em] text-white/40">Voice input</p>
-                        <p class="text-[11px] text-white/50 mt-1">
-                          Pre-recording keeps the mic listening in the background so the start of your transmission isn't clipped.
-                        </p>
-                      </div>
-                      <v-switch
-                          v-model="prerecEnabled"
-                          color="cyan"
-                          inset
-                          label="Pre-recording (rolling buffer)"
-                          hide-details
-                      />
-                      <div :class="{ 'opacity-50 pointer-events-none': !prerecEnabled }">
-                        <div class="flex items-center justify-between mb-2">
-                          <label class="text-xs uppercase tracking-[0.3em] text-white/40">
-                            Pre-recording lead-in
-                          </label>
-                          <span class="text-xs font-mono text-white/60">{{ prerecSeconds.toFixed(1) }}s</span>
-                        </div>
-                        <v-slider
-                            v-model="prerecSeconds"
-                            :min="0.3"
-                            :max="2.5"
-                            :step="0.1"
-                            color="cyan"
-                            thumb-label
-                            hide-details
-                            :disabled="!prerecEnabled"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </v-card-text>
-              </v-card>
-            </div>
-
-            <!-- =============== DEBUG TAB =============== -->
-            <div v-show="activeTab === 'debug' && debugMode" class="pm-block">
-              <v-card
-                  v-if="simulationRunning || simulationTrace.length"
-                  class="bg-white/5 border border-white/10 mb-4"
-              >
-                <v-card-text class="space-y-3">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <h3 class="text-lg font-semibold">Simulation Trace</h3>
-                      <v-chip size="small" color="cyan" variant="outlined">
-                        {{ completedPilotSteps }} / {{ simulationStepCount }}
-                      </v-chip>
-                    </div>
-                    <v-chip size="small" :color="simulationRunning ? 'orange' : 'grey'" variant="tonal">
-                      {{ simulationRunning ? 'Running' : 'Ready' }}
-                    </v-chip>
-                  </div>
-
-                  <v-alert
-                      v-if="simulationError"
-                      type="warning"
-                      variant="tonal"
-                      density="compact"
-                      class="bg-amber-500/10 text-amber-200"
-                  >
-                    {{ simulationError }}
-                  </v-alert>
-
-                  <div
-                      v-if="simulationRunning && simulationTrace.length === 0"
-                      class="text-sm text-white/60"
-                  >
-                    Simulation initializing...
-                  </div>
-
-                  <div
-                      v-else
-                      class="space-y-2 max-h-64 overflow-y-auto pr-1"
-                  >
-                    <div
-                        v-for="(entry, idx) in simulationTrace"
-                        :key="idx"
-                        class="rounded-2xl border border-white/10 bg-black/40 p-3 space-y-2"
-                    >
-                      <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/40">
-                        <span>{{ entry.label }}</span>
-                        <span class="text-white/60">{{ entry.id }}</span>
-                      </div>
-                      <div v-if="entry.kind === 'pilot' || entry.kind === 'atc'" class="space-y-1">
-                        <p class="text-sm font-mono text-white">{{ entry.payload?.text }}</p>
-                        <p class="text-[11px] text-white/50 font-mono">{{ entry.payload?.normalized }}</p>
-                      </div>
-                      <pre
-                          v-else-if="entry.payload"
-                          class="text-[11px] text-white/60 font-mono whitespace-pre-wrap"
-                      >{{ formatTracePayload(entry.payload) }}</pre>
-                    </div>
-                  </div>
-                </v-card-text>
-              </v-card>
-
-              <v-card class="bg-white/5 border border-white/10">
-                <v-card-text class="space-y-4">
-                  <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold">Debug: Flow Insights</h3>
-                    <v-chip size="small" color="grey" variant="outlined">LLM</v-chip>
-                  </div>
-
-                  <div class="flex items-center justify-between text-[11px] text-white/50">
-                    <span>Session: {{ sessionLabel }}</span>
-                    <div class="flex flex-wrap gap-2" v-if="traceAutoSelection || (traceFallback?.used) || timelineUsedFallback">
-                      <v-chip v-if="traceAutoSelection" size="x-small" color="cyan" variant="outlined">
-                        Auto: {{ traceAutoSelection.id }}
-                      </v-chip>
-                      <v-chip v-if="timelineUsedFallback" size="x-small" color="orange" variant="tonal">
-                        Fallback candidates
-                      </v-chip>
-                      <v-chip v-if="traceFallback?.used" size="x-small" color="red" variant="tonal">
-                        Fallback: {{ traceFallback.reason || 'triggered' }}
-                      </v-chip>
-                    </div>
-                  </div>
-
-                  <div class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
-                    <p class="text-xs uppercase tracking-[0.3em] text-white/40">Current node</p>
-                    <p class="font-mono text-sm text-white">{{ debugState?.id || '—' }}</p>
-                    <p class="text-[11px] text-white/50">
-                      {{ debugState ? `${debugState.role} • ${debugState.phase}` : 'N/A' }}
-                      <span v-if="debugState?.frequencyName" class="ml-1 text-white/40">({{ debugState.frequencyName }})</span>
-                    </p>
-                    <p v-if="debugState?.sayPlain" class="text-xs text-white/70">
-                      Auto (LLM): <span class="font-mono text-white">{{ debugState.sayPlain }}</span>
-                    </p>
-                    <p v-if="debugState?.sayNormalized" class="text-[11px] text-white/40">
-                      Radio: {{ debugState.sayNormalized }}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Upcoming decisions</p>
-                    <div v-if="debugNextStates.length" class="space-y-2">
-                      <div
-                          v-for="state in debugNextStates"
-                          :key="state.id"
-                          class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3"
-                      >
-                        <div class="flex items-start justify-between gap-2">
-                          <div>
-                            <p class="font-mono text-sm text-white">{{ state.id }}</p>
-                            <p class="text-[11px] text-white/50">
-                              {{ state.role || '—' }} • {{ state.phase || '—' }}
-                              <span v-if="state.frequencyName" class="ml-1 text-white/40">({{ state.frequencyName }})</span>
-                            </p>
-                          </div>
-                          <v-chip
-                              size="x-small"
-                              color="cyan"
-                              variant="outlined"
-                              class="cursor-pointer"
-                              @click="forceMove(state.id)"
-                          >
-                            Jump
-                          </v-chip>
-                        </div>
-                        <p v-if="state.sayPlain" class="text-xs text-white/70">
-                          ATC: <span class="font-mono text-white">{{ state.sayPlain }}</span>
-                        </p>
-                        <p v-if="state.sayNormalized" class="text-[11px] text-white/40">
-                          Radio: {{ state.sayNormalized }}
-                        </p>
-                      </div>
-                    </div>
-                    <p v-else class="text-xs text-white/50">No further decisions available.</p>
-                  </div>
-
-                  <div class="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
-                    <p class="text-xs uppercase tracking-[0.3em] text-white/40">Decision timeline</p>
-                    <div v-if="timelineSteps.length" class="space-y-3">
-                      <div
-                        v-for="(step, index) in timelineSteps"
-                        :key="`${step.stage}-${index}`"
-                        class="space-y-2 rounded-xl border border-white/10 bg-black/40 p-3"
-                      >
-                        <div class="flex items-start justify-between gap-3">
-                          <div>
-                            <p class="font-semibold text-sm text-white">{{ step.label }}</p>
-                            <p class="text-[11px] text-white/50 uppercase tracking-[0.2em]">{{ step.stage }}</p>
-                          </div>
-                          <v-chip size="x-small" color="cyan" variant="outlined">
-                            {{ step.candidates.length }} candidates
-                          </v-chip>
-                        </div>
-                        <p v-if="step.note" class="text-[11px] text-white/50">{{ step.note }}</p>
-                        <div v-if="step.candidates.length" class="space-y-2">
-                          <div
-                            v-for="candidate in step.candidates"
-                            :key="candidate.id"
-                            class="rounded-lg border border-white/10 bg-black/30 p-2"
-                          >
-                            <div class="flex items-center justify-between gap-2">
-                              <span class="font-mono text-sm text-white">{{ candidate.id }}</span>
-                              <span class="text-[11px] text-white/50">{{ candidate.flow || 'current' }}</span>
-                            </div>
-                            <p v-if="candidate.summary" class="text-[11px] text-white/60 mt-1">{{ candidate.summary }}</p>
-                          </div>
-                        </div>
-                        <div v-if="step.eliminated?.length" class="space-y-2">
-                          <p class="text-[11px] text-red-200/80 uppercase tracking-[0.25em]">Eliminated</p>
-                          <div
-                            v-for="elim in step.eliminated"
-                            :key="`${step.stage}-${elim.candidate.id}`"
-                            class="space-y-1 rounded-lg border border-red-400/30 bg-red-500/10 p-2 text-xs text-red-100"
-                          >
-                            <div class="flex items-center justify-between gap-2">
-                              <span class="font-mono text-sm">{{ elim.candidate.id }}</span>
-                              <span class="text-[11px] text-red-200/80">{{ elim.kind }}</span>
-                            </div>
-                            <p class="text-[11px] text-red-100/80">{{ elim.reason }}</p>
-                            <p v-if="describeElimination(elim)" class="text-[10px] text-red-100/70">{{ describeElimination(elim) }}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <p v-else class="text-[11px] text-white/50">No decision timeline available yet.</p>
-                  </div>
-                </v-card-text>
-              </v-card>
-            </div>
           </div>
         </main>
 
@@ -1031,6 +622,412 @@
           <span>{{ tab.label }}</span>
         </button>
       </nav>
+
+      <!-- Debug FAB (bottom-left) -->
+      <button
+          v-if="debugMode"
+          type="button"
+          class="debug-fab"
+          :class="{ 'is-open': showDebugDrawer }"
+          :aria-pressed="showDebugDrawer ? 'true' : 'false'"
+          :aria-label="showDebugDrawer ? 'Close debug panel' : 'Open debug panel'"
+          title="Debug panel"
+          @click="showDebugDrawer = !showDebugDrawer"
+      >
+        <v-icon size="22">{{ showDebugDrawer ? 'mdi-close' : 'mdi-bug' }}</v-icon>
+      </button>
+
+      <!-- Debug drawer (left, non-blocking) -->
+      <Transition name="debug-drawer">
+        <aside
+            v-if="showDebugDrawer && debugMode"
+            class="debug-drawer"
+            role="complementary"
+            aria-label="Debug panel"
+        >
+          <header class="debug-drawer-head">
+            <div class="flex items-center gap-2">
+              <v-icon size="18" color="orange">mdi-bug</v-icon>
+              <h3 class="text-base font-semibold">Debug</h3>
+              <v-chip size="x-small" color="grey" variant="outlined">LLM</v-chip>
+            </div>
+            <button
+                type="button"
+                class="debug-drawer-close"
+                aria-label="Close debug panel"
+                @click="showDebugDrawer = false"
+            >
+              <v-icon size="18">mdi-close</v-icon>
+            </button>
+          </header>
+
+          <div class="debug-drawer-body">
+            <v-card
+                v-if="simulationRunning || simulationTrace.length"
+                class="bg-white/5 border border-white/10 mb-3"
+            >
+              <v-card-text class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <h4 class="text-sm font-semibold">Simulation Trace</h4>
+                    <v-chip size="x-small" color="cyan" variant="outlined">
+                      {{ completedPilotSteps }} / {{ simulationStepCount }}
+                    </v-chip>
+                  </div>
+                  <v-chip size="x-small" :color="simulationRunning ? 'orange' : 'grey'" variant="tonal">
+                    {{ simulationRunning ? 'Running' : 'Ready' }}
+                  </v-chip>
+                </div>
+
+                <v-alert
+                    v-if="simulationError"
+                    type="warning"
+                    variant="tonal"
+                    density="compact"
+                    class="bg-amber-500/10 text-amber-200"
+                >
+                  {{ simulationError }}
+                </v-alert>
+
+                <div
+                    v-if="simulationRunning && simulationTrace.length === 0"
+                    class="text-xs text-white/60"
+                >
+                  Simulation initializing...
+                </div>
+
+                <div v-else class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  <div
+                      v-for="(entry, idx) in simulationTrace"
+                      :key="idx"
+                      class="rounded-xl border border-white/10 bg-black/40 p-2 space-y-1"
+                  >
+                    <div class="flex items-center justify-between text-[10px] uppercase tracking-[0.25em] text-white/40">
+                      <span>{{ entry.label }}</span>
+                      <span class="text-white/60">{{ entry.id }}</span>
+                    </div>
+                    <div v-if="entry.kind === 'pilot' || entry.kind === 'atc'" class="space-y-1">
+                      <p class="text-xs font-mono text-white">{{ entry.payload?.text }}</p>
+                      <p class="text-[10px] text-white/50 font-mono">{{ entry.payload?.normalized }}</p>
+                    </div>
+                    <pre
+                        v-else-if="entry.payload"
+                        class="text-[10px] text-white/60 font-mono whitespace-pre-wrap"
+                    >{{ formatTracePayload(entry.payload) }}</pre>
+                  </div>
+                </div>
+              </v-card-text>
+            </v-card>
+
+            <v-card class="bg-white/5 border border-white/10">
+              <v-card-text class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-sm font-semibold">Flow Insights</h4>
+                </div>
+
+                <div class="flex items-center justify-between text-[10px] text-white/50">
+                  <span>Session: {{ sessionLabel }}</span>
+                  <div class="flex flex-wrap gap-1" v-if="traceAutoSelection || (traceFallback?.used) || timelineUsedFallback">
+                    <v-chip v-if="traceAutoSelection" size="x-small" color="cyan" variant="outlined">
+                      Auto: {{ traceAutoSelection.id }}
+                    </v-chip>
+                    <v-chip v-if="timelineUsedFallback" size="x-small" color="orange" variant="tonal">
+                      Fallback candidates
+                    </v-chip>
+                    <v-chip v-if="traceFallback?.used" size="x-small" color="red" variant="tonal">
+                      Fallback: {{ traceFallback.reason || 'triggered' }}
+                    </v-chip>
+                  </div>
+                </div>
+
+                <div class="space-y-2 rounded-xl border border-white/10 bg-black/30 p-2">
+                  <p class="text-[10px] uppercase tracking-[0.25em] text-white/40">Current node</p>
+                  <p class="font-mono text-xs text-white">{{ debugState?.id || '—' }}</p>
+                  <p class="text-[10px] text-white/50">
+                    {{ debugState ? `${debugState.role} • ${debugState.phase}` : 'N/A' }}
+                    <span v-if="debugState?.frequencyName" class="ml-1 text-white/40">({{ debugState.frequencyName }})</span>
+                  </p>
+                  <p v-if="debugState?.sayPlain" class="text-[11px] text-white/70">
+                    Auto (LLM): <span class="font-mono text-white">{{ debugState.sayPlain }}</span>
+                  </p>
+                  <p v-if="debugState?.sayNormalized" class="text-[10px] text-white/40">
+                    Radio: {{ debugState.sayNormalized }}
+                  </p>
+                </div>
+
+                <div>
+                  <p class="text-[10px] uppercase tracking-[0.25em] text-white/40 mb-2">Upcoming decisions</p>
+                  <div v-if="debugNextStates.length" class="space-y-2">
+                    <div
+                        v-for="state in debugNextStates"
+                        :key="state.id"
+                        class="space-y-1 rounded-xl border border-white/10 bg-black/30 p-2"
+                    >
+                      <div class="flex items-start justify-between gap-2">
+                        <div>
+                          <p class="font-mono text-xs text-white">{{ state.id }}</p>
+                          <p class="text-[10px] text-white/50">
+                            {{ state.role || '—' }} • {{ state.phase || '—' }}
+                            <span v-if="state.frequencyName" class="ml-1 text-white/40">({{ state.frequencyName }})</span>
+                          </p>
+                        </div>
+                        <v-chip
+                            size="x-small"
+                            color="cyan"
+                            variant="outlined"
+                            class="cursor-pointer"
+                            @click="forceMove(state.id)"
+                        >
+                          Jump
+                        </v-chip>
+                      </div>
+                      <p v-if="state.sayPlain" class="text-[11px] text-white/70">
+                        ATC: <span class="font-mono text-white">{{ state.sayPlain }}</span>
+                      </p>
+                      <p v-if="state.sayNormalized" class="text-[10px] text-white/40">
+                        Radio: {{ state.sayNormalized }}
+                      </p>
+                    </div>
+                  </div>
+                  <p v-else class="text-[10px] text-white/50">No further decisions available.</p>
+                </div>
+
+                <div class="space-y-2 rounded-xl border border-white/10 bg-black/30 p-2">
+                  <p class="text-[10px] uppercase tracking-[0.25em] text-white/40">Decision timeline</p>
+                  <div v-if="timelineSteps.length" class="space-y-2">
+                    <div
+                      v-for="(step, index) in timelineSteps"
+                      :key="`${step.stage}-${index}`"
+                      class="space-y-2 rounded-lg border border-white/10 bg-black/40 p-2"
+                    >
+                      <div class="flex items-start justify-between gap-2">
+                        <div>
+                          <p class="font-semibold text-xs text-white">{{ step.label }}</p>
+                          <p class="text-[10px] text-white/50 uppercase tracking-[0.2em]">{{ step.stage }}</p>
+                        </div>
+                        <v-chip size="x-small" color="cyan" variant="outlined">
+                          {{ step.candidates.length }} cand.
+                        </v-chip>
+                      </div>
+                      <p v-if="step.note" class="text-[10px] text-white/50">{{ step.note }}</p>
+                      <div v-if="step.candidates.length" class="space-y-1">
+                        <div
+                          v-for="candidate in step.candidates"
+                          :key="candidate.id"
+                          class="rounded-md border border-white/10 bg-black/30 p-1.5"
+                        >
+                          <div class="flex items-center justify-between gap-2">
+                            <span class="font-mono text-[11px] text-white">{{ candidate.id }}</span>
+                            <span class="text-[10px] text-white/50">{{ candidate.flow || 'current' }}</span>
+                          </div>
+                          <p v-if="candidate.summary" class="text-[10px] text-white/60 mt-0.5">{{ candidate.summary }}</p>
+                        </div>
+                      </div>
+                      <div v-if="step.eliminated?.length" class="space-y-1">
+                        <p class="text-[10px] text-red-200/80 uppercase tracking-[0.25em]">Eliminated</p>
+                        <div
+                          v-for="elim in step.eliminated"
+                          :key="`${step.stage}-${elim.candidate.id}`"
+                          class="space-y-1 rounded-md border border-red-400/30 bg-red-500/10 p-1.5 text-[10px] text-red-100"
+                        >
+                          <div class="flex items-center justify-between gap-2">
+                            <span class="font-mono text-[11px]">{{ elim.candidate.id }}</span>
+                            <span class="text-[10px] text-red-200/80">{{ elim.kind }}</span>
+                          </div>
+                          <p class="text-[10px] text-red-100/80">{{ elim.reason }}</p>
+                          <p v-if="describeElimination(elim)" class="text-[10px] text-red-100/70">{{ describeElimination(elim) }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <p v-else class="text-[10px] text-white/50">No decision timeline available yet.</p>
+                </div>
+              </v-card-text>
+            </v-card>
+          </div>
+        </aside>
+      </Transition>
+
+      <!-- Flight info sheet (opened via hud-context click) -->
+      <v-dialog v-model="showFlightSheet" max-width="520">
+        <v-card class="bg-[#0b101d] border border-white/10 text-white">
+          <v-card-title class="flex items-center justify-between gap-2 text-base font-semibold">
+            <div class="flex items-center gap-2">
+              <v-icon icon="mdi-airplane" size="20" color="cyan" />
+              Flight info
+            </div>
+            <v-btn icon="mdi-close" variant="text" size="small" @click="showFlightSheet = false" />
+          </v-card-title>
+          <v-card-text class="space-y-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[0.3em] text-white/50">Active flight</p>
+                <h2 class="text-2xl font-semibold">{{ flightContext.callsign || 'N/A' }}</h2>
+                <p class="text-sm text-white/70">{{ flightContext.dep }} → {{ flightContext.dest }}</p>
+              </div>
+              <div class="text-right space-y-1">
+                <v-chip
+                    :color="flags.in_air ? 'green' : 'grey'"
+                    variant="flat"
+                    size="small"
+                >
+                  {{ flags.in_air ? 'IN-AIR' : 'GROUND' }}
+                </v-chip>
+                <div class="flex gap-1 justify-end">
+                  <v-chip size="x-small" :color="flags.emergency_active ? 'red' : 'grey'" variant="outlined">
+                    EMERG
+                  </v-chip>
+                  <v-chip size="x-small" color="cyan" variant="outlined">
+                    {{ flags.current_unit }}
+                  </v-chip>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+              <div>
+                <p class="text-xs text-white/40 uppercase tracking-wider">Stand</p>
+                <p class="text-white/80 font-mono">{{ vars.stand }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-white/40 uppercase tracking-wider">Runway</p>
+                <p class="text-white/80 font-mono">{{ vars.runway }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-white/40 uppercase tracking-wider">Squawk</p>
+                <p class="text-white/80 font-mono">{{ vars.squawk }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-white/40 uppercase tracking-wider">SID</p>
+                <p class="text-white/80 font-mono">{{ vars.sid }}</p>
+              </div>
+            </div>
+
+            <div class="flex justify-between pt-2 border-t border-white/10">
+              <div class="text-center">
+                <p class="text-lg font-semibold text-cyan-300">{{ flags.radio_checks_done || 0 }}</p>
+                <p class="text-xs text-white/40 uppercase tracking-wider">Radio Checks</p>
+              </div>
+              <div class="text-center">
+                <p class="text-lg font-semibold text-orange-300">{{ flags.off_schema_count || 0 }}</p>
+                <p class="text-xs text-white/40 uppercase tracking-wider">Off-Schema</p>
+              </div>
+              <div class="text-center">
+                <p class="text-lg font-semibold text-white">{{ log.length }}</p>
+                <p class="text-xs text-white/40 uppercase tracking-wider">Transmissions</p>
+              </div>
+            </div>
+
+            <v-btn
+                block
+                color="grey"
+                variant="outlined"
+                size="small"
+                prepend-icon="mdi-airplane-off"
+                @click="backToSetup"
+            >
+              Select new flight
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+
+      <!-- Settings sheet (opened via Settings button in HUD) -->
+      <v-dialog v-model="showSettingsSheet" max-width="560">
+        <v-card class="bg-[#0b101d] border border-white/10 text-white">
+          <v-card-title class="flex items-center justify-between gap-2 text-base font-semibold">
+            <div class="flex items-center gap-2">
+              <v-icon icon="mdi-cog" size="20" color="cyan" />
+              Settings
+            </div>
+            <v-btn icon="mdi-close" variant="text" size="small" @click="showSettingsSheet = false" />
+          </v-card-title>
+          <v-card-text class="space-y-4">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-xs uppercase tracking-[0.3em] text-white/40">
+                  Speech speed
+                </label>
+                <span class="text-xs font-mono text-white/60">{{ speechSpeedLabel }}</span>
+              </div>
+              <v-slider
+                  v-model="speechSpeed"
+                  :min="0.7"
+                  :max="1.3"
+                  :step="0.05"
+                  color="cyan"
+                  thumb-label
+                  hide-details
+              />
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2">
+              <v-switch
+                  v-model="radioEffectsEnabled"
+                  color="cyan"
+                  inset
+                  label="Radio effects"
+                  hide-details
+              />
+              <v-switch
+                  v-model="readbackEnabled"
+                  color="cyan"
+                  inset
+                  label="Readback voice"
+                  hide-details
+              />
+              <v-switch
+                  v-model="learningMode"
+                  color="cyan"
+                  inset
+                  label="Learning aid (expected comm)"
+                  hide-details
+              />
+              <v-switch
+                  v-model="debugMode"
+                  color="orange"
+                  inset
+                  label="Developer debug"
+                  hide-details
+              />
+            </div>
+
+            <div class="pt-2 border-t border-white/10 space-y-3">
+              <div>
+                <p class="text-xs uppercase tracking-[0.3em] text-white/40">Voice input</p>
+                <p class="text-[11px] text-white/50 mt-1">
+                  Pre-recording keeps the mic listening in the background so the start of your transmission isn't clipped.
+                </p>
+              </div>
+              <v-switch
+                  v-model="prerecEnabled"
+                  color="cyan"
+                  inset
+                  label="Pre-recording (rolling buffer)"
+                  hide-details
+              />
+              <div :class="{ 'opacity-50 pointer-events-none': !prerecEnabled }">
+                <div class="flex items-center justify-between mb-2">
+                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">
+                    Pre-recording lead-in
+                  </label>
+                  <span class="text-xs font-mono text-white/60">{{ prerecSeconds.toFixed(1) }}s</span>
+                </div>
+                <v-slider
+                    v-model="prerecSeconds"
+                    :min="0.3"
+                    :max="2.5"
+                    :step="0.1"
+                    color="cyan"
+                    thumb-label
+                    hide-details
+                    :disabled="!prerecEnabled"
+                />
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
 
       <!-- Transmission issue dialog -->
       <v-dialog v-model="showTransmissionIssueDialog" max-width="420">
@@ -1589,28 +1586,28 @@ const prerecEnabled = ref(true)
 const prerecSeconds = ref(1.0)
 
 // Layout / view state
-const activeTab = ref<'funk' | 'freq' | 'log' | 'flug' | 'more' | 'debug'>('funk')
+const activeTab = ref<'funk' | 'log'>('funk')
 const experienceMenu = ref(false)
 const inputMode = ref<'voice' | 'text'>('voice')
 const learningMode = ref(true)
 
+// Overlays / sheets opened from HUD controls
+const showFlightSheet = ref(false)
+const showSettingsSheet = ref(false)
+const showDebugDrawer = ref(false)
+const hudStatusMenu = ref(false)
+
 type PmTab = {
-  id: 'funk' | 'freq' | 'log' | 'flug' | 'more' | 'debug'
+  id: 'funk' | 'log'
   label: string
   icon: string
   mobileOnly?: boolean
-  debugOnly?: boolean
 }
 const TABS: PmTab[] = [
   { id: 'funk', label: 'Radio', icon: 'mdi-radio-handheld' },
-  { id: 'freq', label: 'Freq', icon: 'mdi-sine-wave' },
   { id: 'log', label: 'Log', icon: 'mdi-format-list-bulleted', mobileOnly: true },
-  { id: 'flug', label: 'Flight', icon: 'mdi-airplane' },
-  { id: 'more', label: 'More', icon: 'mdi-cog' },
-  { id: 'debug', label: 'Debug', icon: 'mdi-bug', debugOnly: true },
 ]
-const visibleTabs = computed(() => TABS.filter((tab) => !tab.debugOnly || debugMode.value))
-const desktopTabs = computed(() => visibleTabs.value.filter((tab) => !tab.mobileOnly))
+const visibleTabs = computed(() => TABS)
 
 const simulationRunning = ref(false)
 const simulationTrace = ref<SimulationTraceEntry[]>([])
@@ -3128,35 +3125,33 @@ const FREQ_ROLE_LABEL: Record<string, string> = {
   DEP: 'Departure', APP: 'Approach', CTR: 'Center', ACC: 'Center', FSS: 'Radio',
 }
 
-const frequencyPresets = computed<AirportFrequencyEntry[]>(() => {
-  const byType = new Map<string, AirportFrequencyEntry>()
-  const prioritized = [...airportFrequencies.value].sort((a, b) =>
-    a.source === b.source ? 0 : (a.source === 'vatsim' ? -1 : 1)
-  )
-  for (const entry of prioritized) {
-    if (!entry.frequency || entry.frequency === FREQUENCY_PLACEHOLDER) continue
-    if (!byType.has(entry.type)) byType.set(entry.type, entry)
-  }
-  const result: AirportFrequencyEntry[] = []
-  for (const type of FREQ_ROLE_ORDER) {
-    const entry = byType.get(type)
-    if (entry) result.push(entry)
-  }
-  for (const [type, entry] of byType) {
-    if (!FREQ_ROLE_ORDER.includes(type)) result.push(entry)
-  }
-  return result
+const frequencyPresets = computed<DisplayAirportFrequencyEntry[]>(() => {
+  // Use the grouped overview list so every distinct frequency shows up in the dropdown
+  // (deduped by type+frequency, with merged sources for tooltip).
+  return displayAirportFrequencies.value
 })
 
-const presetKey = (entry: AirportFrequencyEntry) => `${entry.type}-${entry.frequency}`
+const presetKey = (entry: AirportFrequencyEntry | DisplayAirportFrequencyEntry) =>
+  'displayKey' in entry ? entry.displayKey : `${entry.type}-${entry.frequency}`
 const presetLabel = (entry: AirportFrequencyEntry) => FREQ_ROLE_LABEL[entry.type] || entry.type
 
-const presetOptions = computed(() =>
+type FrequencyPresetOption = {
+  value: string
+  label: string
+  sublabel: string
+  color: string
+  sourceLabel: string
+  callsign?: string
+}
+
+const presetOptions = computed<FrequencyPresetOption[]>(() =>
   frequencyPresets.value.map((entry) => ({
     value: presetKey(entry),
     label: presetLabel(entry),
     sublabel: entry.frequency,
     color: entry.type === 'ATIS' ? '#f59e0b' : '#22d3ee',
+    sourceLabel: entry.sourceLabel,
+    callsign: entry.callsign,
   }))
 )
 
@@ -3513,14 +3508,6 @@ onUnmounted(() => {
   transition: transform 0.5s ease;
 }
 
-.freq-input-active :deep(.v-field__outline) {
-  --v-field-border-color: #4ade80;
-}
-
-.freq-input-standby :deep(.v-field__outline) {
-  --v-field-border-color: #f59e0b;
-}
-
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
@@ -3700,12 +3687,39 @@ onUnmounted(() => {
   color: var(--t3);
 }
 
-.hud-context {
+/* Flight context: styled like freq-control-group, with status dropdown toggle */
+.hud-context-group {
+  display: inline-flex;
+  align-items: stretch;
+  min-height: 40px;
+  margin-left: 4px;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(34, 211, 238, 0.32);
+  background: rgba(34, 211, 238, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+.hud-context-btn {
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  margin-left: 4px;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+  min-width: 110px;
+  padding: 4px 12px;
+  background: transparent;
+  text-align: left;
   line-height: 1.15;
+  color: inherit;
+  cursor: pointer;
+  transition: background 120ms ease, transform 80ms ease;
+}
+.hud-context-btn:hover {
+  background: rgba(34, 211, 238, 0.1);
+}
+.hud-context-btn:active {
+  transform: scale(0.98);
+  background: rgba(34, 211, 238, 0.18);
 }
 .hud-context-callsign {
   font-size: 14px;
@@ -3714,6 +3728,7 @@ onUnmounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 160px;
 }
 .hud-context-route {
   font-size: 11px;
@@ -3721,21 +3736,76 @@ onUnmounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 160px;
 }
-.hud-status {
+.hud-context-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-height: 100%;
+  border-left: 1px solid rgba(34, 211, 238, 0.24);
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.06);
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.hud-context-toggle:hover {
+  color: #cffafe;
+  background: rgba(34, 211, 238, 0.16);
+}
+.hud-context-toggle.is-open {
+  background: rgba(34, 211, 238, 0.22);
+}
+.hud-context-toggle.is-open .v-icon {
+  transform: rotate(180deg);
+}
+
+.hud-status-panel {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  flex-shrink: 0;
+  gap: 8px;
+  min-width: 220px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, .45);
+  backdrop-filter: blur(10px);
+}
+.hud-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+.hud-status-key {
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 10px;
+}
+.hud-status-val {
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 @media (max-width: 1180px) {
-  .hud-context,
-  .hud-status,
+  .hud-context-btn .hud-context-route {
+    display: none;
+  }
   .sep,
   .mode-switch,
   .hud-divider,
   .brand {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .hud-context-group {
     display: none;
   }
 }
@@ -3761,10 +3831,6 @@ onUnmounted(() => {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-}
-
-.pm-sidenav {
-  display: none;
 }
 
 .pm-main {
@@ -3832,34 +3898,49 @@ onUnmounted(() => {
   border-color: color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
-/* Frequency control group in the top bar */
+/* Frequency control group in the top bar: SBY (top) + ACT (bottom) + swap */
 .freq-control-group {
   display: inline-flex;
   align-items: stretch;
-  height: 46px;
+  min-height: 56px;
   overflow: hidden;
   border-radius: 14px;
   border: 1px solid rgba(34, 211, 238, 0.35);
   background: rgba(34, 211, 238, 0.09);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
-.freq-chip {
+.freq-stack {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-  min-width: 98px;
-  padding: 6px 11px 6px 12px;
+  min-width: 0;
+}
+.freq-chip {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 130px;
+  padding: 4px 12px;
   background: transparent;
   line-height: 1.1;
   transition: background 120ms ease, transform 80ms ease;
+  cursor: pointer;
+}
+.freq-chip-sby {
+  border-bottom: 1px solid rgba(34, 211, 238, 0.18);
+  padding-top: 5px;
+  padding-bottom: 4px;
+}
+.freq-chip-act {
+  padding-top: 4px;
+  padding-bottom: 5px;
 }
 .freq-chip:hover {
   background: rgba(34, 211, 238, 0.08);
 }
 .freq-chip.is-open {
-  background: rgba(34, 211, 238, 0.18);
-  transform: scale(0.98);
+  background: rgba(34, 211, 238, 0.2);
+  transform: scale(0.99);
 }
 .freq-swap-btn {
   display: inline-flex;
@@ -3880,11 +3961,6 @@ onUnmounted(() => {
 .freq-swap-btn:active {
   background: rgba(34, 211, 238, 0.22);
 }
-.freq-chip-row {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
 .freq-chip-tag {
   font-size: 9px;
   letter-spacing: 0.2em;
@@ -3892,14 +3968,54 @@ onUnmounted(() => {
 }
 .freq-chip-value {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #fff;
 }
-.freq-chip-standby {
+.freq-chip-value-sm {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* Dropdown option row with source label on the right */
+.freq-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+.freq-option-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+.freq-option-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.1;
+}
+.freq-option-sub {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  line-height: 1.1;
+}
+.freq-option-source {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(103, 232, 249, 0.78);
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 211, 238, 0.4);
+  background: rgba(34, 211, 238, 0.08);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Preset hold-select trigger buttons (freq tab) */
@@ -3984,101 +4100,8 @@ onUnmounted(() => {
   gap: 2px;
 }
 
-.frequency-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 10px;
-}
-.frequency-card {
-  display: flex;
-  min-height: 136px;
-  flex-direction: column;
-  justify-content: space-between;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.32);
-  overflow: hidden;
-}
-.frequency-card-content {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  justify-content: center;
-  padding: 14px;
-}
-.frequency-card-topline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 24px;
-}
-.frequency-value {
-  margin-top: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 30px;
-  font-weight: 750;
-  line-height: 1;
-  color: #fff;
-}
-.frequency-description {
-  margin-top: 6px;
-  min-height: 18px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
-}
-.frequency-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(34, 211, 238, 0.06);
-}
-.frequency-action-btn {
-  min-height: 38px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: rgba(103, 232, 249, 0.95);
-  transition: background 120ms ease, color 120ms ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.frequency-action-btn + .frequency-action-btn {
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-}
-.frequency-action-btn:hover {
-  background: rgba(34, 211, 238, 0.14);
-  color: #cffafe;
-}
-.frequency-action-btn:active {
-  background: rgba(34, 211, 238, 0.22);
-}
-
 /* Tablet / desktop: use the extra space ----------------------------------- */
 @media (min-width: 1024px) {
-  .pm-sidenav {
-    display: flex;
-    flex: 0 0 auto;
-    flex-direction: column;
-    gap: 6px;
-    width: 168px;
-    padding: 16px 12px;
-    border-right: 1px solid var(--border);
-    background: color-mix(in srgb, var(--bg) 70%, transparent);
-    overflow-y: auto;
-  }
-  .pm-sidenav .pm-navbtn {
-    flex: 0 0 auto;
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: 10px;
-    padding: 11px 14px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-  }
   .pm-lograil {
     display: block;
     flex: 0 0 360px;
@@ -4097,6 +4120,111 @@ onUnmounted(() => {
   /* Log lives in the right rail on desktop, so its tab body is redundant */
   .pm-log-tab {
     display: none !important;
+  }
+  /* No bottom nav on desktop: drop the FAB back down to the corner. */
+  .debug-fab {
+    bottom: calc(env(safe-area-inset-bottom) + 16px);
+  }
+  .debug-drawer {
+    bottom: calc(env(safe-area-inset-bottom) + 16px);
+  }
+}
+
+/* =========================================================================
+ * Debug FAB + drawer (left, non-blocking, can stay open in parallel)
+ * ======================================================================= */
+.debug-fab {
+  position: fixed;
+  left: 16px;
+  /* Clear the mobile bottom nav (~64px) by default; desktop overrides below. */
+  bottom: calc(env(safe-area-inset-bottom) + 78px);
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  border: 1px solid rgba(249, 115, 22, 0.45);
+  background: rgba(249, 115, 22, 0.16);
+  color: #fdba74;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease, border-color 160ms ease;
+}
+.debug-fab:hover {
+  background: rgba(249, 115, 22, 0.26);
+  color: #fed7aa;
+  transform: translateY(-1px);
+}
+.debug-fab.is-open {
+  background: rgba(249, 115, 22, 0.35);
+  border-color: rgba(249, 115, 22, 0.7);
+  color: #fff;
+}
+
+.debug-drawer {
+  position: fixed;
+  top: 72px;
+  left: 12px;
+  bottom: calc(env(safe-area-inset-bottom) + 76px);
+  width: min(420px, calc(100vw - 24px));
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 13, 24, 0.96);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(14px);
+  pointer-events: auto;
+}
+.debug-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.debug-drawer-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  background: transparent;
+  transition: background 120ms ease, color 120ms ease;
+}
+.debug-drawer-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.debug-drawer-body {
+  padding: 12px 14px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.debug-drawer-enter-active,
+.debug-drawer-leave-active {
+  transition: transform 220ms ease, opacity 220ms ease;
+}
+.debug-drawer-enter-from,
+.debug-drawer-leave-to {
+  transform: translateX(-12px);
+  opacity: 0;
+}
+
+@media (max-width: 640px) {
+  .debug-drawer {
+    top: 64px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    bottom: calc(env(safe-area-inset-bottom) + 84px);
   }
 }
 </style>
