@@ -8,13 +8,15 @@ interface ApiRequestOptions<T = any> {
   query?: Record<string, any>
   headers?: HeadersInit
   auth?: boolean
+  /** AbortSignal — pass to cancel an in-flight request (e.g. on frequency change). */
+  signal?: AbortSignal
 }
 
 export function useApi() {
   const auth = useAuthStore()
 
   const execute = async <T>(path: string, options: ApiRequestOptions = {}) => {
-    const { method = 'GET', body, query, headers = {}, auth: requiresAuth = true } = options
+    const { method = 'GET', body, query, headers = {}, auth: requiresAuth = true, signal } = options
 
     const computedHeaders: Record<string, string> = {
       Accept: 'application/json',
@@ -30,6 +32,7 @@ export function useApi() {
       headers: computedHeaders,
       query,
       body,
+      signal,
     }
 
     if (body && !(body instanceof FormData)) {
@@ -40,6 +43,8 @@ export function useApi() {
     try {
       return await $fetch<T>(path, requestOptions)
     } catch (error: any) {
+      // Propagate abort errors immediately — do not retry on 401.
+      if (error?.name === 'AbortError' || signal?.aborted) throw error
       const status = error?.status || error?.response?.status
       if (status === 401 && requiresAuth) {
         const refreshed = await auth.tryRefresh()
@@ -47,7 +52,7 @@ export function useApi() {
           if (auth.accessToken) {
             computedHeaders.Authorization = `Bearer ${auth.accessToken}`
           }
-          return await $fetch<T>(path, requestOptions)
+          return await $fetch<T>(path, { ...requestOptions, signal })
         }
         await auth.logout()
       }
