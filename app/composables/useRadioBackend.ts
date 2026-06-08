@@ -10,6 +10,7 @@ export interface RadioSessionResponse {
 export interface RadioTransmitResponse {
     session_id: string
     next_state_id: string
+    active_flow: string
     controller_say_template: string | null
     controller_say_rendered: string | null
     expected_pilot_template: string | null
@@ -19,6 +20,8 @@ export interface RadioTransmitResponse {
     fallback_used: boolean
     fallback_reason: string | null
     auto_advanced_states?: string[]
+    /** True when the full chain is done — show the completion screen. */
+    session_complete?: boolean
 }
 
 export function useRadioBackend() {
@@ -31,10 +34,11 @@ export function useRadioBackend() {
     async function createSession(
         flowSlug: string,
         variables?: Record<string, any>,
+        noChain: boolean = false,
     ): Promise<RadioSessionResponse> {
         return await $fetch<RadioSessionResponse>(`${baseUrl()}/api/radio/session`, {
             method: 'POST',
-            body: { flow_slug: flowSlug, variables: variables ?? null },
+            body: { flow_slug: flowSlug, variables: variables ?? null, no_chain: noChain },
         })
     }
 
