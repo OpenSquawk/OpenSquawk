@@ -1391,6 +1391,45 @@ export default function useCommunicationsEngine() {
         communicationLog.value.push(entry)
     }
 
+    /**
+     * Patch arbitrary variables directly on the active flow's reactive variable
+     * store.  Use this from outside the engine instead of trying to mutate
+     * `readonly(variables).value` (which Vue 3 silently blocks).
+     */
+    function patchVariables(updates: Record<string, any>) {
+        for (const [key, value] of Object.entries(updates)) {
+            variables.value[key] = value
+        }
+    }
+
+    function patchFlags(updates: Record<string, boolean>) {
+        for (const [key, value] of Object.entries(updates)) {
+            if (typeof value === 'boolean') {
+                (flags.value as Record<string, any>)[key] = value
+            }
+        }
+    }
+
+    function appendLogEntry(
+        speaker: Role,
+        message: string,
+        stateId: string,
+        options: { frequency?: string; flow?: string; radioCheck?: boolean; offSchema?: boolean } = {},
+    ) {
+        const entry: EngineLog = {
+            timestamp: new Date(),
+            frequency: options.frequency ?? activeFrequency.value,
+            speaker,
+            message,
+            normalized: normalizeATCText(message, exposeCtxFlat()),
+            state: stateId,
+            flow: options.flow ?? (activeFlowSlug.value || undefined),
+            radioCheck: options.radioCheck,
+            offSchema: options.offSchema,
+        }
+        communicationLog.value.push(entry)
+    }
+
     function renderATCMessage(tpl: string) {
         return renderTpl(tpl, exposeCtx())
     }
@@ -1511,6 +1550,9 @@ export default function useCommunicationsEngine() {
         // Utilities
         normalizeATCText,
         renderATCMessage,
+        appendLogEntry,
+        patchVariables,
+        patchFlags,
         getStateDetails,
         updateTelemetry,
     }

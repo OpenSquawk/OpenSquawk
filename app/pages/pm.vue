@@ -87,7 +87,7 @@
               v-for="plan in flightPlans"
               :key="plan.id"
               class="bg-white/5 border border-white/10 backdrop-blur transition hover:border-cyan-400/60 cursor-pointer"
-              @click="startMonitoring(plan)"
+              @click="selectedPlan = plan; currentScreen = 'scenario'"
           >
             <v-card-text class="space-y-2">
               <div class="flex items-baseline justify-between">
@@ -110,6 +110,101 @@
               </div>
             </v-card-text>
           </v-card>
+        </div>
+      </section>
+
+      <!-- ── Scenario Picker ─────────────────────────────────────────────── -->
+      <section v-else-if="currentScreen === 'scenario'" class="space-y-6">
+        <!-- Header -->
+        <div class="flex items-center gap-3">
+          <v-btn icon variant="text" @click="currentScreen = flightPlans.length > 0 ? 'flightselect' : 'login'" class="text-cyan-300">
+            <v-icon>mdi-arrow-left</v-icon>
+          </v-btn>
+          <div>
+            <h2 class="text-lg font-semibold">Choose your scenario</h2>
+            <p v-if="selectedPlan" class="text-sm text-white/50">
+              {{ selectedPlan.callsign }} · {{ selectedPlan.dep }} → {{ selectedPlan.arr }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Complete scenarios -->
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-white/35 mb-3">
+            Complete scenarios
+          </p>
+          <div class="grid grid-cols-2 gap-3">
+            <v-card
+                v-for="s in completeScenarios"
+                :key="s.id"
+                class="bg-white/5 border border-white/10 backdrop-blur cursor-pointer transition hover:border-cyan-400/60 hover:bg-white/8"
+                rounded="lg"
+                @click="launchScenario(s)"
+            >
+              <v-card-text class="p-4 space-y-2">
+                <v-icon :icon="s.icon" class="text-cyan-300" size="28" />
+                <div class="font-semibold text-sm leading-tight">{{ s.name }}</div>
+                <div class="text-[11px] text-white/45 leading-snug">{{ s.subtitle }}</div>
+              </v-card-text>
+            </v-card>
+          </div>
+        </div>
+
+        <!-- Individual phases -->
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-white/35 mb-3">
+            Practice a single phase
+          </p>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+                v-for="s in individualScenarios"
+                :key="s.id"
+                class="text-left p-3 rounded-lg bg-white/3 border border-white/8 hover:border-white/25 hover:bg-white/6 transition flex items-center gap-2"
+                @click="launchScenario(s)"
+            >
+              <v-icon :icon="s.icon" size="16" class="text-white/40 shrink-0" />
+              <div>
+                <div class="text-sm leading-tight">{{ s.name }}</div>
+                <div class="text-[10px] text-white/35 leading-tight mt-0.5">{{ s.subtitle }}</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Completion Screen ───────────────────────────────────────────── -->
+      <section v-else-if="currentScreen === 'complete'" class="space-y-6">
+        <div class="text-center space-y-3 pt-10 pb-6">
+          <v-icon size="72" class="text-green-400">mdi-check-circle-outline</v-icon>
+          <h2 class="text-2xl font-semibold">
+            {{ completedScenario?.name ?? 'Session' }} complete
+          </h2>
+          <p class="text-white/50 text-sm">
+            {{ selectedPlan?.callsign }} ·
+            {{ selectedPlan?.dep }} → {{ selectedPlan?.arr }}
+          </p>
+        </div>
+
+        <div class="space-y-3">
+          <v-btn block color="cyan" variant="flat" @click="flyAgain">
+            <v-icon start>mdi-refresh</v-icon>
+            Fly again
+          </v-btn>
+
+          <v-btn
+              v-if="oppositeScenario"
+              block
+              color="white"
+              variant="outlined"
+              @click="launchScenario(oppositeScenario!)"
+          >
+            <v-icon start>{{ oppositeScenario.icon }}</v-icon>
+            Try {{ oppositeScenario.name }}
+          </v-btn>
+
+          <v-btn block variant="text" class="text-white/60" @click="currentScreen = 'scenario'">
+            Back to scenarios
+          </v-btn>
         </div>
       </section>
 
@@ -1163,6 +1258,9 @@ const {
   activeFlow,
   sessionId: engineSessionId,
   lastDecisionTrace,
+  appendLogEntry,
+  patchVariables,
+  patchFlags,
   initializeFlight,
   updateFrequencyVariables,
   fetchRuntimeTree,
@@ -1170,6 +1268,7 @@ const {
   processPilotTransmission,
   buildLLMContext,
   applyLLMDecision,
+  setActiveFlow,
   moveTo: forceMove,
   moveToSilent,
   normalizeATCText,
@@ -1220,11 +1319,29 @@ const FREQ_NAME_TO_VAR: Record<string, string> = {
   'radar':              'handoff_freq',
 }
 
+// Derived from the raw airport frequency list — always reflects the real airport
+// data regardless of which flow snapshot is active.  Used by expectedFrequencyForState
+// so the wrong-frequency check is reliable across all flow transitions.
+const airportFreqMap = computed<Record<string, string>>(() => {
+  const result: Record<string, string> = {}
+  for (const entry of airportFrequencies.value) {
+    const key = frequencyTypeMap[entry.type]
+    if (key && entry.frequency && !result[key]) {
+      result[key] = entry.frequency
+    }
+  }
+  return result
+})
+
 function expectedFrequencyForState(): string | null {
   const freqName = (currentState.value as any)?.frequency_name as string | undefined
   if (!freqName) return null
   const varKey = FREQ_NAME_TO_VAR[freqName.toLowerCase()]
-  return varKey ? ((vars as any).value[varKey] as string ?? null) : null
+  if (!varKey) return null
+  // airportFreqMap is the authoritative source — it comes from the live airport
+  // data and is unaffected by flow-snapshot switches.  Fall back to the engine
+  // variable store for any edge-case where airport data is missing.
+  return airportFreqMap.value[varKey] ?? ((vars as any).value[varKey] as string ?? null)
 }
 
 const lastTransmission = ref('')
@@ -1566,8 +1683,151 @@ function describeElimination(entry: any): string {
   return entry.reason
 }
 
+// ---------------------------------------------------------------------------
+// Scenario definitions
+// ---------------------------------------------------------------------------
+
+interface Scenario {
+  id: string
+  name: string
+  subtitle: string
+  icon: string
+  startFlow: string
+  /** Display-only chain label, e.g. "Clearance → Taxi → Tower → Departure" */
+  chain: string
+  isComplete: boolean
+  /** When true, backend will NOT follow next_flow links (single-phase practice). */
+  noChain: boolean
+  /**
+   * Which airport from the flight plan to use for frequency lookups.
+   * 'dep' = departure airport, 'arr' = arrival/destination airport.
+   */
+  airport: 'dep' | 'arr'
+}
+
+const SCENARIOS: Scenario[] = [
+  // ── Complete chains ──────────────────────────────────────────────────────
+  {
+    id: 'ifr-departure',
+    name: 'IFR Departure',
+    subtitle: 'Clearance → Taxi → Tower → Departure',
+    chain: 'clearance-v1 → taxi-v1 → tower-v1 → departure-v1',
+    icon: 'mdi-airplane-takeoff',
+    startFlow: 'clearance-v1',
+    isComplete: true,
+    noChain: false,
+    airport: 'dep',
+  },
+  {
+    id: 'vfr-arrival',
+    name: 'VFR Arrival',
+    subtitle: 'Approach → Circuit → Landing → Taxi-in',
+    chain: 'vfr-arrival-v1 → vfr-circuit-landing-v1 → taxi-in-v1',
+    icon: 'mdi-airplane-landing',
+    startFlow: 'vfr-arrival-v1',
+    isComplete: true,
+    noChain: false,
+    airport: 'arr',
+  },
+  // ── Individual phases ────────────────────────────────────────────────────
+  {
+    id: 'clearance',
+    name: 'Clearance',
+    subtitle: 'Request IFR clearance',
+    chain: 'clearance-v1',
+    icon: 'mdi-file-document-outline',
+    startFlow: 'clearance-v1',
+    isComplete: false,
+    noChain: true,
+    airport: 'dep',
+  },
+  {
+    id: 'taxi',
+    name: 'Startup & Taxi',
+    subtitle: 'Startup → Pushback → Taxi',
+    chain: 'taxi-v1',
+    icon: 'mdi-car-side',
+    startFlow: 'taxi-v1',
+    isComplete: false,
+    noChain: true,
+    airport: 'dep',
+  },
+  {
+    id: 'tower',
+    name: 'Tower',
+    subtitle: 'Line-up and takeoff',
+    chain: 'tower-v1',
+    icon: 'mdi-tower-fire',
+    startFlow: 'tower-v1',
+    isComplete: false,
+    noChain: true,
+    airport: 'dep',
+  },
+  {
+    id: 'departure',
+    name: 'Departure',
+    subtitle: 'Initial climb check-in',
+    chain: 'departure-v1',
+    icon: 'mdi-radar',
+    startFlow: 'departure-v1',
+    isComplete: false,
+    noChain: true,
+    airport: 'dep',
+  },
+  {
+    id: 'vfr-approach',
+    name: 'VFR Approach',
+    subtitle: 'Initial contact & joining',
+    chain: 'vfr-arrival-v1',
+    icon: 'mdi-binoculars',
+    startFlow: 'vfr-arrival-v1',
+    isComplete: false,
+    noChain: true,
+    airport: 'arr',
+  },
+  {
+    id: 'circuit-landing',
+    name: 'Circuit & Landing',
+    subtitle: 'Traffic circuit and landing',
+    chain: 'vfr-circuit-landing-v1',
+    icon: 'mdi-airport',
+    startFlow: 'vfr-circuit-landing-v1',
+    isComplete: false,
+    noChain: true,
+    airport: 'arr',
+  },
+  {
+    id: 'taxi-in',
+    name: 'Taxi-in',
+    subtitle: 'Post-landing ground movement',
+    chain: 'taxi-in-v1',
+    icon: 'mdi-parking',
+    startFlow: 'taxi-in-v1',
+    isComplete: false,
+    noChain: true,
+    airport: 'arr',
+  },
+]
+
+const completeScenarios = SCENARIOS.filter(s => s.isComplete)
+const individualScenarios = SCENARIOS.filter(s => !s.isComplete)
+
+/** The scenario the user just finished (used on the completion screen). */
+const completedScenario = ref<Scenario | null>(null)
+/** The scenario currently being flown. */
+const activeScenario = ref<Scenario | null>(null)
+
+const oppositeScenario = computed<Scenario | null>(() => {
+  if (!completedScenario.value) return null
+  if (completedScenario.value.id === 'ifr-departure')
+    return SCENARIOS.find(s => s.id === 'vfr-arrival') ?? null
+  if (completedScenario.value.id === 'vfr-arrival')
+    return SCENARIOS.find(s => s.id === 'ifr-departure') ?? null
+  return null
+})
+
 // UI State
-const currentScreen = ref<'login' | 'flightselect' | 'monitor'>('login')
+const currentScreen = ref<'login' | 'flightselect' | 'scenario' | 'monitor' | 'complete'>('login')
 const loading = ref(false)
 const error = ref('')
 const pilotInput = ref('')
@@ -1678,7 +1938,8 @@ onMounted(async () => {
       if (storedPlanRaw) {
         try {
           const parsedPlan = JSON.parse(storedPlanRaw)
-          await startMonitoring(parsedPlan)
+          selectedPlan.value = parsedPlan
+          currentScreen.value = 'scenario'
         } catch (err) {
           console.warn('Failed to restore stored flight plan', err)
           window.localStorage.removeItem(STORAGE_KEYS.selectedPlan)
@@ -2284,6 +2545,8 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
     pmLog.warn('WRONG FREQUENCY', { active: frequencies.value.active, expected: expectedFreq })
     lastControllerSay.value = reply
     scheduleControllerSpeech(reply)
+    // Add the ATC "wrong frequency" reply to the communication log.
+    appendLogEntry('atc', reply, currentState.value?.id ?? '', { offSchema: true })
     return
   }
 
@@ -2318,6 +2581,18 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
       }
     })
 
+    // If the backend has chained to a different flow, switch the local engine
+    // to that flow first so moveToSilent can find the new states and
+    // expectedFrequencyForState() returns the correct frequency_name.
+    if (response.active_flow && response.active_flow !== activeFlow.value) {
+      pmLog.info('FLOW CHANGE  local:', activeFlow.value, '→ backend:', response.active_flow)
+      try {
+        setActiveFlow(response.active_flow)
+      } catch (e) {
+        pmLog.warn('setActiveFlow failed for', response.active_flow, e)
+      }
+    }
+
     // Advance local cursor through every state the backend auto-walked, then
     // the final state. moveToSilent updates current_unit, actions, handoffs,
     // and the communication log without scheduling further auto-transitions.
@@ -2333,28 +2608,17 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
     backendExpectedPhrase.value = response.expected_pilot_template ?? null
 
     // Sync variables from backend — keeps local renderer in step with backend state.
-    // Without this, {{squawk}} / {{sid}} etc. render from stale frontend defaults.
-    const changedVars: Record<string, any> = {}
-    for (const [k, v] of Object.entries(response.variables ?? {})) {
-      if ((vars as any).value[k] !== v) {
-        ;(vars as any).value[k] = v
-        changedVars[k] = v
-      }
-    }
-    if (Object.keys(changedVars).length) {
-      pmLog.debug('variables synced:', changedVars)
+    // Uses patchVariables() which writes directly to the engine's reactive store,
+    // bypassing the readonly(ref) wrapper that silently blocks (vars as any).value[k] = v.
+    if (response.variables && Object.keys(response.variables).length) {
+      patchVariables(response.variables)
+      pmLog.debug('variables synced:', response.variables)
     }
 
     // Sync boolean routing flags (in_air, emergency_active, etc.) from backend.
-    const changedFlags: Record<string, boolean> = {}
-    for (const [k, v] of Object.entries(response.flags ?? {})) {
-      if (typeof v === 'boolean') {
-        (flags as any).value[k] = v
-        changedFlags[k] = v
-      }
-    }
-    if (Object.keys(changedFlags).length) {
-      pmLog.debug('flags synced:', changedFlags)
+    if (response.flags && Object.keys(response.flags).length) {
+      patchFlags(response.flags)
+      pmLog.debug('flags synced:', response.flags)
     }
 
     // TTS: use the pre-rendered string from the backend (correct variable values).
@@ -2364,11 +2628,22 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
       pmLog.info('TTS →', sayText)
       lastControllerSay.value = sayText
       scheduleControllerSpeech(sayText)
+      // Add ATC speech to the communication log so it appears alongside pilot entries.
+      appendLogEntry('atc', sayText, response.next_state_id, {
+        flow: response.active_flow,
+      })
     }
 
     if (response.fallback_used) {
       pmLog.warn('FALLBACK USED:', response.fallback_reason)
       console.warn('[Backend] Fallback used:', response.fallback_reason)
+    }
+
+    // Session complete → show completion screen
+    if (response.session_complete) {
+      pmLog.info('SESSION COMPLETE — showing completion screen')
+      completedScenario.value = activeScenario.value
+      currentScreen.value = 'complete'
     }
   } catch (e) {
     pmLog.error('TRANSMIT FAILED', { transcript, session: backendSessionId.value, error: e })
@@ -2403,11 +2678,13 @@ const loadFlightPlans = async () => {
   }
 }
 
-const startMonitoring = async (flightPlan: any) => {
+const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
+  activeScenario.value = scenario
+
   // 1. Ensure the local tree is loaded from the Python backend (same source as session)
   try {
     if (!engineReady.value) {
-      await fetchRuntimeTree('clearance', config.public.radioBackendUrl as string)
+      await fetchRuntimeTree(scenario.startFlow, config.public.radioBackendUrl as string)
     }
   } catch (err) {
     console.error('Failed to prepare decision engine', err)
@@ -2419,24 +2696,47 @@ const startMonitoring = async (flightPlan: any) => {
   //    are computed and available in vars.value before we create the backend session.
   initializeFlight(flightPlan)
 
-  // 3. Build the backend variable payload — maps frontend variable names to the
-  //    names declared in clearance-v1.yaml. Unknown keys are silently ignored by
-  //    the backend so it's safe to pass extras.
+  // 3a. Resolve which airport to use for frequencies.
+  //     Departure scenarios use the dep airport; arrival scenarios use arr.
+  const scenarioIcao: string | undefined =
+    scenario.airport === 'arr'
+      ? (flightPlan.arr || flightPlan.arrival || flightPlan.dep || flightPlan.departure)
+      : (flightPlan.dep || flightPlan.departure || flightPlan.arr || flightPlan.arrival)
+
+  // Fetch real airport frequencies BEFORE building backendVariables so that
+  // all freq vars are resolved from live VATSIM/OpenAIP data.
+  await fetchAirportFrequencies(scenarioIcao)
+
+  // 3b. Build the backend variable payload.  The backend stores ALL keys so that
+  //     frequencies declared in downstream chained flows (tower_freq for taxi-v1,
+  //     departure_freq for tower-v1, etc.) are already populated with real airport
+  //     values when the session advances to those flows.
   const v = (vars as any).value
   const backendVariables: Record<string, any> = {
-    callsign:        v.callsign    || flightPlan.callsign || 'UNKNOWN',
-    information:     v.atis_code   || 'K',
-    destination:     v.dest        || flightPlan.arr || flightPlan.arrival || 'Unknown',
-    stand:           v.stand       || 'A1',
-    sid:             v.sid         || 'UNKNOWN1A',
+    callsign:         v.callsign         || flightPlan.callsign || 'UNKNOWN',
+    information:      v.atis_code        || 'K',
+    destination:      v.dest             || flightPlan.arr || flightPlan.arrival || 'Unknown',
+    stand:            v.stand            || 'A1',
+    sid:              v.sid              || 'UNKNOWN1A',
     initial_altitude: String(v.initial_altitude_ft ?? 5000),
-    squawk:          String(v.squawk ?? '2000'),
+    squawk:           String(v.squawk ?? '2000'),
+    // All airport frequencies — available to every flow in the chain.
+    delivery_freq:    v.delivery_freq    || '121.950',
+    ground_freq:      v.ground_freq      || '121.800',
+    tower_freq:       v.tower_freq       || '118.700',
+    departure_freq:   v.departure_freq   || '120.000',
+    approach_freq:    v.approach_freq    || '119.000',
+    handoff_freq:     v.handoff_freq     || '131.150',
   }
   pmLog.info('backend variables payload:', backendVariables)
 
   // 4. Create a backend session with the flight-plan-derived variables
   try {
-    const session = await radioBackend.createSession('clearance', backendVariables)
+    const session = await radioBackend.createSession(
+      scenario.startFlow,
+      backendVariables,
+      scenario.noChain,
+    )
     backendSessionId.value = session.session_id
     pmLog.group(`SESSION CREATED  id=${session.session_id.slice(0, 8)}`, () => {
       pmLog.info('flow        :', session.flow_slug)
@@ -2447,13 +2747,13 @@ const startMonitoring = async (flightPlan: any) => {
     // Sync cursor to wherever the backend initialised (usually start_state)
     moveToSilent(session.current_state)
     pmLog.debug('moveToSilent ← session start_state:', session.current_state)
-    // Sync session variables back so the local renderer stays in step
-    for (const [k, v] of Object.entries(session.variables ?? {})) {
-      ;(vars as any).value[k] = v
+    // Sync session variables back so the local renderer stays in step.
+    if (session.variables && Object.keys(session.variables).length) {
+      patchVariables(session.variables)
     }
     // Sync boolean routing flags from session
-    for (const [k, v] of Object.entries(session.flags ?? {})) {
-      if (typeof v === 'boolean') (flags as any).value[k] = v
+    if (session.flags && Object.keys(session.flags).length) {
+      patchFlags(session.flags)
     }
     // Seed the expected pilot phrase from the start state
     backendExpectedPhrase.value = session.expected_pilot_template ?? null
@@ -2470,12 +2770,10 @@ const startMonitoring = async (flightPlan: any) => {
   currentScreen.value = 'monitor'
   persistSelectedPlan(flightPlan)
 
-  if (flightPlan.dep === 'EDDF') {
+  if (scenarioIcao === 'EDDF') {
     frequencies.value.active = '121.900'
     frequencies.value.standby = '121.700'
   }
-
-  await fetchAirportFrequencies(flightPlan.dep || flightPlan.departure)
 
   // 4. Walk the initial ATC/system states locally (deterministic, no LLM).
   //    Safe because we loaded the tree from the same Python backend, so the
@@ -2499,7 +2797,23 @@ const startDemoFlight = () => {
     arr: 'EDDM',
     altitude: '36000',
   }
-  void startMonitoring(demoFlight)
+  selectedPlan.value = demoFlight
+  currentScreen.value = 'scenario'
+}
+
+/** Launch a specific scenario with the current flight plan. */
+const launchScenario = async (scenario: Scenario) => {
+  if (!selectedPlan.value) return
+  await startMonitoring(selectedPlan.value, scenario)
+}
+
+/** Re-fly the same scenario that was just completed. */
+const flyAgain = async () => {
+  if (!completedScenario.value || !selectedPlan.value) {
+    currentScreen.value = 'scenario'
+    return
+  }
+  await startMonitoring(selectedPlan.value, completedScenario.value)
 }
 
 const backToSetup = () => {
