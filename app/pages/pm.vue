@@ -1573,6 +1573,8 @@ const error = ref('')
 const pilotInput = ref('')
 const isRecording = ref(false)
 const micPermission = ref(false)
+/** Maximum PTT hold time in ms. Auto-stops and submits the recording when exceeded. */
+const PTT_MAX_DURATION_MS = 30_000  // 30 s — long enough for any realistic transmission
 const swapAnimation = ref(false)
 const signalStrength = ref(5)
 const speechSpeed = ref(0.95)
@@ -1719,6 +1721,8 @@ watch(vatsimId, (id) => {
 // Audio
 const mediaRecorder = ref<MediaRecorder | null>(null)
 const audioChunks = ref<Blob[]>([])
+/** Timer that auto-stops a PTT recording when PTT_MAX_DURATION_MS is exceeded. */
+let pttMaxDurationTimer: ReturnType<typeof setTimeout> | null = null
 
 // Computed Properties
 const radioQuality = computed(() => {
@@ -1951,11 +1955,43 @@ let audioContext: AudioContext | null = null
 let pizzicatoLite: PizzicatoLite | null = null
 let speechQueue: Promise<void> = Promise.resolve()
 
+// Tracks objects that must be torn down when frequency changes mid-speech.
+let _currentAudio: HTMLAudioElement | null = null
+let _currentPizzicatoSound: { stop: () => void } | null = null
+let _currentSpeechAbort: AbortController | null = null
+// Incremented on each stopCurrentSpeech() call so enqueued tasks can detect
+// they belong to a cancelled generation and exit early.
+let _speechGeneration = 0
+
+/** Immediately stop any in-flight TTS request and audio playback. */
+const stopCurrentSpeech = () => {
+  _speechGeneration++
+  if (_currentSpeechAbort) {
+    _currentSpeechAbort.abort()
+    _currentSpeechAbort = null
+  }
+  if (_currentPizzicatoSound) {
+    try { _currentPizzicatoSound.stop() } catch (_) { /* ignore */ }
+    _currentPizzicatoSound = null
+  }
+  if (_currentAudio) {
+    _currentAudio.pause()
+    _currentAudio.src = ''
+    _currentAudio = null
+  }
+  // Drop queued tasks by resolving the queue immediately.
+  speechQueue = Promise.resolve()
+}
+
 const enqueueSpeech = (task: () => Promise<void>) => {
+  const generation = _speechGeneration
   speechQueue = speechQueue
-    .then(() => task())
+    .then(() => {
+      if (generation !== _speechGeneration) return  // cancelled — skip
+      return task()
+    })
     .catch(err => {
-      console.error('Speech queue error:', err)
+      if (err?.name !== 'AbortError') console.error('Speech queue error:', err)
     })
   return speechQueue
 }
@@ -2041,9 +2077,10 @@ const playAudioWithEffects = async (base64: string, mime = 'audio/wav') => {
   const playWithoutEffects = () =>
     new Promise<void>((resolve) => {
       const audio = new Audio(dataUrl)
-      audio.onended = () => resolve()
-      audio.onerror = () => resolve()
-      audio.play().catch(() => resolve())
+      _currentAudio = audio
+      audio.onended = () => { _currentAudio = null; resolve() }
+      audio.onerror = () => { _currentAudio = null; resolve() }
+      audio.play().catch(() => { _currentAudio = null; resolve() })
     })
 
   if (!radioEffectsEnabled.value) {
@@ -2102,9 +2139,11 @@ const playAudioWithEffects = async (base64: string, mime = 'audio/wav') => {
 
     const stopNoiseGenerators = createNoiseGenerators(ctx, sound.duration, profile, readability)
 
+    _currentPizzicatoSound = sound
     try {
       await sound.play()
     } finally {
+      _currentPizzicatoSound = null
       stopNoiseGenerators.forEach((stop) => stop())
       sound.clearEffects()
     }
@@ -2116,6 +2155,8 @@ const playAudioWithEffects = async (base64: string, mime = 'audio/wav') => {
 
 const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = {}) => {
   pmLog.info('TTS ▶', prepared.plain.slice(0, 100))
+  const abort = new AbortController()
+  _currentSpeechAbort = abort
   try {
     const speed = options.speed ?? speechSpeed.value
     const response = await api.post('/api/atc/say', {
@@ -2127,7 +2168,10 @@ const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = 
       lessonId: currentState.value?.id || 'general',
       tag: options.tag || 'controller-reply',
       sessionId: engineSessionId.value || flags.value.session_id || undefined,
-    })
+    }, { signal: abort.signal })
+
+    if (abort.signal.aborted) return  // frequency changed while request was in flight
+    _currentSpeechAbort = null
 
     if (response.success && response.audio) {
       pmLog.debug('TTS ✓  provider=%s  size=%dB', response.meta?.ttsProvider, response.audio.size)
@@ -2138,9 +2182,15 @@ const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = 
     } else {
       pmLog.warn('TTS ✗  unexpected response', response)
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.name === 'AbortError' || abort.signal.aborted) {
+      pmLog.info('TTS cancelled (frequency change)')
+      return
+    }
     pmLog.error('TTS FAILED', err)
     console.error('TTS failed:', err)
+  } finally {
+    if (_currentSpeechAbort === abort) _currentSpeechAbort = null
   }
 }
 
@@ -2624,6 +2674,25 @@ const restartPrerecCapture = async () => {
   await startPrerecCapture()
 }
 
+/** Clear any pending PTT auto-stop timer. */
+const clearPttTimer = () => {
+  if (pttMaxDurationTimer !== null) {
+    clearTimeout(pttMaxDurationTimer)
+    pttMaxDurationTimer = null
+  }
+}
+
+/** Start the PTT auto-stop safety timer. Fires stopRecording() if the user
+ *  holds PTT longer than PTT_MAX_DURATION_MS.  Without this, very long
+ *  recordings produce blobs too large to base64-encode synchronously. */
+const startPttTimer = () => {
+  clearPttTimer()
+  pttMaxDurationTimer = setTimeout(() => {
+    pmLog.warn(`PTT auto-stop: exceeded ${PTT_MAX_DURATION_MS / 1000}s limit`)
+    stopRecording()
+  }, PTT_MAX_DURATION_MS)
+}
+
 const startRecording = async (isIntercom = false) => {
   if (!micPermission.value) {
     await requestMicAccess()
@@ -2641,6 +2710,7 @@ const startRecording = async (isIntercom = false) => {
       prerecLiveIntercom = isIntercom
       prerecLiveCapture = true
       isRecording.value = true
+      startPttTimer()
       if (radioEffectsEnabled.value) {
         playPTTBeep(true)
       }
@@ -2676,6 +2746,7 @@ const startRecording = async (isIntercom = false) => {
 
     mediaRecorder.value.start()
     isRecording.value = true
+    startPttTimer()
 
     if (radioEffectsEnabled.value) {
       playPTTBeep(true)
@@ -2687,6 +2758,9 @@ const startRecording = async (isIntercom = false) => {
 }
 
 const stopRecording = () => {
+  // Always clear the safety timer, regardless of which recording path is active.
+  clearPttTimer()
+
   if (prerecLiveCapture) {
     prerecLiveCapture = false
     isRecording.value = false
@@ -2720,12 +2794,34 @@ const stopRecording = () => {
   }
 }
 
+/**
+ * Convert an ArrayBuffer to a base64 string without blowing the call stack.
+ *
+ * The naive approach — btoa(String.fromCharCode(...new Uint8Array(buf))) —
+ * spreads every byte as a separate function argument.  For recordings longer
+ * than a few seconds the argument count exceeds the JS engine limit (~65 k –
+ * 131 k args) and throws RangeError: Maximum call stack size exceeded,
+ * silently aborting the PTT request before it is ever sent.
+ *
+ * Processing in 8 KB chunks keeps argument count well within safe limits
+ * regardless of recording length.
+ */
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  const chunkSize = 8192
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)))
+  }
+  return btoa(binary)
+}
+
 const processTransmission = async (audioBlob: Blob, isIntercom: boolean, format: 'wav' | 'webm' = 'webm') => {
   const channel = isIntercom ? 'INTERCOM' : 'RADIO'
   pmLog.info(`PTT ▶ ${channel}  blob=${(audioBlob.size / 1024).toFixed(1)}KB  fmt=${format}  session=${backendSessionId.value?.slice(0,8) ?? 'none'}`)
   try {
     const arrayBuffer = await audioBlob.arrayBuffer()
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+    const base64Audio = arrayBufferToBase64(arrayBuffer)
 
     if (isIntercom) {
       const result = await api.post('/api/atc/ptt', {
@@ -2898,6 +2994,9 @@ const setActiveFrequencyFromList = (entry: AirportFrequencyEntry) => {
   const isPlaceholder = !entry.frequency || entry.frequency === FREQUENCY_PLACEHOLDER
 
   if (!isPlaceholder && frequencies.value.active !== entry.frequency) {
+    // Tuning away from the current frequency — cut any in-progress ATC speech
+    // so the pilot no longer "hears" the controller on the old channel.
+    stopCurrentSpeech()
     frequencies.value.standby = frequencies.value.active
     frequencies.value.active = entry.frequency
   }
@@ -3108,6 +3207,12 @@ const performRadioCheck = async () => {
 
 const swapFrequencies = () => {
   swapAnimation.value = true
+
+  // Swapping away from the active frequency — cut any in-progress speech
+  // so the pilot no longer "hears" the controller on the old channel.
+  if (frequencies.value.active !== frequencies.value.standby) {
+    stopCurrentSpeech()
+  }
 
   const temp = frequencies.value.active
   frequencies.value.active = frequencies.value.standby
