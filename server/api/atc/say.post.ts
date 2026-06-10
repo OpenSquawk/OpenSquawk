@@ -169,6 +169,12 @@ export default defineEventHandler(async (event) => {
         tag?: string;
         format?: AudioFmt | "smallest";
         sessionId?: string;
+        /**
+         * Client already ran the radiotelephony normalizer on the text.
+         * Skip server-side normalizeATC — double-normalizing corrupts it
+         * (e.g. expandAirports spells the city name "MAIN" letter-by-letter).
+         */
+        preNormalized?: boolean;
     }>(event);
 
     // const user = await requireUserSession(event);
@@ -185,7 +191,7 @@ export default defineEventHandler(async (event) => {
     const voice = (body?.voice || runtimeConfig.voiceId).trim();
     const speed = Math.max(0.5, Math.min(2.0, body?.speed || 1.0));
 
-    const normalized = normalizeATC(raw);
+    const normalized = body?.preNormalized ? raw : normalizeATC(raw);
     if (!normalized) throw createError({ statusCode: 400, statusMessage: "normalized text empty" });
 
     // Routing
