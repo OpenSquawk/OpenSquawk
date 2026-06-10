@@ -42,8 +42,9 @@ const formatTime = (date: Date): string => {
       </div>
 
       <div class="space-y-2 overflow-y-auto" :class="dense ? 'max-h-[70vh]' : 'max-h-64'">
+        <!-- Newest first: the latest exchange is always visible without scrolling. -->
         <div
-            v-for="entry in entries.slice(-limit)"
+            v-for="entry in entries.slice(-limit).reverse()"
             :key="entry.timestamp.getTime?.() ?? entry.timestamp"
             class="rounded-2xl border border-white/10 bg-black/40 p-3"
         >

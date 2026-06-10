@@ -62,8 +62,18 @@ export function createAtisAudioLoop(): AtisAudioLoop {
     let carrierGain: GainNode | null = null
     let atisSource: AudioBufferSourceNode | null = null
     let atisGain: GainNode | null = null
+    // Pending deferred teardown from stop() — must be cancelled when a new
+    // start comes in before it fires, otherwise it kills the fresh sources.
+    let stopTimer: ReturnType<typeof setTimeout> | null = null
 
     const state: AtisLoopState = { phase: 'idle' }
+
+    const cancelScheduledStop = () => {
+        if (stopTimer) {
+            clearTimeout(stopTimer)
+            stopTimer = null
+        }
+    }
 
     const ensureCtx = (): AudioContext => {
         if (ctx && ctx.state !== 'closed') {
@@ -133,6 +143,11 @@ export function createAtisAudioLoop(): AtisAudioLoop {
     }
 
     const startLoading = () => {
+        cancelScheduledStop()
+        // Cut any previous broadcast immediately — when switching between ATIS
+        // stations only the carrier noise should be audible until the new
+        // audio is ready, never the old station bleeding through.
+        stopAtis()
         const c = ensureCtx()
         if (carrierSource) {
             // Already running. Ramp back up to loud in case we were in bed mode.
@@ -142,7 +157,7 @@ export function createAtisAudioLoop(): AtisAudioLoop {
                 carrierGain.gain.setValueAtTime(carrierGain.gain.value, now)
                 carrierGain.gain.linearRampToValueAtTime(CARRIER_GAIN_LOUD, now + CARRIER_FADE_S)
             }
-            state.phase = state.phase === 'playing' ? 'playing' : 'loading'
+            state.phase = 'loading'
             exposeDebug()
             return
         }
@@ -178,6 +193,7 @@ export function createAtisAudioLoop(): AtisAudioLoop {
         mime?: string
         epochMs: number
     }) => {
+        cancelScheduledStop()
         const c = ensureCtx()
         let audioBuffer: AudioBuffer
         try {
@@ -230,6 +246,7 @@ export function createAtisAudioLoop(): AtisAudioLoop {
     }
 
     const stop = () => {
+        cancelScheduledStop()
         // Quick fade out the carrier then stop both sources
         if (ctx && carrierGain) {
             const now = ctx.currentTime
@@ -239,9 +256,11 @@ export function createAtisAudioLoop(): AtisAudioLoop {
                 carrierGain.gain.linearRampToValueAtTime(0, now + 0.15)
             } catch {}
         }
-        // Schedule stops slightly in the future so the fade completes audibly
+        // Schedule stops slightly in the future so the fade completes audibly.
+        // Kept in stopTimer so a retune can cancel it before it fires.
         const stopDelay = 200
-        setTimeout(() => {
+        stopTimer = setTimeout(() => {
+            stopTimer = null
             stopAtis()
             stopCarrier()
             state.phase = 'idle'

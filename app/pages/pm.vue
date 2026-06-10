@@ -1890,6 +1890,62 @@ const atisLoopKey = ref<string | null>(null)
 let atisAudioLoop: AtisAudioLoop | null = null
 let atisLoopActive = false
 let atisLoopSeq = 0
+// ICAO of the airport this session operates at (dep for departures, arr for
+// arrivals) — drives ATIS announcements, METAR fallback, and the periodic refetch.
+const activeAirportIcao = ref<string | undefined>(undefined)
+// Virtual ATIS start times per loop key.  Keeps the broadcast position stable
+// across tune-out/tune-in: re-tuning resumes where the loop would be if it
+// had been playing continuously.
+const atisEpochByKey = new Map<string, number>()
+// Airport-data refresh scheduling.  VATSIM ATIS regenerates from real-world
+// METARs, which publish at :20/:50 — the new info letter shows up on the
+// datafeed a couple of minutes later, so refetch at :23 and :53.  When no
+// ATIS is on the feed yet (station may log on mid-session), poll more often.
+let airportDataRefreshTimer: ReturnType<typeof setTimeout> | null = null
+const ATIS_REFRESH_MINUTES = [23, 53]
+const ATIS_RETRY_NO_DATA_MS = 5 * 60 * 1000
+
+const cancelAirportDataRefresh = () => {
+  if (airportDataRefreshTimer) {
+    clearTimeout(airportDataRefreshTimer)
+    airportDataRefreshTimer = null
+  }
+}
+
+const msUntilNextAtisSlot = (): number => {
+  const now = new Date()
+  let best = Infinity
+  for (const hourOffset of [0, 1]) {
+    for (const minute of ATIS_REFRESH_MINUTES) {
+      const candidate = new Date(now)
+      candidate.setHours(now.getHours() + hourOffset, minute, 0, 0)
+      const delta = candidate.getTime() - now.getTime()
+      if (delta > 0 && delta < best) best = delta
+    }
+  }
+  return best
+}
+
+const scheduleAirportDataRefresh = () => {
+  cancelAirportDataRefresh()
+  const hasAtisData = Boolean(atisFrequencyEntry.value?.atisText)
+  const slotDelay = msUntilNextAtisSlot()
+  // With live ATIS data wait for the next METAR slot; without it, also retry
+  // sooner in case the ATIS station logs on mid-session.
+  const delay = hasAtisData ? slotDelay : Math.min(slotDelay, ATIS_RETRY_NO_DATA_MS)
+  airportDataRefreshTimer = setTimeout(async () => {
+    airportDataRefreshTimer = null
+    if (currentScreen.value === 'monitor' && activeAirportIcao.value) {
+      await fetchAirportFrequencies(activeAirportIcao.value, { silent: true })
+      // Pre-generate audio for a changed info letter so the loop restart
+      // (triggered by the key change) plays without a generation gap.
+      prefetchAtisAudio()
+    }
+    if (currentScreen.value === 'monitor') {
+      scheduleAirportDataRefresh()
+    }
+  }, delay)
+}
 
 onMounted(async () => {
   try {
@@ -1999,7 +2055,14 @@ const speechSpeedLabel = computed(() => `${speechSpeed.value.toFixed(2)}x`)
 
 const completedPilotSteps = computed(() => simulationTrace.value.filter(entry => entry.kind === 'pilot').length)
 
-const atisFrequencyEntry = computed(() => airportFrequencies.value.find(entry => entry.type === 'ATIS'))
+// All ATIS stations at the airport.  Large airports broadcast separate
+// Arrival and Departure ATIS on different frequencies (EDDF_A_ATIS /
+// EDDF_D_ATIS on VATSIM), each with its own info letter and text.
+const atisEntries = computed(() => airportFrequencies.value.filter(entry => entry.type === 'ATIS'))
+
+// Primary ATIS entry for the quick-play button — prefer one with live text.
+const atisFrequencyEntry = computed(() =>
+  atisEntries.value.find(entry => (entry.atisText || '').trim()) || atisEntries.value[0])
 
 const frequencySourceLabels = computed(() => {
   const labels: string[] = []
@@ -2010,6 +2073,21 @@ const frequencySourceLabels = computed(() => {
 
 const normalizedFrequencyValue = (value: string | undefined) =>
   (value || '').trim().replace(/\s+/g, '').replace(',', '.')
+
+// The ATIS station matching the currently tuned frequency (if any).  With
+// multiple ATIS stations, each frequency carries its own broadcast.
+const tunedAtisEntry = computed<AirportFrequencyEntry | null>(() => {
+  const active = normalizedFrequencyValue(frequencies.value.active)
+  if (!active) return null
+  const matches = atisEntries.value.filter(entry =>
+    entry.frequency
+    && entry.frequency !== FREQUENCY_PLACEHOLDER
+    && normalizedFrequencyValue(entry.frequency) === active,
+  )
+  if (!matches.length) return null
+  // Two sources can list the same frequency — prefer the entry with live text.
+  return matches.find(entry => (entry.atisText || '').trim()) || matches[0]!
+})
 
 const frequencyDisplayKey = (entry: AirportFrequencyEntry) =>
   [
@@ -2219,7 +2297,9 @@ let speechQueue: Promise<void> = Promise.resolve()
 // Tracks objects that must be torn down when frequency changes mid-speech.
 let _currentAudio: HTMLAudioElement | null = null
 let _currentPizzicatoSound: { stop: () => void } | null = null
-let _currentSpeechAbort: AbortController | null = null
+// All in-flight TTS requests (playback is serialized, but generation runs in
+// parallel so a reply's TTS doesn't wait for earlier speech to finish playing).
+const _pendingSpeechAborts = new Set<AbortController>()
 // Incremented on each stopCurrentSpeech() call so enqueued tasks can detect
 // they belong to a cancelled generation and exit early.
 let _speechGeneration = 0
@@ -2227,10 +2307,10 @@ let _speechGeneration = 0
 /** Immediately stop any in-flight TTS request and audio playback. */
 const stopCurrentSpeech = () => {
   _speechGeneration++
-  if (_currentSpeechAbort) {
-    _currentSpeechAbort.abort()
-    _currentSpeechAbort = null
+  for (const abort of _pendingSpeechAborts) {
+    abort.abort()
   }
+  _pendingSpeechAborts.clear()
   if (_currentPizzicatoSound) {
     try { _currentPizzicatoSound.stop() } catch (_) { /* ignore */ }
     _currentPizzicatoSound = null
@@ -2414,55 +2494,77 @@ const playAudioWithEffects = async (base64: string, mime = 'audio/wav') => {
   }
 }
 
-const speakPrepared = async (prepared: PreparedSpeech, options: SpeechOptions = {}) => {
-  pmLog.info('TTS ▶', prepared.plain.slice(0, 100))
+/** Kick off TTS generation immediately (parallel to whatever is playing). */
+const fetchSpeechAudio = (prepared: PreparedSpeech, options: SpeechOptions = {}): Promise<any | null> => {
   const abort = new AbortController()
-  _currentSpeechAbort = abort
-  try {
-    const speed = options.speed ?? speechSpeed.value
-    const response = await api.post('/api/atc/say', {
-      text: options.useNormalizedForTTS === false ? prepared.plain : prepared.normalized,
-      level: signalStrength.value,
-      voice: options.voice || 'alloy',
-      speed,
-      moduleId: 'pilot-monitoring',
-      lessonId: currentState.value?.id || 'general',
-      tag: options.tag || 'controller-reply',
-      sessionId: engineSessionId.value || flags.value.session_id || undefined,
-    }, { signal: abort.signal })
-
-    if (abort.signal.aborted) return  // frequency changed while request was in flight
-    _currentSpeechAbort = null
-
-    if (response.success && response.audio) {
-      pmLog.debug('TTS ✓  provider=%s  size=%dB', response.meta?.ttsProvider, response.audio.size)
-      if (options.updateLastTransmission !== false) {
-        setLastTransmission(options.lastTransmissionLabel || `ATC: ${prepared.plain}`)
+  _pendingSpeechAborts.add(abort)
+  return (async () => {
+    try {
+      const speed = options.speed ?? speechSpeed.value
+      const usesNormalized = options.useNormalizedForTTS !== false
+      const response = await api.post('/api/atc/say', {
+        text: usesNormalized ? prepared.normalized : prepared.plain,
+        // The normalized variant already went through the client-side
+        // radiotelephony normalizer — the server must not normalize again.
+        preNormalized: usesNormalized,
+        level: signalStrength.value,
+        voice: options.voice || 'alloy',
+        speed,
+        moduleId: 'pilot-monitoring',
+        lessonId: currentState.value?.id || 'general',
+        tag: options.tag || 'controller-reply',
+        sessionId: engineSessionId.value || flags.value.session_id || undefined,
+      }, { signal: abort.signal })
+      if (abort.signal.aborted) return null  // frequency changed while in flight
+      return response
+    } catch (err: any) {
+      if (err?.name === 'AbortError' || abort.signal.aborted) {
+        pmLog.info('TTS cancelled (frequency change)')
+        return null
       }
-      await playAudioWithEffects(response.audio.base64, response.audio.mime)
-    } else {
-      pmLog.warn('TTS ✗  unexpected response', response)
+      pmLog.error('TTS FAILED', err)
+      console.error('TTS failed:', err)
+      return null
+    } finally {
+      _pendingSpeechAborts.delete(abort)
     }
-  } catch (err: any) {
-    if (err?.name === 'AbortError' || abort.signal.aborted) {
-      pmLog.info('TTS cancelled (frequency change)')
-      return
+  })()
+}
+
+const speakPrepared = async (
+  prepared: PreparedSpeech,
+  options: SpeechOptions = {},
+  audioPromise?: Promise<any | null>,
+) => {
+  pmLog.info('TTS ▶', prepared.plain.slice(0, 100))
+  const response = await (audioPromise ?? fetchSpeechAudio(prepared, options))
+  if (!response) return
+
+  if (response.success && response.audio) {
+    pmLog.debug('TTS ✓  provider=%s  size=%dB', response.meta?.ttsProvider, response.audio.size)
+    if (options.updateLastTransmission !== false) {
+      setLastTransmission(options.lastTransmissionLabel || `ATC: ${prepared.plain}`)
     }
-    pmLog.error('TTS FAILED', err)
-    console.error('TTS failed:', err)
-  } finally {
-    if (_currentSpeechAbort === abort) _currentSpeechAbort = null
+    await playAudioWithEffects(response.audio.base64, response.audio.mime)
+  } else {
+    pmLog.warn('TTS ✗  unexpected response', response)
   }
 }
 
 const speakWithRadioEffects = (tpl: string, options: SpeechOptions = {}) => {
   const prepared = prepareSpeech(tpl)
   const delay = options.delayMs ?? 0
+  // Start TTS generation NOW — it overlaps queued speech and the artificial
+  // controller delay instead of adding to them, so the audible latency is
+  // max(generation, delay) rather than the sum of everything in the queue.
+  const audioPromise = fetchSpeechAudio(prepared, options)
   enqueueSpeech(async () => {
+    const generation = _speechGeneration
     if (delay > 0) {
       await wait(delay)
     }
-    await speakPrepared(prepared, options)
+    if (generation !== _speechGeneration) return  // stopped while waiting
+    await speakPrepared(prepared, options, audioPromise)
   })
 }
 
@@ -2528,10 +2630,24 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   const prefix = source === 'ptt' ? 'Pilot (PTT)' : 'Pilot'
   setLastTransmission(`${prefix}: ${transcript}`)
 
-  processPilotTransmission(transcript)
+  // Log the pilot's call with the ACTUAL tuned frequency (the engine's own
+  // notion of "active frequency" is unit-derived and can lag what's tuned).
+  appendLogEntry('pilot', transcript, currentState.value?.id ?? '', {
+    frequency: frequencies.value.active,
+  })
 
   if (readbackEnabled.value) {
     speakPilotReadback(transcript)
+  }
+
+  // --- Radio check ---
+  // A service call, valid on ANY frequency and answered by whoever owns it.
+  // Handled entirely locally: it must bypass the wrong-frequency gate (its
+  // purpose is verifying the tuned frequency) and never reach the backend
+  // flow engine (the training state stays untouched).
+  if (RADIO_CHECK_RE.test(transcript)) {
+    answerRadioCheck(transcript)
+    return
   }
 
   // --- Frequency check ---
@@ -2546,7 +2662,10 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
     lastControllerSay.value = reply
     scheduleControllerSpeech(reply)
     // Add the ATC "wrong frequency" reply to the communication log.
-    appendLogEntry('atc', reply, currentState.value?.id ?? '', { offSchema: true })
+    appendLogEntry('atc', reply, currentState.value?.id ?? '', {
+      offSchema: true,
+      frequency: frequencies.value.active,
+    })
     return
   }
 
@@ -2631,6 +2750,7 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
       // Add ATC speech to the communication log so it appears alongside pilot entries.
       appendLogEntry('atc', sayText, response.next_state_id, {
         flow: response.active_flow,
+        frequency: frequencies.value.active,
       })
     }
 
@@ -2702,10 +2822,15 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
     scenario.airport === 'arr'
       ? (flightPlan.arr || flightPlan.arrival || flightPlan.dep || flightPlan.departure)
       : (flightPlan.dep || flightPlan.departure || flightPlan.arr || flightPlan.arrival)
+  activeAirportIcao.value = scenarioIcao
 
   // Fetch real airport frequencies BEFORE building backendVariables so that
   // all freq vars are resolved from live VATSIM/OpenAIP data.
   await fetchAirportFrequencies(scenarioIcao)
+
+  // Pre-generate the ATIS TTS audio now so the first tune-in plays instantly
+  // instead of waiting for generation. Fire-and-forget.
+  prefetchAtisAudio()
 
   // 3b. Build the backend variable payload.  The backend stores ALL keys so that
   //     frequencies declared in downstream chained flows (tower_freq for taxi-v1,
@@ -3248,7 +3373,7 @@ const syncLocalFrequenciesWithEngine = (updates: FrequencyVariableUpdate) => {
   }
 }
 
-const applyFrequencyVariablesFromList = (list: AirportFrequencyEntry[]) => {
+const applyFrequencyVariablesFromList = (list: AirportFrequencyEntry[], options: { syncRadio?: boolean } = {}) => {
   if (!Array.isArray(list) || list.length === 0) {
     return
   }
@@ -3270,17 +3395,23 @@ const applyFrequencyVariablesFromList = (list: AirportFrequencyEntry[]) => {
 
   if (Object.keys(updates).length > 0) {
     updateFrequencyVariables(updates)
-    syncLocalFrequenciesWithEngine(updates)
+    if (options.syncRadio !== false) {
+      syncLocalFrequenciesWithEngine(updates)
+    }
   }
 }
 
-const fetchAirportFrequencies = async (icao: string | undefined) => {
+const fetchAirportFrequencies = async (icao: string | undefined, options: { silent?: boolean } = {}) => {
   if (!icao) return
 
-  airportFrequencyLoading.value = true
-  airportFrequencies.value = []
-  airportName.value = undefined
-  frequencySources.value = { vatsim: false, openaip: false }
+  // Silent mode (background refresh): keep the current list visible while
+  // fetching and never retune the user's radio — only swap data when it arrives.
+  if (!options.silent) {
+    airportFrequencyLoading.value = true
+    airportFrequencies.value = []
+    airportName.value = undefined
+    frequencySources.value = { vatsim: false, openaip: false }
+  }
 
   try {
     const response = await api.get(`/api/airports/${encodeURIComponent(icao)}/frequencies`)
@@ -3292,14 +3423,18 @@ const fetchAirportFrequencies = async (icao: string | undefined) => {
       openaip: Boolean(response?.sources?.openaip)
     }
 
-    applyFrequencyVariablesFromList(entries)
+    applyFrequencyVariablesFromList(entries, { syncRadio: !options.silent })
   } catch (err) {
     console.error('Failed to load airport frequencies:', err)
-    airportFrequencies.value = []
-    airportName.value = undefined
-    frequencySources.value = { vatsim: false, openaip: false }
+    if (!options.silent) {
+      airportFrequencies.value = []
+      airportName.value = undefined
+      frequencySources.value = { vatsim: false, openaip: false }
+    }
   } finally {
-    airportFrequencyLoading.value = false
+    if (!options.silent) {
+      airportFrequencyLoading.value = false
+    }
   }
 }
 
@@ -3345,9 +3480,23 @@ const fetchMetarText = async (icao: string | undefined): Promise<string | null> 
   return null
 }
 
+/** "Arrival" / "Departure" variant from the station callsign (EDDF_A_ATIS / EDDF_D_ATIS). */
+const atisVariantLabel = (entry: AirportFrequencyEntry): string => {
+  const callsign = (entry.callsign || '').toUpperCase()
+  if (callsign.includes('_A_')) return 'Arrival '
+  if (callsign.includes('_D_')) return 'Departure '
+  // Fallback: published station name (OpenAIP) sometimes carries the variant.
+  const label = (entry.label || '').toLowerCase()
+  if (label.includes('arr')) return 'Arrival '
+  if (label.includes('dep')) return 'Departure '
+  return ''
+}
+
 const buildAtisAnnouncement = (entry: AirportFrequencyEntry, fallback?: string): string => {
   const parts: string[] = []
-  const location = flightContext.value.dep ? `${flightContext.value.dep} ATIS` : 'ATIS'
+  const icao = activeAirportIcao.value || flightContext.value.dep
+  const variant = atisVariantLabel(entry)
+  const location = icao ? `${icao} ${variant}ATIS` : `${variant}ATIS`
   parts.push(location)
 
   if (entry.atisCode) {
@@ -3374,10 +3523,13 @@ const buildAtisAnnouncement = (entry: AirportFrequencyEntry, fallback?: string):
 }
 
 const buildAtisLoopKey = (entry: AirportFrequencyEntry): string => {
-  const icao = (flightContext.value.dep || 'XXXX').toUpperCase()
+  const icao = (activeAirportIcao.value || flightContext.value.dep || 'XXXX').toUpperCase()
+  // Station identity: with separate Arrival/Departure ATIS, each station
+  // gets its own loop (own content, own virtual-clock epoch).
+  const station = (entry.callsign || normalizedFrequencyValue(entry.frequency) || '-').toUpperCase()
   const code = entry.atisCode || '-'
   const text = (entry.atisText || '').trim()
-  return `${icao}|${code}|${text.length}`
+  return `${icao}|${station}|${code}|${text.length}`
 }
 
 const resolveAtisEpoch = (entry: AirportFrequencyEntry): number => {
@@ -3385,7 +3537,14 @@ const resolveAtisEpoch = (entry: AirportFrequencyEntry): number => {
     const parsed = Date.parse(entry.lastUpdated)
     if (Number.isFinite(parsed)) return parsed
   }
-  return Date.now()
+  // No timestamp from VATSIM — pin a stable epoch per ATIS content so that
+  // tuning away and back resumes mid-broadcast instead of restarting at zero.
+  const key = buildAtisLoopKey(entry)
+  const cached = atisEpochByKey.get(key)
+  if (cached) return cached
+  const epoch = Date.now()
+  atisEpochByKey.set(key, epoch)
+  return epoch
 }
 
 const ensureAtisAudioLoop = (): AtisAudioLoop => {
@@ -3405,6 +3564,52 @@ const stopAtisLoop = () => {
     } catch (err) {
       pmLog.warn('ATIS loop stop failed', err)
     }
+  }
+}
+
+// TTS audio cache per ATIS broadcast (keyed by loop key + signal level) so
+// tune-in is instant when the audio was prefetched or heard before.
+const atisAudioRequestCache = new Map<string, Promise<any | null>>()
+
+/** Request (or reuse) the TTS audio for an ATIS broadcast. Deduped by content. */
+const requestAtisAudio = (entry: AirportFrequencyEntry, content: string): { announcement: string; promise: Promise<any | null> } => {
+  const announcement = buildAtisAnnouncement({ ...entry, atisText: content })
+  const cacheKey = `${buildAtisLoopKey(entry)}|${signalStrength.value}`
+
+  let promise = atisAudioRequestCache.get(cacheKey)
+  if (!promise) {
+    const spokenAnnouncement = normalizeAtisForSpeech(announcement, {
+      airportIcao: activeAirportIcao.value || flightContext.value.dep,
+      airportName: airportName.value,
+    })
+    promise = api.post('/api/atc/say', {
+      text: spokenAnnouncement,
+      preNormalized: true,
+      level: signalStrength.value,
+      voice: 'verse',
+      speed: 0.9,
+      moduleId: 'pilot-monitoring',
+      lessonId: 'atis',
+      tag: 'atis',
+      sessionId: engineSessionId.value || flags.value.session_id || undefined,
+    }).catch((err: any) => {
+      // Drop failed requests from the cache so a retune retries.
+      atisAudioRequestCache.delete(cacheKey)
+      pmLog.error('ATIS TTS failed', err)
+      return null
+    })
+    atisAudioRequestCache.set(cacheKey, promise)
+  }
+
+  return { announcement, promise }
+}
+
+/** Pre-generate TTS for all ATIS broadcasts so the first tune-in plays instantly. */
+const prefetchAtisAudio = () => {
+  for (const entry of atisEntries.value) {
+    const content = (entry.atisText || '').trim()
+    if (!content) continue
+    requestAtisAudio(entry, content)
   }
 }
 
@@ -3430,7 +3635,7 @@ const startAtisLoop = async (entry: AirportFrequencyEntry) => {
 
   let content = (entry.atisText || '').trim()
   if (!content) {
-    const metar = await fetchMetarText(flightContext.value.dep)
+    const metar = await fetchMetarText(activeAirportIcao.value || flightContext.value.dep)
     if (metar) {
       content = `METAR ${metar}`
     }
@@ -3442,29 +3647,21 @@ const startAtisLoop = async (entry: AirportFrequencyEntry) => {
     return
   }
 
-  const announcement = buildAtisAnnouncement({ ...entry, atisText: content })
-  const spokenAnnouncement = normalizeAtisForSpeech(announcement, {
-    airportIcao: flightContext.value.dep,
-    airportName: airportName.value,
-  })
+  const { announcement, promise } = requestAtisAudio(entry, content)
   const epoch = resolveAtisEpoch(entry)
   const requestSeq = ++atisLoopSeq
   atisPlaybackLoading.value = true
 
   try {
-    const response = await api.post('/api/atc/say', {
-      text: spokenAnnouncement,
-      level: signalStrength.value,
-      voice: 'verse',
-      speed: 0.9,
-      moduleId: 'pilot-monitoring',
-      lessonId: 'atis',
-      tag: 'atis',
-      sessionId: engineSessionId.value || flags.value.session_id || undefined,
-    })
+    const response = await promise
 
     if (requestSeq !== atisLoopSeq) return
-    if (!response?.success || !response.audio) return
+    if (!response?.success || !response.audio) {
+      pmLog.warn('ATIS loop TTS returned no audio')
+      atisLoopActive = false
+      atisLoopKey.value = null
+      return
+    }
 
     const result = await loop.startBroadcast({
       audioBase64: response.audio.base64,
@@ -3475,11 +3672,15 @@ const startAtisLoop = async (entry: AirportFrequencyEntry) => {
     if (requestSeq !== atisLoopSeq) return
     if (!result) {
       pmLog.warn('ATIS loop broadcast start returned null (decode failed?)')
+      // Mark inactive so a retune triggers a fresh attempt instead of being
+      // swallowed by the "already active on this key" early-return.
+      atisLoopActive = false
+      atisLoopKey.value = null
       return
     }
 
     pmLog.info('ATIS loop start', {
-      icao: flightContext.value.dep,
+      icao: activeAirportIcao.value || flightContext.value.dep,
       atisCode: entry.atisCode,
       duration: result.duration,
       requestedOffset: result.requestedOffset,
@@ -3488,7 +3689,11 @@ const startAtisLoop = async (entry: AirportFrequencyEntry) => {
 
     setLastTransmission(`ATIS: ${announcement}`)
   } catch (err) {
-    pmLog.error('ATIS loop TTS failed', err)
+    pmLog.error('ATIS loop start failed', err)
+    if (requestSeq === atisLoopSeq) {
+      atisLoopActive = false
+      atisLoopKey.value = null
+    }
   } finally {
     if (requestSeq === atisLoopSeq) {
       atisPlaybackLoading.value = false
@@ -3503,12 +3708,69 @@ const playAtisBroadcast = async () => {
   await startAtisLoop(atisEntry)
 }
 
+const RADIO_CHECK_RE = /\b(radio|signal)\s*check\b|how do you read/i
+
+/** Spoken readability per signal-strength level (1–5). */
+const READABILITY_PHRASE: Record<number, string> = {
+  5: 'read you 5, loud and clear',
+  4: 'read you 4',
+  3: 'read you 3, readable with difficulty',
+  2: 'read you 2, say again',
+  1: 'read you 1, unreadable',
+}
+
+/** Whichever station owns the currently tuned frequency, if any. */
+const tunedStationEntry = (): AirportFrequencyEntry | null => {
+  const active = normalizedFrequencyValue(frequencies.value.active)
+  if (!active) return null
+  return airportFrequencies.value.find(entry =>
+    entry.frequency
+    && entry.frequency !== FREQUENCY_PLACEHOLDER
+    && normalizedFrequencyValue(entry.frequency) === active,
+  ) ?? null
+}
+
+const answerRadioCheck = (transcript: string) => {
+  const callsign = (vars as any).value?.callsign || flightContext.value.callsign || ''
+  const entry = tunedStationEntry()
+
+  // ATIS is a broadcast, and an unknown frequency is unstaffed — no reply.
+  if (!entry || entry.type === 'ATIS') {
+    pmLog.info('RADIO CHECK — no station on', frequencies.value.active)
+    setLastTransmission(`Pilot: ${transcript} — no reply on ${frequencies.value.active}`)
+    appendLogEntry('system', `No reply on ${frequencies.value.active}`, currentState.value?.id ?? '', {
+      radioCheck: true,
+      frequency: frequencies.value.active,
+    })
+    return
+  }
+
+  const role = FREQ_ROLE_LABEL[entry.type] || entry.type
+  const station = airportName.value ? `${airportName.value} ${role}` : role
+  const readability = READABILITY_PHRASE[signalStrength.value] || `read you ${signalStrength.value}`
+  const reply = callsign
+    ? `${callsign}, ${station}, ${readability}`
+    : `Station calling, ${station}, ${readability}`
+
+  pmLog.info('RADIO CHECK', { station, freq: frequencies.value.active, readability: signalStrength.value })
+  lastControllerSay.value = reply
+  scheduleControllerSpeech(reply)
+  appendLogEntry('atc', reply, currentState.value?.id ?? '', {
+    radioCheck: true,
+    frequency: frequencies.value.active,
+  })
+}
+
 const performRadioCheck = async () => {
   if (!flightContext.value.callsign) return
 
   radioCheckLoading.value = true
 
-  const message = `${frequencies.value.active}, ${flightContext.value.callsign}, radio check`
+  const station = tunedStationEntry()
+  const stationName = station && station.type !== 'ATIS'
+    ? (airportName.value ? `${airportName.value} ${FREQ_ROLE_LABEL[station.type] || station.type}` : FREQ_ROLE_LABEL[station.type] || station.type)
+    : frequencies.value.active
+  const message = `${stationName}, ${flightContext.value.callsign}, radio check`
 
   try {
     await handlePilotTransmission(message, 'text')
@@ -3552,7 +3814,14 @@ const frequencyPresets = computed<DisplayAirportFrequencyEntry[]>(() => {
 
 const presetKey = (entry: AirportFrequencyEntry | DisplayAirportFrequencyEntry) =>
   'displayKey' in entry ? entry.displayKey : `${entry.type}-${entry.frequency}`
-const presetLabel = (entry: AirportFrequencyEntry) => FREQ_ROLE_LABEL[entry.type] || entry.type
+const presetLabel = (entry: AirportFrequencyEntry) => {
+  // Distinguish multiple ATIS stations (Arrival ATIS / Departure ATIS).
+  if (entry.type === 'ATIS') {
+    const variant = atisVariantLabel(entry)
+    if (variant) return `${variant}ATIS`
+  }
+  return FREQ_ROLE_LABEL[entry.type] || entry.type
+}
 
 type FrequencyPresetOption = {
   value: string
@@ -3567,7 +3836,9 @@ const presetOptions = computed<FrequencyPresetOption[]>(() =>
   frequencyPresets.value.map((entry) => ({
     value: presetKey(entry),
     label: presetLabel(entry),
-    sublabel: entry.frequency,
+    sublabel: entry.type === 'ATIS' && entry.atisCode
+      ? `${entry.frequency} · Info ${entry.atisCode}`
+      : entry.frequency,
     color: entry.type === 'ATIS' ? '#f59e0b' : '#22d3ee',
     sourceLabel: entry.sourceLabel,
     callsign: entry.callsign,
@@ -3842,14 +4113,25 @@ watch(() => activeFrequency.value, (newFreq) => {
   }
 })
 
-// ATIS loop: start when ATIS frequency is tuned, stop otherwise, restart on info-letter change
+// Background airport-data refresh while monitoring, aligned to METAR
+// publication slots (:23/:53 — see ATIS_REFRESH_MINUTES).  The silent fetch
+// never blanks the list or retunes the radio; when the info letter changes,
+// the ATIS-loop watcher below sees a new key and restarts the broadcast.
+watch(currentScreen, (screen) => {
+  if (screen === 'monitor') {
+    scheduleAirportDataRefresh()
+  } else {
+    cancelAirportDataRefresh()
+  }
+}, { immediate: true })
+
+// ATIS loop: start when any ATIS frequency is tuned (arrival/departure ATIS
+// are separate stations with own content), stop when tuned away, restart on
+// info-letter change or when switching between ATIS stations.
 watch(
   () => {
-    const entry = atisFrequencyEntry.value
-    if (!entry?.frequency || entry.frequency === FREQUENCY_PLACEHOLDER) return null
-    const active = normalizedFrequencyValue(frequencies.value.active)
-    const atisFreq = normalizedFrequencyValue(entry.frequency)
-    if (!active || active !== atisFreq) return null
+    const entry = tunedAtisEntry.value
+    if (!entry) return null
     return {
       entry,
       key: buildAtisLoopKey(entry),
@@ -3893,6 +4175,7 @@ watch(prerecEnabled, (val) => {
 onUnmounted(() => {
   stopAtisLoop()
   stopPrerecCapture()
+  cancelAirportDataRefresh()
 })
 </script>
 
