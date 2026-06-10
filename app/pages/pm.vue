@@ -128,6 +128,18 @@
           </div>
         </div>
 
+        <v-alert
+            v-if="error"
+            type="warning"
+            density="compact"
+            variant="tonal"
+            closable
+            class="bg-amber-500/10 text-amber-200"
+            @click:close="error = ''"
+        >
+          {{ error }}
+        </v-alert>
+
         <!-- Complete scenarios -->
         <div>
           <p class="text-[11px] font-semibold uppercase tracking-widest text-white/35 mb-3">
@@ -2765,7 +2777,17 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
       completedScenario.value = activeScenario.value
       currentScreen.value = 'complete'
     }
-  } catch (e) {
+  } catch (e: any) {
+    const status = e?.status ?? e?.response?.status
+    if (status === 404) {
+      // Session expired (idle timeout) or backend restarted without the
+      // persisted session — reset to scenario selection for a clean restart.
+      pmLog.error('SESSION GONE (404) — resetting to scenario selection', { session: backendSessionId.value })
+      backendSessionId.value = null
+      error.value = 'Session expired — please start the scenario again.'
+      currentScreen.value = 'scenario'
+      return
+    }
     pmLog.error('TRANSMIT FAILED', { transcript, session: backendSessionId.value, error: e })
     console.error('Backend transmission failed', e)
     setLastTransmission(`${prefix}: ${transcript} (backend failed)`)
@@ -2857,6 +2879,7 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
 
   // 4. Create a backend session with the flight-plan-derived variables
   try {
+    error.value = ''
     const session = await radioBackend.createSession(
       scenario.startFlow,
       backendVariables,
