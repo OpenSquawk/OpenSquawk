@@ -8,7 +8,7 @@ import type {
     DecisionNodeAutoTrigger,
 } from '../types/decision'
 import type { FlowActivationInstruction, FlowActivationMode, LLMDecisionTrace } from '../types/llm'
-import { normalizeRadioPhrase } from './radioSpeech'
+import { normalizeRadioPhrase, DEFAULT_AIRLINE_TELEPHONY } from './radioSpeech'
 
 // --- DecisionTree runtime types ---
 type Role = 'pilot' | 'atc' | 'system'
@@ -128,7 +128,16 @@ function createSessionId(): string {
 
 export function normalizeATCText(text: string, context: Record<string, any>): string {
     const rendered = renderTpl(text, context)
-    return normalizeRadioPhrase(rendered)
+    // Full radiotelephony expansion for TTS.  Callsign expansion used to happen
+    // server-side; since preNormalized texts skip the server normalizer, the
+    // client must produce the complete spoken form itself.  Template text is
+    // mixed-case, so 4-letter all-caps tokens are ICAO codes (EDDM → spelled),
+    // not English words.
+    return normalizeRadioPhrase(rendered, {
+        expandCallsigns: true,
+        expandAirports: true,
+        airlineMap: DEFAULT_AIRLINE_TELEPHONY,
+    })
 }
 
 function createDefaultFlightContext(): FlightContext {
