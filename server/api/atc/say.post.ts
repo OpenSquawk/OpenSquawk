@@ -7,6 +7,9 @@ import {normalize, TTS_MODEL, normalizeATC} from "../../utils/normalize";
 import { getServerRuntimeConfig } from "../../utils/runtimeConfig";
 import {request} from "node:http";
 import { TransmissionLog } from "../../models/TransmissionLog";
+import { requireUserSession } from "../../utils/auth";
+import { enforceRateLimit } from "../../utils/rateLimit";
+import { recordUsage } from "../../utils/usage";
 
 
 function outDir() {
@@ -157,7 +160,12 @@ async function speachesTTS(
     return Buffer.from(arr);
 }
 
+const SAY_RATE_LIMIT_PER_MINUTE = 60;
+
 export default defineEventHandler(async (event) => {
+    const user = await requireUserSession(event);
+    enforceRateLimit(event, 'atc-say', String(user._id), SAY_RATE_LIMIT_PER_MINUTE);
+
     const runtimeConfig = getServerRuntimeConfig();
     const body = await readBody<{
         text?: string;
@@ -176,8 +184,6 @@ export default defineEventHandler(async (event) => {
          */
         preNormalized?: boolean;
     }>(event);
-
-    // const user = await requireUserSession(event);
 
     const rawSessionId = typeof body?.sessionId === "string"
         ? body.sessionId.trim()
@@ -348,9 +354,20 @@ export default defineEventHandler(async (event) => {
             }
         };
 
+        await recordUsage({
+            user: String(user._id),
+            sessionId,
+            kind: 'tts',
+            // Cache hits cost nothing regardless of which provider filled the cache.
+            provider: cacheHit ? 'cache' : ttsProvider,
+            model: modelUsed,
+            endpoint: '/api/atc/say',
+            characters: normalized.length,
+        });
+
         try {
             await TransmissionLog.create({
-                // user: user._id,
+                user: user._id,
                 role: "atc",
                 channel: "say",
                 direction: "outgoing",

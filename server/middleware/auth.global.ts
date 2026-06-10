@@ -6,9 +6,6 @@ export default defineEventHandler(async (event) => {
     if (!url.pathname.startsWith('/api/')) {
         return
     }
-    if (url.pathname.startsWith('/api/atc/say')) {
-        return
-    }
     if (url.pathname.startsWith('/api/service/')) {
         return
     }
