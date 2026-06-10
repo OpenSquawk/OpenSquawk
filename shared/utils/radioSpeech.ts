@@ -300,12 +300,19 @@ function callsignSpeak(raw: string, map: AirlineTelephonyMap): string {
     return `${telephony} ${digitsSpoken}${suffix}`.trim();
 }
 
+// 4-letter all-caps tokens that are acronyms, not ICAO airport codes.
+const AIRPORT_CODE_SKIP = new Set(['ATIS', 'RNAV', 'NDBS', 'VORS', 'MAIN']);
+
 function icaoAirportSpeak(raw: string): string {
+    if (AIRPORT_CODE_SKIP.has(raw)) return raw;
     return /^[A-Z]{4}$/.test(raw) ? spellIcaoLetters(raw) : raw;
 }
 
 function sidSuffixSpeak(prefix: string, digit: string, letter: string): string {
-    return `${toIcaoPhonetic(prefix)} ${spellIcaoDigits(digit)} ${spellIcaoLetters(letter)}`;
+    // SID basenames are pronounceable waypoint names, spoken as a word:
+    // "ANEKI 7S" → "Aneki seven sierra", not "alpha november echo kilo india…".
+    const word = prefix.charAt(0) + prefix.slice(1).toLowerCase();
+    return `${word} ${spellIcaoDigits(digit)} ${spellIcaoLetters(letter)}`;
 }
 
 function approachSpeak(type: string, runway: string, suffix: string): string {
@@ -669,6 +676,18 @@ export function normalizeRadioPhrase(text: string, options: NormalizeRadioOption
     out = out.replace(/\b(\d{3,5})\s*(?:ft|feet)\b/gi, (_, ft: string) => altitudeSpeak(Number(ft)));
     out = out.replace(/\bQNH\s*(\d{3,4})\b/gi, (_, qnh: string) => qnhSpeak(qnh));
 
+    // Stand/gate designators: "stand A12" → "stand alfa wun too"
+    out = out.replace(/\b(stand|gate)\s+([A-Z]{1,2}\d{1,4}[A-Z]?)\b/gi, (_m, word: string, code: string) =>
+        `${word} ${toIcaoPhonetic(code)}`);
+
+    // ATIS information letter: "information K" → "information Kilo"
+    out = out.replace(/\b([Ii]nformation)\s+([A-Z])(?![A-Za-z0-9])/g, (_m, word: string, letter: string) =>
+        `${word} ${ICAO_LETTERS[letter] ?? letter}`);
+
+    // Surface wind "wind 250/07" or "wind 250/07KT" → digit-by-digit with units
+    out = out.replace(/\b(wind\s+)(\d{3})\/(\d{2,3})(?:KT)?\b/gi, (_m, prefix: string, dir: string, spd: string) =>
+        `${prefix}${spellIcaoDigits(dir)} degrees, ${spellIcaoDigits(spd)} knots`);
+
     if (opts.sidSuffixIcao) {
         out = out.replace(/\b([A-Z]{4,6})\s*(\d)\s*([A-Z])\b/g, (_match, prefix: string, digit: string, letter: string) => {
             return sidSuffixSpeak(prefix, digit, letter);
@@ -688,11 +707,13 @@ export function normalizeRadioPhrase(text: string, options: NormalizeRadioOption
     );
 
     if (opts.expandWaypoints) {
-        // Expand standalone 5-6-char uppercase waypoint names (not already expanded by sidSuffixIcao)
-        // Skip common ATC English words that may appear uppercase.
+        // 5-letter waypoint names (SULUS, SUGOL, ANEKI…) are designed to be
+        // pronounceable and are spoken AS WORDS in real radiotelephony — never
+        // spelled letter-by-letter. Titlecase them so TTS reads them as words
+        // instead of shouting all-caps or spelling them out.
         out = out.replace(/\b([A-Z]{5,6})\b/g, (match, wp: string) => {
             if (WAYPOINT_SKIP.has(wp)) return match;
-            return toIcaoPhonetic(wp);
+            return wp.charAt(0) + wp.slice(1).toLowerCase();
         });
     }
 
