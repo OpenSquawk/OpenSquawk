@@ -3,6 +3,7 @@ import { InvitationCode } from '../models/InvitationCode'
 import { LandingAnalyticsEvent } from '../models/LandingAnalyticsEvent'
 import { ProductUsageSession } from '../models/ProductUsageSession'
 import { WaitlistEntry } from '../models/WaitlistEntry'
+import { summarizeUsage, getRollingCostUsd, type UsageSummary } from './usage'
 
 export type KpiProduct = 'classroom' | 'liveatc'
 
@@ -53,6 +54,7 @@ export type WeeklyKpiReport = {
   smartGoals: SmartGoal[]
   landingTrend: { date: string; views: number; scrolled: number; waitlistEntries: number }[]
   feedback: FeedbackItem[]
+  aiUsage: UsageSummary & { rolling30dCostUsd: number }
 }
 
 function startOfUtcDay(date: Date) {
@@ -189,6 +191,11 @@ export async function buildWeeklyKpiReport(now = new Date()): Promise<WeeklyKpiR
       .lean(),
   ])
 
+  const [usageSummary, rolling30dCostUsd] = await Promise.all([
+    summarizeUsage(periodStart, periodEnd),
+    getRollingCostUsd(30, now),
+  ])
+
   const waitlistCounts = getProductCounts(waitlistByProductRows)
   const activatedCounts = getProductCounts(activatedByProductRows)
   const feedbackCounts = getProductCounts(feedbackByProductRows)
@@ -305,7 +312,18 @@ export async function buildWeeklyKpiReport(now = new Date()): Promise<WeeklyKpiR
       from: doc.name || doc.email || doc.discordHandle || 'anonymous',
       summary: pickFeedbackSummary(doc),
     })),
+    aiUsage: { ...usageSummary, rolling30dCostUsd },
   }
+}
+
+function formatUsd(value: number) {
+  return `$${(Math.round(value * 10000) / 10000).toFixed(4)}`
+}
+
+function formatTokens(value: number) {
+  if (value >= 1_000_000) return `${Math.round((value / 1_000_000) * 10) / 10}M`
+  if (value >= 1_000) return `${Math.round((value / 1_000) * 10) / 10}k`
+  return String(value)
 }
 
 function escapeHtml(value: unknown) {
@@ -333,6 +351,16 @@ export function renderWeeklyKpiText(report: WeeklyKpiReport) {
     '',
     'Produkte:',
     ...report.products.map((product) => `- ${product.product}: Waitlist ${product.waitlistEntries}, User ${product.activatedUsers}, Nutzung ${formatSeconds(product.averageUsageSeconds)} avg, Feedback ${product.feedbackCount}`),
+    '',
+    'AI-Nutzung (diese Woche):',
+    `- Kosten: ${formatUsd(report.aiUsage.costUsd)} (letzte 30 Tage: ${formatUsd(report.aiUsage.rolling30dCostUsd)})`,
+    `- STT: ${formatSeconds(report.aiUsage.sttSeconds)} Audio (${report.aiUsage.byKind.stt.events} Requests, ${formatUsd(report.aiUsage.byKind.stt.costUsd)})`,
+    `- TTS: ${formatTokens(report.aiUsage.ttsCharacters)} Zeichen (${report.aiUsage.byKind.tts.events} Requests, ${formatUsd(report.aiUsage.byKind.tts.costUsd)})`,
+    `- LLM: ${formatTokens(report.aiUsage.llmInputTokens)} in / ${formatTokens(report.aiUsage.llmOutputTokens)} out Tokens (${report.aiUsage.byKind.llm.events} Requests, ${formatUsd(report.aiUsage.byKind.llm.costUsd)})`,
+    'Top User nach Kosten:',
+    ...(report.aiUsage.topUsers.length
+      ? report.aiUsage.topUsers.map((u) => `- ${u.email}: ${formatUsd(u.costUsd)} (${u.events} Requests)`)
+      : ['- keine Nutzungsdaten in diesem Zeitraum']),
     '',
     'Feedback:',
     ...report.feedback.map((item) => `- ${item.product} ${item.excitement}/5 ${item.from}: ${item.summary}`),
@@ -371,6 +399,33 @@ export function renderWeeklyKpiEmail(report: WeeklyKpiReport) {
         <td>${item.scrolled}</td>
         <td>${item.waitlistEntries}</td>
       </tr>`)
+    .join('')
+
+  const usageTopUserRows = report.aiUsage.topUsers.length
+    ? report.aiUsage.topUsers.map((u) => `
+      <tr>
+        <td>${escapeHtml(u.email)}</td>
+        <td>${u.events}</td>
+        <td>${escapeHtml(formatUsd(u.costUsd))}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="3">Keine Nutzungsdaten in diesem Zeitraum.</td></tr>'
+
+  const usageKindRows = (['stt', 'tts', 'llm'] as const)
+    .map((kind) => {
+      const row = report.aiUsage.byKind[kind]
+      const detail = kind === 'stt'
+        ? `${formatSeconds(report.aiUsage.sttSeconds)} Audio`
+        : kind === 'tts'
+          ? `${formatTokens(report.aiUsage.ttsCharacters)} Zeichen`
+          : `${formatTokens(report.aiUsage.llmInputTokens)} in / ${formatTokens(report.aiUsage.llmOutputTokens)} out`
+      return `
+      <tr>
+        <td><strong>${kind.toUpperCase()}</strong></td>
+        <td>${row.events}</td>
+        <td>${escapeHtml(detail)}</td>
+        <td>${escapeHtml(formatUsd(row.costUsd))}</td>
+      </tr>`
+    })
     .join('')
 
   const feedbackRows = report.feedback.length
@@ -432,6 +487,11 @@ export function renderWeeklyKpiEmail(report: WeeklyKpiReport) {
         <table><thead><tr><th>KPI</th><th>Ziel</th><th>Ist</th><th>Status</th></tr></thead><tbody>${goalRows}</tbody></table>
         <h2>Produkte</h2>
         <table><thead><tr><th>Produkt</th><th>Waitlist</th><th>Neue User</th><th>Nutzung Ø</th><th>Feedback</th></tr></thead><tbody>${productRows}</tbody></table>
+        <h2>AI-Nutzung &amp; Kosten</h2>
+        <p class="muted">Diese Woche: <strong>${escapeHtml(formatUsd(report.aiUsage.costUsd))}</strong> · Letzte 30 Tage: <strong>${escapeHtml(formatUsd(report.aiUsage.rolling30dCostUsd))}</strong></p>
+        <table><thead><tr><th>Art</th><th>Requests</th><th>Volumen</th><th>Kosten</th></tr></thead><tbody>${usageKindRows}</tbody></table>
+        <h2>Top User nach Kosten</h2>
+        <table><thead><tr><th>User</th><th>Requests</th><th>Kosten</th></tr></thead><tbody>${usageTopUserRows}</tbody></table>
         <h2>Landing Verlauf</h2>
         <table><thead><tr><th>Datum</th><th>Views</th><th>Scrolled</th><th>Waitlist</th></tr></thead><tbody>${trendRows}</tbody></table>
         <h2>Feedback</h2>
