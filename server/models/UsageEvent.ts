@@ -5,7 +5,11 @@ const { Schema } = mongoose
 export type UsageKind = 'stt' | 'tts' | 'llm'
 export type UsageProvider = 'openai' | 'speaches' | 'piper' | 'cache'
 
-export interface UsageEventDocument extends mongoose.Document {
+// Plain attribute shape (not extending mongoose.Document). Extending Document
+// collides on `model` (Document.model is a method); passing the attrs type to
+// the Schema/Model generics is the recommended pattern and still yields
+// hydrated documents with all Document methods from queries/create.
+export interface UsageEventAttrs {
   user?: mongoose.Types.ObjectId
   sessionId?: string
   kind: UsageKind
@@ -23,7 +27,7 @@ export interface UsageEventDocument extends mongoose.Document {
   createdAt: Date
 }
 
-const usageEventSchema = new mongoose.Schema<UsageEventDocument>({
+const usageEventSchema = new mongoose.Schema<UsageEventAttrs>({
   user: { type: Schema.Types.ObjectId, ref: 'User', index: true },
   sessionId: { type: String },
   kind: { type: String, enum: ['stt', 'tts', 'llm'], required: true },
@@ -41,5 +45,5 @@ const usageEventSchema = new mongoose.Schema<UsageEventDocument>({
 usageEventSchema.index({ user: 1, createdAt: -1 })
 
 export const UsageEvent =
-  (mongoose.models.UsageEvent as mongoose.Model<UsageEventDocument> | undefined) ||
-  mongoose.model<UsageEventDocument>('UsageEvent', usageEventSchema)
+  (mongoose.models.UsageEvent as mongoose.Model<UsageEventAttrs> | undefined) ||
+  mongoose.model<UsageEventAttrs>('UsageEvent', usageEventSchema)
