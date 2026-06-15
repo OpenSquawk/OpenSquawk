@@ -1,28 +1,10 @@
 import type { DecisionNodeCondition, DecisionNodeTrigger } from './decision'
 
-export interface LLMDecisionInput {
-    state_id: string
-    state: any
-    candidates: Array<{ id: string; state: any; flow?: string }>
-    variables: Record<string, any>
-    flags: Record<string, any>
-    pilot_utterance: string
-    flow_slug?: string
-}
-
 export type FlowActivationMode = 'main' | 'parallel' | 'linear'
 
 export interface FlowActivationInstruction {
     slug: string
     mode?: FlowActivationMode
-}
-
-export interface ActiveNodeSummary {
-    flow: string
-    state: string
-    role?: string
-    say_tpl?: string
-    controller_say_tpl?: string
 }
 
 export interface CandidateTraceEntry {
@@ -81,17 +63,6 @@ export interface DecisionCandidateTimeline {
     autoSelected?: CandidateTraceEntry | null
 }
 
-export interface LLMDecision {
-    next_state: string
-    updates?: Record<string, any>
-    flags?: Record<string, any>
-    controller_say_tpl?: string
-    off_schema?: boolean
-    radio_check?: boolean
-    activate_flow?: string | FlowActivationInstruction
-    resume_previous?: boolean
-}
-
 export interface LLMDecisionTraceCall {
     stage: 'readback-check' | 'decision'
     request: Record<string, any>
@@ -115,11 +86,4 @@ export interface LLMDecisionTrace {
         flow: string
         reason?: string
     }
-}
-
-export interface LLMDecisionResult {
-    decision: LLMDecision
-    trace?: LLMDecisionTrace
-    active_nodes?: ActiveNodeSummary[]
-    pilot_intent?: string | null
 }
