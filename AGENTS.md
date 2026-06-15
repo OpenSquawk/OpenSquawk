@@ -10,8 +10,8 @@
 ## Key Files
 - `/shared/utils/communicationsEngine.ts` — Core state machine composable (used by `/pm` live ATC). Drives local cursor and TTS; Python backend owns the authoritative state.
 - `/app/composables/useRadioBackend.ts` — Typed wrapper around the Python backend REST API (`createSession`, `transmit`, `deleteSession`, `fetchFlows`)
-- `/server/utils/openai.ts` — Legacy LLM decision router (`routeDecision()`). No longer called by `/pm`; may still be used by other routes.
-- `/server/services/decisionFlowService.ts` — Builds runtime decision trees from MongoDB (used by Nuxt `/api/decision-flows/runtime`; `/pm` now fetches directly from the Python backend)
+- `/server/utils/openai.ts` — `getOpenAIClient()` only (TTS via `/api/atc/say`, STT via `/api/atc/ptt`). The old `routeDecision()` LLM router has been removed; routing lives in the Python backend.
+- `/server/services/decisionFlowService.ts` — Builds/edits MongoDB-backed decision trees for the flow editor (`/server/api/editor/flows*`). There is no Nuxt `/api/decision-flows/runtime` route — `/pm` fetches the runtime flow directly from the Python backend.
 - `/app/pages/pm.vue` — Live ATC page (speech-to-text, PTT, text input)
 - `/app/pages/classroom.vue` — Classroom learning mode (separate system, does NOT use communicationsEngine)
 

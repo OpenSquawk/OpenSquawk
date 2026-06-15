@@ -28,6 +28,7 @@ Goal: a community-driven alternative to other costly AI-ATC solutions while bein
 | MongoDB 7+          | Local instance or hosted database. Configure via `MONGODB_URI`.            |
 | ffmpeg              | Needed for audio processing (`fluent-ffmpeg`), must be on the system PATH. |
 | OpenAI API Key      | For TTS and LLM calls (`OPENAI_API_KEY`).                                  |
+| Live ATC backend    | The `/pm` Live ATC mode requires the Python decision backend ([OpenSquawk-LiveATC-api](https://github.com/OpenSquawk/OpenSquawk-LiveATC-api)). Point `NUXT_PUBLIC_RADIO_BACKEND_URL` at it (default `http://127.0.0.1:8000`). Other features run without it. |
 | Optional: Piper TTS | For local speech (`pip install "piper-tts[http]"`).                        |
 
 You can connect to any OpenAI-compatible (self-hosted or third-party) API by setting `OPENAI_BASE_URL` to the service's base URL.
@@ -107,7 +108,7 @@ Local models via WSL+Docker is planned but not yet implemented. Placeholders and
 
 ```
 app/          # Nuxt frontend (pages, components, stores)
-server/       # API routes, services, utilities (ATC, Auth, LLM)
+server/       # API routes, services, utilities (ATC TTS/STT, Auth, flow editor)
 shared/       # Shared types and helpers
 content/      # Markdown news & CMS content
 ```
