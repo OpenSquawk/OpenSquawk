@@ -239,7 +239,8 @@ onBeforeUnmount(() => {
             <span v-if="opt.sublabel" class="hs-opt-sub">{{ opt.sublabel }}</span>
           </slot>
         </div>
-        <p v-if="!options.length" class="hs-empty">Keine Optionen</p>
+        <p v-if="!options.length && !$slots.footer" class="hs-empty">Keine Optionen</p>
+        <slot name="footer" :close="closeMenu" />
       </div>
     </Teleport>
   </div>
