@@ -365,6 +365,20 @@
                       </template>
                     </v-tooltip>
                   </template>
+                  <template #footer="{ close }">
+                    <form class="freq-manual" @submit.prevent="applyManualFrequency('standby', close)">
+                      <input
+                          v-model="manualFreqStandby"
+                          class="freq-manual-input"
+                          type="text"
+                          inputmode="decimal"
+                          placeholder="Manuell, z.B. 121.500"
+                          maxlength="7"
+                          aria-label="Manual standby frequency"
+                      >
+                      <button type="submit" class="freq-manual-btn" :disabled="!normalizeManualFreq(manualFreqStandby)">SET</button>
+                    </form>
+                  </template>
                 </HoldSelect>
                 <HoldSelect
                     :options="presetOptions"
@@ -394,6 +408,20 @@
                         </div>
                       </template>
                     </v-tooltip>
+                  </template>
+                  <template #footer="{ close }">
+                    <form class="freq-manual" @submit.prevent="applyManualFrequency('active', close)">
+                      <input
+                          v-model="manualFreqActive"
+                          class="freq-manual-input"
+                          type="text"
+                          inputmode="decimal"
+                          placeholder="Manuell, z.B. 121.500"
+                          maxlength="7"
+                          aria-label="Manual active frequency"
+                      >
+                      <button type="submit" class="freq-manual-btn" :disabled="!normalizeManualFreq(manualFreqActive)">SET</button>
+                    </form>
                   </template>
                 </HoldSelect>
               </div>
@@ -3880,6 +3908,42 @@ const onPresetSelectStandby = (opt: { value: string | number }) => {
   if (entry) setStandbyFrequencyFromList(entry)
 }
 
+// --- Manual frequency entry (free-tune any VHF airband channel) --------------
+const manualFreqActive = ref('')
+const manualFreqStandby = ref('')
+
+// Accepts inputs like "121.5", "121,500" or "118" and normalises to a valid
+// VHF airband frequency string (118.000–136.975). Returns null when invalid so
+// callers/UI can disable the action.
+function normalizeManualFreq(input: string): string | null {
+  const raw = input.trim().replace(',', '.')
+  if (!raw) return null
+  const num = Number(raw)
+  if (!Number.isFinite(num) || num < 118 || num >= 137) return null
+  return num.toFixed(3)
+}
+
+function applyManualFrequency(target: 'active' | 'standby', close?: () => void) {
+  const model = target === 'active' ? manualFreqActive : manualFreqStandby
+  const freq = normalizeManualFreq(model.value)
+  if (!freq) return
+
+  if (target === 'active') {
+    if (frequencies.value.active !== freq) {
+      // Tuning away from the current frequency — cut any in-progress ATC speech
+      // so the pilot no longer "hears" the controller on the old channel.
+      stopCurrentSpeech()
+      frequencies.value.standby = frequencies.value.active
+      frequencies.value.active = freq
+    }
+  } else {
+    frequencies.value.standby = freq
+  }
+
+  model.value = ''
+  close?.()
+}
+
 // Readability / signal strength quick-select (top bar)
 const readabilityOptions = [
   { value: 5, label: 'Excellent', sublabel: 'Readability 5', color: '#22c55e' },
@@ -4741,6 +4805,56 @@ onUnmounted(() => {
   background: rgba(34, 211, 238, 0.08);
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+/* Manual free-tune frequency entry inside the freq hold-select menu */
+.freq-manual {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.freq-manual-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  outline: none;
+}
+.freq-manual-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+  font-family: inherit;
+}
+.freq-manual-input:focus {
+  border-color: rgba(34, 211, 238, 0.6);
+  background: rgba(34, 211, 238, 0.06);
+}
+.freq-manual-btn {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(34, 211, 238, 0.4);
+  background: rgba(34, 211, 238, 0.12);
+  color: #67e8f9;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 90ms ease, opacity 90ms ease;
+}
+.freq-manual-btn:hover {
+  background: rgba(34, 211, 238, 0.2);
+}
+.freq-manual-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* Preset hold-select trigger buttons (freq tab) */
