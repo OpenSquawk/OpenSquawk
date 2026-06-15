@@ -33,8 +33,8 @@ describe('radioSpeech', () => {
     const sid = normalizeRadioPhrase('MARUN 7F')
     const metar = normalizeMetarPhrase('EDDF 171450Z 28015G25KT 9999 -RA SCT025 BKN040 15/08 Q1013')
 
-    // SID prefix is spelled phonetically so TTS pronounces unfamiliar waypoint names correctly
-    assert.equal(sid, 'Mike Alfa Romeo Uniform November seven Foxtrot')
+    // SID identifier: the named waypoint is spoken as a word, the number and suffix letter are spelled out
+    assert.equal(sid, 'Marun seven Foxtrot')
     assert.match(metar, /wind too eight zero degrees/)
     assert.match(metar, /gusting too fife knots/)
     assert.match(metar, /QNH wun zero wun tree/)
