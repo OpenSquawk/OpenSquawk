@@ -11,8 +11,23 @@ import { TransmissionLog } from "../../models/TransmissionLog";
 import { getUserFromEvent } from "../../utils/auth";
 import { enforceRateLimit, getClientIp } from "../../utils/rateLimit";
 import { recordUsage } from "../../utils/usage";
+import { DEFAULT_AIRLINE_TELEPHONY } from "../../../shared/utils/radioSpeech";
 
 type AudioFormat = 'wav' | 'mp3' | 'ogg' | 'webm'
+
+// Whisper accepts a ~224-token `prompt` that biases recognition toward the
+// expected vocabulary and spelling. Aviation R/T is a constrained domain, so
+// seeding the phonetic alphabet, aviation number words, common phraseology, and
+// the airline telephony names in play markedly improves transcription of
+// callsigns, runways, and readbacks. The telephony names are pulled from the
+// shared map so this stays in sync as airlines are added.
+const STT_BIAS_PROMPT = [
+    "Air traffic control radio communication in ICAO English phraseology.",
+    "Phonetic alphabet: Alfa Bravo Charlie Delta Echo Foxtrot Golf Hotel India Juliett Kilo Lima Mike November Oscar Papa Quebec Romeo Sierra Tango Uniform Victor Whiskey X-ray Yankee Zulu.",
+    "Numbers: zero one two three four five six seven eight niner, also tree fife niner, decimal.",
+    `Airline callsigns: ${Object.values(DEFAULT_AIRLINE_TELEPHONY).join(", ")}.`,
+    "Common phrases: ready for pushback, request taxi, holding point, line up and wait, cleared for takeoff, contact tower, QNH, flight level, squawk, wilco, roger, affirm, negative, say again, runway, heading, descend, climb, maintain.",
+].join(" ");
 
 interface PTTRequest {
     audio: string; // Base64 encoded audio
@@ -124,7 +139,8 @@ export default defineEventHandler(async (event) => {
             file: createReadStream(audioFileForWhisper),
             model: "whisper-1",
             language: "en",
-            prompt: "This is ATC radio communication with aviation phraseology including callsigns, runway numbers, and standard procedures."
+            temperature: 0,
+            prompt: STT_BIAS_PROMPT
         });
 
         const transcribedText = transcription.text.trim();
