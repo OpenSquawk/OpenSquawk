@@ -2,6 +2,9 @@
 import { createError } from 'h3'
 import { getOpenAIClient } from '../../../utils/openai'
 import { getServerRuntimeConfig } from '../../../utils/runtimeConfig'
+import { requireUserSession } from '../../../utils/auth'
+import { enforceRateLimit } from '../../../utils/rateLimit'
+import { recordUsage } from '../../../utils/usage'
 
 const SYSTEM_PROMPT =
     'Check if the pilot readback contains ALL of: Frankfurt or EDDF, FL320, and 120.8 MHz. ' +
@@ -10,7 +13,10 @@ const SYSTEM_PROMPT =
 const READBACK =
     'Lufthanser four seven eight cleared fra via NORDA1A, climb 5000 feet, expect flight level tree too zero, dep 120 decimal 8, squawk 4213.';
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
+    const user = await requireUserSession(event)
+    enforceRateLimit(event, 'tools-latency', String(user._id), 5)
+
     const client = getOpenAIClient()
     const { llmModel } = getServerRuntimeConfig()
     const model = llmModel || 'chatgpt-5-nano'
@@ -31,6 +37,16 @@ export default defineEventHandler(async () => {
         const parsed = Number.parseInt(raw, 10)
         const validResult = Number.isInteger(parsed) && parsed >= 0 && parsed <= 2 ? parsed : null
         const latencyMs = Date.now() - started
+
+        await recordUsage({
+            user: String(user._id),
+            kind: 'llm',
+            provider: 'openai',
+            model,
+            endpoint: '/api/service/tools/latency',
+            inputTokens: response.usage?.prompt_tokens,
+            outputTokens: response.usage?.completion_tokens,
+        })
 
         return {
             result: validResult,

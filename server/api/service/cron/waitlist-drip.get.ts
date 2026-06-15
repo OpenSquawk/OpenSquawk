@@ -12,6 +12,8 @@ import {
   renderInvitationText,
 } from '../../../utils/invitations'
 import { buildWeeklyKpiReport, renderWeeklyKpiEmail, renderWeeklyKpiText } from '../../../utils/kpiReport'
+import { requireCronSecret } from '../../../utils/cron'
+import { maybeSendUsageQuotaAlert } from '../../../utils/usageAlert'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 const INVITATION_DELAY_DAYS = 5
@@ -93,7 +95,9 @@ async function sendWeeklyKpiReportIfDue(now: Date) {
   }
 }
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
+  requireCronSecret(event)
+
   const now = new Date()
   const invitationCutoff = new Date(now.getTime() - INVITATION_DELAY_DAYS * DAY_MS)
   const feedbackCutoff = new Date(now.getTime() - FEEDBACK_DELAY_DAYS * DAY_MS)
@@ -188,9 +192,15 @@ export default defineEventHandler(async () => {
   const kpiReport = await sendWeeklyKpiReportIfDue(now)
   console.log(`[waitlist-drip] weekly KPI report: ${kpiReport.sent ? 'sent' : `skipped (${kpiReport.skipped})`}`)
 
+  const usageAlert = await maybeSendUsageQuotaAlert(now)
+  if (usageAlert.sent) {
+    console.log(`[waitlist-drip] usage quota alert sent ($${usageAlert.costUsd?.toFixed(4)})`)
+  }
+
   return {
     invitationsSent,
     feedbackRequests,
     kpiReport,
+    usageAlert,
   }
 })

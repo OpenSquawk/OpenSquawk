@@ -1,5 +1,6 @@
 // shared/composables/flightlab/useFlightLabAudio.ts
 import { ref, computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import type { FlightLabSound } from '../../data/flightlab/types'
 import { getReadabilityProfile, createNoiseGenerators } from '../../utils/radioEffects'
 import type { PizzicatoLite as PizzicatoLiteType } from '../../utils/pizzicatoLite'
@@ -134,9 +135,11 @@ export function useFlightLabAudio() {
         }
         isSpeaking.value = true
         try {
-          // Call the existing TTS API
+          // Call the existing TTS API (now requires an authenticated session)
+          const auth = useAuthStore()
           const res = await $fetch<any>('/api/atc/say', {
             method: 'POST',
+            headers: auth.accessToken ? { Authorization: `Bearer ${auth.accessToken}` } : undefined,
             body: {
               text,
               level: options?.readability ?? 5,

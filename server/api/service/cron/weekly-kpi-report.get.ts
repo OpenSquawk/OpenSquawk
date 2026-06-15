@@ -1,18 +1,12 @@
-import { createError, getQuery } from 'h3'
 import { sendMail } from '../../../utils/notifications'
 import { buildWeeklyKpiReport, renderWeeklyKpiEmail, renderWeeklyKpiText } from '../../../utils/kpiReport'
+import { requireCronSecret } from '../../../utils/cron'
+import { maybeSendUsageQuotaAlert } from '../../../utils/usageAlert'
 
 const DEFAULT_KPI_RECIPIENT = 'opensquawk-kpi@faktorxmensch.com'
 
 export default defineEventHandler(async (event) => {
-  const secret = process.env.KPI_CRON_SECRET?.trim()
-  if (secret) {
-    const query = getQuery(event)
-    const provided = typeof query.secret === 'string' ? query.secret : ''
-    if (provided !== secret) {
-      throw createError({ statusCode: 401, statusMessage: 'Invalid KPI cron secret.' })
-    }
-  }
+  requireCronSecret(event)
 
   const report = await buildWeeklyKpiReport()
   const to = process.env.KPI_EMAIL_TO || DEFAULT_KPI_RECIPIENT
@@ -25,6 +19,8 @@ export default defineEventHandler(async (event) => {
     html: renderWeeklyKpiEmail(report),
   })
 
+  const usageAlert = await maybeSendUsageQuotaAlert()
+
   return {
     success: true,
     sent,
@@ -34,5 +30,7 @@ export default defineEventHandler(async (event) => {
     totals: report.totals,
     products: report.products,
     smartGoals: report.smartGoals,
+    aiUsage: report.aiUsage,
+    usageAlert,
   }
 })
