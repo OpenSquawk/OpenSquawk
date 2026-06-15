@@ -10,12 +10,12 @@ jobs:
     name: Test suite
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Enable Corepack
         run: corepack enable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: yarn
@@ -27,19 +27,15 @@ jobs:
         run: yarn test
 
   typecheck:
-    name: Typecheck (non-blocking)
+    name: Typecheck
     runs-on: ubuntu-latest
-    # TypeScript strict mode is currently disabled (see review QUAL-10). This job
-    # surfaces type errors without gating merges; promote it to a required check
-    # once the strict-mode cleanup lands.
-    continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Enable Corepack
         run: corepack enable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: yarn
@@ -47,5 +43,5 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: vue-tsc
-        run: yarn vue-tsc --noEmit
+      - name: Typecheck (vue-tsc --build)
+        run: yarn typecheck
