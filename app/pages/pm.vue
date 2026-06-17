@@ -3012,6 +3012,17 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
     sid:              v.sid              || 'UNKNOWN1A',
     initial_altitude: String(v.initial_altitude_ft ?? 5000),
     squawk:           String(v.squawk ?? '2000'),
+    // Shared / arrival variables. The engine generates these, but they were not
+    // being forwarded — so arrival flows (and taxi/tower on departure) fell back
+    // to YAML defaults and ignored the selected flight. Names are mapped to the
+    // backend flow conventions (qnh_hpa→qnh, acf_type→aircraft_type, …).
+    runway:           v.runway           || '25R',
+    qnh:              String(v.qnh_hpa ?? '1013'),
+    surface_wind:     v.surface_wind     || '250/08',
+    taxi_route:       v.taxi_route       || 'A, B',
+    aircraft_type:    v.acf_type         || 'A320',
+    cruise_level:     v.cruise_flight_level || 'FL360',
+    assigned_squawk:  String(v.squawk ?? '2000'),
     // All airport frequencies — available to every flow in the chain.
     delivery_freq:    v.delivery_freq    || '121.950',
     ground_freq:      v.ground_freq      || '121.800',
