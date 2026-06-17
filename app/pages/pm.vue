@@ -140,48 +140,57 @@
           {{ error }}
         </v-alert>
 
-        <!-- Complete scenarios -->
-        <div>
-          <p class="text-[11px] font-semibold uppercase tracking-widest text-white/35 mb-3">
-            Complete scenarios
+        <!-- Scenarios grouped by journey, each chain shown as a flow -->
+        <div v-for="grp in chainGroups" :key="grp.category" class="space-y-3">
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-white/35">
+            {{ grp.category }}
           </p>
-          <div class="grid grid-cols-2 gap-3">
-            <v-card
-                v-for="s in completeScenarios"
-                :key="s.id"
-                class="bg-white/5 border border-white/10 backdrop-blur cursor-pointer transition hover:border-cyan-400/60 hover:bg-white/8"
-                rounded="lg"
-                @click="launchScenario(s)"
-            >
-              <v-card-text class="p-4 space-y-2">
-                <v-icon :icon="s.icon" class="text-cyan-300" size="28" />
-                <div class="font-semibold text-sm leading-tight">{{ s.name }}</div>
-                <div class="text-[11px] text-white/45 leading-snug">{{ s.subtitle }}</div>
-              </v-card-text>
-            </v-card>
-          </div>
+
+          <v-card
+              v-for="chain in grp.chains"
+              :key="chain.id"
+              class="bg-white/5 border border-white/10 backdrop-blur"
+              rounded="lg"
+          >
+            <v-card-text class="p-4 space-y-3">
+              <!-- Chain header + run-the-whole-thing button -->
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 min-w-0">
+                  <v-icon :icon="chain.complete.icon" class="text-cyan-300 shrink-0" size="24" />
+                  <div class="min-w-0">
+                    <div class="font-semibold text-sm leading-tight">{{ chain.complete.name }}</div>
+                    <div class="text-[11px] text-white/45 leading-snug truncate">{{ chain.complete.subtitle }}</div>
+                  </div>
+                </div>
+                <v-btn size="small" color="cyan" variant="flat" class="shrink-0" @click="launchScenario(chain.complete)">
+                  Fly full
+                </v-btn>
+              </div>
+
+              <!-- Phase flow: tap a step to practise just that phase -->
+              <div class="pm-flow">
+                <template v-for="(seg, i) in chain.segments" :key="seg.id">
+                  <button
+                      type="button"
+                      class="pm-flow-node"
+                      :title="seg.subtitle"
+                      @click="launchScenario(seg)"
+                  >
+                    <v-icon :icon="seg.icon" size="13" />
+                    <span>{{ seg.name }}</span>
+                  </button>
+                  <v-icon v-if="i < chain.segments.length - 1" size="13" class="pm-flow-arrow">
+                    mdi-arrow-right
+                  </v-icon>
+                </template>
+              </div>
+            </v-card-text>
+          </v-card>
         </div>
 
-        <!-- Individual phases -->
-        <div>
-          <p class="text-[11px] font-semibold uppercase tracking-widest text-white/35 mb-3">
-            Practice a single phase
-          </p>
-          <div class="grid grid-cols-2 gap-2">
-            <button
-                v-for="s in individualScenarios"
-                :key="s.id"
-                class="text-left p-3 rounded-lg bg-white/3 border border-white/8 hover:border-white/25 hover:bg-white/6 transition flex items-center gap-2"
-                @click="launchScenario(s)"
-            >
-              <v-icon :icon="s.icon" size="16" class="text-white/40 shrink-0" />
-              <div>
-                <div class="text-sm leading-tight">{{ s.name }}</div>
-                <div class="text-[10px] text-white/35 leading-tight mt-0.5">{{ s.subtitle }}</div>
-              </div>
-            </button>
-          </div>
-        </div>
+        <p class="text-[10px] text-white/30 text-center">
+          Tap a step to practise just that phase · “Fly full” runs the whole chain.
+        </p>
       </section>
 
       <!-- ── Completion Screen ───────────────────────────────────────────── -->
@@ -1922,8 +1931,35 @@ const SCENARIOS: Scenario[] = [
   },
 ]
 
-const completeScenarios = SCENARIOS.filter(s => s.isComplete)
-const individualScenarios = SCENARIOS.filter(s => !s.isComplete)
+// ---------------------------------------------------------------------------
+// Chooser layout: each complete chain is shown as a flow of its phases, so it's
+// clear which single-phase practice maps to which segment of which journey.
+// ---------------------------------------------------------------------------
+interface ChainDef {
+  category: 'Departure' | 'Arrival'
+  completeId: string   // the isComplete scenario that flies the whole chain
+  segmentIds: string[] // individual-phase scenario ids, in order
+}
+
+const CHAIN_DEFS: ChainDef[] = [
+  { category: 'Departure', completeId: 'ifr-departure', segmentIds: ['clearance', 'taxi', 'tower', 'departure'] },
+  { category: 'Arrival',   completeId: 'ifr-arrival',   segmentIds: ['ifr-enroute', 'ifr-approach', 'ifr-landing', 'taxi-in'] },
+  { category: 'Arrival',   completeId: 'vfr-arrival',   segmentIds: ['vfr-approach', 'circuit-landing', 'taxi-in'] },
+]
+
+const chainGroups = computed(() => {
+  const byCategory = new Map<string, Array<{ id: string; complete: Scenario; segments: Scenario[] }>>()
+  for (const def of CHAIN_DEFS) {
+    const complete = SCENARIOS.find(s => s.id === def.completeId)
+    if (!complete) continue
+    const segments = def.segmentIds
+      .map(id => SCENARIOS.find(s => s.id === id))
+      .filter((s): s is Scenario => !!s)
+    if (!byCategory.has(def.category)) byCategory.set(def.category, [])
+    byCategory.get(def.category)!.push({ id: def.completeId, complete, segments })
+  }
+  return Array.from(byCategory, ([category, chains]) => ({ category, chains }))
+})
 
 /** The scenario the user just finished (used on the completion screen). */
 const completedScenario = ref<Scenario | null>(null)
@@ -4777,6 +4813,35 @@ onUnmounted(() => {
 .pm-readback-field { color: rgba(255, 255, 255, 0.7); }
 .pm-readback-expected { color: #fff; font-weight: 600; }
 .pm-readback-forms { color: rgba(255, 255, 255, 0.4); }
+
+/* Scenario chooser — phase flow with arrows */
+.pm-flow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pm-flow-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11.5px;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.8);
+  transition: border-color .15s, background .15s, color .15s;
+}
+.pm-flow-node:hover {
+  border-color: rgba(34, 211, 238, 0.6);
+  background: rgba(34, 211, 238, 0.1);
+  color: #fff;
+}
+.pm-flow-arrow {
+  color: rgba(255, 255, 255, 0.25);
+}
 
 .pm-bottomnav {
   flex: 0 0 auto;
