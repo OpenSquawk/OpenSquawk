@@ -229,10 +229,26 @@ export interface SttFieldDef {
   isCallsign?: boolean
 }
 
+export interface SttFieldReport {
+  key: string
+  expected: string
+  matched: boolean
+  /** The normalized candidate form that matched the transcription, or null. */
+  matchedVia: string | null
+  /** Which transcription view the match landed in. */
+  view: 'raw' | 'spoken' | 'callsign' | null
+}
+
 export interface SttMatchResult {
   matches: Record<string, string>
   filled: number
   total: number
+  /** Normalized raw transcription (what Whisper returned, cleaned). */
+  normalized: string
+  /** Spoken→written folded view ("two five right" → "25r"). */
+  denormalized: string
+  /** Per-field diagnostic, in the original field order, for the comm log. */
+  fields: SttFieldReport[]
 }
 
 function escapeRegex(value: string): string {
@@ -265,11 +281,22 @@ export function matchTranscriptionToFields(
   const normalized = normalizeForMatch(transcription)
   const denormalized = normalizeForMatch(denormalizeSpokenAtc(transcription))
   const matches: Record<string, string> = {}
+  // Per-field diagnostic keyed by field.key (output in original order below).
+  const reportByKey: Record<string, SttFieldReport> = {}
   let filled = 0
 
   for (const field of pickLongestExpected(fields)) {
     const expectedRaw = (field.expected || '').trim()
+    const report: SttFieldReport = {
+      key: field.key,
+      expected: expectedRaw,
+      matched: false,
+      matchedVia: null,
+      view: null,
+    }
+    reportByKey[field.key] = report
     if (!expectedRaw) continue
+
     const altList = field.alternatives || []
     const candidates = Array.from(new Set([expectedRaw, ...altList]
       .map(c => (c || '').trim())
@@ -277,26 +304,36 @@ export function matchTranscriptionToFields(
       .map(normalizeForMatch)
       .filter(c => c.length >= 1)))
 
-    let matched = false
     for (const cand of candidates) {
       if (!cand) continue
-      if (candidateMatches(normalized, cand) || candidateMatches(denormalized, cand)) {
-        matched = true
-        break
+      if (candidateMatches(normalized, cand)) {
+        report.matched = true; report.matchedVia = cand; report.view = 'raw'; break
       }
-      if (field.isCallsign && cand.length >= 4) {
-        if (callsignMatches(normalized, cand) || callsignMatches(denormalized, cand)) {
-          matched = true
-          break
-        }
+      if (candidateMatches(denormalized, cand)) {
+        report.matched = true; report.matchedVia = cand; report.view = 'spoken'; break
+      }
+      if (field.isCallsign && cand.length >= 4
+          && (callsignMatches(normalized, cand) || callsignMatches(denormalized, cand))) {
+        report.matched = true; report.matchedVia = cand; report.view = 'callsign'; break
       }
     }
-    if (matched) {
+
+    if (report.matched) {
       matches[field.key] = expectedRaw
       filled++
     }
   }
-  return { matches, filled, total: fields.length }
+
+  return {
+    matches,
+    filled,
+    total: fields.length,
+    normalized,
+    denormalized,
+    fields: fields.map(f => reportByKey[f.key] ?? {
+      key: f.key, expected: (f.expected || '').trim(), matched: false, matchedVia: null, view: null,
+    }),
+  }
 }
 
 export function looksLikeCallsignKey(key: string, label?: string): boolean {

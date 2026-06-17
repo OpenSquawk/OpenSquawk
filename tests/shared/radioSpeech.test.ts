@@ -2,13 +2,61 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  DEFAULT_AIRLINE_TELEPHONY,
   normalizeAtisForSpeech,
   normalizeMetarPhrase,
   normalizeRadioPhrase,
+  speakToken,
   spellIcaoDigits,
   spellIcaoLetters,
   toIcaoPhonetic,
 } from '~~/shared/utils/radioSpeech'
+
+describe('normalizeRadioPhrase — PM radio pronunciation', () => {
+  const opts = {
+    expandCallsigns: true,
+    expandAirports: true,
+    airlineMap: DEFAULT_AIRLINE_TELEPHONY,
+    sidSuffixIcao: true,
+  }
+
+  it('expands a callsign with a multi-letter suffix (DLH6RK)', () => {
+    assert.equal(normalizeRadioPhrase('DLH6RK', opts), 'Lufthansa six Romeo Kilo')
+  })
+
+  it('spells a 4-letter ICAO airport code', () => {
+    assert.equal(normalizeRadioPhrase('EDDC', opts), spellIcaoLetters('EDDC'))
+  })
+
+  it('speaks a bare altitude in a clearance context', () => {
+    assert.match(normalizeRadioPhrase('climb initially 5000', opts), /thousand feet$/)
+  })
+
+  it('leaves sub-1000 numbers (speeds/headings) untouched', () => {
+    assert.equal(normalizeRadioPhrase('maintain 250 knots', opts), 'maintain 250 knots')
+  })
+})
+
+describe('speakToken', () => {
+  it('speaks a runway with its side', () => {
+    assert.equal(speakToken('25R'), `${spellIcaoDigits('25')} right`)
+  })
+  it('speaks a frequency with decimal', () => {
+    assert.equal(speakToken('121.800'), `${spellIcaoDigits('121')} decimal ${spellIcaoDigits('800')}`)
+  })
+  it('speaks a flight level', () => {
+    assert.equal(speakToken('FL150'), `flight level ${spellIcaoDigits('150')}`)
+  })
+  it('spells a pure number digit by digit', () => {
+    assert.equal(speakToken('2341'), spellIcaoDigits('2341'))
+  })
+  it('spells an alphanumeric identifier phonetically', () => {
+    assert.equal(speakToken('BIBAX1N'), toIcaoPhonetic('BIBAX1N'))
+  })
+  it('returns empty for plain words (caller keeps raw)', () => {
+    assert.equal(speakToken('west'), '')
+  })
+})
 
 describe('radioSpeech', () => {
   it('spells ICAO digits and letters', () => {

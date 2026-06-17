@@ -164,6 +164,42 @@ export function toIcaoPhonetic(value: string, separator = ' '): string {
         .trim();
 }
 
+/**
+ * Spoken ICAO form of a single written value (callsign/SID/runway/squawk/
+ * frequency/flight-level/number). Used to seed Whisper's `prompt` with the
+ * exact tokens the pilot is about to read back, in spoken form, so recognition
+ * is biased toward e.g. "two five right" for "25R" and "bravo india bravo alpha
+ * x-ray one november" for "BIBAX1N". Returns '' when no distinct spoken form
+ * applies (caller should fall back to the raw token).
+ */
+export function speakToken(raw: string): string {
+    const v = `${raw ?? ''}`.trim();
+    if (!v) return '';
+    // Frequency: 118.700 → "one one eight decimal seven zero zero"
+    if (/^\d{2,3}\.\d+$/.test(v)) {
+        const [left, right] = v.split('.') as [string, string];
+        return `${spellIcaoDigits(left)} decimal ${spellIcaoDigits(right)}`;
+    }
+    // Runway: 25R → "two five right"
+    const rwy = v.match(/^(\d{2})([LCR])?$/i);
+    if (rwy) {
+        const side = rwy[2]?.toUpperCase();
+        const suffix = side === 'L' ? ' left' : side === 'R' ? ' right' : side === 'C' ? ' center' : '';
+        return `${spellIcaoDigits(rwy[1]!)}${suffix}`;
+    }
+    // Flight level: FL150 → "flight level one five zero"
+    const fl = v.match(/^FL(\d+)$/i);
+    if (fl) return `flight level ${spellIcaoDigits(fl[1]!)}`;
+    // Pure number (squawk/altitude/QNH): 2341 → "two three four one"
+    if (/^\d+$/.test(v)) return spellIcaoDigits(v);
+    // Alphanumeric identifier mixing letters AND digits (SID/STAR/callsign,
+    // e.g. BIBAX1N, MARUN7F, DLH39A): spell it out phonetically. Pure-letter
+    // tokens (plain words like "west", airport codes, bare waypoints) are left
+    // raw so they are not mis-spelled letter by letter.
+    if (/^[A-Z0-9]+$/i.test(v) && /[A-Z]/i.test(v) && /\d/.test(v)) return toIcaoPhonetic(v);
+    return '';
+}
+
 function runwaySpeak(raw: string): string {
     const match = raw.match(/^(\d{2})([LCR])?$/i);
     if (!match) return raw;
@@ -291,12 +327,14 @@ function qnhSpeak(raw: string): string {
 
 function callsignSpeak(raw: string, map: AirlineTelephonyMap): string {
     const upper = raw.toUpperCase();
-    const match = upper.match(/^([A-Z]{2,3})(\d{1,4})([A-Z])?$/);
+    // Allow one or more trailing letters so suffixes like "6RK" (→ "six romeo
+    // kilo") are spelled out, not just a single letter.
+    const match = upper.match(/^([A-Z]{2,3})(\d{1,4})([A-Z]{0,3})$/);
     if (!match) return raw;
-    const [, prefix, digitsPart, suffixLetter] = match;
+    const [, prefix, digitsPart, suffixLetters] = match;
     const telephony = map[prefix] ?? spellIcaoLetters(prefix);
     const digitsSpoken = spellIcaoDigits(digitsPart);
-    const suffix = suffixLetter ? ` ${spellIcaoLetters(suffixLetter)}` : '';
+    const suffix = suffixLetters ? ` ${spellIcaoLetters(suffixLetters)}` : '';
     return `${telephony} ${digitsSpoken}${suffix}`.trim();
 }
 
@@ -676,6 +714,21 @@ export function normalizeRadioPhrase(text: string, options: NormalizeRadioOption
     out = out.replace(/\b(\d{3,5})\s*(?:ft|feet)\b/gi, (_, ft: string) => altitudeSpeak(Number(ft)));
     out = out.replace(/\bQNH\s*(\d{3,4})\b/gi, (_, qnh: string) => qnhSpeak(qnh));
 
+    // Bare altitude/height numbers without an explicit "feet" unit, in a
+    // clearance/readback context ("climb initially 5000", "passing 1500",
+    // "descend to 3000"). Runs after the squawk/QNH/FL rules above have already
+    // consumed their numbers, so it only sees genuine altitudes. The keyword may
+    // be separated from the number by a word ("climb initially 5000").
+    out = out.replace(
+        /\b(climb|climbing|descend|descending|maintain|passing|initially)\b((?:\s+\w+){0,2}?\s+)(\d{3,5})\b/gi,
+        (m: string, verb: string, gap: string, num: string) => {
+            const v = Number(num);
+            // Only treat as an altitude when ≥ 1000 ft, so speeds/headings
+            // ("maintain 250") are left untouched.
+            return v >= 1000 ? `${verb}${gap}${altitudeSpeak(v)}` : m;
+        },
+    );
+
     // Stand/gate designators: "stand A12" → "stand alfa wun too"
     out = out.replace(/\b(stand|gate)\s+([A-Z]{1,2}\d{1,4}[A-Z]?)\b/gi, (_m, word: string, code: string) =>
         `${word} ${toIcaoPhonetic(code)}`);
@@ -723,7 +776,7 @@ export function normalizeRadioPhrase(text: string, options: NormalizeRadioOption
 
     if (opts.expandCallsigns) {
         const airlineMap = opts.airlineMap ?? {};
-        out = out.replace(/\b([A-Z]{2,3}\d{1,4}[A-Z]?)\b/g, (match: string) => callsignSpeak(match, airlineMap));
+        out = out.replace(/\b([A-Z]{2,3}\d{1,4}[A-Z]{0,3})\b/g, (match: string) => callsignSpeak(match, airlineMap));
     }
 
     out = applyTaxiRoutePhonetics(out);
