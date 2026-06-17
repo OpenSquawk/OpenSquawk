@@ -29,7 +29,7 @@
           <li><strong>Communications:</strong> All radio inputs (typed or push-to-talk transcripts, normalized text, metadata such as module, lesson ID, signal strength, decision context).</li>
           <li><strong>Technical logs:</strong> Device details (browser, OS), timestamps, request IDs, error logs.</li>
         </ul>
-        <p class="text-xs text-white/50">Note: Raw audio from push-to-talk is processed temporarily only. Transcripts and context data are stored to improve quality.</p>
+        <p class="text-xs text-white/50">Note: Raw audio from push-to-talk is transmitted to OpenAI for speech-to-text transcription (see section 5) and is not stored by us beyond temporary processing. The resulting transcripts and context data are stored to improve quality.</p>
       </section>
 
       <section class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
@@ -55,7 +55,16 @@
       <section class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
         <h2 class="text-xl font-semibold">5. Sharing & processors</h2>
         <p class="text-white/70">
-          OpenSquawk runs on European cloud infrastructure (currently Hetzner Cloud, Germany). Communication data resides in our MongoDB database. External AI providers (e.g. OpenAI) receive only pseudonymised text to power TTS/LLM features. Appropriate processing agreements are in place. Transfers to third countries rely on EU Standard Contractual Clauses where necessary.
+          OpenSquawk runs on European cloud infrastructure (currently Hetzner Cloud, Germany). Communication data resides in our MongoDB database. We use the following processors:
+        </p>
+        <ul class="list-disc space-y-2 pl-6 text-white/70">
+          <li><strong>OpenAI (OpenAI, L.L.C., USA):</strong> To power the live radio features your spoken push-to-talk <strong>audio is sent to OpenAI for speech-to-text transcription (Whisper)</strong>, and controller text is sent to OpenAI for text-to-speech synthesis and language features. Where you enable the optional self-hosted speech server (Speaches/Piper), speech is processed on that infrastructure instead of OpenAI.</li>
+          <li><strong>Radio decision backend:</strong> Pilot transcripts are processed by our radio backend to determine the next ATC response and session state.</li>
+          <li><strong>Hotjar (Hotjar Ltd, Malta):</strong> Product-usage and session analytics (see section 6).</li>
+          <li><strong>Email delivery:</strong> Transactional/SMTP provider for notifications and the emails you opt into.</li>
+        </ul>
+        <p class="text-white/70">
+          Appropriate data processing agreements are in place. Transfers to third countries (e.g. the USA for OpenAI) rely on EU Standard Contractual Clauses where necessary.
         </p>
         <p class="text-xs text-white/60">
           Note: Form submissions (waitlist, feature updates, roadmap suggestions) trigger an internal notification email to info@opensquawk.de via our SMTP or transactional provider. We only forward the details you submit so we can respond quickly.
@@ -63,7 +72,26 @@
       </section>
 
       <section class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
-        <h2 class="text-xl font-semibold">6. Your rights</h2>
+        <h2 class="text-xl font-semibold">6. Analytics (Hotjar)</h2>
+        <p class="text-white/70">
+          We use Hotjar (Hotjar Ltd, Malta) to understand how the interface is used so we can improve it. Hotjar may capture product-usage events and session insights — such as clicks, navigation, scrolling, device/browser attributes and interactions with page elements — and sets its own cookies to recognise returning sessions. We do not use Hotjar to identify you personally, and we ask it to suppress sensitive input.
+        </p>
+        <p class="text-white/70">
+          This analytics processing is based on your consent (Art. 6(1)(a) GDPR), which you can withdraw at any time with future effect. You can also opt out directly via Hotjar's <a href="https://www.hotjar.com/policies/do-not-track/" class="text-cyan-300 underline" target="_blank" rel="noopener">Do Not Track</a> mechanism.
+        </p>
+      </section>
+
+      <section class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+        <h2 class="text-xl font-semibold">7. Cookies & local storage</h2>
+        <ul class="list-disc space-y-2 pl-6 text-white/70">
+          <li><strong>Strictly necessary (sign-in):</strong> an httpOnly session cookie (<code>os_refresh_token</code>) keeps you signed in, and a short-lived access token is stored in your browser's local storage (<code>os_access_token</code>). These are set only when you log in and are required for the service to function.</li>
+          <li><strong>Analytics:</strong> Hotjar sets cookies to recognise returning sessions; these are used only with your consent (see section 6).</li>
+        </ul>
+        <p class="text-white/70">We do not use advertising or cross-site tracking cookies.</p>
+      </section>
+
+      <section class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+        <h2 class="text-xl font-semibold">8. Your rights</h2>
         <ul class="list-disc space-y-2 pl-6 text-white/70">
           <li>Access, rectification, erasure and restriction (Art. 15–18 GDPR).</li>
           <li>Data portability (Art. 20 GDPR).</li>
@@ -74,7 +102,7 @@
       </section>
 
       <section class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
-        <h2 class="text-xl font-semibold">7. Contact</h2>
+        <h2 class="text-xl font-semibold">9. Contact</h2>
         <p class="text-white/70">
           To exercise your rights please email info@opensquawk.de. Provide the email address registered with OpenSquawk and, if applicable, additional identifiers (e.g. VATSIM ID) so we can verify your request.
         </p>
@@ -84,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-const lastUpdated = new Date('2025-09-17').toLocaleDateString('en-US')
+const lastUpdated = new Date('2026-06-17').toLocaleDateString('en-US')
 </script>
 
 <style scoped>
