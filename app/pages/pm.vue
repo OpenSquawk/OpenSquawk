@@ -3059,9 +3059,17 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
   currentScreen.value = 'monitor'
   persistSelectedPlan(flightPlan)
 
-  if (scenarioIcao === 'EDDF') {
-    frequencies.value.active = '121.900'
-    frequencies.value.standby = '121.700'
+  // Tune the radio to the starting position's actual frequency so the pilot's
+  // first call is on the right frequency instead of being rejected with a
+  // "check frequency" (the active freq otherwise carries over from a prior run
+  // or a hardcoded default, which breaks every non-EDDF start and any arrival
+  // that begins on Center/Approach rather than Delivery).
+  const startFreq = expectedFrequencyForState()
+  if (startFreq) {
+    if (frequencies.value.active && frequencies.value.active !== startFreq) {
+      frequencies.value.standby = frequencies.value.active
+    }
+    frequencies.value.active = startFreq
   }
 
   // 4. Walk the initial ATC/system states locally (deterministic, no LLM).
