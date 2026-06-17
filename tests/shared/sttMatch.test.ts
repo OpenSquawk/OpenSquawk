@@ -120,6 +120,31 @@ describe('fuzzyContains', () => {
   })
 })
 
+describe('matchTranscriptionToFields — per-field report', () => {
+  it('reports matched and missing fields with the view that matched', () => {
+    const result = matchTranscriptionToFields('runway two five right squawk seven five zero zero', [
+      { key: 'runway', expected: '25R' },
+      { key: 'squawk', expected: '7500' },
+      { key: 'altitude', expected: '5000' },
+    ])
+    const byKey = Object.fromEntries(result.fields.map(f => [f.key, f]))
+    assert.equal(byKey.runway!.matched, true)
+    assert.equal(byKey.runway!.view, 'spoken')      // folded from "two five right"
+    assert.equal(byKey.squawk!.matched, true)
+    assert.equal(byKey.altitude!.matched, false)     // never spoken
+    assert.equal(byKey.altitude!.matchedVia, null)
+    assert.match(result.denormalized, /25r/)
+  })
+
+  it('preserves original field order in the report', () => {
+    const result = matchTranscriptionToFields('nothing here', [
+      { key: 'a', expected: '111' },
+      { key: 'b', expected: '222' },
+    ])
+    assert.deepEqual(result.fields.map(f => f.key), ['a', 'b'])
+  })
+})
+
 describe('looksLikeCallsignKey', () => {
   it('detects common callsign field keys', () => {
     assert.equal(looksLikeCallsignKey('callsign'), true)

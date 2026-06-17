@@ -1175,6 +1175,23 @@
                     </div>
                   </div>
 
+                  <!-- Per-field readback debug: what was recognised vs missing. -->
+                  <div v-if="!sttRecording && !sttTranscribing && sttLastReport && sttLastReport.fields.length" class="stt-report">
+                    <div
+                        v-for="f in sttLastReport.fields"
+                        :key="f.key"
+                        class="stt-report-row"
+                        :class="f.matched ? 'is-ok' : 'is-missing'"
+                    >
+                      <v-icon size="13">{{ f.matched ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon>
+                      <span class="stt-report-field">{{ f.key }}</span>
+                      <span class="stt-report-expected">{{ f.expected || '—' }}</span>
+                      <span v-if="f.matched" class="stt-report-via">recognised ({{ f.view }})</span>
+                      <span v-else class="stt-report-via">not recognised</span>
+                    </div>
+                    <div class="stt-report-folded">folded: {{ sttLastReport.denormalized }}</div>
+                  </div>
+
                   <div v-if="sttError" class="stt-error-body">{{ sttError }}</div>
 
                   <div v-else-if="sttRecording || sttTranscribing" class="stt-waiting">
@@ -2900,6 +2917,7 @@ const sttLastTranscription = ref('')
 const sttEditableTranscription = ref('')
 const sttFilledFields = reactive<Record<string, boolean>>({})
 const sttLastFillSummary = ref<{ filled: number; total: number } | null>(null)
+const sttLastReport = ref<import('~~/shared/utils/sttMatch').SttMatchResult | null>(null)
 const sttRecordingSeconds = ref(0)
 const sttMediaRecorder = ref<MediaRecorder | null>(null)
 const sttChunks = ref<Blob[]>([])
@@ -3561,9 +3579,13 @@ function buildSttFieldDefs(): SttFieldDef[] {
 }
 
 function mapTranscriptionToFields(transcription: string): { filled: number; total: number } {
-  if (!activeLesson.value || !scenario.value) return { filled: 0, total: 0 }
+  if (!activeLesson.value || !scenario.value) {
+    sttLastReport.value = null
+    return { filled: 0, total: 0 }
+  }
   const defs = buildSttFieldDefs()
   const result = matchTranscriptionToFields(transcription, defs)
+  sttLastReport.value = result
   // Clear stale mic markers for fields not in this match round
   Object.keys(sttFilledFields).forEach(k => { delete sttFilledFields[k] })
   for (const [key, value] of Object.entries(result.matches)) {
@@ -3585,6 +3607,7 @@ function clearSttResult() {
   sttLastTranscription.value = ''
   sttEditableTranscription.value = ''
   sttLastFillSummary.value = null
+  sttLastReport.value = null
   sttError.value = ''
   Object.keys(sttFilledFields).forEach(k => { delete sttFilledFields[k] })
 }
@@ -3610,11 +3633,19 @@ async function processSTTAudio(blob: Blob) {
       return
     }
     const base64 = await blobToBase64(blob)
+    // Seed Whisper with this lesson's expected field values (raw + alternatives);
+    // the server expands them to spoken ICAO form and biases recognition.
+    const sttDefs = buildSttFieldDefs()
+    const expectedTokens = Array.from(new Set(
+      sttDefs.flatMap(d => [d.expected, ...(d.alternatives ?? [])]).map(t => (t || '').trim()).filter(Boolean)
+    ))
+    const expectedPhrase = sttDefs.map(d => d.expected).filter(Boolean).join(', ')
     const result = await api.post<{ success: boolean; transcription: string }>('/api/atc/ptt', {
       audio: base64,
       moduleId: current.value?.id || 'classroom',
       lessonId: activeLesson.value.id,
       format: 'webm',
+      expected: { phrase: expectedPhrase || undefined, tokens: expectedTokens },
     })
     if (result?.success && result.transcription) {
       const text = result.transcription.trim()
@@ -7032,6 +7063,31 @@ onBeforeUnmount(() => {
   padding: 3px 9px;
   border-radius: 999px;
   letter-spacing: .02em;
+}
+
+.stt-report {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+}
+.stt-report-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stt-report-row.is-ok { color: #6ee7a8; }
+.stt-report-row.is-missing { color: #fca5a5; }
+.stt-report-field { color: var(--t2); min-width: 90px; }
+.stt-report-expected { color: var(--text); font-weight: 600; }
+.stt-report-via { color: var(--t2); opacity: .8; }
+.stt-report-folded {
+  margin-top: 2px;
+  color: var(--t2);
+  opacity: .6;
+  font-size: 11px;
 }
 
 .stt-waiting {

@@ -22,6 +22,19 @@ export interface RadioTransmitResponse {
     auto_advanced_states?: string[]
     /** True when the full chain is done — show the completion screen. */
     session_complete?: boolean
+    /** Per-field readback diagnostic for the pilot state just evaluated. */
+    readback_report?: ReadbackFieldDetail[]
+}
+
+export interface ReadbackFieldDetail {
+    field: string
+    expected: string
+    matched: boolean
+    /** Which accepted spoken form matched ("two five right", "icao_phonetic"), or null. */
+    matched_via: string | null
+    /** All spoken forms that would have matched this field. */
+    accepted_forms: string[]
+    note?: string | null
 }
 
 export function useRadioBackend() {

@@ -11,7 +11,7 @@ import { TransmissionLog } from "../../models/TransmissionLog";
 import { getUserFromEvent } from "../../utils/auth";
 import { enforceRateLimit, getClientIp } from "../../utils/rateLimit";
 import { recordUsage } from "../../utils/usage";
-import { DEFAULT_AIRLINE_TELEPHONY } from "../../../shared/utils/radioSpeech";
+import { DEFAULT_AIRLINE_TELEPHONY, normalizeRadioPhrase, speakToken } from "../../../shared/utils/radioSpeech";
 
 type AudioFormat = 'wav' | 'mp3' | 'ogg' | 'webm'
 
@@ -29,12 +29,45 @@ const STT_BIAS_PROMPT = [
     "Common phrases: ready for pushback, request taxi, holding point, line up and wait, cleared for takeoff, contact tower, QNH, flight level, squawk, wilco, roger, affirm, negative, say again, runway, heading, descend, climb, maintain.",
 ].join(" ");
 
+// Whisper keeps only the final ~224 prompt tokens, so the session-specific
+// expected readback is appended LAST (after the generic bias) to ensure it
+// survives truncation. We add the expected transmission both as written tokens
+// (spelling bias for callsigns/SIDs) and in spoken ICAO form (the words the
+// pilot actually says) — e.g. "25R" → "two five right", "BIBAX1N" → phonetics.
+function buildSttPrompt(expected?: { phrase?: string; tokens?: string[] }): string {
+    const segments: string[] = [STT_BIAS_PROMPT];
+
+    const phrase = expected?.phrase?.trim();
+    if (phrase) {
+        segments.push(`Expected pilot transmission: ${phrase}.`);
+        const spoken = normalizeRadioPhrase(phrase, { expandAirports: true, expandCallsigns: true });
+        if (spoken && spoken.toLowerCase() !== phrase.toLowerCase()) {
+            segments.push(`Spoken: ${spoken}.`);
+        }
+    }
+
+    const tokens = Array.from(
+        new Set((expected?.tokens ?? []).map(t => `${t ?? ''}`.trim()).filter(Boolean))
+    );
+    if (tokens.length) {
+        segments.push(`Expected values: ${tokens.join(', ')}.`);
+        const spokenTokens = tokens.map(speakToken).filter(Boolean);
+        if (spokenTokens.length) segments.push(`Read as: ${spokenTokens.join(', ')}.`);
+    }
+
+    return segments.join(" ");
+}
+
 interface PTTRequest {
     audio: string; // Base64 encoded audio
     moduleId: string;
     lessonId: string;
     format?: AudioFormat;
     sessionId?: string;       // Python backend session ID — used for TransmissionLog correlation
+    expected?: {              // Seeds Whisper toward this state's expected readback
+        phrase?: string;      // rendered expected_pilot_template (PM) or joined field values
+        tokens?: string[];    // discrete expected values (variables / lesson field values)
+    };
     context?: {               // Legacy field; kept for backwards compat but not used for routing
         state_id?: string;
         flags?: Record<string, any>;
@@ -140,7 +173,7 @@ export default defineEventHandler(async (event) => {
             model: "whisper-1",
             language: "en",
             temperature: 0,
-            prompt: STT_BIAS_PROMPT
+            prompt: buildSttPrompt(body.expected)
         });
 
         const transcribedText = transcription.text.trim();

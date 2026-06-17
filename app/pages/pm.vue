@@ -739,6 +739,31 @@
 
         <!-- Desktop log rail -->
         <aside class="pm-lograil">
+          <!-- STT readback check: what was recognised vs missing in the last call. -->
+          <div v-if="lastReadbackReport.length" class="pm-readback-check">
+            <div class="pm-readback-head">
+              <v-icon size="15">mdi-magnify-scan</v-icon>
+              <span>Readback check</span>
+            </div>
+            <p v-if="lastReadbackTranscript" class="pm-readback-heard">heard: “{{ lastReadbackTranscript }}”</p>
+            <div
+                v-for="r in lastReadbackReport"
+                :key="r.field"
+                class="pm-readback-row"
+                :class="r.matched ? 'is-ok' : 'is-missing'"
+            >
+              <v-icon size="13">{{ r.matched ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon>
+              <span class="pm-readback-text">
+                <span class="pm-readback-field">{{ r.field }}</span>
+                = <span class="pm-readback-expected">{{ r.expected || '—' }}</span>
+                <template v-if="r.matched"> → “{{ r.matched_via }}”</template>
+                <template v-else>
+                  → not recognised<span v-if="r.accepted_forms.length" class="pm-readback-forms">
+                    (say: {{ r.accepted_forms.join(' / ') }})</span>
+                </template>
+              </span>
+            </div>
+          </div>
           <CommLog :entries="log" :limit="30" dense @clear="clearLog" />
         </aside>
       </div>
@@ -1323,12 +1348,16 @@ const backendSessionId = ref<string | null>(null)
 const lastControllerSay = ref<string | null>(null)
 // Authoritative expected pilot phrase from the backend — replaces local engine rendering.
 const backendExpectedPhrase = ref<string | null>(null)
+// Per-field readback diagnostic from the last transmission (STT debug panel).
+const lastReadbackReport = ref<import('../composables/useRadioBackend').ReadbackFieldDetail[]>([])
+const lastReadbackTranscript = ref<string>('')
 // Toggle: show radio pronunciation (wun, tree, squawk niner…) vs plain text.
 const showRadioPronunciation = ref(false)
 
 function toRadioSpeech(text: string): string {
   return normalizeRadioPhrase(text, {
     expandCallsigns: true,
+    expandAirports: true,
     airlineMap: DEFAULT_AIRLINE_TELEPHONY,
     sidSuffixIcao: true,
   })
@@ -2762,6 +2791,10 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
     pmLog.debug('moveToSilent ← next_state_id:', response.next_state_id)
     moveToSilent(response.next_state_id)
 
+    // Capture the per-field readback diagnostic for the STT debug panel.
+    lastReadbackReport.value = response.readback_report ?? []
+    lastReadbackTranscript.value = transcript
+
     // Update expected phrase AFTER cursor moves so any local-engine reactive
     // updates from moveToSilent have already settled.
     backendExpectedPhrase.value = response.expected_pilot_template ?? null
@@ -3306,6 +3339,24 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary)
 }
 
+// Build the Whisper-prompt seed for the current state: the expected pilot
+// phrase plus the active variable values (callsign, SID, squawk, runway,
+// frequencies…). The server expands these to spoken ICAO form and appends them
+// to the bias prompt so Whisper is steered toward exactly what's expected.
+function buildSttExpected(): { phrase?: string; tokens: string[] } {
+  const phrase = backendExpectedPhrase.value?.trim() || undefined
+  const dict = ((vars as any).value ?? {}) as Record<string, unknown>
+  const tokens: string[] = []
+  for (const val of Object.values(dict)) {
+    if (typeof val === 'number') { tokens.push(String(val)); continue }
+    if (typeof val === 'string') {
+      const t = val.trim()
+      if (t && t.length <= 24) tokens.push(t)
+    }
+  }
+  return { phrase, tokens }
+}
+
 const processTransmission = async (audioBlob: Blob, isIntercom: boolean, format: 'wav' | 'webm' = 'webm') => {
   const channel = isIntercom ? 'INTERCOM' : 'RADIO'
   pmLog.info(`PTT ▶ ${channel}  blob=${(audioBlob.size / 1024).toFixed(1)}KB  fmt=${format}  session=${backendSessionId.value?.slice(0,8) ?? 'none'}`)
@@ -3342,6 +3393,7 @@ const processTransmission = async (audioBlob: Blob, isIntercom: boolean, format:
         lessonId: currentState.value?.id || 'general',
         format,
         sessionId: backendSessionId.value || undefined,
+        expected: buildSttExpected(),
       })
 
       if (result.success) {
@@ -4643,6 +4695,44 @@ onUnmounted(() => {
 .pm-lograil {
   display: none;
 }
+
+.pm-readback-check {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 11.5px;
+}
+.pm-readback-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 6px;
+}
+.pm-readback-heard {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+.pm-readback-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  line-height: 1.5;
+}
+.pm-readback-row.is-ok { color: #6ee7a8; }
+.pm-readback-row.is-missing { color: #fca5a5; }
+.pm-readback-field { color: rgba(255, 255, 255, 0.7); }
+.pm-readback-expected { color: #fff; font-weight: 600; }
+.pm-readback-forms { color: rgba(255, 255, 255, 0.4); }
 
 .pm-bottomnav {
   flex: 0 0 auto;
