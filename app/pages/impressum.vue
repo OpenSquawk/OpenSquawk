@@ -12,7 +12,7 @@
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
         <h2 class="text-xl font-semibold">Company details (§5 DDG)</h2>
         <div class="space-y-2 text-white/70">
-          <p>Faktor Mensch MEDIA UG (limited liability)</p>
+          <p>Faktor Mensch MEDIA UG (haftungsbeschränkt)</p>
           <p>Wilhelm-Holzamer-Strasse 8</p>
           <p>55129 Mainz</p>
         </div>
@@ -26,7 +26,7 @@
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
         <h2 class="text-xl font-semibold">Contact</h2>
         <div class="space-y-2 text-white/70">
-          <p>Phone: +49 251 981 157 912 0</p>
+          <p>Phone: +49 152 58 79 98 71</p>
           <p>Email: info@opensquawk.de</p>
         </div>
       </section>

@@ -34,7 +34,7 @@ const sections = [
   {
     title: '1. Scope',
     paragraphs: [
-      'These terms govern the use of the OpenSquawk platform (the “Service”), operated by Faktor Mensch MEDIA UG (limited liability). Conflicting user terms only apply if agreed to in writing.',
+      'These terms govern the use of the OpenSquawk platform (the “Service”), operated by Faktor Mensch MEDIA UG (haftungsbeschränkt). Conflicting user terms only apply if agreed to in writing.',
     ],
   },
   {

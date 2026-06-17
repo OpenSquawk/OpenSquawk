@@ -13,8 +13,8 @@
       <section class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
         <h2 class="text-xl font-semibold">1. Controller</h2>
         <p class="text-white/70">
-          The data controller under the GDPR is Faktor Mensch MEDIA UG (limited liability), Wilhelm-Holzamer-Strasse 8,
-          55129 Mainz, Germany. Managing directors: Dominik Ziegenhagel, Emanuel Leube. Telephone: +49 251 981 157 912 0.
+          The data controller under the GDPR is Faktor Mensch MEDIA UG (haftungsbeschränkt), Wilhelm-Holzamer-Strasse 8,
+          55129 Mainz, Germany. Managing directors: Dominik Ziegenhagel, Emanuel Leube. Telephone: +49 152 58 79 98 71.
           Email: info@opensquawk.de.
         </p>
       </section>
