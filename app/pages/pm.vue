@@ -2804,9 +2804,13 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   const expectedFreq = expectedFrequencyForState()
   if (expectedFreq && frequencies.value.active !== expectedFreq) {
     const callsign = (vars as any).value?.callsign ?? ''
+    const freqName = (currentState.value as any)?.frequency_name as string | undefined
+    // Tell the pilot exactly which frequency to switch to (and the position),
+    // since tuning is manual and the call won't go through until they do.
+    const target = freqName ? `${freqName} on ${expectedFreq}` : expectedFreq
     const reply = callsign
-      ? `${callsign}, check frequency. You are on ${frequencies.value.active}, expected ${expectedFreq}.`
-      : `Station calling, check frequency. Expected ${expectedFreq}.`
+      ? `${callsign}, you are on the wrong frequency. Contact ${target}.`
+      : `Station calling, wrong frequency. Contact ${target}.`
     pmLog.warn('WRONG FREQUENCY', { active: frequencies.value.active, expected: expectedFreq })
     lastControllerSay.value = reply
     scheduleControllerSpeech(reply)
@@ -3059,18 +3063,13 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
   currentScreen.value = 'monitor'
   persistSelectedPlan(flightPlan)
 
-  // Tune the radio to the starting position's actual frequency so the pilot's
-  // first call is on the right frequency instead of being rejected with a
-  // "check frequency" (the active freq otherwise carries over from a prior run
-  // or a hardcoded default, which breaks every non-EDDF start and any arrival
-  // that begins on Center/Approach rather than Delivery).
-  const startFreq = expectedFrequencyForState()
-  if (startFreq) {
-    if (frequencies.value.active && frequencies.value.active !== startFreq) {
-      frequencies.value.standby = frequencies.value.active
-    }
-    frequencies.value.active = startFreq
-  }
+  // Start every scenario from a known baseline frequency. Tuning to the first
+  // controller is part of the exercise: the pilot must dial the correct
+  // frequency themselves, and the first call is rejected (telling them which
+  // frequency to switch to) until they are on it. We deliberately do NOT
+  // auto-tune to the expected frequency here.
+  frequencies.value.active = '121.900'
+  frequencies.value.standby = '118.100'
 
   // 4. Walk the initial ATC/system states locally (deterministic, no LLM).
   //    Safe because we loaded the tree from the same Python backend, so the
