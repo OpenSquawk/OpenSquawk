@@ -10,7 +10,7 @@
       </header>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
-        <h2 class="text-xl font-semibold">Company details (§5 TMG)</h2>
+        <h2 class="text-xl font-semibold">Company details (§5 DDG)</h2>
         <div class="space-y-2 text-white/70">
           <p>Faktor Mensch MEDIA UG (limited liability)</p>
           <p>Wilhelm-Holzamer-Strasse 8</p>
@@ -41,7 +41,7 @@
       </section>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
-        <h2 class="text-xl font-semibold">Content responsibility (§55 II RStV)</h2>
+        <h2 class="text-xl font-semibold">Content responsibility (§18 (2) MStV)</h2>
         <p class="text-white/70">Dominik Ziegenhagel, Emanuel Leube – address as above.</p>
       </section>
 

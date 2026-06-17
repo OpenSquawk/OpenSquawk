@@ -21,7 +21,7 @@
       </section>
 
       <footer class="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
-        <p>Questions about these terms? Email us at info@opensquawk.dev. We provide tailored contracts for enterprise or training programmes on request.</p>
+        <p>Questions about these terms? Email us at info@opensquawk.de. We provide tailored contracts for enterprise or training programmes on request.</p>
       </footer>
     </div>
   </div>
@@ -99,7 +99,7 @@ const sections = [
   {
     title: '10. Governing Law',
     paragraphs: [
-      'These terms are governed by German law. The place of jurisdiction for merchants is Berlin. If any clause is invalid, the remaining provisions remain effective.',
+      'These terms are governed by German law. The place of jurisdiction for merchants is Mainz. If any clause is invalid, the remaining provisions remain effective.',
     ],
   },
 ]

@@ -97,7 +97,7 @@
           <li>Data portability (Art. 20 GDPR).</li>
           <li>Objection to processing based on legitimate interest (Art. 21 GDPR).</li>
           <li>Withdrawal of consent with future effect.</li>
-          <li>Complaint to a supervisory authority, e.g. the Berlin Commissioner for Data Protection and Freedom of Information.</li>
+          <li>Complaint to a supervisory authority. The authority responsible for us is the State Commissioner for Data Protection and Freedom of Information of Rhineland-Palatinate (Landesbeauftragter für den Datenschutz und die Informationsfreiheit Rheinland-Pfalz), Mainz.</li>
         </ul>
       </section>
 
