@@ -1222,17 +1222,27 @@
             </div>
             <template v-else>
               <div v-if="bugReportScreenshot" class="space-y-2">
-                <div class="flex items-center justify-between">
-                  <p class="text-xs uppercase tracking-[0.3em] text-white/40">Screenshot – Pfeile einzeichnen</p>
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-2">
+                    <v-icon size="18" color="red" class="mt-0.5">mdi-gesture-tap-button</v-icon>
+                    <div>
+                      <p class="text-sm font-semibold text-white/90">Wo ist der Fehler? Zeichne einen Pfeil hin.</p>
+                      <p class="text-xs text-white/55 leading-snug">
+                        Klicke auf die Stelle und ziehe mit gedrückter Maustaste (am Handy: mit dem Finger)
+                        zur Problemstelle. Du kannst mehrere Pfeile setzen.
+                      </p>
+                    </div>
+                  </div>
                   <v-btn
                     v-if="bugReportArrows.length > 0"
                     size="x-small"
                     variant="text"
                     color="red"
                     prepend-icon="mdi-undo"
+                    class="shrink-0"
                     @click="undoLastArrow"
                   >
-                    Rückgängig
+                    Pfeil zurück
                   </v-btn>
                 </div>
                 <div class="relative rounded-xl overflow-hidden border border-white/10" style="line-height:0">
@@ -1247,11 +1257,20 @@
                     ref="bugReportCanvasRef"
                     class="absolute inset-0 w-full h-full cursor-crosshair select-none"
                     style="touch-action:none"
-                    @mousedown="onCanvasMouseDown"
-                    @mousemove="onCanvasMouseMove"
-                    @mouseup="onCanvasMouseUp"
-                    @mouseleave="onCanvasMouseLeave"
+                    @pointerdown="onCanvasMouseDown"
+                    @pointermove="onCanvasMouseMove"
+                    @pointerup="onCanvasMouseUp"
+                    @pointerleave="onCanvasMouseLeave"
+                    @pointercancel="onCanvasMouseLeave"
                   />
+                  <span
+                    v-if="bugReportArrows.length === 0"
+                    class="pointer-events-none absolute inset-0 flex items-center justify-center text-center px-4"
+                  >
+                    <span class="rounded-full bg-black/55 px-3 py-1 text-xs text-white/85 backdrop-blur">
+                      ✏️ Hier ziehen, um einen Pfeil zur Fehlerstelle zu zeichnen
+                    </span>
+                  </span>
                 </div>
               </div>
               <div v-else class="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm text-white/50">
