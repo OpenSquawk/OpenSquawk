@@ -471,10 +471,11 @@
                 type="button"
                 class="btn ghost"
                 title="Fehler melden"
+                :disabled="bugReportCapturing"
                 @click="openBugReport"
             >
-              <v-icon size="18">mdi-bug-outline</v-icon>
-              <span class="btn-label">Bug</span>
+              <v-icon size="18">{{ bugReportCapturing ? 'mdi-loading mdi-spin' : 'mdi-bug-outline' }}</v-icon>
+              <span class="btn-label">{{ bugReportCapturing ? '…' : 'Bug' }}</span>
             </button>
             <NuxtLink class="btn ghost" to="/feedback" title="Share feedback or ideas">
               <v-icon size="18">mdi-message-draw</v-icon>
@@ -2110,6 +2111,7 @@ const bugReportContact = ref('')
 const bugReportScreenshot = ref<string | null>(null)
 const bugReportArrows = ref<Array<{ fx: number; fy: number; tx: number; ty: number }>>([])
 const bugReportLoading = ref(false)
+const bugReportCapturing = ref(false)
 const bugReportError = ref('')
 const bugReportSuccess = ref(false)
 const bugReportCanvasRef = ref<HTMLCanvasElement | null>(null)
@@ -2206,11 +2208,28 @@ async function openBugReport() {
   bugReportScreenshot.value = null
   bugReportContact.value = [auth.user?.name, auth.user?.email].filter(Boolean).join(' — ')
 
+  // Capture the screenshot BEFORE opening the dialog, otherwise the open
+  // dialog overlay would appear in the shot instead of the actual bug state.
+  bugReportCapturing.value = true
   try {
-    const { default: html2canvas } = await import('html2canvas')
-    const c = await html2canvas(document.body, { scale: 0.55, useCORS: true, allowTaint: true, logging: false })
-    bugReportScreenshot.value = c.toDataURL('image/jpeg', 0.75)
-  } catch { /* Screenshot optional */ }
+    // modern-screenshot renders via a native SVG <foreignObject>, so modern CSS
+    // such as color-mix()/oklch() (used throughout the app) is supported.
+    // html2canvas could not parse those and silently produced no screenshot.
+    const { domToJpeg } = await import('modern-screenshot')
+    bugReportScreenshot.value = await domToJpeg(document.body, {
+      quality: 0.75,
+      scale: 0.55,
+      // Skip assets we cannot read (cross-origin tiles/avatars) instead of failing.
+      filter: (node) => !(node instanceof Element && node.getAttribute?.('data-no-screenshot') === 'true'),
+    })
+  } catch (err) {
+    // Screenshot is optional — keep the report flow usable, but surface why.
+    console.warn('[PM] Bug report screenshot capture failed', err)
+    bugReportScreenshot.value = null
+    bugReportError.value = 'Screenshot konnte nicht erstellt werden – Bug-Report ohne Bild möglich.'
+  } finally {
+    bugReportCapturing.value = false
+  }
 
   showBugReportDialog.value = true
 }
@@ -2261,6 +2280,83 @@ async function submitBugReport() {
     bugReportError.value = err?.data?.statusMessage || err?.message || 'Fehler beim Senden.'
   } finally {
     bugReportLoading.value = false
+  }
+}
+
+/**
+ * Restore a /pm session from a saved bug-report snapshot (admin link
+ * `/pm?restoreBugReport=<id>`). The Python backend has no "resume mid-session"
+ * endpoint, so we recreate a real, working session for the SAME flight and
+ * scenario via startMonitoring(), then overlay the saved variables/flags and
+ * the captured conversation so the admin can reproduce and try out the bug.
+ */
+async function restoreBugReportState(restoreId: string) {
+  try {
+    const report = await api.get<any>(`/api/admin/bug-reports/${restoreId}`)
+    const state = report?.pmState
+    if (!state) {
+      error.value = 'Bug-Report enthält keinen gespeicherten State.'
+      return
+    }
+
+    // Locate the scenario the report was captured in.
+    const scenario =
+      SCENARIOS.find(s => s.id === state.scenarioId) ||
+      SCENARIOS.find(s => s.startFlow === state.flowSlug)
+    if (!scenario) {
+      error.value = `Bug-Report-Restore: Szenario "${state.scenarioId || state.flowSlug || '?'}" nicht gefunden.`
+      return
+    }
+
+    // Reconstruct a flight plan from the snapshot so startMonitoring resolves the
+    // correct airport/frequencies and creates a backend session for the same flight.
+    const v = state.variables || {}
+    const fc = state.flightContext || {}
+    const dep = v.dep || fc.dep
+    const dest = v.dest || fc.dest
+    const flightPlan: Record<string, any> = {
+      callsign: v.callsign || fc.callsign || 'UNKNOWN',
+      aircraft: v.acf_type || fc.acf_type || 'A320',
+      dep,
+      departure: dep,
+      arr: dest,
+      arrival: dest,
+      route: fc.route || v.route || '',
+      assignedsquawk: v.squawk,
+    }
+
+    // Spin up a real session (loads tree, fetches frequencies, creates backend session).
+    await startMonitoring(flightPlan, scenario)
+    // startMonitoring bails out on error without entering the monitor screen.
+    if (currentScreen.value !== 'monitor') return
+
+    // Overlay the exact saved values over the freshly generated ones (stand, SID, …).
+    if (state.variables && Object.keys(state.variables).length) patchVariables(state.variables)
+    if (state.flags && Object.keys(state.flags).length) patchFlags(state.flags)
+
+    // Restore the captured conversation for context.
+    clearCommunicationLog?.()
+    if (Array.isArray(state.communicationLog)) {
+      for (const e of state.communicationLog) {
+        if (!e?.message) continue
+        appendLogEntry(e.speaker || 'system', e.message, e.state || '', {
+          frequency: e.frequency,
+          flow: e.flow,
+          radioCheck: e.radioCheck,
+          offSchema: e.offSchema,
+        })
+      }
+    }
+
+    // A fresh backend session always starts at the flow's start state, so we
+    // can't fake the local cursor onto the captured mid-flow state without
+    // desyncing transmits. Tell the admin where the bug was captured instead.
+    error.value =
+      `Bug-Report wiederhergestellt: ${scenario.name} · ${flightPlan.callsign} (${dep || '?'}→${dest || '?'}). ` +
+      `Erfasster State: ${state.currentStateId || '?'} (Flow ${state.flowSlug || '?'}).`
+  } catch (err) {
+    console.warn('[PM] Bug report restore failed', err)
+    error.value = 'Bug-Report konnte nicht wiederhergestellt werden.'
   }
 }
 // ────────────────────────────────────────────────────────────────────────────
@@ -2428,22 +2524,7 @@ onMounted(async () => {
     // Restore state from bug report (admin link: /pm?restoreBugReport=<id>)
     const restoreId = route.query.restoreBugReport as string | undefined
     if (restoreId) {
-      try {
-        const report = await api.get<any>(`/api/admin/bug-reports/${restoreId}`)
-        const state = report?.pmState
-        if (state) {
-          if (state.variables && Object.keys(state.variables).length) patchVariables(state.variables)
-          if (state.flags && Object.keys(state.flags).length) patchFlags(state.flags)
-          if (state.flowSlug) {
-            try {
-              await fetchRuntimeTree(state.flowSlug, config.public.radioBackendUrl as string)
-            } catch {}
-          }
-          error.value = `[Bug-Report-Restore] State: ${state.currentStateId || '?'} · Flow: ${state.flowSlug || '?'}`
-        }
-      } catch (err) {
-        console.warn('[PM] Bug report restore failed', err)
-      }
+      await restoreBugReportState(restoreId)
     }
   } finally {
     restoringFromStorage = false
