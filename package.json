@@ -10,7 +10,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "start": "node .output/server/index.mjs",
-    "postinstall": "nuxt prepare",
+    "postinstall": "nuxt prepare && (git config core.hooksPath .githooks 2>/dev/null || true)",
     "typecheck": "vue-tsc --build",
     "sharp:rebuild": "SHARP_IGNORE_GLOBAL_LIBVIPS=1 yarn rebuild sharp",
     "import:decision": "tsx --tsconfig tsconfig.scripts.json scripts/import-decision-tree.ts",
