@@ -467,6 +467,15 @@
           </div>
 
           <div class="hud-right">
+            <button
+                type="button"
+                class="btn ghost"
+                title="Fehler melden"
+                @click="openBugReport"
+            >
+              <v-icon size="18">mdi-bug-outline</v-icon>
+              <span class="btn-label">Bug</span>
+            </button>
             <NuxtLink class="btn ghost" to="/feedback" title="Share feedback or ideas">
               <v-icon size="18">mdi-message-draw</v-icon>
               <span class="btn-label">Feedback</span>
@@ -1198,6 +1207,107 @@
         </v-card>
       </v-dialog>
 
+      <!-- Bug Report Dialog -->
+      <v-dialog v-model="showBugReportDialog" max-width="680" scrollable>
+        <v-card class="bg-[#0b101d] border border-white/10 text-white">
+          <v-card-title class="flex items-center gap-2 text-base font-semibold pt-4 px-5">
+            <v-icon icon="mdi-bug-outline" color="#f87171" size="20" />
+            Fehler melden
+          </v-card-title>
+          <v-card-text class="space-y-4 px-5 pb-2">
+            <div v-if="bugReportSuccess" class="rounded-xl bg-emerald-500/10 border border-emerald-400/30 p-4 text-center">
+              <v-icon icon="mdi-check-circle-outline" color="emerald" size="32" class="mb-2" />
+              <p class="text-emerald-300 font-semibold">Danke! Bug Report wurde gesendet.</p>
+            </div>
+            <template v-else>
+              <div v-if="bugReportScreenshot" class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <p class="text-xs uppercase tracking-[0.3em] text-white/40">Screenshot – Pfeile einzeichnen</p>
+                  <v-btn
+                    v-if="bugReportArrows.length > 0"
+                    size="x-small"
+                    variant="text"
+                    color="red"
+                    prepend-icon="mdi-undo"
+                    @click="undoLastArrow"
+                  >
+                    Rückgängig
+                  </v-btn>
+                </div>
+                <div class="relative rounded-xl overflow-hidden border border-white/10" style="line-height:0">
+                  <img
+                    ref="bugReportImgRef"
+                    :src="bugReportScreenshot"
+                    class="w-full block"
+                    alt="Screenshot"
+                    @load="setupAnnotationCanvas"
+                  />
+                  <canvas
+                    ref="bugReportCanvasRef"
+                    class="absolute inset-0 w-full h-full cursor-crosshair select-none"
+                    style="touch-action:none"
+                    @mousedown="onCanvasMouseDown"
+                    @mousemove="onCanvasMouseMove"
+                    @mouseup="onCanvasMouseUp"
+                    @mouseleave="onCanvasMouseLeave"
+                  />
+                </div>
+              </div>
+              <div v-else class="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm text-white/50">
+                Kein Screenshot verfügbar
+              </div>
+
+              <v-textarea
+                v-model="bugReportComment"
+                label="Was ist kaputt? Was sollte stattdessen passieren?"
+                variant="outlined"
+                color="red"
+                rows="3"
+                auto-grow
+                maxlength="2000"
+                counter="2000"
+                hide-details="auto"
+                :disabled="bugReportLoading"
+              />
+
+              <v-text-field
+                v-model="bugReportContact"
+                label="Dein Name / Kontakt"
+                variant="outlined"
+                color="red"
+                density="comfortable"
+                hide-details
+                :disabled="bugReportLoading"
+              />
+
+              <v-alert
+                v-if="bugReportError"
+                type="error"
+                density="compact"
+                variant="tonal"
+                class="bg-red-500/10 text-red-200"
+              >
+                {{ bugReportError }}
+              </v-alert>
+            </template>
+          </v-card-text>
+          <v-card-actions v-if="!bugReportSuccess" class="justify-end gap-2 px-5 pb-4">
+            <v-btn variant="text" color="grey" :disabled="bugReportLoading" @click="showBugReportDialog = false">
+              Abbrechen
+            </v-btn>
+            <v-btn
+              color="red"
+              variant="flat"
+              :loading="bugReportLoading"
+              :disabled="!bugReportComment.trim()"
+              @click="submitBugReport"
+            >
+              Bug melden
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
       <!-- Transmission issue dialog -->
       <v-dialog v-model="showTransmissionIssueDialog" max-width="420">
         <v-card class="bg-[#0b101d] border border-white/10 text-white">
@@ -1242,7 +1352,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
 import { normalizeRadioPhrase, normalizeAtisForSpeech, DEFAULT_AIRLINE_TELEPHONY } from '../../shared/utils/radioSpeech';
 import { useAuthStore } from '~/stores/auth'
@@ -1292,6 +1402,7 @@ const engine = useCommunicationsEngine()
 const auth = useAuthStore()
 const api = useApi()
 const router = useRouter()
+const route = useRoute()
 const radioBackend = useRadioBackend()
 const config = useRuntimeConfig()
 
@@ -1992,6 +2103,168 @@ const radioEffectsEnabled = ref(true)
 const readbackEnabled = ref(false)
 const debugMode = ref(true)
 
+// ── Bug Report ───────────────────────────────────────────────────────────────
+const showBugReportDialog = ref(false)
+const bugReportComment = ref('')
+const bugReportContact = ref('')
+const bugReportScreenshot = ref<string | null>(null)
+const bugReportArrows = ref<Array<{ fx: number; fy: number; tx: number; ty: number }>>([])
+const bugReportLoading = ref(false)
+const bugReportError = ref('')
+const bugReportSuccess = ref(false)
+const bugReportCanvasRef = ref<HTMLCanvasElement | null>(null)
+const bugReportImgRef = ref<HTMLImageElement | null>(null)
+let _arrowDrawing = false
+let _arrowStart = { x: 0, y: 0 }
+
+function setupAnnotationCanvas() {
+  const canvas = bugReportCanvasRef.value
+  const img = bugReportImgRef.value
+  if (!canvas || !img) return
+  canvas.width = img.clientWidth
+  canvas.height = img.clientHeight
+}
+
+function _drawArrow(ctx: CanvasRenderingContext2D, fx: number, fy: number, tx: number, ty: number) {
+  const headLen = 14
+  const angle = Math.atan2(ty - fy, tx - fx)
+  ctx.strokeStyle = '#ef4444'
+  ctx.fillStyle = '#ef4444'
+  ctx.lineWidth = 3
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.beginPath()
+  ctx.moveTo(fx, fy)
+  ctx.lineTo(tx, ty)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo(tx, ty)
+  ctx.lineTo(tx - headLen * Math.cos(angle - Math.PI / 6), ty - headLen * Math.sin(angle - Math.PI / 6))
+  ctx.lineTo(tx - headLen * Math.cos(angle + Math.PI / 6), ty - headLen * Math.sin(angle + Math.PI / 6))
+  ctx.closePath()
+  ctx.fill()
+}
+
+function _redrawAnnotations(preview?: { fx: number; fy: number; tx: number; ty: number }) {
+  const canvas = bugReportCanvasRef.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  for (const a of bugReportArrows.value) _drawArrow(ctx, a.fx, a.fy, a.tx, a.ty)
+  if (preview) {
+    ctx.globalAlpha = 0.55
+    _drawArrow(ctx, preview.fx, preview.fy, preview.tx, preview.ty)
+    ctx.globalAlpha = 1
+  }
+}
+
+function _canvasCoords(e: MouseEvent) {
+  const canvas = bugReportCanvasRef.value!
+  const rect = canvas.getBoundingClientRect()
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+}
+
+function onCanvasMouseDown(e: MouseEvent) {
+  _arrowStart = _canvasCoords(e)
+  _arrowDrawing = true
+}
+
+function onCanvasMouseMove(e: MouseEvent) {
+  if (!_arrowDrawing) return
+  const { x, y } = _canvasCoords(e)
+  _redrawAnnotations({ fx: _arrowStart.x, fy: _arrowStart.y, tx: x, ty: y })
+}
+
+function onCanvasMouseUp(e: MouseEvent) {
+  if (!_arrowDrawing) return
+  _arrowDrawing = false
+  const { x, y } = _canvasCoords(e)
+  const dx = x - _arrowStart.x
+  const dy = y - _arrowStart.y
+  if (Math.sqrt(dx * dx + dy * dy) < 8) { _redrawAnnotations(); return }
+  bugReportArrows.value = [...bugReportArrows.value, { fx: _arrowStart.x, fy: _arrowStart.y, tx: x, ty: y }]
+  _redrawAnnotations()
+}
+
+function onCanvasMouseLeave() {
+  if (!_arrowDrawing) return
+  _arrowDrawing = false
+  _redrawAnnotations()
+}
+
+function undoLastArrow() {
+  bugReportArrows.value = bugReportArrows.value.slice(0, -1)
+  _redrawAnnotations()
+}
+
+async function openBugReport() {
+  bugReportError.value = ''
+  bugReportSuccess.value = false
+  bugReportComment.value = ''
+  bugReportArrows.value = []
+  bugReportScreenshot.value = null
+  bugReportContact.value = [auth.user?.name, auth.user?.email].filter(Boolean).join(' — ')
+
+  try {
+    const { default: html2canvas } = await import('html2canvas')
+    const c = await html2canvas(document.body, { scale: 0.55, useCORS: true, allowTaint: true, logging: false })
+    bugReportScreenshot.value = c.toDataURL('image/jpeg', 0.75)
+  } catch { /* Screenshot optional */ }
+
+  showBugReportDialog.value = true
+}
+
+async function submitBugReport() {
+  if (!bugReportComment.value.trim()) { bugReportError.value = 'Bitte einen Kommentar eingeben.'; return }
+  bugReportLoading.value = true
+  bugReportError.value = ''
+
+  try {
+    let finalScreenshot: string | undefined
+    if (bugReportScreenshot.value) {
+      const img = bugReportImgRef.value
+      const src = new Image()
+      await new Promise<void>((res) => { src.onload = () => res(); src.src = bugReportScreenshot.value! })
+      const out = document.createElement('canvas')
+      out.width = src.naturalWidth; out.height = src.naturalHeight
+      const ctx = out.getContext('2d')!
+      ctx.drawImage(src, 0, 0)
+      if (bugReportArrows.value.length > 0 && img) {
+        const sx = src.naturalWidth / img.clientWidth
+        const sy = src.naturalHeight / img.clientHeight
+        for (const a of bugReportArrows.value) _drawArrow(ctx, a.fx * sx, a.fy * sy, a.tx * sx, a.ty * sy)
+      }
+      finalScreenshot = out.toDataURL('image/jpeg', 0.8)
+    }
+
+    const pmState = {
+      flowSlug: activeScenario.value?.startFlow || '',
+      scenarioId: activeScenario.value?.id || '',
+      currentStateId: (currentState.value as any)?.id || '',
+      variables: (vars as any)?.value || {},
+      flags: (flags as any)?.value || {},
+      flightContext: (flightContext as any)?.value || {},
+      communicationLog: ((log as any)?.value || [] as any[]).slice(-20),
+    }
+
+    await api.post('/api/bug-reports', {
+      comment: bugReportComment.value.trim(),
+      contact: bugReportContact.value.trim(),
+      screenshot: finalScreenshot,
+      pmState,
+    })
+
+    bugReportSuccess.value = true
+    setTimeout(() => { showBugReportDialog.value = false; bugReportSuccess.value = false }, 2500)
+  } catch (err: any) {
+    bugReportError.value = err?.data?.statusMessage || err?.message || 'Fehler beim Senden.'
+  } finally {
+    bugReportLoading.value = false
+  }
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 // Pre-recording (rolling mic buffer) so the first ~1s of PTT speech isn't clipped
 const prerecEnabled = ref(true)
 const prerecSeconds = ref(1.0)
@@ -2149,6 +2422,27 @@ onMounted(async () => {
           console.warn('Failed to restore stored flight plan', err)
           window.localStorage.removeItem(STORAGE_KEYS.selectedPlan)
         }
+      }
+    }
+
+    // Restore state from bug report (admin link: /pm?restoreBugReport=<id>)
+    const restoreId = route.query.restoreBugReport as string | undefined
+    if (restoreId) {
+      try {
+        const report = await api.get<any>(`/api/admin/bug-reports/${restoreId}`)
+        const state = report?.pmState
+        if (state) {
+          if (state.variables && Object.keys(state.variables).length) patchVariables(state.variables)
+          if (state.flags && Object.keys(state.flags).length) patchFlags(state.flags)
+          if (state.flowSlug) {
+            try {
+              await fetchRuntimeTree(state.flowSlug, config.public.radioBackendUrl as string)
+            } catch {}
+          }
+          error.value = `[Bug-Report-Restore] State: ${state.currentStateId || '?'} · Flow: ${state.flowSlug || '?'}`
+        }
+      } catch (err) {
+        console.warn('[PM] Bug report restore failed', err)
       }
     }
   } finally {
