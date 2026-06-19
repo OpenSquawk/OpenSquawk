@@ -2497,12 +2497,19 @@ const scheduleAirportDataRefresh = () => {
   }, delay)
 }
 
+// Send unauthenticated visitors to login while preserving where they were
+// headed (e.g. /pm?token=… so the bridge link survives the round-trip),
+// instead of dropping them on the classroom fallback after sign-in.
+const redirectToLogin = () => {
+  router.push({ path: '/login', query: { redirect: route.fullPath } })
+}
+
 onMounted(async () => {
   try {
     if (!auth.accessToken) {
       const refreshed = await auth.tryRefresh()
       if (!refreshed) {
-        router.push('/login')
+        redirectToLogin()
         return
       }
     }
@@ -2510,7 +2517,7 @@ onMounted(async () => {
     if (!auth.user) {
       await auth.fetchUser().catch((err) => {
         console.error('Session initialisation failed', err)
-        router.push('/login')
+        redirectToLogin()
       })
     }
 
@@ -2568,7 +2575,7 @@ watch(
   (token) => {
     if (!token) {
       persistSelectedPlan(null)
-      router.push('/login')
+      redirectToLogin()
     }
   }
 )
