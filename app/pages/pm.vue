@@ -4807,9 +4807,10 @@ watch(prerecEnabled, (val) => {
 
 // --- SimBridge live frequency sync -----------------------------------------
 // When /pm is opened with ?token=<bridge-token> and that bridge is actively
-// posting telemetry, mirror the sim's COM1 active frequency into the radio and
-// surface a "Bridge connected" indicator. The bridge counts as connected only
-// while fresh telemetry keeps arriving — if it goes quiet we drop the badge.
+// posting telemetry, mirror the sim's COM1 radio panel (active + standby) into
+// the radio and surface a "Bridge connected" indicator. The bridge counts as
+// connected only while fresh telemetry keeps arriving — if it goes quiet we
+// drop the badge.
 const bridgeToken = computed(() => {
   const value = route.query.token
   const raw = Array.isArray(value) ? value[0] : value
@@ -4821,9 +4822,10 @@ const bridgeSimActiveFreq = ref<string | null>(null)
 const BRIDGE_TELEMETRY_STALE_MS = 12_000
 const BRIDGE_POLL_INTERVAL_MS = 3_000
 let bridgePoller: ReturnType<typeof setInterval> | null = null
-// Last sim frequency we pushed into the radio — only re-tune when the sim value
-// actually changes, so manual/flow tuning isn't constantly overridden.
-let lastSyncedSimFreq: string | null = null
+// Last sim frequencies we pushed into the radio — only re-tune when the sim
+// value actually changes, so manual/flow tuning isn't constantly overridden.
+let lastSyncedSimActive: string | null = null
+let lastSyncedSimStandby: string | null = null
 
 function normalizeSimFreq(value: unknown): string | null {
   const num = typeof value === 'number' ? value : Number(value)
@@ -4844,22 +4846,32 @@ async function pollBridgeTelemetry() {
     bridgeConnected.value = fresh
 
     if (!fresh) {
-      // Bridge went quiet — drop the sync anchor so reconnecting re-tunes.
-      lastSyncedSimFreq = null
+      // Bridge went quiet — drop the sync anchors so reconnecting re-tunes.
+      lastSyncedSimActive = null
+      lastSyncedSimStandby = null
       bridgeSimActiveFreq.value = null
       return
     }
 
-    const simFreq = normalizeSimFreq(res.telemetry?.COM_ACTIVE_FREQUENCY)
-    bridgeSimActiveFreq.value = simFreq
-    if (simFreq && simFreq !== lastSyncedSimFreq) {
-      lastSyncedSimFreq = simFreq
-      if (frequencies.value.active !== simFreq) {
-        // Mirror the sim radio: tuning away cuts in-progress ATC speech on the
-        // old channel, same as a manual tune.
+    const simActive = normalizeSimFreq(res.telemetry?.COM_ACTIVE_FREQUENCY)
+    const simStandby = normalizeSimFreq(res.telemetry?.COM_STANDBY_FREQUENCY)
+    bridgeSimActiveFreq.value = simActive
+
+    // Mirror COM1 active: tuning away cuts in-progress ATC speech on the old
+    // channel, same as a manual tune.
+    if (simActive && simActive !== lastSyncedSimActive) {
+      lastSyncedSimActive = simActive
+      if (frequencies.value.active !== simActive) {
         stopCurrentSpeech()
-        frequencies.value.standby = frequencies.value.active
-        frequencies.value.active = simFreq
+        frequencies.value.active = simActive
+      }
+    }
+
+    // Mirror COM1 standby (no audio side effects — it's just the staged channel).
+    if (simStandby && simStandby !== lastSyncedSimStandby) {
+      lastSyncedSimStandby = simStandby
+      if (frequencies.value.standby !== simStandby) {
+        frequencies.value.standby = simStandby
       }
     }
   } catch {
@@ -4888,7 +4900,8 @@ onMounted(() => {
 watch(bridgeToken, () => {
   bridgeConnected.value = false
   bridgeSimActiveFreq.value = null
-  lastSyncedSimFreq = null
+  lastSyncedSimActive = null
+  lastSyncedSimStandby = null
   startBridgeSync()
 })
 
