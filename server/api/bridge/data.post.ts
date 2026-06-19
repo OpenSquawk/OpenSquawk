@@ -59,6 +59,9 @@ function mapBridgeTelemetry(raw: Record<string, any>): FlightLabTelemetryState {
         ADF_STANDBY_FREQUENCY: raw.adf_standby_freq_hz ?? raw.ADF_STANDBY_FREQUENCY ?? 0,
         COM_ACTIVE_FREQUENCY: raw.com_active_frequency ?? raw.COM_ACTIVE_FREQUENCY ?? 0,
         COM_STANDBY_FREQUENCY: raw.com_standby_frequency ?? raw.COM_STANDBY_FREQUENCY ?? 0,
+        PLANE_LATITUDE: raw.latitude_deg ?? raw.PLANE_LATITUDE ?? 0,
+        PLANE_LONGITUDE: raw.longitude_deg ?? raw.PLANE_LONGITUDE ?? 0,
+        PLANE_HEADING_DEGREES_TRUE: raw.heading_deg ?? raw.PLANE_HEADING_DEGREES_TRUE ?? 0,
     }
 }
 

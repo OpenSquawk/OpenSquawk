@@ -40,6 +40,9 @@ export interface FlightLabTelemetryState {
   ADF_STANDBY_FREQUENCY: number     // Hz
   COM_ACTIVE_FREQUENCY?: number     // MHz (e.g. 121.900), COM1 active radio
   COM_STANDBY_FREQUENCY?: number    // MHz, COM1 standby radio
+  PLANE_LATITUDE?: number              // degrees, WGS84 (N+)
+  PLANE_LONGITUDE?: number             // degrees, WGS84 (E+)
+  PLANE_HEADING_DEGREES_TRUE?: number  // degrees, 0..360
   timestamp?: number
 }
 
