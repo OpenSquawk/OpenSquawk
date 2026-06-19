@@ -38,6 +38,8 @@ export interface FlightLabTelemetryState {
   TRANSPONDER_CODE: number          // squawk code (0-7777 octal)
   ADF_ACTIVE_FREQUENCY: number      // Hz
   ADF_STANDBY_FREQUENCY: number     // Hz
+  COM_ACTIVE_FREQUENCY?: number     // MHz (e.g. 121.900), COM1 active radio
+  COM_STANDBY_FREQUENCY?: number    // MHz, COM1 standby radio
   timestamp?: number
 }
 
