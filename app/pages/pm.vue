@@ -4829,10 +4829,11 @@ const bridgeSimActiveFreq = ref<string | null>(null)
 const BRIDGE_TELEMETRY_STALE_MS = 12_000
 const BRIDGE_POLL_INTERVAL_MS = 3_000
 let bridgePoller: ReturnType<typeof setInterval> | null = null
-// Last sim frequencies we pushed into the radio — only re-tune when the sim
-// value actually changes, so manual/flow tuning isn't constantly overridden.
+// Last sim active frequency we pushed into the radio — only re-tune active when
+// the sim value actually changes, so manual/flow tuning isn't constantly
+// overridden. Standby has no such anchor: while connected it strictly mirrors
+// the sim's standby radio.
 let lastSyncedSimActive: string | null = null
-let lastSyncedSimStandby: string | null = null
 
 function normalizeSimFreq(value: unknown): string | null {
   const num = typeof value === 'number' ? value : Number(value)
@@ -4853,9 +4854,8 @@ async function pollBridgeTelemetry() {
     bridgeConnected.value = fresh
 
     if (!fresh) {
-      // Bridge went quiet — drop the sync anchors so reconnecting re-tunes.
+      // Bridge went quiet — drop the active sync anchor so reconnecting re-tunes.
       lastSyncedSimActive = null
-      lastSyncedSimStandby = null
       bridgeSimActiveFreq.value = null
       return
     }
@@ -4874,12 +4874,11 @@ async function pollBridgeTelemetry() {
       }
     }
 
-    // Mirror COM1 standby (no audio side effects — it's just the staged channel).
-    if (simStandby && simStandby !== lastSyncedSimStandby) {
-      lastSyncedSimStandby = simStandby
-      if (frequencies.value.standby !== simStandby) {
-        frequencies.value.standby = simStandby
-      }
+    // Mirror COM1 standby (no audio side effects — it's just the staged
+    // channel). While connected the standby always reflects the sim's standby
+    // radio, never the previously tuned channel.
+    if (simStandby && frequencies.value.standby !== simStandby) {
+      frequencies.value.standby = simStandby
     }
   } catch {
     bridgeConnected.value = false
@@ -4908,7 +4907,6 @@ watch(bridgeToken, () => {
   bridgeConnected.value = false
   bridgeSimActiveFreq.value = null
   lastSyncedSimActive = null
-  lastSyncedSimStandby = null
   startBridgeSync()
 })
 
