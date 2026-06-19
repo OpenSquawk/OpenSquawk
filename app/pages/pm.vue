@@ -467,6 +467,19 @@
           </div>
 
           <div class="hud-right">
+            <v-tooltip
+                v-if="bridgeConnected"
+                :text="bridgeSimActiveFreq ? `SimBridge connected · COM1 ${bridgeSimActiveFreq}` : 'SimBridge connected'"
+                location="bottom"
+            >
+              <template #activator="{ props }">
+                <span class="bridge-badge" v-bind="props" role="status" aria-label="SimBridge connected">
+                  <span class="bridge-badge-dot" aria-hidden="true"></span>
+                  <v-icon size="15">mdi-bridge</v-icon>
+                  <span class="bridge-badge-label">Bridge</span>
+                </span>
+              </template>
+            </v-tooltip>
             <button
                 type="button"
                 class="btn ghost"
@@ -4792,10 +4805,98 @@ watch(prerecEnabled, (val) => {
   }
 })
 
+// --- SimBridge live frequency sync -----------------------------------------
+// When /pm is opened with ?token=<bridge-token> and that bridge is actively
+// posting telemetry, mirror the sim's COM1 active frequency into the radio and
+// surface a "Bridge connected" indicator. The bridge counts as connected only
+// while fresh telemetry keeps arriving — if it goes quiet we drop the badge.
+const bridgeToken = computed(() => {
+  const value = route.query.token
+  const raw = Array.isArray(value) ? value[0] : value
+  return typeof raw === 'string' ? raw.trim() : ''
+})
+const bridgeConnected = ref(false)
+const bridgeSimActiveFreq = ref<string | null>(null)
+// Telemetry older than this means the bridge stopped posting.
+const BRIDGE_TELEMETRY_STALE_MS = 12_000
+const BRIDGE_POLL_INTERVAL_MS = 3_000
+let bridgePoller: ReturnType<typeof setInterval> | null = null
+// Last sim frequency we pushed into the radio — only re-tune when the sim value
+// actually changes, so manual/flow tuning isn't constantly overridden.
+let lastSyncedSimFreq: string | null = null
+
+function normalizeSimFreq(value: unknown): string | null {
+  const num = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(num) || num < 118 || num >= 137) return null
+  return num.toFixed(3)
+}
+
+async function pollBridgeTelemetry() {
+  const token = bridgeToken.value
+  if (!token) return
+  try {
+    const res = await $fetch<{ connected: boolean; lastTelemetryAt: string | null; telemetry: any }>(
+      '/api/bridge/live',
+      { headers: { 'x-bridge-token': token } },
+    )
+    const ts = res.lastTelemetryAt ? Date.parse(res.lastTelemetryAt) : null
+    const fresh = Boolean(res.connected && ts && Date.now() - ts < BRIDGE_TELEMETRY_STALE_MS)
+    bridgeConnected.value = fresh
+
+    if (!fresh) {
+      // Bridge went quiet — drop the sync anchor so reconnecting re-tunes.
+      lastSyncedSimFreq = null
+      bridgeSimActiveFreq.value = null
+      return
+    }
+
+    const simFreq = normalizeSimFreq(res.telemetry?.COM_ACTIVE_FREQUENCY)
+    bridgeSimActiveFreq.value = simFreq
+    if (simFreq && simFreq !== lastSyncedSimFreq) {
+      lastSyncedSimFreq = simFreq
+      if (frequencies.value.active !== simFreq) {
+        // Mirror the sim radio: tuning away cuts in-progress ATC speech on the
+        // old channel, same as a manual tune.
+        stopCurrentSpeech()
+        frequencies.value.standby = frequencies.value.active
+        frequencies.value.active = simFreq
+      }
+    }
+  } catch {
+    bridgeConnected.value = false
+  }
+}
+
+function startBridgeSync() {
+  stopBridgeSync()
+  if (!bridgeToken.value) return
+  void pollBridgeTelemetry()
+  bridgePoller = setInterval(pollBridgeTelemetry, BRIDGE_POLL_INTERVAL_MS)
+}
+
+function stopBridgeSync() {
+  if (bridgePoller) {
+    clearInterval(bridgePoller)
+    bridgePoller = null
+  }
+}
+
+onMounted(() => {
+  startBridgeSync()
+})
+
+watch(bridgeToken, () => {
+  bridgeConnected.value = false
+  bridgeSimActiveFreq.value = null
+  lastSyncedSimFreq = null
+  startBridgeSync()
+})
+
 onUnmounted(() => {
   stopAtisLoop()
   stopPrerecCapture()
   cancelAirportDataRefresh()
+  stopBridgeSync()
 })
 </script>
 
@@ -4900,6 +5001,42 @@ onUnmounted(() => {
 }
 .hud-right .btn-label {
   white-space: nowrap;
+}
+.bridge-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  background: rgba(16, 185, 129, 0.14);
+  color: rgba(167, 243, 208, 0.95);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: default;
+}
+.bridge-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
+  animation: bridge-badge-pulse 1.8s ease-in-out infinite;
+}
+.bridge-badge-label {
+  white-space: nowrap;
+}
+@keyframes bridge-badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@media (max-width: 900px) {
+  .bridge-badge-label { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bridge-badge-dot { animation: none; }
 }
 .hud-logo {
   display: inline-flex;

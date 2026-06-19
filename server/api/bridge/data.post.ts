@@ -57,6 +57,8 @@ function mapBridgeTelemetry(raw: Record<string, any>): FlightLabTelemetryState {
         TRANSPONDER_CODE: raw.transponder_code ?? raw.TRANSPONDER_CODE ?? 0,
         ADF_ACTIVE_FREQUENCY: raw.adf_active_freq ?? raw.ADF_ACTIVE_FREQUENCY ?? 0,
         ADF_STANDBY_FREQUENCY: raw.adf_standby_freq_hz ?? raw.ADF_STANDBY_FREQUENCY ?? 0,
+        COM_ACTIVE_FREQUENCY: raw.com_active_frequency ?? raw.COM_ACTIVE_FREQUENCY ?? 0,
+        COM_STANDBY_FREQUENCY: raw.com_standby_frequency ?? raw.COM_STANDBY_FREQUENCY ?? 0,
     }
 }
 
