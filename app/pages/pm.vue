@@ -622,6 +622,9 @@
                       >
                         {{ isRecording ? 'Transmitting' : 'Hold to transmit' }}
                       </p>
+                      <p v-if="bridgePttConnected" class="text-[10px] uppercase tracking-[0.25em] text-cyan-300/70">
+                        Hotkey armed
+                      </p>
                       <p class="pt-2 text-4xl font-bold font-mono tracking-tight">{{ frequencies.active || '---' }}</p>
                       <p class="text-xs text-white/45">Active frequency</p>
                     </div>
@@ -4899,8 +4902,90 @@ function stopBridgeSync() {
   }
 }
 
+// --- Remote push-to-talk over the bridge link --------------------------------
+// The OpenSquawk Bridge captures a global hotkey on the PC and POSTs each edge
+// to /api/bridge/ptt; the backend relays it here over WebSocket so PTT works
+// while the sim (not this tab) is focused. We reuse the on-screen pad's
+// startRecording/stopRecording, so behaviour is identical to holding the pad.
+let pttSocket: WebSocket | null = null
+let pttReconnectTimer: ReturnType<typeof setTimeout> | null = null
+let pttClosedByUs = false
+const bridgePttConnected = ref(false)
+
+async function handleRemotePtt(state: 'down' | 'up') {
+  if (state === 'down') {
+    // A backgrounded tab can suspend the prerec AudioContext; resume it so the
+    // ring buffer + live capture are running when the edge arrives from the sim.
+    if (prerecCtx && prerecCtx.state === 'suspended') {
+      try { await prerecCtx.resume() } catch {}
+    }
+    void startRecording(false)
+  } else {
+    stopRecording()
+  }
+}
+
+function schedulePttReconnect() {
+  if (pttReconnectTimer || pttClosedByUs) return
+  pttReconnectTimer = setTimeout(() => {
+    pttReconnectTimer = null
+    connectPttSocket()
+  }, 3_000)
+}
+
+function connectPttSocket() {
+  disconnectPttSocket()
+  const token = bridgeToken.value
+  if (!token || typeof window === 'undefined') return
+  pttClosedByUs = false
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const url = `${proto}//${window.location.host}/api/bridge/ws`
+  let socket: WebSocket
+  try {
+    socket = new WebSocket(url)
+  } catch {
+    schedulePttReconnect()
+    return
+  }
+  pttSocket = socket
+
+  socket.onopen = () => {
+    bridgePttConnected.value = true
+    try { socket.send(JSON.stringify({ type: 'subscribe', token })) } catch {}
+  }
+  socket.onmessage = (ev) => {
+    let data: any
+    try { data = JSON.parse(typeof ev.data === 'string' ? ev.data : String(ev.data)) } catch { return }
+    if (data?.type === 'ptt' && (data.state === 'down' || data.state === 'up')) {
+      void handleRemotePtt(data.state)
+    }
+  }
+  socket.onclose = () => {
+    bridgePttConnected.value = false
+    if (pttSocket === socket) pttSocket = null
+    if (!pttClosedByUs) schedulePttReconnect()
+  }
+  socket.onerror = () => {
+    try { socket.close() } catch {}
+  }
+}
+
+function disconnectPttSocket() {
+  pttClosedByUs = true
+  if (pttReconnectTimer) {
+    clearTimeout(pttReconnectTimer)
+    pttReconnectTimer = null
+  }
+  if (pttSocket) {
+    try { pttSocket.close() } catch {}
+    pttSocket = null
+  }
+  bridgePttConnected.value = false
+}
+
 onMounted(() => {
   startBridgeSync()
+  connectPttSocket()
 })
 
 watch(bridgeToken, () => {
@@ -4908,6 +4993,7 @@ watch(bridgeToken, () => {
   bridgeSimActiveFreq.value = null
   lastSyncedSimActive = null
   startBridgeSync()
+  connectPttSocket()
 })
 
 onUnmounted(() => {
@@ -4915,6 +5001,7 @@ onUnmounted(() => {
   stopPrerecCapture()
   cancelAirportDataRefresh()
   stopBridgeSync()
+  disconnectPttSocket()
 })
 </script>
 
