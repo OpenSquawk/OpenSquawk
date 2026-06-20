@@ -622,8 +622,16 @@
                       >
                         {{ isRecording ? 'Transmitting' : 'Hold to transmit' }}
                       </p>
-                      <p v-if="bridgePttConnected" class="text-[10px] uppercase tracking-[0.25em] text-cyan-300/70">
-                        Hotkey armed
+                      <p
+                          v-if="bridgePttConnected"
+                          class="text-[10px] uppercase tracking-[0.25em] flex items-center justify-center gap-1.5"
+                          :class="isRecording ? 'text-red-300' : 'text-cyan-300/70'"
+                      >
+                        <span
+                            class="inline-block h-1.5 w-1.5 rounded-full"
+                            :class="isRecording ? 'bg-red-400 animate-pulse' : 'bg-cyan-300/60'"
+                        />
+                        {{ isRecording ? 'Hotkey transmitting' : 'Hotkey armed' }}
                       </p>
                       <p class="pt-2 text-4xl font-bold font-mono tracking-tight">{{ frequencies.active || '---' }}</p>
                       <p class="text-xs text-white/45">Active frequency</p>
