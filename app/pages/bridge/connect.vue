@@ -22,12 +22,30 @@
             <h1 class="mt-3 text-2xl font-semibold text-emerald-50">Bridge connected</h1>
             <p class="mt-2 text-sm text-emerald-100/70">
               Linked to <span class="font-semibold text-white">{{ authDisplayName }}</span>.
-              You can close this page and return to the app.
             </p>
+
+            <!-- PTT pad -->
+            <div
+              class="bridge-ptt-pad mt-6 w-full select-none"
+              :class="{ 'bridge-ptt-pad--active': pttActive }"
+              @mousedown.prevent="startPtt"
+              @mouseup.prevent="stopPtt"
+              @mouseleave="stopPtt"
+              @touchstart.prevent="startPtt"
+              @touchend.prevent="stopPtt"
+              @touchcancel.prevent="stopPtt"
+            >
+              <v-icon :icon="pttActive ? 'mdi-access-point' : 'mdi-radio-handheld'" size="32" />
+              <p class="mt-1 text-xs uppercase tracking-[0.35em]">
+                {{ pttActive ? 'Transmitting …' : 'Hold to transmit' }}
+              </p>
+              <p class="mt-1 text-[10px] text-white/40">or hold <kbd class="bridge-kbd">Space</kbd></p>
+            </div>
+            <p v-if="pttError" class="mt-2 text-xs text-red-300">{{ pttError }}</p>
 
             <button
               type="button"
-              class="bridge-btn-primary mt-6"
+              class="bridge-btn-primary mt-5"
               @click="closeWindow"
             >
               Close this page
@@ -280,6 +298,52 @@ interface TelemetrySummary {
 }
 
 const latestTelemetry = ref<TelemetrySummary | null>(null)
+
+const pttActive = ref(false)
+const pttError = ref('')
+
+async function sendPtt(state: 'down' | 'up') {
+  if (!token.value) return
+  try {
+    await $fetch('/api/bridge/ptt', {
+      method: 'POST',
+      headers: { 'x-bridge-token': token.value },
+      body: { state },
+    })
+    pttError.value = ''
+  } catch (err: any) {
+    pttError.value = err?.data?.statusMessage || 'PTT failed'
+  }
+}
+
+function startPtt() {
+  if (pttActive.value) return
+  pttActive.value = true
+  void sendPtt('down')
+}
+
+function stopPtt() {
+  if (!pttActive.value) return
+  pttActive.value = false
+  void sendPtt('up')
+}
+
+function onKeyDown(e: KeyboardEvent) {
+  if (!alreadyLinked.value || pttActive.value) return
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName ?? '')) return
+  if (e.code === 'Space') {
+    e.preventDefault()
+    startPtt()
+  }
+}
+
+function onKeyUp(e: KeyboardEvent) {
+  if (!alreadyLinked.value) return
+  if (e.code === 'Space') {
+    e.preventDefault()
+    stopPtt()
+  }
+}
 
 const token = computed(() => {
   const value = route.query.token
@@ -650,12 +714,16 @@ onMounted(() => {
     auth.fetchUser().catch(() => {})
   }
   startPolling()
-
+  window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('keyup', onKeyUp)
 })
 
 onBeforeUnmount(() => {
   stopPolling()
   stopLogPolling()
+  if (pttActive.value) void sendPtt('up')
+  window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('keyup', onKeyUp)
   if (autoCloseTimer) {
     clearTimeout(autoCloseTimer)
     autoCloseTimer = null
@@ -664,6 +732,42 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.bridge-ptt-pad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 1rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  user-select: none;
+  touch-action: none;
+}
+.bridge-ptt-pad:hover {
+  border-color: rgba(22, 187, 215, 0.4);
+  background: rgba(22, 187, 215, 0.06);
+  color: #84e8f6;
+}
+.bridge-ptt-pad--active {
+  border-color: rgba(248, 113, 113, 0.5);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+.bridge-kbd {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.25rem;
+  font-family: monospace;
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .bridge-connect-page {
   position: relative;
   min-height: 100vh;
