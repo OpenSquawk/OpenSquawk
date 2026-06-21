@@ -34,8 +34,8 @@
               </h2>
               <NuxtImg src="/img/bridge/hangar_sleeping.jpeg" alt="Bridge app screenshot" style="aspect-ratio: 2.7/1;object-fit: cover" class="rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(4,8,24,0.45)]" format="webp" />
               <p class="text-sm text-white/75 sm:text-base">
-                We&rsquo;re actively building this part of the Bridge experience. There isn&rsquo;t a hosted version
-                yet, but we&rsquo;re lining everything up for launch in the coming weeks and months.
+                We&rsquo;re actively building this part of the Bridge experience. Not every feature works yet,
+                and some areas still use static dummy data, but you can already look around and send us feedback.
               </p>
 
             </div>
