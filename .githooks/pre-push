@@ -1,0 +1,9 @@
+#!/bin/sh
+# Runs automatically before every git push (installed via postinstall → git config core.hooksPath).
+# Keeps broken TypeScript off main without any manual developer setup.
+set -e
+
+echo "→ TypeScript check..."
+yarn typecheck
+
+echo "✓ Pre-push checks passed"

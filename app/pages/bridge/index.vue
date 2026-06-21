@@ -34,8 +34,8 @@
               </h2>
               <NuxtImg src="/img/bridge/hangar_sleeping.jpeg" alt="Bridge app screenshot" style="aspect-ratio: 2.7/1;object-fit: cover" class="rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(4,8,24,0.45)]" format="webp" />
               <p class="text-sm text-white/75 sm:text-base">
-                We&rsquo;re actively building this part of the Bridge experience. There isn&rsquo;t a hosted version
-                yet, but we&rsquo;re lining everything up for launch in the coming weeks and months.
+                We&rsquo;re actively building this part of the Bridge experience. Not every feature works yet,
+                and some areas still use static dummy data, but you can already look around and send us feedback.
               </p>
 
             </div>
@@ -249,20 +249,20 @@ const downloads = [
     id: 'msfs2020',
     title: 'Microsoft Flight Simulator 2020',
     description: 'One-click installer for the current simulator with live status built in.',
-    status: 'In development',
+    status: 'Developer preview',
     badgeClass: 'bg-[#F59E0B]/15 text-[#F59E0B]',
     state: 'preview',
-    href: 'https://github.com/itsrubberduck/OpenSquawk-MSFS-Bridge/',
+    href: 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge',
     icon: 'mdi-microsoft',
   },
   {
     id: 'msfs2024',
     title: 'Microsoft Flight Simulator 2024',
-    description: 'We’re updating the Bridge for the new sim launch. Watch this space.',
-    status: 'Planned',
-    badgeClass: 'bg-white/10 text-white/55',
-    state: 'planned',
-    href: '#',
+    description: 'Developer preview for the new simulator with live status built in.',
+    status: 'Developer preview',
+    badgeClass: 'bg-[#F59E0B]/15 text-[#F59E0B]',
+    state: 'preview',
+    href: 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge',
     icon: 'mdi-microsoft',
   },
   {

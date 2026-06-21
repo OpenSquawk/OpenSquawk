@@ -467,6 +467,29 @@
           </div>
 
           <div class="hud-right">
+            <v-tooltip
+                v-if="bridgeConnected"
+                :text="bridgeSimActiveFreq ? `SimBridge connected · COM1 ${bridgeSimActiveFreq}` : 'SimBridge connected'"
+                location="bottom"
+            >
+              <template #activator="{ props }">
+                <span class="bridge-badge" v-bind="props" role="status" aria-label="SimBridge connected">
+                  <span class="bridge-badge-dot" aria-hidden="true"></span>
+                  <v-icon size="15">mdi-bridge</v-icon>
+                  <span class="bridge-badge-label">Bridge</span>
+                </span>
+              </template>
+            </v-tooltip>
+            <button
+                type="button"
+                class="btn ghost"
+                title="Fehler melden"
+                :disabled="bugReportCapturing"
+                @click="openBugReport"
+            >
+              <v-icon size="18">{{ bugReportCapturing ? 'mdi-loading mdi-spin' : 'mdi-bug-outline' }}</v-icon>
+              <span class="btn-label">{{ bugReportCapturing ? '…' : 'Bug' }}</span>
+            </button>
             <NuxtLink class="btn ghost" to="/feedback" title="Share feedback or ideas">
               <v-icon size="18">mdi-message-draw</v-icon>
               <span class="btn-label">Feedback</span>
@@ -598,6 +621,17 @@
                           :class="isRecording ? 'text-red-300' : 'text-white/40'"
                       >
                         {{ isRecording ? 'Transmitting' : 'Hold to transmit' }}
+                      </p>
+                      <p
+                          v-if="bridgePttConnected"
+                          class="text-[10px] uppercase tracking-[0.25em] flex items-center justify-center gap-1.5"
+                          :class="isRecording ? 'text-red-300' : 'text-cyan-300/70'"
+                      >
+                        <span
+                            class="inline-block h-1.5 w-1.5 rounded-full"
+                            :class="isRecording ? 'bg-red-400 animate-pulse' : 'bg-cyan-300/60'"
+                        />
+                        {{ isRecording ? 'Hotkey transmitting' : 'Hotkey armed' }}
                       </p>
                       <p class="pt-2 text-4xl font-bold font-mono tracking-tight">{{ frequencies.active || '---' }}</p>
                       <p class="text-xs text-white/45">Active frequency</p>
@@ -1198,6 +1232,126 @@
         </v-card>
       </v-dialog>
 
+      <!-- Bug Report Dialog -->
+      <v-dialog v-model="showBugReportDialog" max-width="680" scrollable>
+        <v-card class="bg-[#0b101d] border border-white/10 text-white">
+          <v-card-title class="flex items-center gap-2 text-base font-semibold pt-4 px-5">
+            <v-icon icon="mdi-bug-outline" color="#f87171" size="20" />
+            Fehler melden
+          </v-card-title>
+          <v-card-text class="space-y-4 px-5 pb-2">
+            <div v-if="bugReportSuccess" class="rounded-xl bg-emerald-500/10 border border-emerald-400/30 p-4 text-center">
+              <v-icon icon="mdi-check-circle-outline" color="emerald" size="32" class="mb-2" />
+              <p class="text-emerald-300 font-semibold">Danke! Bug Report wurde gesendet.</p>
+            </div>
+            <template v-else>
+              <div v-if="bugReportScreenshot" class="space-y-2">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-2">
+                    <v-icon size="18" color="red" class="mt-0.5">mdi-gesture-tap-button</v-icon>
+                    <div>
+                      <p class="text-sm font-semibold text-white/90">Wo ist der Fehler? Zeichne einen Pfeil hin.</p>
+                      <p class="text-xs text-white/55 leading-snug">
+                        Klicke auf die Stelle und ziehe mit gedrückter Maustaste (am Handy: mit dem Finger)
+                        zur Problemstelle. Du kannst mehrere Pfeile setzen.
+                      </p>
+                    </div>
+                  </div>
+                  <v-btn
+                    v-if="bugReportArrows.length > 0"
+                    size="x-small"
+                    variant="text"
+                    color="red"
+                    prepend-icon="mdi-undo"
+                    class="shrink-0"
+                    @click="undoLastArrow"
+                  >
+                    Pfeil zurück
+                  </v-btn>
+                </div>
+                <div class="relative rounded-xl overflow-hidden border border-white/10" style="line-height:0">
+                  <img
+                    ref="bugReportImgRef"
+                    :src="bugReportScreenshot"
+                    class="w-full block"
+                    alt="Screenshot"
+                    @load="setupAnnotationCanvas"
+                  />
+                  <canvas
+                    ref="bugReportCanvasRef"
+                    class="absolute inset-0 w-full h-full cursor-crosshair select-none"
+                    style="touch-action:none"
+                    @pointerdown="onCanvasMouseDown"
+                    @pointermove="onCanvasMouseMove"
+                    @pointerup="onCanvasMouseUp"
+                    @pointerleave="onCanvasMouseLeave"
+                    @pointercancel="onCanvasMouseLeave"
+                  />
+                  <span
+                    v-if="bugReportArrows.length === 0"
+                    class="pointer-events-none absolute inset-0 flex items-center justify-center text-center px-4"
+                  >
+                    <span class="rounded-full bg-black/55 px-3 py-1 text-xs text-white/85 backdrop-blur">
+                      ✏️ Hier ziehen, um einen Pfeil zur Fehlerstelle zu zeichnen
+                    </span>
+                  </span>
+                </div>
+              </div>
+              <div v-else class="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm text-white/50">
+                Kein Screenshot verfügbar
+              </div>
+
+              <v-textarea
+                v-model="bugReportComment"
+                label="Was ist kaputt? Was sollte stattdessen passieren?"
+                variant="outlined"
+                color="red"
+                rows="3"
+                auto-grow
+                maxlength="2000"
+                counter="2000"
+                hide-details="auto"
+                :disabled="bugReportLoading"
+              />
+
+              <v-text-field
+                v-model="bugReportContact"
+                label="Dein Name / Kontakt"
+                variant="outlined"
+                color="red"
+                density="comfortable"
+                hide-details
+                :disabled="bugReportLoading"
+              />
+
+              <v-alert
+                v-if="bugReportError"
+                type="error"
+                density="compact"
+                variant="tonal"
+                class="bg-red-500/10 text-red-200"
+              >
+                {{ bugReportError }}
+              </v-alert>
+            </template>
+          </v-card-text>
+          <v-card-actions v-if="!bugReportSuccess" class="justify-end gap-2 px-5 pb-4">
+            <v-btn variant="text" color="grey" :disabled="bugReportLoading" @click="showBugReportDialog = false">
+              Abbrechen
+            </v-btn>
+            <v-btn
+              color="red"
+              variant="flat"
+              :loading="bugReportLoading"
+              :disabled="!bugReportComment.trim()"
+              @click="submitBugReport"
+            >
+              Bug melden
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
       <!-- Transmission issue dialog -->
       <v-dialog v-model="showTransmissionIssueDialog" max-width="420">
         <v-card class="bg-[#0b101d] border border-white/10 text-white">
@@ -1242,7 +1396,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
 import { normalizeRadioPhrase, normalizeAtisForSpeech, DEFAULT_AIRLINE_TELEPHONY } from '../../shared/utils/radioSpeech';
 import { useAuthStore } from '~/stores/auth'
@@ -1292,6 +1446,7 @@ const engine = useCommunicationsEngine()
 const auth = useAuthStore()
 const api = useApi()
 const router = useRouter()
+const route = useRoute()
 const radioBackend = useRadioBackend()
 const config = useRuntimeConfig()
 
@@ -1992,6 +2147,263 @@ const radioEffectsEnabled = ref(true)
 const readbackEnabled = ref(false)
 const debugMode = ref(true)
 
+// ── Bug Report ───────────────────────────────────────────────────────────────
+const showBugReportDialog = ref(false)
+const bugReportComment = ref('')
+const bugReportContact = ref('')
+const bugReportScreenshot = ref<string | null>(null)
+const bugReportArrows = ref<Array<{ fx: number; fy: number; tx: number; ty: number }>>([])
+const bugReportLoading = ref(false)
+const bugReportCapturing = ref(false)
+const bugReportError = ref('')
+const bugReportSuccess = ref(false)
+const bugReportCanvasRef = ref<HTMLCanvasElement | null>(null)
+const bugReportImgRef = ref<HTMLImageElement | null>(null)
+let _arrowDrawing = false
+let _arrowStart = { x: 0, y: 0 }
+
+function setupAnnotationCanvas() {
+  const canvas = bugReportCanvasRef.value
+  const img = bugReportImgRef.value
+  if (!canvas || !img) return
+  canvas.width = img.clientWidth
+  canvas.height = img.clientHeight
+}
+
+function _drawArrow(ctx: CanvasRenderingContext2D, fx: number, fy: number, tx: number, ty: number) {
+  const headLen = 14
+  const angle = Math.atan2(ty - fy, tx - fx)
+  ctx.strokeStyle = '#ef4444'
+  ctx.fillStyle = '#ef4444'
+  ctx.lineWidth = 3
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.beginPath()
+  ctx.moveTo(fx, fy)
+  ctx.lineTo(tx, ty)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo(tx, ty)
+  ctx.lineTo(tx - headLen * Math.cos(angle - Math.PI / 6), ty - headLen * Math.sin(angle - Math.PI / 6))
+  ctx.lineTo(tx - headLen * Math.cos(angle + Math.PI / 6), ty - headLen * Math.sin(angle + Math.PI / 6))
+  ctx.closePath()
+  ctx.fill()
+}
+
+function _redrawAnnotations(preview?: { fx: number; fy: number; tx: number; ty: number }) {
+  const canvas = bugReportCanvasRef.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  for (const a of bugReportArrows.value) _drawArrow(ctx, a.fx, a.fy, a.tx, a.ty)
+  if (preview) {
+    ctx.globalAlpha = 0.55
+    _drawArrow(ctx, preview.fx, preview.fy, preview.tx, preview.ty)
+    ctx.globalAlpha = 1
+  }
+}
+
+function _canvasCoords(e: MouseEvent) {
+  const canvas = bugReportCanvasRef.value!
+  const rect = canvas.getBoundingClientRect()
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+}
+
+function onCanvasMouseDown(e: MouseEvent) {
+  _arrowStart = _canvasCoords(e)
+  _arrowDrawing = true
+}
+
+function onCanvasMouseMove(e: MouseEvent) {
+  if (!_arrowDrawing) return
+  const { x, y } = _canvasCoords(e)
+  _redrawAnnotations({ fx: _arrowStart.x, fy: _arrowStart.y, tx: x, ty: y })
+}
+
+function onCanvasMouseUp(e: MouseEvent) {
+  if (!_arrowDrawing) return
+  _arrowDrawing = false
+  const { x, y } = _canvasCoords(e)
+  const dx = x - _arrowStart.x
+  const dy = y - _arrowStart.y
+  if (Math.sqrt(dx * dx + dy * dy) < 8) { _redrawAnnotations(); return }
+  bugReportArrows.value = [...bugReportArrows.value, { fx: _arrowStart.x, fy: _arrowStart.y, tx: x, ty: y }]
+  _redrawAnnotations()
+}
+
+function onCanvasMouseLeave() {
+  if (!_arrowDrawing) return
+  _arrowDrawing = false
+  _redrawAnnotations()
+}
+
+function undoLastArrow() {
+  bugReportArrows.value = bugReportArrows.value.slice(0, -1)
+  _redrawAnnotations()
+}
+
+async function openBugReport() {
+  bugReportError.value = ''
+  bugReportSuccess.value = false
+  bugReportComment.value = ''
+  bugReportArrows.value = []
+  bugReportScreenshot.value = null
+  bugReportContact.value = [auth.user?.name, auth.user?.email].filter(Boolean).join(' — ')
+
+  // Capture the screenshot BEFORE opening the dialog, otherwise the open
+  // dialog overlay would appear in the shot instead of the actual bug state.
+  bugReportCapturing.value = true
+  try {
+    // modern-screenshot renders via a native SVG <foreignObject>, so modern CSS
+    // such as color-mix()/oklch() (used throughout the app) is supported.
+    // html2canvas could not parse those and silently produced no screenshot.
+    const { domToJpeg } = await import('modern-screenshot')
+    bugReportScreenshot.value = await domToJpeg(document.body, {
+      quality: 0.75,
+      scale: 0.55,
+      // Skip assets we cannot read (cross-origin tiles/avatars) instead of failing.
+      filter: (node) => !(node instanceof Element && node.getAttribute?.('data-no-screenshot') === 'true'),
+    })
+  } catch (err) {
+    // Screenshot is optional — keep the report flow usable, but surface why.
+    console.warn('[PM] Bug report screenshot capture failed', err)
+    bugReportScreenshot.value = null
+    bugReportError.value = 'Screenshot konnte nicht erstellt werden – Bug-Report ohne Bild möglich.'
+  } finally {
+    bugReportCapturing.value = false
+  }
+
+  showBugReportDialog.value = true
+}
+
+async function submitBugReport() {
+  if (!bugReportComment.value.trim()) { bugReportError.value = 'Bitte einen Kommentar eingeben.'; return }
+  bugReportLoading.value = true
+  bugReportError.value = ''
+
+  try {
+    let finalScreenshot: string | undefined
+    if (bugReportScreenshot.value) {
+      const img = bugReportImgRef.value
+      const src = new Image()
+      await new Promise<void>((res) => { src.onload = () => res(); src.src = bugReportScreenshot.value! })
+      const out = document.createElement('canvas')
+      out.width = src.naturalWidth; out.height = src.naturalHeight
+      const ctx = out.getContext('2d')!
+      ctx.drawImage(src, 0, 0)
+      if (bugReportArrows.value.length > 0 && img) {
+        const sx = src.naturalWidth / img.clientWidth
+        const sy = src.naturalHeight / img.clientHeight
+        for (const a of bugReportArrows.value) _drawArrow(ctx, a.fx * sx, a.fy * sy, a.tx * sx, a.ty * sy)
+      }
+      finalScreenshot = out.toDataURL('image/jpeg', 0.8)
+    }
+
+    const pmState = {
+      flowSlug: activeScenario.value?.startFlow || '',
+      scenarioId: activeScenario.value?.id || '',
+      currentStateId: (currentState.value as any)?.id || '',
+      variables: (vars as any)?.value || {},
+      flags: (flags as any)?.value || {},
+      flightContext: (flightContext as any)?.value || {},
+      communicationLog: ((log as any)?.value || [] as any[]).slice(-20),
+    }
+
+    await api.post('/api/bug-reports', {
+      comment: bugReportComment.value.trim(),
+      contact: bugReportContact.value.trim(),
+      screenshot: finalScreenshot,
+      pmState,
+    })
+
+    bugReportSuccess.value = true
+    setTimeout(() => { showBugReportDialog.value = false; bugReportSuccess.value = false }, 2500)
+  } catch (err: any) {
+    bugReportError.value = err?.data?.statusMessage || err?.message || 'Fehler beim Senden.'
+  } finally {
+    bugReportLoading.value = false
+  }
+}
+
+/**
+ * Restore a /pm session from a saved bug-report snapshot (admin link
+ * `/pm?restoreBugReport=<id>`). The Python backend has no "resume mid-session"
+ * endpoint, so we recreate a real, working session for the SAME flight and
+ * scenario via startMonitoring(), then overlay the saved variables/flags and
+ * the captured conversation so the admin can reproduce and try out the bug.
+ */
+async function restoreBugReportState(restoreId: string) {
+  try {
+    const report = await api.get<any>(`/api/admin/bug-reports/${restoreId}`)
+    const state = report?.pmState
+    if (!state) {
+      error.value = 'Bug-Report enthält keinen gespeicherten State.'
+      return
+    }
+
+    // Locate the scenario the report was captured in.
+    const scenario =
+      SCENARIOS.find(s => s.id === state.scenarioId) ||
+      SCENARIOS.find(s => s.startFlow === state.flowSlug)
+    if (!scenario) {
+      error.value = `Bug-Report-Restore: Szenario "${state.scenarioId || state.flowSlug || '?'}" nicht gefunden.`
+      return
+    }
+
+    // Reconstruct a flight plan from the snapshot so startMonitoring resolves the
+    // correct airport/frequencies and creates a backend session for the same flight.
+    const v = state.variables || {}
+    const fc = state.flightContext || {}
+    const dep = v.dep || fc.dep
+    const dest = v.dest || fc.dest
+    const flightPlan: Record<string, any> = {
+      callsign: v.callsign || fc.callsign || 'UNKNOWN',
+      aircraft: v.acf_type || fc.acf_type || 'A320',
+      dep,
+      departure: dep,
+      arr: dest,
+      arrival: dest,
+      route: fc.route || v.route || '',
+      assignedsquawk: v.squawk,
+    }
+
+    // Spin up a real session (loads tree, fetches frequencies, creates backend session).
+    await startMonitoring(flightPlan, scenario)
+    // startMonitoring bails out on error without entering the monitor screen.
+    if (currentScreen.value !== 'monitor') return
+
+    // Overlay the exact saved values over the freshly generated ones (stand, SID, …).
+    if (state.variables && Object.keys(state.variables).length) patchVariables(state.variables)
+    if (state.flags && Object.keys(state.flags).length) patchFlags(state.flags)
+
+    // Restore the captured conversation for context.
+    clearCommunicationLog?.()
+    if (Array.isArray(state.communicationLog)) {
+      for (const e of state.communicationLog) {
+        if (!e?.message) continue
+        appendLogEntry(e.speaker || 'system', e.message, e.state || '', {
+          frequency: e.frequency,
+          flow: e.flow,
+          radioCheck: e.radioCheck,
+          offSchema: e.offSchema,
+        })
+      }
+    }
+
+    // A fresh backend session always starts at the flow's start state, so we
+    // can't fake the local cursor onto the captured mid-flow state without
+    // desyncing transmits. Tell the admin where the bug was captured instead.
+    error.value =
+      `Bug-Report wiederhergestellt: ${scenario.name} · ${flightPlan.callsign} (${dep || '?'}→${dest || '?'}). ` +
+      `Erfasster State: ${state.currentStateId || '?'} (Flow ${state.flowSlug || '?'}).`
+  } catch (err) {
+    console.warn('[PM] Bug report restore failed', err)
+    error.value = 'Bug-Report konnte nicht wiederhergestellt werden.'
+  }
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 // Pre-recording (rolling mic buffer) so the first ~1s of PTT speech isn't clipped
 const prerecEnabled = ref(true)
 const prerecSeconds = ref(1.0)
@@ -2096,12 +2508,19 @@ const scheduleAirportDataRefresh = () => {
   }, delay)
 }
 
+// Send unauthenticated visitors to login while preserving where they were
+// headed (e.g. /pm?token=… so the bridge link survives the round-trip),
+// instead of dropping them on the classroom fallback after sign-in.
+const redirectToLogin = () => {
+  router.push({ path: '/login', query: { redirect: route.fullPath } })
+}
+
 onMounted(async () => {
   try {
     if (!auth.accessToken) {
       const refreshed = await auth.tryRefresh()
       if (!refreshed) {
-        router.push('/login')
+        redirectToLogin()
         return
       }
     }
@@ -2109,7 +2528,7 @@ onMounted(async () => {
     if (!auth.user) {
       await auth.fetchUser().catch((err) => {
         console.error('Session initialisation failed', err)
-        router.push('/login')
+        redirectToLogin()
       })
     }
 
@@ -2151,6 +2570,12 @@ onMounted(async () => {
         }
       }
     }
+
+    // Restore state from bug report (admin link: /pm?restoreBugReport=<id>)
+    const restoreId = route.query.restoreBugReport as string | undefined
+    if (restoreId) {
+      await restoreBugReportState(restoreId)
+    }
   } finally {
     restoringFromStorage = false
   }
@@ -2161,7 +2586,7 @@ watch(
   (token) => {
     if (!token) {
       persistSelectedPlan(null)
-      router.push('/login')
+      redirectToLogin()
     }
   }
 )
@@ -4409,10 +4834,193 @@ watch(prerecEnabled, (val) => {
   }
 })
 
+// --- SimBridge live frequency sync -----------------------------------------
+// When /pm is opened with ?token=<bridge-token> and that bridge is actively
+// posting telemetry, mirror the sim's COM1 radio panel (active + standby) into
+// the radio and surface a "Bridge connected" indicator. The bridge counts as
+// connected only while fresh telemetry keeps arriving — if it goes quiet we
+// drop the badge.
+const bridgeToken = computed(() => {
+  const value = route.query.token
+  const raw = Array.isArray(value) ? value[0] : value
+  return typeof raw === 'string' ? raw.trim() : ''
+})
+const bridgeConnected = ref(false)
+const bridgeSimActiveFreq = ref<string | null>(null)
+// Telemetry older than this means the bridge stopped posting.
+const BRIDGE_TELEMETRY_STALE_MS = 12_000
+const BRIDGE_POLL_INTERVAL_MS = 3_000
+let bridgePoller: ReturnType<typeof setInterval> | null = null
+// Last sim active frequency we pushed into the radio — only re-tune active when
+// the sim value actually changes, so manual/flow tuning isn't constantly
+// overridden. Standby has no such anchor: while connected it strictly mirrors
+// the sim's standby radio.
+let lastSyncedSimActive: string | null = null
+
+function normalizeSimFreq(value: unknown): string | null {
+  const num = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(num) || num < 118 || num >= 137) return null
+  return num.toFixed(3)
+}
+
+async function pollBridgeTelemetry() {
+  const token = bridgeToken.value
+  if (!token) return
+  try {
+    const res = await $fetch<{ connected: boolean; lastTelemetryAt: string | null; telemetry: any }>(
+      '/api/bridge/live',
+      { headers: { 'x-bridge-token': token } },
+    )
+    const ts = res.lastTelemetryAt ? Date.parse(res.lastTelemetryAt) : null
+    const fresh = Boolean(res.connected && ts && Date.now() - ts < BRIDGE_TELEMETRY_STALE_MS)
+    bridgeConnected.value = fresh
+
+    if (!fresh) {
+      // Bridge went quiet — drop the active sync anchor so reconnecting re-tunes.
+      lastSyncedSimActive = null
+      bridgeSimActiveFreq.value = null
+      return
+    }
+
+    const simActive = normalizeSimFreq(res.telemetry?.COM_ACTIVE_FREQUENCY)
+    const simStandby = normalizeSimFreq(res.telemetry?.COM_STANDBY_FREQUENCY)
+    bridgeSimActiveFreq.value = simActive
+
+    // Mirror COM1 active: tuning away cuts in-progress ATC speech on the old
+    // channel, same as a manual tune.
+    if (simActive && simActive !== lastSyncedSimActive) {
+      lastSyncedSimActive = simActive
+      if (frequencies.value.active !== simActive) {
+        stopCurrentSpeech()
+        frequencies.value.active = simActive
+      }
+    }
+
+    // Mirror COM1 standby (no audio side effects — it's just the staged
+    // channel). While connected the standby always reflects the sim's standby
+    // radio, never the previously tuned channel.
+    if (simStandby && frequencies.value.standby !== simStandby) {
+      frequencies.value.standby = simStandby
+    }
+  } catch {
+    bridgeConnected.value = false
+  }
+}
+
+function startBridgeSync() {
+  stopBridgeSync()
+  if (!bridgeToken.value) return
+  void pollBridgeTelemetry()
+  bridgePoller = setInterval(pollBridgeTelemetry, BRIDGE_POLL_INTERVAL_MS)
+}
+
+function stopBridgeSync() {
+  if (bridgePoller) {
+    clearInterval(bridgePoller)
+    bridgePoller = null
+  }
+}
+
+// --- Remote push-to-talk over the bridge link --------------------------------
+// The OpenSquawk Bridge captures a global hotkey on the PC and POSTs each edge
+// to /api/bridge/ptt; the backend relays it here over WebSocket so PTT works
+// while the sim (not this tab) is focused. We reuse the on-screen pad's
+// startRecording/stopRecording, so behaviour is identical to holding the pad.
+let pttSocket: WebSocket | null = null
+let pttReconnectTimer: ReturnType<typeof setTimeout> | null = null
+let pttClosedByUs = false
+const bridgePttConnected = ref(false)
+
+async function handleRemotePtt(state: 'down' | 'up') {
+  if (state === 'down') {
+    // A backgrounded tab can suspend the prerec AudioContext; resume it so the
+    // ring buffer + live capture are running when the edge arrives from the sim.
+    if (prerecCtx && prerecCtx.state === 'suspended') {
+      try { await prerecCtx.resume() } catch {}
+    }
+    void startRecording(false)
+  } else {
+    stopRecording()
+  }
+}
+
+function schedulePttReconnect() {
+  if (pttReconnectTimer || pttClosedByUs) return
+  pttReconnectTimer = setTimeout(() => {
+    pttReconnectTimer = null
+    connectPttSocket()
+  }, 3_000)
+}
+
+function connectPttSocket() {
+  disconnectPttSocket()
+  const token = bridgeToken.value
+  if (!token || typeof window === 'undefined') return
+  pttClosedByUs = false
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const url = `${proto}//${window.location.host}/api/bridge/ws`
+  let socket: WebSocket
+  try {
+    socket = new WebSocket(url)
+  } catch {
+    schedulePttReconnect()
+    return
+  }
+  pttSocket = socket
+
+  socket.onopen = () => {
+    bridgePttConnected.value = true
+    try { socket.send(JSON.stringify({ type: 'subscribe', token })) } catch {}
+  }
+  socket.onmessage = (ev) => {
+    let data: any
+    try { data = JSON.parse(typeof ev.data === 'string' ? ev.data : String(ev.data)) } catch { return }
+    if (data?.type === 'ptt' && (data.state === 'down' || data.state === 'up')) {
+      void handleRemotePtt(data.state)
+    }
+  }
+  socket.onclose = () => {
+    bridgePttConnected.value = false
+    if (pttSocket === socket) pttSocket = null
+    if (!pttClosedByUs) schedulePttReconnect()
+  }
+  socket.onerror = () => {
+    try { socket.close() } catch {}
+  }
+}
+
+function disconnectPttSocket() {
+  pttClosedByUs = true
+  if (pttReconnectTimer) {
+    clearTimeout(pttReconnectTimer)
+    pttReconnectTimer = null
+  }
+  if (pttSocket) {
+    try { pttSocket.close() } catch {}
+    pttSocket = null
+  }
+  bridgePttConnected.value = false
+}
+
+onMounted(() => {
+  startBridgeSync()
+  connectPttSocket()
+})
+
+watch(bridgeToken, () => {
+  bridgeConnected.value = false
+  bridgeSimActiveFreq.value = null
+  lastSyncedSimActive = null
+  startBridgeSync()
+  connectPttSocket()
+})
+
 onUnmounted(() => {
   stopAtisLoop()
   stopPrerecCapture()
   cancelAirportDataRefresh()
+  stopBridgeSync()
+  disconnectPttSocket()
 })
 </script>
 
@@ -4517,6 +5125,42 @@ onUnmounted(() => {
 }
 .hud-right .btn-label {
   white-space: nowrap;
+}
+.bridge-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  background: rgba(16, 185, 129, 0.14);
+  color: rgba(167, 243, 208, 0.95);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: default;
+}
+.bridge-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
+  animation: bridge-badge-pulse 1.8s ease-in-out infinite;
+}
+.bridge-badge-label {
+  white-space: nowrap;
+}
+@keyframes bridge-badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@media (max-width: 900px) {
+  .bridge-badge-label { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bridge-badge-dot { animation: none; }
 }
 .hud-logo {
   display: inline-flex;

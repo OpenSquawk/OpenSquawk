@@ -43,6 +43,10 @@
         <v-tab value="invitations">Invitations</v-tab>
         <v-tab value="waitlist">Waitlist</v-tab>
         <v-tab value="logs">Transmissions</v-tab>
+        <v-tab value="bug-reports">
+          Bug Reports
+          <v-badge v-if="bugReportOpenCount > 0" :content="bugReportOpenCount" color="red" inline class="ml-1" />
+        </v-tab>
       </v-tabs>
 
       <v-window v-model="activeTab" class="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
@@ -932,6 +936,145 @@
           </section>
         </v-window-item>
 
+        <!-- Bug Reports Tab -->
+        <v-window-item value="bug-reports">
+          <section class="space-y-6">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 class="text-2xl font-semibold">Bug Reports</h2>
+                <p class="text-sm text-white/70">Fehlermeldungen von Testern aus der /pm-Seite.</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <v-select
+                  v-model="bugReportStatusFilter"
+                  :items="[{ title: 'Offen', value: 'open' }, { title: 'Erledigt', value: 'resolved' }]"
+                  label="Status"
+                  density="comfortable"
+                  variant="outlined"
+                  color="cyan"
+                  hide-details
+                  class="w-40"
+                />
+                <v-btn color="cyan" variant="tonal" :loading="bugReportLoading" @click="fetchBugReports(true)">
+                  Laden
+                </v-btn>
+              </div>
+            </div>
+
+            <v-alert v-if="bugReportError" type="warning" variant="tonal" density="comfortable" class="bg-red-500/10 text-red-100">
+              {{ bugReportError }}
+            </v-alert>
+
+            <div v-if="bugReportLoading && !bugReports.length" class="py-12 text-center text-white/70">
+              <v-progress-circular indeterminate color="cyan" class="mb-4" />
+              <p>Bug Reports laden…</p>
+            </div>
+
+            <div v-else class="space-y-4">
+              <div v-if="bugReports.length" class="space-y-4">
+                <v-card
+                  v-for="report in bugReports"
+                  :key="report.id"
+                  class="border border-white/10 bg-black/40"
+                >
+                  <v-card-text class="space-y-3">
+                    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div class="space-y-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <v-chip size="x-small" :color="report.status === 'open' ? 'red' : 'green'" variant="tonal">
+                            {{ report.status === 'open' ? 'Offen' : 'Erledigt' }}
+                          </v-chip>
+                          <span class="text-xs text-white/40">{{ formatRelative(report.createdAt) }}</span>
+                          <span v-if="report.hasScreenshot" class="text-xs text-cyan-300/60">
+                            <v-icon size="12">mdi-image</v-icon> Screenshot
+                          </span>
+                        </div>
+                        <p class="font-semibold text-white text-sm">{{ report.contact }}</p>
+                        <p v-if="report.user" class="text-xs text-white/50">{{ report.user.email }}</p>
+                        <p class="text-sm text-white/80 whitespace-pre-line">{{ report.comment }}</p>
+                        <div v-if="report.pmState?.currentStateId" class="text-xs text-white/40 font-mono">
+                          State: {{ report.pmState.currentStateId }} · Flow: {{ report.pmState.flowSlug || '—' }}
+                        </div>
+                      </div>
+
+                      <div class="flex flex-col gap-2 items-start md:items-end shrink-0">
+                        <v-btn
+                          v-if="report.status === 'open'"
+                          size="small"
+                          color="green"
+                          variant="tonal"
+                          prepend-icon="mdi-check"
+                          :loading="bugReportResolving === report.id"
+                          @click="resolveBugReport(report.id)"
+                        >
+                          Erledigt
+                        </v-btn>
+                        <v-btn
+                          v-else
+                          size="small"
+                          color="orange"
+                          variant="text"
+                          prepend-icon="mdi-refresh"
+                          :loading="bugReportResolving === report.id"
+                          @click="reopenBugReport(report.id)"
+                        >
+                          Wieder öffnen
+                        </v-btn>
+                        <v-btn
+                          v-if="report.hasScreenshot"
+                          size="small"
+                          variant="outlined"
+                          color="cyan"
+                          prepend-icon="mdi-image"
+                          @click="loadBugReportDetail(report.id)"
+                        >
+                          Screenshot
+                        </v-btn>
+                        <v-btn
+                          v-if="report.pmState?.flowSlug"
+                          size="small"
+                          variant="text"
+                          color="cyan"
+                          prepend-icon="mdi-play-circle-outline"
+                          :href="`/pm?restoreBugReport=${report.id}`"
+                          target="_blank"
+                        >
+                          In /pm öffnen
+                        </v-btn>
+                      </div>
+                    </div>
+
+                    <!-- Screenshot detail (loaded on demand) -->
+                    <div v-if="bugReportDetailId === report.id">
+                      <div v-if="bugReportDetailLoading" class="py-4 text-center text-white/60">
+                        <v-progress-circular indeterminate color="cyan" size="24" />
+                      </div>
+                      <img
+                        v-else-if="bugReportDetail?.screenshot"
+                        :src="bugReportDetail.screenshot"
+                        class="w-full rounded-xl border border-white/10"
+                        alt="Screenshot"
+                      />
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </div>
+
+              <p v-else class="py-12 text-center text-sm text-white/60">Keine Bug Reports vorhanden.</p>
+
+              <div class="flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <div class="text-xs text-white/50">
+                  Seite {{ bugReportPagination.page }} von {{ bugReportPagination.pages }} · {{ bugReportPagination.total }} Reports
+                </div>
+                <div class="flex items-center gap-2">
+                  <v-btn variant="text" color="cyan" :disabled="bugReportPagination.page <= 1" @click="changeBugReportPage(bugReportPagination.page - 1)">Zurück</v-btn>
+                  <v-btn variant="text" color="cyan" :disabled="bugReportPagination.page >= bugReportPagination.pages" @click="changeBugReportPage(bugReportPagination.page + 1)">Weiter</v-btn>
+                </div>
+              </div>
+            </div>
+          </section>
+        </v-window-item>
+
       </v-window>
     </div>
 
@@ -1280,13 +1423,33 @@ interface CreateInviteResponse {
   }
 }
 
+interface BugReportItem {
+  id: string
+  comment: string
+  contact: string
+  user?: { id: string; email: string; name?: string }
+  pmState?: { flowSlug?: string; scenarioId?: string; currentStateId?: string }
+  status: 'open' | 'resolved'
+  createdAt: string | null
+  hasScreenshot: boolean
+}
+
+interface BugReportDetail extends BugReportItem {
+  screenshot: string | null
+}
+
+interface BugReportsResponse {
+  items: BugReportItem[]
+  pagination: { total: number; page: number; pageSize: number; pages: number }
+}
+
 definePageMeta({ middleware: 'require-admin' })
 useHead({ title: 'Admin • OpenSquawk' })
 
 const auth = useAuthStore()
 const api = useApi()
 
-const activeTab = ref<'overview' | 'users' | 'invitations' | 'waitlist' | 'logs'>('overview')
+const activeTab = ref<'overview' | 'users' | 'invitations' | 'waitlist' | 'logs' | 'bug-reports'>('overview')
 const refreshing = ref(false)
 
 const overview = ref<OverviewData | null>(null)
@@ -1890,11 +2053,104 @@ watch(activeTab, (tab) => {
     fetchWaitlist(true)
   } else if (tab === 'logs' && !sessionsLoaded.value) {
     fetchSessions(true)
+  } else if (tab === 'bug-reports' && !bugReportsLoaded.value) {
+    fetchBugReports(true)
   }
 })
 
+// ── Bug Reports ──────────────────────────────────────────────────────────────
+const bugReports = ref<BugReportItem[]>([])
+const bugReportPagination = reactive({ total: 0, page: 1, pages: 1, pageSize: 20 })
+const bugReportLoading = ref(false)
+const bugReportError = ref('')
+const bugReportsLoaded = ref(false)
+const bugReportStatusFilter = ref<'open' | 'resolved'>('open')
+const bugReportOpenCount = ref(0)
+const bugReportResolving = ref<string | null>(null)
+const bugReportDetailId = ref<string | null>(null)
+const bugReportDetail = ref<BugReportDetail | null>(null)
+const bugReportDetailLoading = ref(false)
+
+async function fetchBugReports(resetPage = false) {
+  if (resetPage) bugReportPagination.page = 1
+  bugReportLoading.value = true
+  bugReportError.value = ''
+  try {
+    const response = await api.get<BugReportsResponse>('/api/admin/bug-reports', {
+      query: { status: bugReportStatusFilter.value, page: bugReportPagination.page },
+    })
+    bugReports.value = response.items
+    Object.assign(bugReportPagination, response.pagination)
+    bugReportsLoaded.value = true
+    if (bugReportStatusFilter.value === 'open') bugReportOpenCount.value = response.pagination.total
+  } catch (error) {
+    bugReportError.value = extractErrorMessage(error, 'Bug Reports konnten nicht geladen werden.')
+  } finally {
+    bugReportLoading.value = false
+  }
+}
+
+async function loadBugReportDetail(id: string) {
+  if (bugReportDetailId.value === id) {
+    bugReportDetailId.value = null
+    bugReportDetail.value = null
+    return
+  }
+  bugReportDetailId.value = id
+  bugReportDetail.value = null
+  bugReportDetailLoading.value = true
+  try {
+    bugReportDetail.value = await api.get<BugReportDetail>(`/api/admin/bug-reports/${id}`)
+  } catch {
+    bugReportDetailId.value = null
+  } finally {
+    bugReportDetailLoading.value = false
+  }
+}
+
+async function resolveBugReport(id: string) {
+  bugReportResolving.value = id
+  try {
+    await api.request(`/api/admin/bug-reports/${id}`, { method: 'PATCH', body: { status: 'resolved' } })
+    const report = bugReports.value.find((r) => r.id === id)
+    if (report) { report.status = 'resolved'; bugReportOpenCount.value = Math.max(0, bugReportOpenCount.value - 1) }
+    if (bugReportStatusFilter.value === 'open') bugReports.value = bugReports.value.filter((r) => r.id !== id)
+  } catch (error) {
+    bugReportError.value = extractErrorMessage(error, 'Status konnte nicht geändert werden.')
+  } finally {
+    bugReportResolving.value = null
+  }
+}
+
+async function reopenBugReport(id: string) {
+  bugReportResolving.value = id
+  try {
+    await api.request(`/api/admin/bug-reports/${id}`, { method: 'PATCH', body: { status: 'open' } })
+    const report = bugReports.value.find((r) => r.id === id)
+    if (report) { report.status = 'open'; bugReportOpenCount.value++ }
+    if (bugReportStatusFilter.value === 'resolved') bugReports.value = bugReports.value.filter((r) => r.id !== id)
+  } catch (error) {
+    bugReportError.value = extractErrorMessage(error, 'Status konnte nicht geändert werden.')
+  } finally {
+    bugReportResolving.value = null
+  }
+}
+
+function changeBugReportPage(page: number) {
+  if (page < 1 || page > bugReportPagination.pages) return
+  bugReportPagination.page = page
+  fetchBugReports()
+}
+
+watch(bugReportStatusFilter, () => fetchBugReports(true))
+// ────────────────────────────────────────────────────────────────────────────
+
 onMounted(() => {
   loadOverview(true)
+  // Load open bug report count for the badge
+  api.get<BugReportsResponse>('/api/admin/bug-reports', { query: { status: 'open', page: 1 } })
+    .then((r) => { bugReportOpenCount.value = r.pagination.total })
+    .catch(() => {})
 })
 </script>
 <style scoped>
