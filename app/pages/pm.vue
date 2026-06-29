@@ -1577,6 +1577,32 @@ function expectedFrequencyForState(): string | null {
   return airportFreqMap.value[varKey] ?? ((vars as any).value[varKey] as string ?? null)
 }
 
+// All real frequencies published for a logical position. Some airports list
+// several for the same role (e.g. EDDM has two Tower frequencies, 118.700 and
+// 120.500) — the wrong-frequency gate accepts ANY of them, while
+// expectedFrequencyForState() still returns the primary one for the prompt.
+const airportFreqListMap = computed<Record<string, string[]>>(() => {
+  const result: Record<string, string[]> = {}
+  for (const entry of airportFrequencies.value) {
+    const key = frequencyTypeMap[entry.type]
+    if (key && entry.frequency) {
+      (result[key] ||= []).push(entry.frequency)
+    }
+  }
+  return result
+})
+
+function acceptedFrequenciesForState(): string[] {
+  const freqName = (currentState.value as any)?.frequency_name as string | undefined
+  if (!freqName) return []
+  const varKey = FREQ_NAME_TO_VAR[freqName.toLowerCase()]
+  if (!varKey) return []
+  const all = [...(airportFreqListMap.value[varKey] ?? [])]
+  const fromVars = (vars as any).value[varKey] as string | undefined
+  if (fromVars) all.push(fromVars)
+  return Array.from(new Set(all.map(normalizedFrequencyValue).filter(Boolean)))
+}
+
 const lastTransmission = ref('')
 const lastTransmissionFaulty = ref(false)
 const lastTransmissionFaultNote = ref('')
@@ -3228,9 +3254,16 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   }
 
   // --- Frequency check ---
-  // Reject the transmission if the pilot is on the wrong frequency.
+  // Reject the transmission if the pilot is on the wrong frequency. A position
+  // can publish several valid frequencies (e.g. two Tower freqs); accept any of
+  // them, and only fall back to the single expected value when no list resolves.
   const expectedFreq = expectedFrequencyForState()
-  if (expectedFreq && frequencies.value.active !== expectedFreq) {
+  const acceptedFreqs = acceptedFrequenciesForState()
+  const activeNorm = normalizedFrequencyValue(frequencies.value.active)
+  const onValidFreq = acceptedFreqs.length
+    ? acceptedFreqs.includes(activeNorm)
+    : frequencies.value.active === expectedFreq
+  if (expectedFreq && !onValidFreq) {
     const callsign = (vars as any).value?.callsign ?? ''
     const freqName = (currentState.value as any)?.frequency_name as string | undefined
     // Tell the pilot exactly which frequency to switch to (and the position),
