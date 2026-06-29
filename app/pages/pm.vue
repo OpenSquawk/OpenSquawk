@@ -602,7 +602,7 @@
                 <ClientOnly>
                   <div
                       class="ptt-pad flex h-52 lg:h-60 items-center justify-center rounded-2xl border text-center transition cursor-pointer"
-                      :class="isRecording ? 'border-red-400/40 ring-4 ring-red-400/40 bg-red-500/10' : 'border-white/10 ring-1 ring-white/5 bg-black/40'"
+                      :class="isRecording ? 'border-green-400/40 ring-4 ring-green-400/40 bg-green-500/10' : 'border-white/10 ring-1 ring-white/5 bg-black/40'"
                       @touchstart.prevent="startRecording(false)"
                       @touchend.prevent="stopRecording"
                       @touchcancel.prevent="stopRecording"
@@ -614,22 +614,22 @@
                       <v-icon
                           :icon="isRecording ? 'mdi-access-point' : 'mdi-radio-handheld'"
                           size="44"
-                          :class="isRecording ? 'text-red-400 animate-pulse' : 'text-cyan-300'"
+                          :class="isRecording ? 'text-green-400 animate-pulse' : 'text-cyan-300'"
                       />
                       <p
                           class="text-[11px] uppercase tracking-[0.35em] mt-1"
-                          :class="isRecording ? 'text-red-300' : 'text-white/40'"
+                          :class="isRecording ? 'text-green-300' : 'text-white/40'"
                       >
                         {{ isRecording ? 'Transmitting' : 'Hold to transmit' }}
                       </p>
                       <p
                           v-if="bridgePttConnected"
                           class="text-[10px] uppercase tracking-[0.25em] flex items-center justify-center gap-1.5"
-                          :class="isRecording ? 'text-red-300' : 'text-cyan-300/70'"
+                          :class="isRecording ? 'text-green-300' : 'text-cyan-300/70'"
                       >
                         <span
                             class="inline-block h-1.5 w-1.5 rounded-full"
-                            :class="isRecording ? 'bg-red-400 animate-pulse' : 'bg-cyan-300/60'"
+                            :class="isRecording ? 'bg-green-400 animate-pulse' : 'bg-cyan-300/60'"
                         />
                         {{ isRecording ? 'Hotkey transmitting' : 'Hotkey armed' }}
                       </p>
@@ -3199,7 +3199,10 @@ const speakPilotReadback = (text: string) => {
 
 const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' = 'text') => {
   const transcript = message.trim()
-  if (!transcript) return
+  // Ignore empty or content-free transmissions: silence, a stray PTT tap, or
+  // Whisper hallucinating punctuation on near-silent audio. A genuine short call
+  // ("roger", "wilco") still contains letters/digits and passes.
+  if (!transcript || !/[a-z0-9]/i.test(transcript)) return
 
   const prefix = source === 'ptt' ? 'Pilot (PTT)' : 'Pilot'
   setLastTransmission(`${prefix}: ${transcript}`)
@@ -3499,11 +3502,9 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
   currentScreen.value = 'monitor'
   persistSelectedPlan(flightPlan)
 
-  // Start every scenario from a known baseline frequency. Tuning to the first
-  // controller is part of the exercise: the pilot must dial the correct
-  // frequency themselves, and the first call is rejected (telling them which
-  // frequency to switch to) until they are on it. We deliberately do NOT
-  // auto-tune to the expected frequency here.
+  // Start from a known baseline; the first controller's frequency is tuned in
+  // automatically below, once the initial state-walk tells us which pilot state
+  // the scenario opens on.
   frequencies.value.active = '121.900'
   frequencies.value.standby = '118.100'
 
@@ -3518,6 +3519,17 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
     }
   } catch (err) {
     console.warn('Initial state advance failed:', err)
+  }
+
+  // Pre-tune COM1 active to the frequency the opening pilot call is expected on,
+  // so the very first transmission isn't met with a confusing 'wrong frequency'
+  // rejection. Later handoffs stay manual — tuning to the next controller
+  // remains part of the exercise.
+  await nextTick()
+  const firstFreq = expectedFrequencyForState()
+  if (firstFreq) {
+    frequencies.value.active = firstFreq
+    pmLog.info('Pre-tuned COM1 active to first frequency:', firstFreq)
   }
 }
 
@@ -3744,6 +3756,10 @@ const startRecording = async (isIntercom = false) => {
     await requestMicAccess()
     return
   }
+
+  // Barge-in: keying the mic cuts any ATC speech still playing, mirroring a real
+  // half-duplex radio where transmitting overrides the controller's output.
+  stopCurrentSpeech()
 
   // Pre-recording path: ring buffer + active capture, encoded to WAV on release
   if (prerecEnabled.value) {

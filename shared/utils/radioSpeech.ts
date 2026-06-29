@@ -226,11 +226,11 @@ function freqSpeak(raw: string): string {
     return `${leftSpoken} decimal ${rightSpoken}`;
 }
 
-const VIA_TAXI_ROUTE_PATTERN = /\b((?:expect\s+taxi\s+)?via\s+)([A-Z0-9\s/\-]+?)(?=(?:,|\s+(?:hold short|cross|then|contact|monitor|with|for|to|left|right)\b|\.)|$)/gi;
+const VIA_TAXI_ROUTE_PATTERN = /\b((?:expect\s+taxi\s+)?via\s+)([A-Z0-9\s/,\-]+?)(?=\s*,?\s*(?:hold short|cross|then|contact|monitor|with|for|to|left|right)\b|\s*\.|$)/gi;
 
-const TAXI_ROUTE_LABEL_PATTERN = /\b(taxi(?:-?in)?\s+route[:\s]+)([A-Z0-9\s/\-]+?)(?=(?:,|\s+(?:hold short|cross|then|contact|monitor|with|for|to|left|right)\b|\.)|$)/gi;
+const TAXI_ROUTE_LABEL_PATTERN = /\b(taxi(?:-?in)?\s+route[:\s]+)([A-Z0-9\s/,\-]+?)(?=\s*,?\s*(?:hold short|cross|then|contact|monitor|with|for|to|left|right)\b|\s*\.|$)/gi;
 
-const STAND_ROUTE_PATTERN = /\b(taxi\s+to\s+stand\s+[A-Z0-9]+\s+via\s+)([A-Z0-9\s/\-]+?)(?=(?:,|\s+(?:hold short|cross|then|contact|monitor|with|for|to|left|right)\b|\.)|$)/gi;
+const STAND_ROUTE_PATTERN = /\b(taxi\s+to\s+stand\s+[A-Z0-9]+\s+via\s+)([A-Z0-9\s/,\-]+?)(?=\s*,?\s*(?:hold short|cross|then|contact|monitor|with|for|to|left|right)\b|\s*\.|$)/gi;
 
 const TAXI_SEGMENT_SINGLE = /^[A-Z]{1,2}$/;
 const TAXI_SEGMENT_WITH_DIGITS = /^[A-Z]{1,3}\d{1,3}$/;
