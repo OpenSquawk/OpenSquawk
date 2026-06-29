@@ -3365,6 +3365,20 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   // ("roger", "wilco") still contains letters/digits and passes.
   if (!transcript || !/[a-z0-9]/i.test(transcript)) return
 
+  // STT MINIMUM-WORD GATE — search here if a spoken transmission was ignored.
+  // Voice (PTT) only: drop transcripts shorter than the configured minimum.
+  // Whisper hallucinates short real words ("Test", "Thank you", "Okay") on
+  // near-silent or noisy audio; left unfiltered those reach the backend as a
+  // (wrong) readback attempt — counting toward the 3x-skip — and now also
+  // trigger a paid LLM-router call. Text input is exempt so deliberate short
+  // commands still work. Threshold is the NUXT_PUBLIC_PTT_MIN_WORDS env var
+  // (default 2); set it to 1 to effectively disable the gate.
+  const minPttWords = Number(config.public.pttMinWords ?? 2)
+  if (source === 'ptt' && transcript.split(/\s+/).filter(Boolean).length < minPttWords) {
+    pmLog.info(`IGNORED short PTT transcript (<${minPttWords} words):`, transcript)
+    return
+  }
+
   const prefix = source === 'ptt' ? 'Pilot (PTT)' : 'Pilot'
   setLastTransmission(`${prefix}: ${transcript}`)
 

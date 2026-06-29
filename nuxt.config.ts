@@ -58,6 +58,10 @@ export default defineNuxtConfig({
         public: {
             apiDocumentationUrl: '/api-docs',
             radioBackendUrl: process.env.NUXT_PUBLIC_RADIO_BACKEND_URL || 'http://127.0.0.1:8000',
+            // Minimum word count for a voice (PTT) transmission to be used. Below
+            // this the transcript is treated as STT noise/hallucination and
+            // ignored. See the "STT MINIMUM-WORD GATE" in pages/pm.vue.
+            pttMinWords: Number(process.env.NUXT_PUBLIC_PTT_MIN_WORDS || 2),
         },
     },
     vuetify: {
