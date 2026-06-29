@@ -3379,6 +3379,10 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
     return
   }
 
+  // Mark this as the latest transmission; a newer one started before the backend
+  // replies supersedes it (the stale reply is dropped below).
+  const myGen = ++transmitGeneration
+
   const prefix = source === 'ptt' ? 'Pilot (PTT)' : 'Pilot'
   setLastTransmission(`${prefix}: ${transcript}`)
 
@@ -3399,6 +3403,31 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   // flow engine (the training state stays untouched).
   if (RADIO_CHECK_RE.test(transcript)) {
     answerRadioCheck(transcript)
+    return
+  }
+
+  // --- Say again ---
+  // Pilot asks ATC to repeat. Handled locally: re-speak the last controller
+  // transmission without advancing the flow.
+  if (SAY_AGAIN_RE.test(transcript) && lastControllerSay.value) {
+    const reply = `I say again. ${lastControllerSay.value}`
+    scheduleControllerSpeech(reply)
+    appendLogEntry('atc', reply, currentState.value?.id ?? '', { frequency: frequencies.value.active })
+    return
+  }
+
+  // --- Sign-off ---
+  // A bare goodbye / thank-you (no readback or request alongside): acknowledge
+  // politely instead of evaluating it as a transmission. Requires a farewell
+  // with no digits, no readback/acknowledgement words, and only a few words, so
+  // it never swallows a real call like "wilco, thanks" or a frequency readback.
+  const wordCount = transcript.split(/\s+/).filter(Boolean).length
+  const hasActionWord = /\b(wilco|roger|cleared|clear|runway|contact|ready|request|squawk|descend|climb|taxi|line\s?up|holding|hold short|approved|affirm|going|switching|push|startup)\b/i.test(transcript)
+  if (FAREWELL_RE.test(transcript) && !/\d/.test(transcript) && !hasActionWord && wordCount <= 6) {
+    const cs = (vars as any).value?.callsign ?? ''
+    const reply = cs ? `Good day, ${cs}.` : 'Good day.'
+    scheduleControllerSpeech(reply)
+    appendLogEntry('atc', reply, currentState.value?.id ?? '', { frequency: frequencies.value.active })
     return
   }
 
@@ -3447,6 +3476,13 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
 
   try {
     const response = await radioBackend.transmit(backendSessionId.value, transcript)
+
+    // Drop a stale reply if the pilot already transmitted again while this call
+    // was in flight — only the newest transmission's result is applied (#16).
+    if (myGen !== transmitGeneration) {
+      pmLog.info('Discarded stale transmission reply (superseded by a newer transmission)')
+      return
+    }
 
     pmLog.group(`✓ RESPONSE  ${currentState.value?.id ?? '?'} → ${response.next_state_id}`, () => {
       pmLog.info('next_state        :', response.next_state_id)
@@ -3509,7 +3545,16 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
 
     // TTS: use the pre-rendered string from the backend (correct variable values).
     // Fall back to rendering the template locally if rendered is absent.
-    const sayText = response.controller_say_rendered || response.controller_say_template
+    let sayText = response.controller_say_rendered || response.controller_say_template
+    // Positive readback confirmation (#10): when every required readback field
+    // was matched, prefix "Readback correct" — unless the controller line is
+    // already a confirmation/correction — so it isn't only the IFR clearance
+    // that acknowledges a good readback.
+    const rb = response.readback_report ?? []
+    const readbackPassed = rb.length > 0 && rb.every((r: any) => r.matched)
+    if (sayText && readbackPassed && !/^\s*(readback correct|correct[,.\s]|negative|i say again)/i.test(sayText)) {
+      sayText = `Readback correct. ${sayText}`
+    }
     if (sayText) {
       pmLog.info('TTS →', sayText)
       lastControllerSay.value = sayText
@@ -4549,6 +4594,15 @@ const playAtisBroadcast = async () => {
 }
 
 const RADIO_CHECK_RE = /\b(radio|signal)\s*check\b|how do you read/i
+
+// Pilot asking ATC to repeat its last transmission.
+const SAY_AGAIN_RE = /\b(say again|come again|repeat( that| your last)?)\b|please\s+say\s+again|pls\s+say\s+again/i
+// Bare sign-off / pleasantry (no substantive content alongside).
+const FAREWELL_RE = /\b(good\s?bye|bye[\s-]?bye|tsch(ü|ue)ss|servus|good day|cheerio|auf\s?wieder|thank you|thanks|danke)\b/i
+
+// Monotonic counter so a newer pilot transmission supersedes an older one still
+// awaiting its backend response — only the latest result is applied (#16).
+let transmitGeneration = 0
 
 /** Spoken readability per signal-strength level (1–5). */
 const READABILITY_PHRASE: Record<number, string> = {
