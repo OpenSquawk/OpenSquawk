@@ -511,6 +511,15 @@
             <button
                 type="button"
                 class="btn ghost"
+                :title="helpLang === 'de' ? 'Hilfe — wie funktioniert /pm' : 'Help — how /pm works'"
+                @click="openHelp"
+            >
+              <v-icon size="18">mdi-help-circle-outline</v-icon>
+              <span class="btn-label">{{ helpLang === 'de' ? 'Hilfe' : 'Help' }}</span>
+            </button>
+            <button
+                type="button"
+                class="btn ghost"
                 title="Fehler melden"
                 :disabled="bugReportCapturing"
                 @click="openBugReport"
@@ -1418,6 +1427,36 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
+
+      <!-- Help / how-it-works overlay (first-run + reopenable via the ? button) -->
+      <v-dialog v-model="showHelp" max-width="560" scrollable>
+        <v-card class="bg-[#0b1220] text-white border border-white/10">
+          <v-card-title class="d-flex align-center justify-space-between gap-2">
+            <span class="text-base font-semibold">{{ helpContent.title }}</span>
+            <v-btn size="small" variant="tonal" color="cyan" @click="toggleHelpLang">
+              {{ helpLang === 'de' ? 'EN' : 'DE' }}
+            </v-btn>
+          </v-card-title>
+          <v-card-text>
+            <p class="text-sm text-white/70 mb-4">{{ helpContent.intro }}</p>
+            <div class="space-y-3">
+              <div v-for="(step, i) in helpContent.steps" :key="i" class="flex gap-3">
+                <v-icon size="22" class="text-cyan-300 shrink-0 mt-1">{{ step.icon }}</v-icon>
+                <div>
+                  <div class="text-sm font-semibold">{{ step.title }}</div>
+                  <div class="text-[13px] text-white/65 leading-snug">{{ step.text }}</div>
+                </div>
+              </div>
+            </div>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn color="cyan" variant="flat" @click="dismissHelp">
+              {{ helpLang === 'de' ? 'Verstanden' : 'Got it' }}
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </section>
   </div>
 </template>
@@ -1483,7 +1522,57 @@ const STORAGE_KEYS = {
   vatsimId: 'pm_vatsim_id',
   prerecEnabled: 'pm_prerec_enabled',
   prerecSeconds: 'pm_prerec_seconds',
+  helpSeen: 'pm_help_seen',
+  helpLang: 'pm_help_lang',
 } as const
+
+// ── Help / how-it-works overlay ────────────────────────────────────────────
+const HELP_CONTENT = {
+  de: {
+    title: 'Wie /pm funktioniert',
+    intro: 'Du bist der Pilot. Du sprichst per Funk mit der Flugsicherung (ATC) und arbeitest ein realistisches Szenario ab.',
+    steps: [
+      { icon: 'mdi-radio-handheld', title: 'Frequenz einstellen', text: 'Stelle die aktive COM1-Frequenz auf den zuständigen Lotsen. Auf der falschen Frequenz kommt dein Funkspruch nicht durch.' },
+      { icon: 'mdi-microphone', title: 'Sprechtaste (PTT)', text: 'Halte die Sprechtaste gedrückt, sprich, lass los. Beim Senden wird die Taste grün. Ein neuer Funkspruch unterbricht die laufende ATC-Ausgabe.' },
+      { icon: 'mdi-repeat', title: 'Readback', text: 'Lies Anweisungen zurück (Frequenz, Piste, Squawk, Höhe …). Stimmt es nicht, sagt ATC „say again“. Nach 3 Versuchen wird übersprungen.' },
+      { icon: 'mdi-alert-octagon', title: 'Notfall', text: 'Mit „Mayday“ oder „Pan-Pan“ rufst du einen Notfall aus, mit „cancel mayday“ beendest du ihn wieder.' },
+      { icon: 'mdi-bug-outline', title: 'Fehler melden', text: 'Mit dem Bug-Knopf meldest du einen Fehler — die ganze Funksession wird mitgeschickt.' },
+    ],
+  },
+  en: {
+    title: 'How /pm works',
+    intro: 'You are the pilot. You talk to ATC over the radio and work through a realistic scenario.',
+    steps: [
+      { icon: 'mdi-radio-handheld', title: 'Tune the frequency', text: 'Set the active COM1 frequency to the controller you need. On the wrong frequency your call will not get through.' },
+      { icon: 'mdi-microphone', title: 'Push-to-talk (PTT)', text: 'Hold the talk button, speak, release. The pad turns green while you transmit. A new transmission cuts any ATC speech still playing.' },
+      { icon: 'mdi-repeat', title: 'Read back', text: 'Read instructions back (frequency, runway, squawk, altitude …). If it is wrong ATC says “say again”. After 3 tries it is skipped.' },
+      { icon: 'mdi-alert-octagon', title: 'Emergency', text: 'Say “Mayday” or “Pan-Pan” to declare an emergency, and “cancel mayday” to end it.' },
+      { icon: 'mdi-bug-outline', title: 'Report a bug', text: 'Use the Bug button to report an issue — the whole radio session is attached.' },
+    ],
+  },
+} as const
+
+const showHelp = ref(false)
+const helpLang = ref<'de' | 'en'>('de')
+const helpContent = computed(() => HELP_CONTENT[helpLang.value])
+const openHelp = () => { showHelp.value = true }
+const dismissHelp = () => {
+  showHelp.value = false
+  try { window.localStorage.setItem(STORAGE_KEYS.helpSeen, '1') } catch { /* ignore */ }
+}
+const toggleHelpLang = () => {
+  helpLang.value = helpLang.value === 'de' ? 'en' : 'de'
+  try { window.localStorage.setItem(STORAGE_KEYS.helpLang, helpLang.value) } catch { /* ignore */ }
+}
+/** Open the help overlay automatically the first time a session is entered. */
+const maybeShowFirstRunHelp = () => {
+  if (typeof window === 'undefined') return
+  try {
+    const lang = window.localStorage.getItem(STORAGE_KEYS.helpLang)
+    if (lang === 'de' || lang === 'en') helpLang.value = lang
+    if (!window.localStorage.getItem(STORAGE_KEYS.helpSeen)) showHelp.value = true
+  } catch { /* ignore */ }
+}
 
 let restoringFromStorage = true
 
@@ -3595,6 +3684,7 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
   selectedPlan.value = flightPlan
   currentScreen.value = 'monitor'
   persistSelectedPlan(flightPlan)
+  maybeShowFirstRunHelp()
 
   // Start from a known baseline; the first controller's frequency is tuned in
   // automatically below, once the initial state-walk tells us which pilot state
