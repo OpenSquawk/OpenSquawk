@@ -43,6 +43,7 @@
         <v-tab value="invitations">Invitations</v-tab>
         <v-tab value="waitlist">Waitlist</v-tab>
         <v-tab value="logs">Transmissions</v-tab>
+        <v-tab value="llm-routing">LLM Routing</v-tab>
         <v-tab value="bug-reports">
           Bug Reports
           <v-badge v-if="bugReportOpenCount > 0" :content="bugReportOpenCount" color="red" inline class="ml-1" />
@@ -937,6 +938,115 @@
         </v-window-item>
 
         <!-- Bug Reports Tab -->
+        <v-window-item value="llm-routing">
+          <section class="space-y-6">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 class="text-2xl font-semibold">LLM Routing</h2>
+                <p class="text-sm text-white/70">
+                  Fälle, in denen die Regex-Routing fehlschlug und das LLM entscheiden musste.
+                  Latenz vs. Zeitlimit hilft beim Tunen des Timeouts.
+                </p>
+              </div>
+              <div class="flex items-center gap-3">
+                <v-select
+                  v-model="llmStatusFilter"
+                  :items="llmStatusItems"
+                  label="Status"
+                  density="comfortable"
+                  variant="outlined"
+                  color="cyan"
+                  hide-details
+                  class="w-48"
+                />
+                <v-btn color="cyan" variant="tonal" :loading="llmLoading" @click="fetchLlmRouting(true)">
+                  Laden
+                </v-btn>
+              </div>
+            </div>
+
+            <v-alert v-if="llmError" type="warning" variant="tonal" density="comfortable" class="bg-red-500/10 text-red-100">
+              {{ llmError }}
+            </v-alert>
+
+            <div v-if="llmLoading && !llmDecisions.length" class="py-12 text-center text-white/70">
+              <v-progress-circular indeterminate color="cyan" class="mb-4" />
+              <p>LLM-Entscheidungen laden…</p>
+            </div>
+
+            <div v-else class="space-y-4">
+              <div v-if="llmDecisions.length" class="space-y-4">
+                <v-card
+                  v-for="d in llmDecisions"
+                  :key="d.id"
+                  class="border border-white/10 bg-black/40"
+                >
+                  <v-card-text class="space-y-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <v-chip size="x-small" :color="llmStatusColor(d.status)" variant="tonal">{{ d.status }}</v-chip>
+                      <v-chip
+                        size="x-small"
+                        :color="d.latencyMs >= d.timeoutMs ? 'red' : (d.latencyMs > d.timeoutMs * 0.8 ? 'orange' : 'cyan')"
+                        variant="tonal"
+                      >
+                        {{ d.latencyMs }}ms / {{ d.timeoutMs }}ms
+                      </v-chip>
+                      <span class="text-xs text-white/40 font-mono">{{ d.model }}</span>
+                      <span v-if="d.costUsd != null" class="text-xs text-white/40">${{ d.costUsd.toFixed(5) }}</span>
+                      <span class="text-xs text-white/40">{{ formatRelative(d.createdAt) }}</span>
+                    </div>
+
+                    <div class="grid gap-2 sm:grid-cols-2">
+                      <div class="space-y-1">
+                        <p class="text-[11px] uppercase tracking-wide text-white/40">Transkript (STT)</p>
+                        <p class="text-sm text-white/90 font-mono">"{{ d.transcript }}"</p>
+                      </div>
+                      <div v-if="d.expectedPhrase" class="space-y-1">
+                        <p class="text-[11px] uppercase tracking-wide text-white/40">Erwartet</p>
+                        <p class="text-sm text-white/70 font-mono">"{{ d.expectedPhrase }}"</p>
+                      </div>
+                    </div>
+
+                    <div class="space-y-1">
+                      <p class="text-[11px] uppercase tracking-wide text-white/40">Kandidaten</p>
+                      <div class="flex flex-wrap gap-1.5">
+                        <v-chip
+                          v-for="c in d.candidates"
+                          :key="c.id"
+                          size="x-small"
+                          :color="c.id === d.chosen ? 'green' : (c.kind === 'ok' ? 'cyan' : 'grey')"
+                          :variant="c.id === d.chosen ? 'flat' : 'outlined'"
+                        >
+                          <v-icon v-if="c.id === d.chosen" size="12" start>mdi-check</v-icon>
+                          {{ c.id }} · {{ c.kind }}
+                        </v-chip>
+                      </div>
+                    </div>
+
+                    <p v-if="d.reason" class="text-sm text-white/70 italic">„{{ d.reason }}“</p>
+
+                    <div class="text-xs text-white/40 font-mono">
+                      State: {{ d.stateId }} · Flow: {{ d.flowSlug || '—' }} · Session: {{ d.sessionId.slice(0, 8) }}
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </div>
+
+              <p v-else class="py-12 text-center text-sm text-white/60">Keine LLM-Entscheidungen vorhanden.</p>
+
+              <div class="flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <div class="text-xs text-white/50">
+                  Seite {{ llmPagination.page }} von {{ llmPagination.pages }} · {{ llmPagination.total }} Einträge
+                </div>
+                <div class="flex items-center gap-2">
+                  <v-btn variant="text" color="cyan" :disabled="llmPagination.page <= 1" @click="changeLlmPage(llmPagination.page - 1)">Zurück</v-btn>
+                  <v-btn variant="text" color="cyan" :disabled="llmPagination.page >= llmPagination.pages" @click="changeLlmPage(llmPagination.page + 1)">Weiter</v-btn>
+                </div>
+              </div>
+            </div>
+          </section>
+        </v-window-item>
+
         <v-window-item value="bug-reports">
           <section class="space-y-6">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1449,7 +1559,7 @@ useHead({ title: 'Admin • OpenSquawk' })
 const auth = useAuthStore()
 const api = useApi()
 
-const activeTab = ref<'overview' | 'users' | 'invitations' | 'waitlist' | 'logs' | 'bug-reports'>('overview')
+const activeTab = ref<'overview' | 'users' | 'invitations' | 'waitlist' | 'logs' | 'llm-routing' | 'bug-reports'>('overview')
 const refreshing = ref(false)
 
 const overview = ref<OverviewData | null>(null)
@@ -2053,6 +2163,8 @@ watch(activeTab, (tab) => {
     fetchWaitlist(true)
   } else if (tab === 'logs' && !sessionsLoaded.value) {
     fetchSessions(true)
+  } else if (tab === 'llm-routing' && !llmLoaded.value) {
+    fetchLlmRouting(true)
   } else if (tab === 'bug-reports' && !bugReportsLoaded.value) {
     fetchBugReports(true)
   }
@@ -2143,6 +2255,88 @@ function changeBugReportPage(page: number) {
 }
 
 watch(bugReportStatusFilter, () => fetchBugReports(true))
+// ────────────────────────────────────────────────────────────────────────────
+
+// ── LLM Routing ──────────────────────────────────────────────────────────────
+interface LlmRoutingItem {
+  id: string
+  sessionId: string
+  flowSlug?: string
+  stateId: string
+  transcript: string
+  expectedPhrase?: string
+  candidates: { id: string; label?: string; kind: 'ok' | 'bad' }[]
+  chosen: string | null
+  reason?: string
+  status: 'decided' | 'abstain' | 'invalid' | 'timeout' | 'error'
+  model: string
+  timeoutMs: number
+  latencyMs: number
+  costUsd?: number
+  createdAt: string | null
+}
+
+interface LlmRoutingResponse {
+  items: LlmRoutingItem[]
+  counts: Record<string, number>
+  pagination: { total: number; page: number; pageSize: number; pages: number }
+}
+
+const llmDecisions = ref<LlmRoutingItem[]>([])
+const llmPagination = reactive({ total: 0, page: 1, pages: 1, pageSize: 20 })
+const llmLoading = ref(false)
+const llmError = ref('')
+const llmLoaded = ref(false)
+const llmStatusFilter = ref<'all' | 'decided' | 'abstain' | 'invalid' | 'timeout' | 'error'>('all')
+const llmCounts = ref<Record<string, number>>({})
+
+const llmStatusItems = computed(() => [
+  { title: `Alle${llmCounts.value.all != null ? ` (${llmCounts.value.all})` : ''}`, value: 'all' },
+  { title: `Entschieden${llmCounts.value.decided != null ? ` (${llmCounts.value.decided})` : ''}`, value: 'decided' },
+  { title: `Abstain${llmCounts.value.abstain != null ? ` (${llmCounts.value.abstain})` : ''}`, value: 'abstain' },
+  { title: `Invalid${llmCounts.value.invalid != null ? ` (${llmCounts.value.invalid})` : ''}`, value: 'invalid' },
+  { title: `Timeout${llmCounts.value.timeout != null ? ` (${llmCounts.value.timeout})` : ''}`, value: 'timeout' },
+  { title: `Error${llmCounts.value.error != null ? ` (${llmCounts.value.error})` : ''}`, value: 'error' },
+])
+
+function llmStatusColor(status: string) {
+  switch (status) {
+    case 'decided': return 'green'
+    case 'abstain': return 'grey'
+    case 'invalid': return 'orange'
+    case 'timeout': return 'red'
+    default: return 'red'
+  }
+}
+
+async function fetchLlmRouting(resetPage = false) {
+  if (resetPage) llmPagination.page = 1
+  llmLoading.value = true
+  llmError.value = ''
+  try {
+    const response = await api.get<LlmRoutingResponse>('/api/admin/llm-routing', {
+      query: { status: llmStatusFilter.value, page: llmPagination.page },
+    })
+    llmDecisions.value = response.items
+    Object.assign(llmPagination, response.pagination)
+    const counts = { ...response.counts }
+    counts.all = Object.values(response.counts).reduce((a, b) => a + b, 0)
+    llmCounts.value = counts
+    llmLoaded.value = true
+  } catch (error) {
+    llmError.value = extractErrorMessage(error, 'LLM-Entscheidungen konnten nicht geladen werden.')
+  } finally {
+    llmLoading.value = false
+  }
+}
+
+function changeLlmPage(page: number) {
+  if (page < 1 || page > llmPagination.pages) return
+  llmPagination.page = page
+  fetchLlmRouting()
+}
+
+watch(llmStatusFilter, () => fetchLlmRouting(true))
 // ────────────────────────────────────────────────────────────────────────────
 
 onMounted(() => {
