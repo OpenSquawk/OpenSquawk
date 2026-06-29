@@ -741,6 +741,13 @@ export function normalizeRadioPhrase(text: string, options: NormalizeRadioOption
     out = out.replace(/\b(wind\s+)(\d{3})\/(\d{2,3})(?:KT)?\b/gi, (_m, prefix: string, dir: string, spd: string) =>
         `${prefix}${spellIcaoDigits(dir)} degrees, ${spellIcaoDigits(spd)} knots`);
 
+    // Aircraft registration callsign: "D-EMIL" → "Delta Echo Mike India Lima",
+    // abbreviated "D-IL" → "Delta India Lima". Single prefix letter, hyphen, then
+    // 1–5 registration letters, each spelled phonetically. Runs before airport/
+    // callsign expansion so the registration body isn't read as an ICAO code.
+    out = out.replace(/\b([A-Z])-([A-Z]{1,5})\b/g, (_m, prefix: string, body: string) =>
+        spellIcaoLetters(prefix + body));
+
     if (opts.sidSuffixIcao) {
         out = out.replace(/\b([A-Z]{4,6})\s*(\d)\s*([A-Z])\b/g, (_match, prefix: string, digit: string, letter: string) => {
             return sidSuffixSpeak(prefix, digit, letter);
