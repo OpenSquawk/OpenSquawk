@@ -3538,6 +3538,21 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
     approach_freq:    v.approach_freq    || '119.000',
     handoff_freq:     v.handoff_freq     || '131.150',
   }
+
+  // VFR flights identify by aircraft registration, not an airline callsign.
+  // Assign a German D-registration and its abbreviated form (D-EMIL -> D-IL,
+  // first letter + last two), which ATC uses after the first call. Mirror it
+  // into the local engine vars and HUD so the display matches the radio.
+  if (scenario.startFlow.startsWith('vfr')) {
+    const pool = ['D-EMIL', 'D-EKLM', 'D-ENNY', 'D-ELLA', 'D-EOMT', 'D-ELPC', 'D-EMTO', 'D-EBRA']
+    const reg = pool[Math.floor(Math.random() * pool.length)]
+    const short = `D-${reg.replace(/^D-/, '').slice(-2)}`
+    backendVariables.callsign = reg
+    backendVariables.callsign_short = short
+    patchVariables({ callsign: reg, callsign_short: short })
+  } else {
+    backendVariables.callsign_short = backendVariables.callsign
+  }
   pmLog.info('backend variables payload:', backendVariables)
 
   // 4. Create a backend session with the flight-plan-derived variables
