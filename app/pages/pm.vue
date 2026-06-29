@@ -188,6 +188,34 @@
           </v-card>
         </div>
 
+        <!-- Standalone drills -->
+        <div v-if="drillScenarios.length" class="space-y-3">
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-white/35">
+            Drills
+          </p>
+          <v-card
+              v-for="drill in drillScenarios"
+              :key="drill.id"
+              class="bg-white/5 border border-white/10 backdrop-blur"
+              rounded="lg"
+          >
+            <v-card-text class="p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 min-w-0">
+                  <v-icon :icon="drill.icon" class="text-cyan-300 shrink-0" size="24" />
+                  <div class="min-w-0">
+                    <div class="font-semibold text-sm leading-tight">{{ drill.name }}</div>
+                    <div class="text-[11px] text-white/45 leading-snug truncate">{{ drill.subtitle }}</div>
+                  </div>
+                </div>
+                <v-btn size="small" color="cyan" variant="flat" class="shrink-0" @click="launchScenario(drill)">
+                  Start
+                </v-btn>
+              </div>
+            </v-card-text>
+          </v-card>
+        </div>
+
         <p class="text-[10px] text-white/30 text-center">
           Tap a step to practise just that phase · “Fly full” runs the whole chain.
         </p>
@@ -2110,6 +2138,18 @@ const SCENARIOS: Scenario[] = [
     noChain: true,
     airport: 'arr',
   },
+  // ── Drills (standalone, not part of a journey chain) ─────────────────────
+  {
+    id: 'rto',
+    name: 'Rejected Take-Off',
+    subtitle: 'Tower cancels takeoff — reject and stop',
+    chain: 'rto-v1',
+    icon: 'mdi-airplane-alert',
+    startFlow: 'rto-v1',
+    isComplete: false,
+    noChain: true,
+    airport: 'dep',
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -2127,6 +2167,12 @@ const CHAIN_DEFS: ChainDef[] = [
   { category: 'Arrival',   completeId: 'ifr-arrival',   segmentIds: ['ifr-enroute', 'ifr-approach', 'ifr-landing', 'taxi-in'] },
   { category: 'Arrival',   completeId: 'vfr-arrival',   segmentIds: ['vfr-approach', 'circuit-landing', 'taxi-in'] },
 ]
+
+// Standalone drills shown in their own section, separate from the journey chains.
+const DRILL_IDS = ['rto']
+const drillScenarios = computed(() => DRILL_IDS
+  .map(id => SCENARIOS.find(s => s.id === id))
+  .filter((s): s is Scenario => !!s))
 
 const chainGroups = computed(() => {
   const byCategory = new Map<string, Array<{ id: string; complete: Scenario; segments: Scenario[] }>>()
