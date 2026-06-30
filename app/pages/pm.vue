@@ -2250,6 +2250,17 @@ const SCENARIOS: Scenario[] = [
     noChain: true,
     airport: 'dep',
   },
+  {
+    id: 'info-arrival',
+    name: 'Uncontrolled Field (Info)',
+    subtitle: 'Self-announce arrival, no clearances',
+    chain: 'info-arrival-v1',
+    icon: 'mdi-account-voice',
+    startFlow: 'info-arrival-v1',
+    isComplete: false,
+    noChain: true,
+    airport: 'arr',
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -2269,7 +2280,7 @@ const CHAIN_DEFS: ChainDef[] = [
 ]
 
 // Standalone drills shown in their own section, separate from the journey chains.
-const DRILL_IDS = ['rto']
+const DRILL_IDS = ['rto', 'info-arrival']
 const drillScenarios = computed(() => DRILL_IDS
   .map(id => SCENARIOS.find(s => s.id === id))
   .filter((s): s is Scenario => !!s))
@@ -3713,7 +3724,7 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
   // Assign a German D-registration and its abbreviated form (D-EMIL -> D-IL,
   // first letter + last two), which ATC uses after the first call. Mirror it
   // into the local engine vars and HUD so the display matches the radio.
-  if (scenario.startFlow.startsWith('vfr')) {
+  if (scenario.startFlow.startsWith('vfr') || scenario.startFlow.startsWith('info')) {
     const pool = ['D-EMIL', 'D-EKLM', 'D-ENNY', 'D-ELLA', 'D-EOMT', 'D-ELPC', 'D-EMTO', 'D-EBRA']
     const reg = pool[Math.floor(Math.random() * pool.length)]
     const short = `D-${reg.replace(/^D-/, '').slice(-2)}`
