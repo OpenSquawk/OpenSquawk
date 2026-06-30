@@ -48,10 +48,19 @@ export function useRadioBackend() {
         flowSlug: string,
         variables?: Record<string, any>,
         noChain: boolean = false,
+        airportIcao?: string,
+        destinationIcao?: string,
     ): Promise<RadioSessionResponse> {
         return await $fetch<RadioSessionResponse>(`${baseUrl()}/api/radio/session`, {
             method: 'POST',
-            body: { flow_slug: flowSlug, variables: variables ?? null, no_chain: noChain },
+            body: {
+                flow_slug: flowSlug,
+                variables: variables ?? null,
+                no_chain: noChain,
+                // Lets the backend compute the real OSM taxi route for taxi flows.
+                airport_icao: airportIcao ?? null,
+                destination_icao: destinationIcao ?? null,
+            },
         })
     }
 
