@@ -1,5 +1,16 @@
 <template>
   <div class="min-h-screen bg-[#050910] text-white">
+    <!-- Session-start overlay: covers the (synchronous) taxi-route computation -->
+    <div
+        v-if="sessionStarting"
+        class="fixed inset-0 z-[2000] flex flex-col items-center justify-center gap-4 bg-[#050910]/80 backdrop-blur"
+        role="status"
+        aria-live="polite"
+    >
+      <v-progress-circular indeterminate color="cyan" size="48" width="4" />
+      <p class="text-sm text-white/80">{{ sessionStartingMessage }}</p>
+    </div>
+
     <div v-if="currentScreen !== 'monitor'" class="mx-auto w-full max-w-[420px] px-4 pb-24 pt-6 sm:px-6">
       <!-- Login/Flight Selection Screen -->
       <section v-if="currentScreen === 'login'" class="space-y-6">
@@ -3620,8 +3631,18 @@ const loadFlightPlans = async () => {
   }
 }
 
+// Overlay shown while a session is being created. For taxi flows the backend
+// computes a real OSM taxi route synchronously, so the create call can take a
+// few seconds — the spinner tells the user that work is happening.
+const sessionStarting = ref(false)
+const sessionStartingMessage = ref('Starting session…')
+
 const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
   activeScenario.value = scenario
+  sessionStarting.value = true
+  sessionStartingMessage.value = /^taxi/.test(scenario.startFlow)
+    ? 'Calculating taxi route…'
+    : 'Starting session…'
 
   // 1. Ensure the local tree is loaded from the Python backend (same source as session)
   try {
@@ -3631,6 +3652,7 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
   } catch (err) {
     console.error('Failed to prepare decision engine', err)
     error.value = 'Entscheidungsbaum konnte nicht geladen werden.'
+    sessionStarting.value = false
     return
   }
 
@@ -3710,6 +3732,8 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
       scenario.startFlow,
       backendVariables,
       scenario.noChain,
+      scenarioIcao,
+      v.dest || flightPlan.arr || flightPlan.arrival,
     )
     backendSessionId.value = session.session_id
     pmLog.group(`SESSION CREATED  id=${session.session_id.slice(0, 8)}`, () => {
@@ -3737,6 +3761,9 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
     console.error('Failed to create backend session', err)
     error.value = 'Verbindung zum Training-Backend fehlgeschlagen.'
     return
+  } finally {
+    // The slow part (route computation) is done once createSession resolves.
+    sessionStarting.value = false
   }
 
   error.value = ''
