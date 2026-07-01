@@ -3380,6 +3380,83 @@ const speakPilotReadback = (text: string) => {
   })
 }
 
+// Apply a backend decision (from a pilot transmission OR a telemetry tick) to
+// the local engine + UI: sync the flow/cursor/variables/flags, speak the
+// controller reply, and surface completion. Shared so telemetry-driven ATC and
+// pilot-driven ATC land through exactly one code path.
+const applyBackendDecision = (
+  response: import('../composables/useRadioBackend').RadioTransmitResponse,
+  opts: { transcript?: string } = {},
+) => {
+  // If the backend has chained to a different flow, switch the local engine
+  // first so moveToSilent can find the new states and expectedFrequencyForState()
+  // returns the correct frequency_name.
+  if (response.active_flow && response.active_flow !== activeFlow.value) {
+    pmLog.info('FLOW CHANGE  local:', activeFlow.value, '→ backend:', response.active_flow)
+    try {
+      setActiveFlow(response.active_flow)
+    } catch (e) {
+      pmLog.warn('setActiveFlow failed for', response.active_flow, e)
+    }
+  }
+
+  // Advance local cursor through every state the backend auto-walked, then the
+  // final state. moveToSilent updates current_unit, actions, handoffs and the
+  // communication log without scheduling further auto-transitions.
+  for (const stateId of response.auto_advanced_states ?? []) {
+    pmLog.debug('moveToSilent ← auto_advanced:', stateId)
+    moveToSilent(stateId)
+  }
+  pmLog.debug('moveToSilent ← next_state_id:', response.next_state_id)
+  moveToSilent(response.next_state_id)
+
+  // Capture the per-field readback diagnostic for the STT debug panel.
+  lastReadbackReport.value = response.readback_report ?? []
+  if (opts.transcript !== undefined) lastReadbackTranscript.value = opts.transcript
+
+  // Update expected phrase AFTER cursor moves so any local-engine reactive
+  // updates from moveToSilent have already settled.
+  backendExpectedPhrase.value = response.expected_pilot_template ?? null
+
+  // Sync variables + routing flags from backend so the local renderer stays in step.
+  if (response.variables && Object.keys(response.variables).length) {
+    patchVariables(response.variables)
+    pmLog.debug('variables synced:', response.variables)
+  }
+  if (response.flags && Object.keys(response.flags).length) {
+    patchFlags(response.flags)
+    pmLog.debug('flags synced:', response.flags)
+  }
+
+  // TTS: use the pre-rendered string from the backend (correct variable values).
+  let sayText = response.controller_say_rendered || response.controller_say_template
+  const rb = response.readback_report ?? []
+  const readbackPassed = rb.length > 0 && rb.every((r: any) => r.matched)
+  if (sayText && readbackPassed && !/^\s*(readback correct|correct[,.\s]|negative|i say again)/i.test(sayText)) {
+    sayText = `Readback correct. ${sayText}`
+  }
+  if (sayText) {
+    pmLog.info('TTS →', sayText)
+    lastControllerSay.value = sayText
+    scheduleControllerSpeech(sayText)
+    appendLogEntry('atc', sayText, response.next_state_id, {
+      flow: response.active_flow,
+      frequency: frequencies.value.active,
+    })
+  }
+
+  if (response.fallback_used) {
+    pmLog.warn('FALLBACK USED:', response.fallback_reason)
+    console.warn('[Backend] Fallback used:', response.fallback_reason)
+  }
+
+  if (response.session_complete) {
+    pmLog.info('SESSION COMPLETE — showing completion screen')
+    completedScenario.value = activeScenario.value
+    currentScreen.value = 'complete'
+  }
+}
+
 const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' = 'text') => {
   const transcript = message.trim()
   // Ignore empty or content-free transmissions: silence, a stray PTT tap, or
@@ -3521,84 +3598,7 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
       }
     })
 
-    // If the backend has chained to a different flow, switch the local engine
-    // to that flow first so moveToSilent can find the new states and
-    // expectedFrequencyForState() returns the correct frequency_name.
-    if (response.active_flow && response.active_flow !== activeFlow.value) {
-      pmLog.info('FLOW CHANGE  local:', activeFlow.value, '→ backend:', response.active_flow)
-      try {
-        setActiveFlow(response.active_flow)
-      } catch (e) {
-        pmLog.warn('setActiveFlow failed for', response.active_flow, e)
-      }
-    }
-
-    // Advance local cursor through every state the backend auto-walked, then
-    // the final state. moveToSilent updates current_unit, actions, handoffs,
-    // and the communication log without scheduling further auto-transitions.
-    for (const stateId of response.auto_advanced_states ?? []) {
-      pmLog.debug('moveToSilent ← auto_advanced:', stateId)
-      moveToSilent(stateId)
-    }
-    pmLog.debug('moveToSilent ← next_state_id:', response.next_state_id)
-    moveToSilent(response.next_state_id)
-
-    // Capture the per-field readback diagnostic for the STT debug panel.
-    lastReadbackReport.value = response.readback_report ?? []
-    lastReadbackTranscript.value = transcript
-
-    // Update expected phrase AFTER cursor moves so any local-engine reactive
-    // updates from moveToSilent have already settled.
-    backendExpectedPhrase.value = response.expected_pilot_template ?? null
-
-    // Sync variables from backend — keeps local renderer in step with backend state.
-    // Uses patchVariables() which writes directly to the engine's reactive store,
-    // bypassing the readonly(ref) wrapper that silently blocks (vars as any).value[k] = v.
-    if (response.variables && Object.keys(response.variables).length) {
-      patchVariables(response.variables)
-      pmLog.debug('variables synced:', response.variables)
-    }
-
-    // Sync boolean routing flags (in_air, emergency_active, etc.) from backend.
-    if (response.flags && Object.keys(response.flags).length) {
-      patchFlags(response.flags)
-      pmLog.debug('flags synced:', response.flags)
-    }
-
-    // TTS: use the pre-rendered string from the backend (correct variable values).
-    // Fall back to rendering the template locally if rendered is absent.
-    let sayText = response.controller_say_rendered || response.controller_say_template
-    // Positive readback confirmation (#10): when every required readback field
-    // was matched, prefix "Readback correct" — unless the controller line is
-    // already a confirmation/correction — so it isn't only the IFR clearance
-    // that acknowledges a good readback.
-    const rb = response.readback_report ?? []
-    const readbackPassed = rb.length > 0 && rb.every((r: any) => r.matched)
-    if (sayText && readbackPassed && !/^\s*(readback correct|correct[,.\s]|negative|i say again)/i.test(sayText)) {
-      sayText = `Readback correct. ${sayText}`
-    }
-    if (sayText) {
-      pmLog.info('TTS →', sayText)
-      lastControllerSay.value = sayText
-      scheduleControllerSpeech(sayText)
-      // Add ATC speech to the communication log so it appears alongside pilot entries.
-      appendLogEntry('atc', sayText, response.next_state_id, {
-        flow: response.active_flow,
-        frequency: frequencies.value.active,
-      })
-    }
-
-    if (response.fallback_used) {
-      pmLog.warn('FALLBACK USED:', response.fallback_reason)
-      console.warn('[Backend] Fallback used:', response.fallback_reason)
-    }
-
-    // Session complete → show completion screen
-    if (response.session_complete) {
-      pmLog.info('SESSION COMPLETE — showing completion screen')
-      completedScenario.value = activeScenario.value
-      currentScreen.value = 'complete'
-    }
+    applyBackendDecision(response, { transcript })
   } catch (e: any) {
     const status = e?.status ?? e?.response?.status
     if (status === 404) {
@@ -5169,6 +5169,62 @@ function normalizeSimFreq(value: unknown): string | null {
   return num.toFixed(3)
 }
 
+// Map the raw bridge telemetry (SimConnect-style field names) to the
+// sim-agnostic contract the backend understands. distance_to_*_nm are omitted
+// until pm.vue has a reliable airport-coordinate source to compute them from;
+// heading is currently true (bridge only reports true) — magnetic correction is
+// needed before any localizer/heading trigger can rely on it.
+function normalizeBridgeTelemetry(raw: any): import('../composables/useRadioBackend').NormalizedTelemetry | null {
+  if (!raw || typeof raw !== 'object') return null
+  const num = (v: unknown): number | undefined => {
+    const n = typeof v === 'number' ? v : Number(v)
+    return Number.isFinite(n) ? n : undefined
+  }
+  return {
+    altitude_ft: num(raw.PLANE_ALTITUDE),
+    ias_kts: num(raw.AIRSPEED_INDICATED),
+    gs_kts: num(raw.GROUND_VELOCITY),
+    vs_fpm: num(raw.VERTICAL_SPEED),
+    heading_deg: num(raw.PLANE_HEADING_DEGREES_TRUE),
+    on_ground: typeof raw.SIM_ON_GROUND === 'boolean' ? raw.SIM_ON_GROUND : undefined,
+  }
+}
+
+// Only forward telemetry that meaningfully changed, so idle cruise doesn't POST
+// an identical tick every poll. Rounded so tiny jitter doesn't count as change.
+let lastSentTelemetrySig: string | null = null
+function telemetrySignature(t: import('../composables/useRadioBackend').NormalizedTelemetry): string {
+  const r = (v: number | undefined, step: number) => (v === undefined ? '_' : Math.round(v / step))
+  return [
+    r(t.altitude_ft, 100), r(t.ias_kts, 5), r(t.gs_kts, 5),
+    r(t.vs_fpm, 100), r(t.heading_deg, 5), t.on_ground ? 'G' : 'A',
+  ].join('|')
+}
+
+async function forwardTelemetryToBackend(rawTelemetry: any) {
+  if (!backendSessionId.value) return
+  const normalized = normalizeBridgeTelemetry(rawTelemetry)
+  if (!normalized) return
+  const sig = telemetrySignature(normalized)
+  if (sig === lastSentTelemetrySig) return  // nothing meaningful changed
+  lastSentTelemetrySig = sig
+  try {
+    const response = await radioBackend.sendTelemetry(backendSessionId.value, normalized)
+    if (response.telemetry_fired) {
+      pmLog.info('TELEMETRY FIRED →', response.next_state_id)
+      applyBackendDecision(response)
+    }
+  } catch (e: any) {
+    // A 404 means the session is gone; the transmit path already handles the
+    // reset, so here we just stop forwarding until a new session exists.
+    if ((e?.status ?? e?.response?.status) === 404) {
+      pmLog.warn('TELEMETRY session gone (404) — pausing telemetry forwarding')
+    } else {
+      pmLog.warn('TELEMETRY forward failed', e)
+    }
+  }
+}
+
 async function pollBridgeTelemetry() {
   const token = bridgeToken.value
   if (!token) return
@@ -5184,6 +5240,7 @@ async function pollBridgeTelemetry() {
     if (!fresh) {
       // Bridge went quiet — drop the active sync anchor so reconnecting re-tunes.
       lastSyncedSimActive = null
+      lastSentTelemetrySig = null
       bridgeSimActiveFreq.value = null
       return
     }
@@ -5208,6 +5265,11 @@ async function pollBridgeTelemetry() {
     if (simStandby && frequencies.value.standby !== simStandby) {
       frequencies.value.standby = simStandby
     }
+
+    // Feed the (normalised) telemetry to the authoritative backend so it can
+    // fire proactive, aircraft-state-driven ATC. No-op when nothing meaningful
+    // changed or when no telemetry trigger matches the current state.
+    void forwardTelemetryToBackend(res.telemetry)
   } catch {
     bridgeConnected.value = false
   }
