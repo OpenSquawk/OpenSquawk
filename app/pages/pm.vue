@@ -3707,7 +3707,10 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
     runway:           v.runway           || '25R',
     qnh:              String(v.qnh_hpa ?? '1013'),
     surface_wind:     v.surface_wind     || '250/08',
-    taxi_route:       v.taxi_route       || 'A, B',
+    // taxi_route is intentionally NOT sent: the backend computes the real OSM
+    // taxi route (and crossings) from airport_icao + stand/runway, and falls
+    // back to the flow's YAML default on its own. Sending a placeholder here
+    // would count as a caller override and suppress that computation.
     aircraft_type:    v.acf_type         || 'A320',
     cruise_level:     v.cruise_flight_level || 'FL360',
     assigned_squawk:  String(v.squawk ?? '2000'),
