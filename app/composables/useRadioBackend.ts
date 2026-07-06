@@ -50,6 +50,7 @@ export function useRadioBackend() {
         noChain: boolean = false,
         airportIcao?: string,
         destinationIcao?: string,
+        aircraftPosition?: { lat: number; lon: number } | null,
     ): Promise<RadioSessionResponse> {
         return await $fetch<RadioSessionResponse>(`${baseUrl()}/api/radio/session`, {
             method: 'POST',
@@ -60,6 +61,9 @@ export function useRadioBackend() {
                 // Lets the backend compute the real OSM taxi route for taxi flows.
                 airport_icao: airportIcao ?? null,
                 destination_icao: destinationIcao ?? null,
+                // Bridge position: taxi route starts at the real parking spot.
+                aircraft_lat: aircraftPosition?.lat ?? null,
+                aircraft_lon: aircraftPosition?.lon ?? null,
             },
         })
     }

@@ -2821,6 +2821,41 @@ const atisEntries = computed(() => airportFrequencies.value.filter(entry => entr
 const atisFrequencyEntry = computed(() =>
   atisEntries.value.find(entry => (entry.atisText || '').trim()) || atisEntries.value[0])
 
+/**
+ * Extract the runway in use from live ATIS text ("DEP RWY 25C", "EXPECT ILS
+ * APPROACH RUNWAY 25L", "RUNWAY IN USE 07"). Prefers a phrase matching the
+ * requested kind (departure/arrival); falls back to any runway mention.
+ * Returns null when no ATIS text carries a runway — callers keep their default.
+ */
+const extractAtisRunway = (kind: 'dep' | 'arr'): string | null => {
+  const RWY = String.raw`(?:RWY|RUNWAY)S?\s*([0-3]?\d\s*[LRC]?)\b`
+  const kindPatterns = kind === 'dep'
+    ? [new RegExp(String.raw`DEP(?:ARTURE)?S?[^.]{0,40}?${RWY}`, 'i')]
+    : [
+        new RegExp(String.raw`(?:ARR(?:IVAL)?S?|LANDING)[^.]{0,40}?${RWY}`, 'i'),
+        new RegExp(String.raw`EXPECT[^.]{0,60}?APPROACH[^.]{0,20}?${RWY}`, 'i'),
+      ]
+  const genericPattern = new RegExp(RWY, 'i')
+
+  const texts = atisEntries.value
+    .map(entry => (entry.atisText || '').trim())
+    .filter(Boolean)
+
+  for (const patterns of [kindPatterns, [genericPattern]]) {
+    for (const text of texts) {
+      for (const pattern of patterns) {
+        const match = pattern.exec(text)
+        if (match?.[1]) {
+          const designator = match[1].replace(/\s+/g, '').toUpperCase()
+          // Normalise "7L" -> "07L" so it matches OSM runway refs.
+          return /^\d[LRC]?$/.test(designator) ? `0${designator}` : designator
+        }
+      }
+    }
+  }
+  return null
+}
+
 const frequencySourceLabels = computed(() => {
   const labels: string[] = []
   if (frequencySources.value.vatsim) labels.push('VATSIM')
@@ -3683,6 +3718,14 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
   // all freq vars are resolved from live VATSIM/OpenAIP data.
   await fetchAirportFrequencies(scenarioIcao)
 
+  // Runway in use from live ATIS (the flight plan carries no runway). Falls
+  // back to the engine-generated one when no ATIS text mentions a runway.
+  const atisRunway = extractAtisRunway(scenario.airport === 'arr' ? 'arr' : 'dep')
+  if (atisRunway) {
+    patchVariables({ runway: atisRunway })
+    pmLog.info('Runway from ATIS:', atisRunway)
+  }
+
   // Pre-generate the ATIS TTS audio now so the first tune-in plays instantly
   // instead of waiting for generation. Fire-and-forget.
   prefetchAtisAudio()
@@ -3704,7 +3747,7 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
     // being forwarded — so arrival flows (and taxi/tower on departure) fell back
     // to YAML defaults and ignored the selected flight. Names are mapped to the
     // backend flow conventions (qnh_hpa→qnh, acf_type→aircraft_type, …).
-    runway:           v.runway           || '25R',
+    runway:           atisRunway         || v.runway || '25R',
     qnh:              String(v.qnh_hpa ?? '1013'),
     surface_wind:     v.surface_wind     || '250/08',
     // taxi_route is intentionally NOT sent: the backend computes the real OSM
@@ -3748,6 +3791,9 @@ const startMonitoring = async (flightPlan: any, scenario: Scenario) => {
       scenario.noChain,
       scenarioIcao,
       v.dest || flightPlan.arr || flightPlan.arrival,
+      // Live aircraft position (bridge connected): backend starts the taxi
+      // route at the real parking position instead of a random stand.
+      bridgeConnected.value ? bridgePosition.value : null,
     )
     backendSessionId.value = session.session_id
     pmLog.group(`SESSION CREATED  id=${session.session_id.slice(0, 8)}`, () => {
@@ -5156,6 +5202,9 @@ const bridgeToken = computed(() => {
 })
 const bridgeConnected = ref(false)
 const bridgeSimActiveFreq = ref<string | null>(null)
+// Last known aircraft position from bridge telemetry. Sent at session creation
+// so the backend can start the taxi route at the real parking position.
+const bridgePosition = ref<{ lat: number; lon: number } | null>(null)
 // Telemetry older than this means the bridge stopped posting.
 const BRIDGE_TELEMETRY_STALE_MS = 12_000
 const BRIDGE_POLL_INTERVAL_MS = 3_000
@@ -5188,8 +5237,17 @@ async function pollBridgeTelemetry() {
       // Bridge went quiet — drop the active sync anchor so reconnecting re-tunes.
       lastSyncedSimActive = null
       bridgeSimActiveFreq.value = null
+      bridgePosition.value = null
       return
     }
+
+    // Track the aircraft position (0/0 is the bridge's "no data" default).
+    const lat = Number(res.telemetry?.PLANE_LATITUDE)
+    const lon = Number(res.telemetry?.PLANE_LONGITUDE)
+    bridgePosition.value =
+      Number.isFinite(lat) && Number.isFinite(lon) && (Math.abs(lat) > 0.5 || Math.abs(lon) > 0.5)
+        ? { lat, lon }
+        : null
 
     const simActive = normalizeSimFreq(res.telemetry?.COM_ACTIVE_FREQUENCY)
     const simStandby = normalizeSimFreq(res.telemetry?.COM_STANDBY_FREQUENCY)
