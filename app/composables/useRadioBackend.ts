@@ -115,6 +115,18 @@ export function useRadioBackend() {
         )
     }
 
+    /**
+     * Fire the silence timeout for the current pilot state. Call when the
+     * state's `auto_advance_timeout_ms` elapses without a pilot transmission;
+     * the backend advances through the state's silence auto-transition.
+     */
+    async function timeout(sessionId: string): Promise<RadioTransmitResponse> {
+        return await $fetch<RadioTransmitResponse>(
+            `${baseUrl()}/api/radio/session/${sessionId}/timeout`,
+            { method: 'POST' },
+        )
+    }
+
     async function deleteSession(sessionId: string): Promise<void> {
         await $fetch(`${baseUrl()}/api/radio/session/${sessionId}`, { method: 'DELETE' })
     }
@@ -123,5 +135,5 @@ export function useRadioBackend() {
         return await $fetch(`${baseUrl()}/api/decision-flows/runtime`)
     }
 
-    return { createSession, transmit, sendTelemetry, deleteSession, fetchFlows }
+    return { createSession, transmit, sendTelemetry, timeout, deleteSession, fetchFlows }
 }

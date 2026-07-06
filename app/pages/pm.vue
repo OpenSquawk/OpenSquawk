@@ -3415,10 +3415,58 @@ const speakPilotReadback = (text: string) => {
   })
 }
 
-// Apply a backend decision (from a pilot transmission OR a telemetry tick) to
-// the local engine + UI: sync the flow/cursor/variables/flags, speak the
-// controller reply, and surface completion. Shared so telemetry-driven ATC and
-// pilot-driven ATC land through exactly one code path.
+// --- Silence auto-advance ----------------------------------------------------
+// Some pilot states let ATC continue on its own when the pilot stays quiet
+// (e.g. the takeoff roll in tower-v1: no report needed, Tower hands off after a
+// while anyway). Such states carry auto_advance_on_silence +
+// auto_advance_timeout_ms in the runtime tree; whenever the session lands on
+// one, arm a timer that fires the backend /timeout endpoint. Any pilot
+// transmission or telemetry-fired advance re-arms or clears it via
+// applyBackendDecision.
+let silenceTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearSilenceTimer() {
+  if (silenceTimer) {
+    clearTimeout(silenceTimer)
+    silenceTimer = null
+  }
+}
+
+function armSilenceTimer() {
+  clearSilenceTimer()
+  const state = currentState.value as any
+  if (!state?.auto_advance_on_silence || !backendSessionId.value) return
+  const ms = Math.max(1000, Number(state.auto_advance_timeout_ms ?? 30000))
+  const sessionAtArm = backendSessionId.value
+  const stateAtArm = state.id
+  pmLog.debug('SILENCE TIMER armed', { state: stateAtArm, ms })
+  const fire = async () => {
+    silenceTimer = null
+    // Never fire stale: the session ended or the state moved on while waiting.
+    if (backendSessionId.value !== sessionAtArm) return
+    if ((currentState.value as any)?.id !== stateAtArm) return
+    // Don't talk over the pilot mid-PTT — check again shortly.
+    if (isRecording.value) {
+      silenceTimer = setTimeout(fire, 5000)
+      return
+    }
+    try {
+      pmLog.info('SILENCE TIMEOUT fired →', stateAtArm)
+      const response = await radioBackend.timeout(sessionAtArm)
+      applyBackendDecision(response)
+    } catch (e: any) {
+      // 422 = the state changed under us (race with a transmission) — harmless.
+      const status = e?.status ?? e?.response?.status
+      if (status !== 422) pmLog.warn('SILENCE TIMEOUT failed', e)
+    }
+  }
+  silenceTimer = setTimeout(fire, ms)
+}
+
+// Apply a backend decision (from a pilot transmission, a telemetry tick, or a
+// silence timeout) to the local engine + UI: sync the
+// flow/cursor/variables/flags, speak the controller reply, and surface
+// completion. Shared so all backend-driven ATC lands through one code path.
 const applyBackendDecision = (
   response: import('../composables/useRadioBackend').RadioTransmitResponse,
   opts: { transcript?: string } = {},
@@ -3490,6 +3538,9 @@ const applyBackendDecision = (
     completedScenario.value = activeScenario.value
     currentScreen.value = 'complete'
   }
+
+  // Re-arm (or clear) the silence auto-advance for whatever state we're now on.
+  armSilenceTimer()
 }
 
 const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' = 'text') => {
@@ -3609,6 +3660,9 @@ const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' =
   })
 
   try {
+    // The pilot spoke — a pending silence auto-advance no longer applies. The
+    // response re-arms it if the next state also allows silence.
+    clearSilenceTimer()
     const response = await radioBackend.transmit(backendSessionId.value, transcript)
 
     // Drop a stale reply if the pilot already transmitted again while this call
@@ -5450,6 +5504,7 @@ onUnmounted(() => {
   cancelAirportDataRefresh()
   stopBridgeSync()
   disconnectPttSocket()
+  clearSilenceTimer()
 })
 </script>
 
