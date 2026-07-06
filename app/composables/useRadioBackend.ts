@@ -20,10 +20,29 @@ export interface RadioTransmitResponse {
     fallback_used: boolean
     fallback_reason: string | null
     auto_advanced_states?: string[]
+    /** True when a telemetry tick actually fired a transition (vs. an idle poll). */
+    telemetry_fired?: boolean
     /** True when the full chain is done — show the completion screen. */
     session_complete?: boolean
     /** Per-field readback diagnostic for the pilot state just evaluated. */
     readback_report?: ReadbackFieldDetail[]
+}
+
+/**
+ * Sim-agnostic telemetry contract. The bridge layer (MSFS SimConnect today,
+ * X-Plane datarefs later) is normalised to exactly these keys before it reaches
+ * the backend, so the decision engine only ever compares plain scalars. Keep
+ * this in lock-step with `TelemetryParameter` in the Python backend (models.py).
+ */
+export interface NormalizedTelemetry {
+    altitude_ft?: number          // feet MSL
+    ias_kts?: number              // indicated airspeed, knots
+    gs_kts?: number               // groundspeed, knots
+    vs_fpm?: number               // vertical speed, feet/min (+climb, -descent)
+    heading_deg?: number          // magnetic heading, 0..360
+    on_ground?: boolean           // wheels on the ground
+    distance_to_dest_nm?: number  // great-circle nm to destination airport
+    distance_to_dep_nm?: number   // great-circle nm from departure airport
 }
 
 export interface ReadbackFieldDetail {
@@ -78,6 +97,24 @@ export function useRadioBackend() {
         )
     }
 
+    /**
+     * Forward a normalised telemetry tick. The backend fires any telemetry-gated
+     * transition whose threshold is met and returns the same shape as transmit;
+     * idle ticks come back with `telemetry_fired: false` and the state unchanged.
+     */
+    async function sendTelemetry(
+        sessionId: string,
+        telemetry: NormalizedTelemetry,
+    ): Promise<RadioTransmitResponse> {
+        return await $fetch<RadioTransmitResponse>(
+            `${baseUrl()}/api/radio/session/${sessionId}/telemetry`,
+            {
+                method: 'POST',
+                body: { telemetry },
+            },
+        )
+    }
+
     async function deleteSession(sessionId: string): Promise<void> {
         await $fetch(`${baseUrl()}/api/radio/session/${sessionId}`, { method: 'DELETE' })
     }
@@ -86,5 +123,5 @@ export function useRadioBackend() {
         return await $fetch(`${baseUrl()}/api/decision-flows/runtime`)
     }
 
-    return { createSession, transmit, deleteSession, fetchFlows }
+    return { createSession, transmit, sendTelemetry, deleteSession, fetchFlows }
 }
