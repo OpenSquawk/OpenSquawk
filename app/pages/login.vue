@@ -463,7 +463,7 @@ async function submitRegister() {
     })
     await auth.fetchUser()
     setClassroomIntroductionComplete(false)
-    await router.replace('/classroom-introduction')
+    await router.replace('/pilot-profile-setup')
   } catch (err: any) {
     const message = err?.data?.statusMessage || err?.message || 'Registration failed'
     registerError.value = message
