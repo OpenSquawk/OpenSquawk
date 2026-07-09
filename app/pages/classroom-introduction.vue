@@ -30,27 +30,54 @@
                 class="inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-400/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-200/80"
               >Orientation</span>
               <h1 class="text-3xl font-semibold leading-tight sm:text-4xl md:text-5xl">
-                Get comfortable with the Classroom before you call live AI ATC
+                Choose how you want to get started
               </h1>
               <p class="max-w-2xl text-base text-white/80 sm:text-lg">
-                This is your training playground. Live AI controllers for the simulator are still in closed testing, so we
-                start with the Classroom to build phraseology, timing and confidence. I will guide you through the flow
-                before you dive into the hub.
+                Practice dry radio calls at your own pace in the Classroom, or jump into our Live ATC alpha test connected
+                to your simulator. You can always switch later — Classroom is where most pilots start.
               </p>
-              <div class="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-5 text-amber-100 shadow-lg shadow-amber-500/10" role="status">
-                <div class="flex items-start gap-3">
-                  <div class="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-amber-200/50 bg-amber-300/20">
-                    <v-icon icon="mdi-alert-decagram-outline" size="22" class="text-amber-200" />
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class="relative flex flex-col gap-3 rounded-2xl border border-cyan-300/40 bg-cyan-400/10 p-5">
+                  <span
+                    class="absolute right-4 top-4 rounded-full border border-cyan-300/40 bg-cyan-400/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200"
+                  >Default</span>
+                  <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/40 bg-cyan-400/15">
+                    <v-icon icon="mdi-school-outline" size="20" class="text-cyan-200" />
                   </div>
-                  <div class="space-y-1">
-                    <p class="text-sm font-semibold uppercase tracking-wide text-amber-100/90">Heads-up</p>
-                    <p class="text-sm text-amber-50/90">
-                      The Classroom mirrors the calls you will make later, but today it runs as a standalone trainer. Treat it
-                      like a warm-up before the live network opens.
+                  <div>
+                    <p class="text-base font-semibold text-white">Classroom</p>
+                    <p class="mt-1 text-sm text-white/70">
+                      Structured, self-paced radio practice. No simulator required — this is where most pilots start.
                     </p>
                   </div>
+                  <button type="button" class="btn primary mt-1 self-start" @click="scrollToOrientation">
+                    Start Classroom
+                    <v-icon icon="mdi-arrow-right" size="16" class="text-[#061318]" />
+                  </button>
+                </div>
+
+                <div class="relative flex flex-col gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/[0.06] p-5">
+                  <span
+                    class="absolute right-4 top-4 rounded-full border border-amber-300/40 bg-amber-400/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200"
+                  >Alpha</span>
+                  <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-300/40 bg-amber-400/15">
+                    <v-icon icon="mdi-radar" size="20" class="text-amber-200" />
+                  </div>
+                  <div>
+                    <p class="text-base font-semibold text-white">Live ATC</p>
+                    <p class="mt-1 text-sm text-white/70">
+                      Connect your simulator and fly against our live AI controller. Early alpha — not everything works
+                      reliably yet. We'd love your bug reports; this is also how we figure out where to take it next.
+                    </p>
+                  </div>
+                  <NuxtLink to="/pm" class="btn soft mt-1 self-start">
+                    Try Live ATC (Alpha)
+                    <v-icon icon="mdi-arrow-right" size="16" class="text-amber-100" />
+                  </NuxtLink>
                 </div>
               </div>
+
               <ul class="grid gap-3 text-sm text-white/70 sm:grid-cols-2 sm:text-base">
                 <li class="flex items-start gap-3">
                   <v-icon icon="mdi-compass-outline" size="20" class="mt-1 text-cyan-300" />
@@ -508,6 +535,11 @@ function markClassroomIntroComplete() {
 
 function handleClassroomEntry() {
   markClassroomIntroComplete()
+}
+
+function scrollToOrientation() {
+  if (typeof window === 'undefined') return
+  document.getElementById('orientation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 const voiceMode = ref<VoiceMode>('text')
