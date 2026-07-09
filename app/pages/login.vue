@@ -410,9 +410,12 @@ function setClassroomIntroductionComplete(completed: boolean) {
 }
 
 function resolvePostAuthTarget(preferred?: string | null) {
+  if (!preferred) {
+    return '/start'
+  }
+
   const introCompleted = hasCompletedClassroomIntroduction()
-  const fallback = introCompleted ? '/classroom' : '/classroom-introduction'
-  let target = preferred || fallback
+  let target = preferred
 
   if (!introCompleted && target.startsWith('/classroom') && target !== '/classroom-introduction') {
     target = '/classroom-introduction'

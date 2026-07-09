@@ -15,6 +15,15 @@
     <main class="mx-auto w-full max-w-screen-md px-4 py-10 sm:px-6">
       <template v-if="!loading">
         <div v-if="!finished" class="mb-10">
+          <button
+            v-if="currentStep > 0"
+            type="button"
+            class="mb-3 inline-flex items-center gap-1 text-xs text-white/40 transition hover:text-white/70"
+            @click="goBack"
+          >
+            <v-icon icon="mdi-arrow-left" size="14" />
+            Back
+          </button>
           <div class="flex items-center gap-3 text-xs text-white/70">
             <div class="flex-1 overflow-hidden rounded-full bg-white/10">
               <div class="progress-fill" :style="{ width: `${progress}%` }"></div>
@@ -169,7 +178,7 @@
                 </button>
               </div>
               <button type="button" class="btn primary mt-8" @click="saveAnswer({ networkExperience: answers.networkExperience })">
-                Continue
+                {{ answers.networkExperience.length === 0 ? "No, not yet" : 'Continue' }}
                 <v-icon icon="mdi-arrow-right" size="18" />
               </button>
             </div>
@@ -369,6 +378,10 @@ async function saveAnswer(partial: Record<string, unknown>) {
   currentStep.value = Math.min(currentStep.value + 1, ONBOARDING_TOTAL_STEPS - 1)
 }
 
+function goBack() {
+  currentStep.value = Math.max(0, currentStep.value - 1)
+}
+
 function continueCockpit() {
   const payload: { simulator: Simulator | null; hardware: HardwareItem[]; os?: string | null } = {
     simulator: answers.simulator,
@@ -396,7 +409,7 @@ function finishAndLeave() {
   if (typeof window !== 'undefined') {
     localStorage.setItem(CLASSROOM_INTRO_STORAGE_KEY, 'false')
   }
-  router.replace('/classroom-introduction')
+  router.replace('/start?firstTime=1')
 }
 
 async function skip() {
@@ -437,11 +450,29 @@ onMounted(async () => {
 
 <style scoped>
 .option-card {
-  @apply flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-center text-sm text-white/80 transition hover:border-cyan-300/50 hover:bg-white/10;
+  @apply relative flex flex-col items-center gap-2 rounded-2xl border-2 border-white/10 bg-white/5 px-4 py-5 text-center text-sm text-white/80 transition hover:border-cyan-300/50 hover:bg-white/10;
 }
 
 .option-card--active {
-  @apply border-cyan-300/60 bg-cyan-400/10 text-white shadow-lg shadow-cyan-500/10;
+  @apply border-cyan-300 bg-cyan-400/20 text-white shadow-lg shadow-cyan-500/20;
+}
+
+.option-card--active::after {
+  content: '\2713';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: #22d3ee;
+  color: #061318;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 .option-card--sm {

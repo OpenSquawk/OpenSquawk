@@ -99,7 +99,7 @@ export const PRICING_PREFERENCE_OPTIONS: OnboardingOption<PricingPreference>[] =
   { value: 'one_time', label: 'One-time unlock — I own it', icon: 'mdi-lock-open-variant-outline' },
   { value: 'monthly', label: 'Small monthly add-on, always latest', icon: 'mdi-calendar-sync-outline' },
   { value: 'season_pass', label: 'Bundle / season pass', icon: 'mdi-ticket-confirmation-outline' },
-  { value: 'free_self_host', label: "I'd rather stay free-tier / self-host", icon: 'mdi-server-network-outline' },
+  { value: 'free_self_host', label: "I'd rather stay free-tier / self-host", icon: 'mdi-source-branch' },
 ]
 
 export const ONBOARDING_TOTAL_STEPS = 7
