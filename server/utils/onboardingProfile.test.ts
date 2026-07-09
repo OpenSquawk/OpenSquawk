@@ -13,9 +13,11 @@ describe('sanitizeOnboardingUpdate', () => {
     assert.equal('simulator' in result, false)
   })
 
-  it('only keeps os when simulator is other', () => {
+  it('keeps os for non-Windows-only simulators (other, xplane12)', () => {
     const withOther = sanitizeOnboardingUpdate({ simulator: 'other', os: 'linux' })
     assert.equal(withOther.os, 'linux')
+    const withXplane = sanitizeOnboardingUpdate({ simulator: 'xplane12', os: 'mac' })
+    assert.equal(withXplane.os, 'mac')
     const withMsfs = sanitizeOnboardingUpdate({ simulator: 'msfs2024', os: 'linux' })
     assert.equal('os' in withMsfs, false)
   })
