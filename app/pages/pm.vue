@@ -1,9 +1,9 @@
 <template>
-  <div class="min-h-screen bg-[#050910] text-white">
+  <div class="pm-page min-h-screen bg-[var(--bg)] text-[var(--text)]" :data-theme="pmTheme">
     <!-- Session-start overlay: covers the (synchronous) taxi-route computation -->
     <div
         v-if="sessionStarting"
-        class="fixed inset-0 z-[2000] flex flex-col items-center justify-center gap-4 bg-[#050910]/80 backdrop-blur"
+        class="fixed inset-0 z-[2000] flex flex-col items-center justify-center gap-4 bg-[var(--bg)]/80 backdrop-blur"
         role="status"
         aria-live="polite"
     >
@@ -519,6 +519,65 @@
                 </span>
               </template>
             </v-tooltip>
+            <v-menu v-model="themeMenu" :offset="[0, 8]" location="bottom end" transition="scale-transition">
+              <template #activator="{ props }">
+                <button
+                    class="btn ghost"
+                    type="button"
+                    v-bind="props"
+                    title="Theme"
+                    aria-haspopup="menu"
+                    :aria-expanded="themeMenu ? 'true' : 'false'"
+                >
+                  <v-icon size="18">{{ themeIcon }}</v-icon>
+                  <span class="btn-label">Theme</span>
+                </button>
+              </template>
+              <div class="experience-menu" role="menu" aria-label="Select theme">
+                <button
+                    type="button"
+                    role="menuitemradio"
+                    class="experience-option"
+                    :class="{ 'is-active': pmThemePreference === 'dark' }"
+                    :aria-checked="pmThemePreference === 'dark'"
+                    @click="setPmTheme('dark')"
+                >
+                  <v-icon size="18" class="experience-option-icon">mdi-weather-night</v-icon>
+                  <div class="experience-option-body">
+                    <div class="experience-option-title">Dark</div>
+                  </div>
+                  <v-icon v-if="pmThemePreference === 'dark'" size="16" class="experience-option-check">mdi-check</v-icon>
+                </button>
+                <button
+                    type="button"
+                    role="menuitemradio"
+                    class="experience-option"
+                    :class="{ 'is-active': pmThemePreference === 'light' }"
+                    :aria-checked="pmThemePreference === 'light'"
+                    @click="setPmTheme('light')"
+                >
+                  <v-icon size="18" class="experience-option-icon">mdi-white-balance-sunny</v-icon>
+                  <div class="experience-option-body">
+                    <div class="experience-option-title">Light</div>
+                  </div>
+                  <v-icon v-if="pmThemePreference === 'light'" size="16" class="experience-option-check">mdi-check</v-icon>
+                </button>
+                <button
+                    type="button"
+                    role="menuitemradio"
+                    class="experience-option"
+                    :class="{ 'is-active': pmThemePreference === 'system' }"
+                    :aria-checked="pmThemePreference === 'system'"
+                    @click="setPmTheme('system')"
+                >
+                  <v-icon size="18" class="experience-option-icon">mdi-theme-light-dark</v-icon>
+                  <div class="experience-option-body">
+                    <div class="experience-option-title">Use system</div>
+                  </div>
+                  <v-icon v-if="pmThemePreference === 'system'" size="16" class="experience-option-check">mdi-check</v-icon>
+                </button>
+              </div>
+            </v-menu>
             <button
                 type="button"
                 class="btn ghost"
@@ -538,7 +597,7 @@
               <v-icon size="18">{{ bugReportCapturing ? 'mdi-loading mdi-spin' : 'mdi-bug-outline' }}</v-icon>
               <span class="btn-label">{{ bugReportCapturing ? '…' : 'Bug' }}</span>
             </button>
-            <NuxtLink class="btn ghost" to="/feedback" title="Share feedback or ideas">
+            <NuxtLink class="btn ghost hud-feedback-btn" to="/feedback" title="Share feedback or ideas">
               <v-icon size="18">mdi-message-draw</v-icon>
               <span class="btn-label">Feedback</span>
             </NuxtLink>
@@ -649,8 +708,8 @@
 
                 <ClientOnly>
                   <div
-                      class="ptt-pad flex h-52 lg:h-60 items-center justify-center rounded-2xl border text-center transition cursor-pointer"
-                      :class="isRecording ? 'border-green-400/40 ring-4 ring-green-400/40 bg-green-500/10' : 'border-white/10 ring-1 ring-white/5 bg-black/40'"
+                      class="ptt-pad flex h-52 lg:h-60 items-center justify-center rounded-2xl border-2 text-center transition cursor-pointer"
+                      :class="isRecording ? 'ptt-pad--active border-green-400/50 ring-4 ring-green-400/40 bg-green-500/10' : 'ptt-pad--idle bg-black/40'"
                       @touchstart.prevent="startRecording(false)"
                       @touchend.prevent="stopRecording"
                       @touchcancel.prevent="stopRecording"
@@ -1479,6 +1538,7 @@ import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
 import { normalizeRadioPhrase, normalizeAtisForSpeech, DEFAULT_AIRLINE_TELEPHONY } from '../../shared/utils/radioSpeech';
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
+import { usePmTheme } from '~/composables/usePmTheme'
 import { loadPizzicatoLite } from '../../shared/utils/pizzicatoLite'
 import type { PizzicatoLite } from '../../shared/utils/pizzicatoLite'
 import { createNoiseGenerators, getReadabilityProfile } from '../../shared/utils/radioEffects'
@@ -1523,6 +1583,12 @@ const pmLog = (() => {
 const engine = useCommunicationsEngine()
 const auth = useAuthStore()
 const api = useApi()
+const { effectiveTheme: pmTheme, preference: pmThemePreference, setPreference: setPmTheme } = usePmTheme()
+const themeMenu = ref(false)
+const themeIcon = computed(() => {
+  if (pmThemePreference.value === 'system') return 'mdi-theme-light-dark'
+  return pmThemePreference.value === 'light' ? 'mdi-white-balance-sunny' : 'mdi-weather-night'
+})
 const router = useRouter()
 const route = useRoute()
 const radioBackend = useRadioBackend()
@@ -5515,6 +5581,24 @@ onUnmounted(() => {
   touch-action: manipulation;
 }
 
+/* Idle state needs a boundary that survives bright ambient light/glare — a
+   hairline low-opacity border reads as "no border at all" outdoors. Width +
+   opacity + a soft shadow together are more glare-resistant than opacity alone. */
+.ptt-pad--idle {
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.16), 0 14px 30px rgba(0, 0, 0, 0.35);
+}
+
+.pm-page[data-theme="light"] .ptt-pad--idle {
+  border-color: rgba(15, 20, 32, 0.24);
+  background-color: rgba(15, 20, 32, 0.045) !important;
+  box-shadow: 0 0 0 1px rgba(8, 145, 178, 0.22), 0 10px 24px rgba(15, 20, 32, 0.1);
+}
+
+.pm-page[data-theme="light"] .ptt-pad--active {
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.28);
+}
+
 .signal-bar {
   width: 3px;
   height: 12px;
@@ -5556,6 +5640,56 @@ onUnmounted(() => {
   flex-direction: column;
   height: 100dvh;
   overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   Light theme — pragmatic MVP: re-tint the handful of Tailwind white/black
+   opacity utilities used throughout this page rather than touching every
+   template occurrence individually. Secondary/decorative surfaces (chips,
+   gradients) are left as-is; they still read fine on the light background.
+   --------------------------------------------------------------------------- */
+.pm-page[data-theme="light"] .text-white,
+.pm-page[data-theme="light"] .text-white\/90,
+.pm-page[data-theme="light"] .text-white\/85,
+.pm-page[data-theme="light"] .text-white\/80 {
+  color: #0f1420;
+}
+
+.pm-page[data-theme="light"] .text-white\/70,
+.pm-page[data-theme="light"] .text-white\/65,
+.pm-page[data-theme="light"] .text-white\/60 {
+  color: rgba(15, 20, 32, 0.75);
+}
+
+.pm-page[data-theme="light"] .text-white\/55,
+.pm-page[data-theme="light"] .text-white\/50,
+.pm-page[data-theme="light"] .text-white\/45,
+.pm-page[data-theme="light"] .text-white\/40 {
+  color: rgba(15, 20, 32, 0.55);
+}
+
+.pm-page[data-theme="light"] .text-white\/35,
+.pm-page[data-theme="light"] .text-white\/30 {
+  color: rgba(15, 20, 32, 0.38);
+}
+
+.pm-page[data-theme="light"] .border-white\/10,
+.pm-page[data-theme="light"] .border-white\/5 {
+  border-color: rgba(15, 20, 32, 0.14);
+}
+
+.pm-page[data-theme="light"] .bg-white\/5 {
+  background-color: rgba(15, 20, 32, 0.035);
+}
+
+.pm-page[data-theme="light"] .bg-black\/30,
+.pm-page[data-theme="light"] .bg-black\/40,
+.pm-page[data-theme="light"] .bg-black\/55 {
+  background-color: rgba(15, 20, 32, 0.05);
+}
+
+.pm-page[data-theme="light"] .ring-white\/5 {
+  --tw-ring-color: rgba(15, 20, 32, 0.08);
 }
 
 /* HUD top bar (matches classroom design) */
@@ -5889,6 +6023,7 @@ onUnmounted(() => {
   }
   .hud-right .btn-label { display: none; }
   .hud-center { padding: 0; }
+  .hud-feedback-btn { display: none; }
 }
 
 .pm-body {

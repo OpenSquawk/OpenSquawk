@@ -84,6 +84,22 @@ export default defineNuxtConfig({
                             'on-background': '#ffffff',
                             'on-surface': '#ffffff'
                         }
+                    },
+                    // Only used on /pm today (see app/composables/usePmTheme.ts) — not the app default.
+                    opensquawkLight: {
+                        dark: false,
+                        colors: {
+                            background: '#f4f6fb',
+                            surface: '#ffffff',
+                            primary: '#0891b2',
+                            secondary: '#0369a1',
+                            info: '#0891b2',
+                            success: '#16a34a',
+                            warning: '#d97706',
+                            error: '#dc2626',
+                            'on-background': '#0f1420',
+                            'on-surface': '#0f1420'
+                        }
                     }
                 }
             }

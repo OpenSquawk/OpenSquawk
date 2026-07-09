@@ -12,6 +12,19 @@
     --border: rgba(255, 255, 255, .10);
 }
 
+/* Light theme override — currently only used by /pm (scoped via [data-theme="light"]
+   on .pm-page), not applied app-wide. */
+[data-theme="light"] {
+    --bg: #f4f6fb;
+    --bg2: #e7ebf3;
+    --accent: #0891b2;
+    --accent2: #0369a1;
+    --text: #0f1420;
+    --t2: rgba(15, 20, 32, .75);
+    --t3: rgba(15, 20, 32, .55);
+    --border: rgba(15, 20, 32, .14);
+}
+
 /* Reset + Base */
 html, body, #__nuxt {
     min-height: 100vh;
