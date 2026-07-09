@@ -5602,7 +5602,7 @@ onUnmounted(() => {
 .signal-bar {
   width: 3px;
   height: 12px;
-  background: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--text) 20%, transparent);
   border-radius: 1px;
   transition: all 0.3s ease;
 }
@@ -5898,7 +5898,7 @@ onUnmounted(() => {
   border-radius: 12px;
   border: 1px solid rgba(34, 211, 238, 0.32);
   background: rgba(34, 211, 238, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 3%, transparent);
 }
 .hud-context-btn {
   display: flex;
@@ -6060,9 +6060,9 @@ onUnmounted(() => {
 .pm-readback-check {
   margin-bottom: 10px;
   padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
   font-size: 11.5px;
 }
 .pm-readback-head {
@@ -6073,12 +6073,12 @@ onUnmounted(() => {
   letter-spacing: .12em;
   font-size: 10px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.55);
+  color: color-mix(in srgb, var(--text) 55%, transparent);
   margin-bottom: 6px;
 }
 .pm-readback-heard {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: rgba(255, 255, 255, 0.5);
+  color: color-mix(in srgb, var(--text) 50%, transparent);
   margin-bottom: 6px;
   font-size: 11px;
 }
@@ -6091,9 +6091,9 @@ onUnmounted(() => {
 }
 .pm-readback-row.is-ok { color: #6ee7a8; }
 .pm-readback-row.is-missing { color: #fca5a5; }
-.pm-readback-field { color: rgba(255, 255, 255, 0.7); }
-.pm-readback-expected { color: #fff; font-weight: 600; }
-.pm-readback-forms { color: rgba(255, 255, 255, 0.4); }
+.pm-readback-field { color: var(--t2); }
+.pm-readback-expected { color: var(--text); font-weight: 600; }
+.pm-readback-forms { color: var(--t4); }
 
 /* Scenario chooser — phase flow with arrows */
 .pm-flow {
@@ -6108,20 +6108,20 @@ onUnmounted(() => {
   gap: 4px;
   padding: 4px 9px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--pm-surface-1);
+  border: 1px solid var(--border);
   font-size: 11.5px;
   line-height: 1.2;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--t2);
   transition: border-color .15s, background .15s, color .15s;
 }
 .pm-flow-node:hover {
   border-color: rgba(34, 211, 238, 0.6);
   background: rgba(34, 211, 238, 0.1);
-  color: #fff;
+  color: var(--text);
 }
 .pm-flow-arrow {
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--t4);
 }
 
 .pm-bottomnav {
@@ -6130,8 +6130,8 @@ onUnmounted(() => {
   align-items: stretch;
   justify-content: space-around;
   gap: 2px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(5, 9, 16, 0.95);
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 95%, transparent);
   backdrop-filter: blur(10px);
   padding: 6px 6px calc(env(safe-area-inset-bottom) + 6px);
 }
@@ -6176,7 +6176,7 @@ onUnmounted(() => {
   border-radius: 14px;
   border: 1px solid rgba(34, 211, 238, 0.35);
   background: rgba(34, 211, 238, 0.09);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 3%, transparent);
 }
 .freq-stack {
   display: flex;
@@ -6233,19 +6233,19 @@ onUnmounted(() => {
 .freq-chip-tag {
   font-size: 9px;
   letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.5);
+  color: color-mix(in srgb, var(--text) 50%, transparent);
 }
 .freq-chip-value {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 16px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text);
 }
 .freq-chip-value-sm {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.78);
+  color: color-mix(in srgb, var(--text) 78%, transparent);
 }
 
 /* Dropdown option row with source label on the right */
@@ -6265,12 +6265,12 @@ onUnmounted(() => {
 .freq-option-label {
   font-size: 13px;
   font-weight: 600;
-  color: #fff;
+  color: var(--text);
   line-height: 1.1;
 }
 .freq-option-sub {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
+  color: color-mix(in srgb, var(--text) 55%, transparent);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   line-height: 1.1;
 }
@@ -6294,22 +6294,22 @@ onUnmounted(() => {
   gap: 6px;
   margin-top: 4px;
   padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border);
 }
 .freq-manual-input {
   flex: 1 1 auto;
   min-width: 0;
   padding: 7px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  color: var(--text);
   font-size: 13px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   outline: none;
 }
 .freq-manual-input::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--t4);
   font-family: inherit;
 }
 .freq-manual-input:focus {
@@ -6366,8 +6366,8 @@ onUnmounted(() => {
   gap: 4px;
   padding: 4px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
 }
 .pm-seg-btn {
   flex: 1 1 0;
@@ -6380,12 +6380,12 @@ onUnmounted(() => {
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--t3);
   transition: color 130ms ease, background 130ms ease;
   -webkit-tap-highlight-color: transparent;
 }
 .pm-seg-btn:hover {
-  color: rgba(255, 255, 255, 0.85);
+  color: color-mix(in srgb, var(--text) 85%, transparent);
 }
 .pm-seg-btn.is-active {
   color: #050910;
@@ -6403,7 +6403,7 @@ onUnmounted(() => {
   border-radius: 14px;
   border: 1px solid rgba(34, 211, 238, 0.35);
   background: rgba(34, 211, 238, 0.09);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 3%, transparent);
   transition: background 120ms ease, transform 80ms ease;
 }
 .signal-chip:hover {
@@ -6426,7 +6426,7 @@ onUnmounted(() => {
     flex: 0 0 360px;
     width: 360px;
     overflow-y: auto;
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
     padding: 16px 14px;
   }
   .pm-bottomnav {
