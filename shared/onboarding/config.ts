@@ -34,6 +34,9 @@ export const OS_OPTIONS: OnboardingOption<OperatingSystem>[] = [
   { value: 'linux', label: 'Linux', icon: 'mdi-linux' },
 ]
 
+/** Simulators that aren't Windows-only — asking OS here tells us real platform reach. */
+export const SIMULATORS_REQUIRING_OS: Simulator[] = ['xplane12', 'other']
+
 export const HARDWARE_OPTIONS: OnboardingOption<HardwareItem>[] = [
   { value: 'keyboard_mouse', label: 'Keyboard & mouse', icon: 'mdi-keyboard-outline' },
   { value: 'hotas', label: 'HOTAS / joystick', icon: 'mdi-controller-classic-outline' },

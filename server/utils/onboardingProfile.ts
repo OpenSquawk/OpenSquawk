@@ -1,7 +1,7 @@
 import {
   SIMULATOR_OPTIONS, OS_OPTIONS, HARDWARE_OPTIONS, RADIO_PAIN_POINT_OPTIONS,
   NETWORK_OPTIONS, TOOLKIT_OPTIONS, PAID_TOOLKIT_VALUES, TOOLKIT_DURATION_OPTIONS,
-  FEATURE_WISH_OPTIONS, PRICING_PREFERENCE_OPTIONS, MAX_FEATURE_WISHES,
+  FEATURE_WISH_OPTIONS, PRICING_PREFERENCE_OPTIONS, MAX_FEATURE_WISHES, SIMULATORS_REQUIRING_OS,
 } from '~~/shared/onboarding/config'
 import type {
   FeatureWish, HardwareItem, NetworkExperience, OperatingSystem, PricingPreference,
@@ -54,7 +54,7 @@ export interface SanitizedOnboardingUpdate {
   skipped?: boolean
 }
 
-/** WHY: os is only meaningful when simulator === 'other' — MSFS/X-Plane imply Windows/cross-platform already. */
+/** WHY: os is only meaningful for non-Windows-only sims (X-Plane, Other) — MSFS implies Windows already. */
 export function sanitizeOnboardingUpdate(body: OnboardingUpdateInput): SanitizedOnboardingUpdate {
   const result: SanitizedOnboardingUpdate = {}
 
@@ -62,7 +62,12 @@ export function sanitizeOnboardingUpdate(body: OnboardingUpdateInput): Sanitized
     result.simulator = body.simulator as Simulator
   }
 
-  if (result.simulator === 'other' && typeof body.os === 'string' && OS_VALUES.has(body.os as OperatingSystem)) {
+  if (
+    result.simulator &&
+    (SIMULATORS_REQUIRING_OS as Simulator[]).includes(result.simulator) &&
+    typeof body.os === 'string' &&
+    OS_VALUES.has(body.os as OperatingSystem)
+  ) {
     result.os = body.os as OperatingSystem
   }
 

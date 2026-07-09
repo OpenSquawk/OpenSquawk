@@ -67,7 +67,7 @@
               </div>
 
               <Transition name="fade-slide">
-                <div v-if="answers.simulator === 'other'" class="mt-6">
+                <div v-if="simulatorRequiresOs" class="mt-6">
                   <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/70">Which OS?</p>
                   <div class="mt-3 grid grid-cols-3 gap-3">
                     <button
@@ -105,7 +105,7 @@
               <button
                 type="button"
                 class="btn primary mt-8"
-                :disabled="!answers.simulator || (answers.simulator === 'other' && !answers.os)"
+                :disabled="!answers.simulator || (simulatorRequiresOs && !answers.os)"
                 @click="continueCockpit"
               >
                 Continue
@@ -298,6 +298,7 @@ import {
   MAX_FEATURE_WISHES,
   PRICING_PREFERENCE_OPTIONS,
   ONBOARDING_TOTAL_STEPS,
+  SIMULATORS_REQUIRING_OS,
   createDefaultOnboardingProfile,
 } from '~~/shared/onboarding/config'
 import type { HardwareItem, NetworkExperience, PricingPreference, Simulator, ToolkitItem } from '~~/shared/onboarding/config'
@@ -333,6 +334,7 @@ const progress = computed(() => {
 })
 
 const simulatorLabel = computed(() => SIMULATOR_OPTIONS.find(o => o.value === answers.simulator)?.label || '')
+const simulatorRequiresOs = computed(() => Boolean(answers.simulator && (SIMULATORS_REQUIRING_OS as string[]).includes(answers.simulator)))
 const toolkitLabels = computed(() => TOOLKIT_OPTIONS.filter(o => answers.toolkit.includes(o.value)).map(o => o.label))
 
 function toggleInArray<T>(arr: T[], value: T) {
@@ -372,7 +374,7 @@ function continueCockpit() {
     simulator: answers.simulator,
     hardware: answers.hardware,
   }
-  if (answers.simulator === 'other') {
+  if (simulatorRequiresOs.value) {
     payload.os = answers.os
   }
   saveAnswer(payload)
