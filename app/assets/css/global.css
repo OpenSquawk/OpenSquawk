@@ -9,7 +9,11 @@
     --text: #ffffff;
     --t2: rgba(255, 255, 255, .80);
     --t3: rgba(255, 255, 255, .60);
+    --t4: rgba(255, 255, 255, .35);
     --border: rgba(255, 255, 255, .10);
+    /* Subtle raised-panel fills used throughout /pm's custom (non-Tailwind) CSS. */
+    --pm-surface-1: rgba(255, 255, 255, .05);
+    --pm-surface-2: rgba(255, 255, 255, .1);
 }
 
 /* Light theme override — currently only used by /pm (scoped via [data-theme="light"]
@@ -22,7 +26,10 @@
     --text: #0f1420;
     --t2: rgba(15, 20, 32, .75);
     --t3: rgba(15, 20, 32, .55);
+    --t4: rgba(15, 20, 32, .38);
     --border: rgba(15, 20, 32, .14);
+    --pm-surface-1: rgba(15, 20, 32, .035);
+    --pm-surface-2: rgba(15, 20, 32, .06);
 }
 
 /* Reset + Base */
