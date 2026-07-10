@@ -221,6 +221,7 @@ onBeforeUnmount(() => {
           :class="[{ 'is-dense': dense }, menuClass]"
           :style="menuStyle"
       >
+        <slot name="header" :close="closeMenu" />
         <p v-if="title" class="hs-title">{{ title }}</p>
         <div
             v-for="(opt, i) in options"
