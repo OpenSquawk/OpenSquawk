@@ -1515,7 +1515,6 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
-import { normalizeRadioPhrase, DEFAULT_AIRLINE_TELEPHONY } from '../../shared/utils/radioSpeech';
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { usePmTheme } from '~/composables/usePmTheme'
@@ -1531,6 +1530,7 @@ import { usePttRecording } from '~/composables/usePttRecording'
 import { useBugReport } from '~/composables/useBugReport'
 import { useDebugSimulation } from '~/composables/useDebugSimulation'
 import { useSimBridgeSync } from '~/composables/useSimBridgeSync'
+import { useSessionState } from '~/composables/useSessionState'
 import { useSpeechInterrupt } from '~/composables/useSpeechInterrupt'
 import { useRadioSpeech } from '~/composables/useRadioSpeech'
 
@@ -1651,96 +1651,34 @@ const {
   expectedPilotPhrases,
 } = engine
 
-const backendSessionId = ref<string | null>(null)
-// Last ATC utterance returned by the backend (pre-rendered, correct variables).
-const lastControllerSay = ref<string | null>(null)
-// Authoritative expected pilot phrase from the backend — replaces local engine rendering.
-const backendExpectedPhrase = ref<string | null>(null)
-// Per-field readback diagnostic from the last transmission (STT debug panel).
-const lastReadbackReport = ref<import('../composables/useRadioBackend').ReadbackFieldDetail[]>([])
-const lastReadbackTranscript = ref<string>('')
-// Toggle: show radio pronunciation (wun, tree, squawk niner…) vs plain text.
-const showRadioPronunciation = ref(false)
-
-function toRadioSpeech(text: string): string {
-  return normalizeRadioPhrase(text, {
-    expandCallsigns: true,
-    expandAirports: true,
-    airlineMap: DEFAULT_AIRLINE_TELEPHONY,
-    sidSuffixIcao: true,
-  })
-}
-
-// Display helpers — apply ICAO phonetics when the toggle is on.
-const displayControllerSay = computed(() =>
-  lastControllerSay.value
-    ? (showRadioPronunciation.value ? toRadioSpeech(lastControllerSay.value) : lastControllerSay.value)
-    : null
-)
-const displayExpectedPhrase = computed(() =>
-  backendExpectedPhrase.value
-    ? (showRadioPronunciation.value ? toRadioSpeech(backendExpectedPhrase.value) : backendExpectedPhrase.value)
-    : null
-)
-
-const lastTransmission = ref('')
-const lastTransmissionFaulty = ref(false)
-const lastTransmissionFaultNote = ref('')
-const showTransmissionIssueDialog = ref(false)
-const transmissionIssueNote = ref('')
-
-function setLastTransmission(text: string) {
-  lastTransmission.value = text
-  lastTransmissionFaulty.value = false
-  lastTransmissionFaultNote.value = ''
-}
-
-function clearLastTransmission() {
-  setLastTransmission('')
-}
-
-function markLastTransmissionFault(note: string) {
-  if (!lastTransmission.value) return
-  lastTransmissionFaulty.value = true
-  lastTransmissionFaultNote.value = note
-}
-
-function resetLastTransmissionFault() {
-  lastTransmissionFaulty.value = false
-  lastTransmissionFaultNote.value = ''
-}
-
-function startTransmissionIssueFlow() {
-  if (!lastTransmission.value) return
-  transmissionIssueNote.value = lastTransmissionFaultNote.value
-  showTransmissionIssueDialog.value = true
-}
-
-function confirmTransmissionIssue() {
-  if (!lastTransmission.value) {
-    showTransmissionIssueDialog.value = false
-    return
-  }
-
-  markLastTransmissionFault(transmissionIssueNote.value.trim())
-  showTransmissionIssueDialog.value = false
-}
-
-function removeTransmissionIssue() {
-  resetLastTransmissionFault()
-  showTransmissionIssueDialog.value = false
-}
-
-function cancelTransmissionIssue() {
-  showTransmissionIssueDialog.value = false
-}
-
-const clearLog = () => {
-  clearCommunicationLog()
-  clearLastTransmission()
-}
-
-const sessionLabel = computed(() => engineSessionId.value || flags.value.session_id || '-')
+const {
+  currentScreen,
+  loading,
+  error,
+  pilotInput,
+  backendSessionId,
+  lastControllerSay,
+  backendExpectedPhrase,
+  lastReadbackReport,
+  lastReadbackTranscript,
+  showRadioPronunciation,
+  displayControllerSay,
+  displayExpectedPhrase,
+  lastTransmission,
+  lastTransmissionFaulty,
+  lastTransmissionFaultNote,
+  showTransmissionIssueDialog,
+  transmissionIssueNote,
+  setLastTransmission,
+  clearLastTransmission,
+  resetLastTransmissionFault,
+  startTransmissionIssueFlow,
+  confirmTransmissionIssue,
+  removeTransmissionIssue,
+  cancelTransmissionIssue,
+  clearLog,
+  sessionLabel,
+} = useSessionState(engine)
 
 // ---------------------------------------------------------------------------
 // Scenario definitions
@@ -1986,10 +1924,6 @@ const oppositeScenario = computed<Scenario | null>(() => {
 })
 
 // UI State
-const currentScreen = ref<'login' | 'flightselect' | 'scenario' | 'monitor' | 'complete'>('login')
-const loading = ref(false)
-const error = ref('')
-const pilotInput = ref('')
 const signalStrength = ref(5)
 const speechSpeed = ref(0.95)
 const radioCheckLoading = ref(false)
@@ -2901,12 +2835,6 @@ const {
 // Lifecycle
 onMounted(async () => {
   await requestMicAccess()
-})
-
-watch(showTransmissionIssueDialog, (open) => {
-  if (!open) {
-    transmissionIssueNote.value = ''
-  }
 })
 
 // Watch for frequency changes from engine
