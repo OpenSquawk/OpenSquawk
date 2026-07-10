@@ -144,81 +144,31 @@
 
         <BugReportDialog :bug="bugReport" :theme="pmTheme" />
 
-        <!-- Transmission issue dialog -->
-        <v-dialog v-model="showTransmissionIssueDialog" max-width="420" :content-class="pmTheme === 'light' ? 'pm-dialog-light' : ''">
-          <v-card :class="pmTheme === 'light' ? 'bg-white border border-black/10 text-[#0f1420]' : 'bg-[#0b101d] border border-white/10 text-white'">
-            <v-card-title class="flex items-center gap-2 text-base font-semibold">
-              <v-icon icon="mdi-alert-circle-outline" color="#f87171" size="20" />
-              Mark transmission as faulty
-            </v-card-title>
-            <v-card-text class="space-y-4 text-sm text-white/70">
-              <p>
-                Optionally leave a short note so the dev team can follow up on the transmission.
-              </p>
-              <v-textarea
-                  v-model="transmissionIssueNote"
-                  label="Issue description (optional)"
-                  variant="outlined"
-                  color="red"
-                  rows="3"
-                  auto-grow
-              />
-            </v-card-text>
-            <v-card-actions class="justify-end gap-2">
-              <v-btn variant="text" color="grey" @click="cancelTransmissionIssue">
-                Cancel
-              </v-btn>
-              <v-btn
-                  v-if="lastTransmissionFaulty"
-                  variant="text"
-                  color="cyan"
-                  @click="removeTransmissionIssue"
-              >
-                Remove flag
-              </v-btn>
-              <v-btn color="red" variant="flat" @click="confirmTransmissionIssue">
-                Save
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
+        <TransmissionIssueDialog
+            v-model="showTransmissionIssueDialog"
+            v-model:note="transmissionIssueNote"
+            :faulty="lastTransmissionFaulty"
+            :theme="pmTheme"
+            @confirm="confirmTransmissionIssue"
+            @remove="removeTransmissionIssue"
+            @cancel="cancelTransmissionIssue"
+        />
 
         <!-- Help / how-it-works overlay (first-run + reopenable via the ? button) -->
-        <v-dialog v-model="showHelp" max-width="560" scrollable :content-class="pmTheme === 'light' ? 'pm-dialog-light' : ''">
-          <v-card :class="pmTheme === 'light' ? 'bg-white text-[#0f1420] border border-black/10' : 'bg-[#0b1220] text-white border border-white/10'">
-            <v-card-title class="d-flex align-center justify-space-between gap-2">
-              <span class="text-base font-semibold">{{ helpContent.title }}</span>
-              <v-btn size="small" variant="tonal" color="cyan" @click="toggleHelpLang">
-                {{ helpLang === 'de' ? 'EN' : 'DE' }}
-              </v-btn>
-            </v-card-title>
-            <v-card-text>
-              <p class="text-sm text-white/70 mb-4">{{ helpContent.intro }}</p>
-              <div class="space-y-3">
-                <div v-for="(step, i) in helpContent.steps" :key="i" class="flex gap-3">
-                  <v-icon size="22" class="text-cyan-300 shrink-0 mt-1">{{ step.icon }}</v-icon>
-                  <div>
-                    <div class="text-sm font-semibold">{{ step.title }}</div>
-                    <div class="text-[13px] text-white/65 leading-snug">{{ step.text }}</div>
-                  </div>
-                </div>
-              </div>
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer />
-              <v-btn color="cyan" variant="flat" @click="dismissHelp">
-                {{ helpLang === 'de' ? 'Verstanden' : 'Got it' }}
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
+        <HelpDialog
+            v-model="showHelp"
+            :lang="helpLang"
+            :theme="pmTheme"
+            @dismiss="dismissHelp"
+            @toggle-lang="toggleHelpLang"
+        />
       </template>
     </CockpitShell>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
 import { useAuthStore } from '~/stores/auth'
@@ -234,6 +184,8 @@ import { useSimBridgeSync } from '~/composables/useSimBridgeSync'
 import FlightInfoSheet from '~/components/live-atc/cockpit/FlightInfoSheet.vue'
 import SettingsSheet from '~/components/live-atc/cockpit/SettingsSheet.vue'
 import BugReportDialog from '~/components/live-atc/cockpit/BugReportDialog.vue'
+import TransmissionIssueDialog from '~/components/live-atc/cockpit/TransmissionIssueDialog.vue'
+import HelpDialog from '~/components/live-atc/cockpit/HelpDialog.vue'
 import DebugPanel from '~/components/live-atc/cockpit/DebugPanel.vue'
 import { CHAIN_GROUPS, DRILL_SCENARIOS } from '../../shared/constants/scenarios'
 import FlightSourceStep from '~/components/live-atc/FlightSourceStep.vue'
@@ -264,35 +216,8 @@ const STORAGE_KEYS = {
   helpLang: 'pm_help_lang',
 } as const
 
-// ── Help / how-it-works overlay ────────────────────────────────────────────
-const HELP_CONTENT = {
-  de: {
-    title: 'Wie /live-atc funktioniert',
-    intro: 'Du bist der Pilot. Du sprichst per Funk mit der Flugsicherung (ATC) und arbeitest ein realistisches Szenario ab.',
-    steps: [
-      { icon: 'mdi-radio-handheld', title: 'Frequenz einstellen', text: 'Stelle die aktive COM1-Frequenz auf den zuständigen Lotsen. Auf der falschen Frequenz kommt dein Funkspruch nicht durch.' },
-      { icon: 'mdi-microphone', title: 'Sprechtaste (PTT)', text: 'Halte die Sprechtaste gedrückt, sprich, lass los. Beim Senden wird die Taste grün. Ein neuer Funkspruch unterbricht die laufende ATC-Ausgabe.' },
-      { icon: 'mdi-repeat', title: 'Readback', text: 'Lies Anweisungen zurück (Frequenz, Piste, Squawk, Höhe …). Stimmt es nicht, sagt ATC „say again“. Nach 3 Versuchen wird übersprungen.' },
-      { icon: 'mdi-alert-octagon', title: 'Notfall', text: 'Mit „Mayday“ oder „Pan-Pan“ rufst du einen Notfall aus, mit „cancel mayday“ beendest du ihn wieder.' },
-      { icon: 'mdi-bug-outline', title: 'Fehler melden', text: 'Mit dem Bug-Knopf meldest du einen Fehler — die ganze Funksession wird mitgeschickt.' },
-    ],
-  },
-  en: {
-    title: 'How /live-atc works',
-    intro: 'You are the pilot. You talk to ATC over the radio and work through a realistic scenario.',
-    steps: [
-      { icon: 'mdi-radio-handheld', title: 'Tune the frequency', text: 'Set the active COM1 frequency to the controller you need. On the wrong frequency your call will not get through.' },
-      { icon: 'mdi-microphone', title: 'Push-to-talk (PTT)', text: 'Hold the talk button, speak, release. The pad turns green while you transmit. A new transmission cuts any ATC speech still playing.' },
-      { icon: 'mdi-repeat', title: 'Read back', text: 'Read instructions back (frequency, runway, squawk, altitude …). If it is wrong ATC says “say again”. After 3 tries it is skipped.' },
-      { icon: 'mdi-alert-octagon', title: 'Emergency', text: 'Say “Mayday” or “Pan-Pan” to declare an emergency, and “cancel mayday” to end it.' },
-      { icon: 'mdi-bug-outline', title: 'Report a bug', text: 'Use the Bug button to report an issue — the whole radio session is attached.' },
-    ],
-  },
-} as const
-
 const showHelp = ref(false)
 const helpLang = ref<'de' | 'en'>('de')
-const helpContent = computed(() => HELP_CONTENT[helpLang.value])
 const openHelp = () => { showHelp.value = true }
 const dismissHelp = () => {
   showHelp.value = false
@@ -578,15 +503,6 @@ const {
   setLastTransmission,
   handlePilotTransmission,
 })
-
-const formatTime = (date: Date): string => {
-  return date.toLocaleTimeString('en-US', {
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
-}
 
 // Lifecycle
 onMounted(async () => {
