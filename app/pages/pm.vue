@@ -413,8 +413,8 @@
                       </template>
                     </v-tooltip>
                   </template>
-                  <template #footer="{ close }">
-                    <form class="freq-manual" @submit.prevent="applyManualFrequency('standby', close)">
+                  <template #header="{ close }">
+                    <form class="freq-manual freq-manual--header" @submit.prevent="applyManualFrequency('standby', close)">
                       <input
                           v-model="manualFreqStandby"
                           class="freq-manual-input"
@@ -457,8 +457,8 @@
                       </template>
                     </v-tooltip>
                   </template>
-                  <template #footer="{ close }">
-                    <form class="freq-manual" @submit.prevent="applyManualFrequency('active', close)">
+                  <template #header="{ close }">
+                    <form class="freq-manual freq-manual--header" @submit.prevent="applyManualFrequency('active', close)">
                       <input
                           v-model="manualFreqActive"
                           class="freq-manual-input"
@@ -1095,8 +1095,8 @@
       </Transition>
 
       <!-- Flight info sheet (opened via hud-context click) -->
-      <v-dialog v-model="showFlightSheet" max-width="520">
-        <v-card class="bg-[#0b101d] border border-white/10 text-white">
+      <v-dialog v-model="showFlightSheet" max-width="520" :content-class="pmTheme === 'light' ? 'pm-dialog-light' : ''">
+        <v-card :class="pmTheme === 'light' ? 'bg-white border border-black/10 text-[#0f1420]' : 'bg-[#0b101d] border border-white/10 text-white'">
           <v-card-title class="flex items-center justify-between gap-2 text-base font-semibold">
             <div class="flex items-center gap-2">
               <v-icon icon="mdi-airplane" size="20" color="cyan" />
@@ -1179,8 +1179,8 @@
       </v-dialog>
 
       <!-- Settings sheet (opened via Settings button in HUD) -->
-      <v-dialog v-model="showSettingsSheet" max-width="560">
-        <v-card class="bg-[#0b101d] border border-white/10 text-white">
+      <v-dialog v-model="showSettingsSheet" max-width="560" :content-class="pmTheme === 'light' ? 'pm-dialog-light' : ''">
+        <v-card :class="pmTheme === 'light' ? 'bg-white border border-black/10 text-[#0f1420]' : 'bg-[#0b101d] border border-white/10 text-white'">
           <v-card-title class="flex items-center justify-between gap-2 text-base font-semibold">
             <div class="flex items-center gap-2">
               <v-icon icon="mdi-cog" size="20" color="cyan" />
@@ -1309,8 +1309,8 @@
       </v-dialog>
 
       <!-- Bug Report Dialog -->
-      <v-dialog v-model="showBugReportDialog" max-width="680" scrollable>
-        <v-card class="bg-[#0b101d] border border-white/10 text-white">
+      <v-dialog v-model="showBugReportDialog" max-width="680" scrollable :content-class="pmTheme === 'light' ? 'pm-dialog-light' : ''">
+        <v-card :class="pmTheme === 'light' ? 'bg-white border border-black/10 text-[#0f1420]' : 'bg-[#0b101d] border border-white/10 text-white'">
           <v-card-title class="flex items-center gap-2 text-base font-semibold pt-4 px-5">
             <v-icon icon="mdi-bug-outline" color="#f87171" size="20" />
             Fehler melden
@@ -1429,8 +1429,8 @@
       </v-dialog>
 
       <!-- Transmission issue dialog -->
-      <v-dialog v-model="showTransmissionIssueDialog" max-width="420">
-        <v-card class="bg-[#0b101d] border border-white/10 text-white">
+      <v-dialog v-model="showTransmissionIssueDialog" max-width="420" :content-class="pmTheme === 'light' ? 'pm-dialog-light' : ''">
+        <v-card :class="pmTheme === 'light' ? 'bg-white border border-black/10 text-[#0f1420]' : 'bg-[#0b101d] border border-white/10 text-white'">
           <v-card-title class="flex items-center gap-2 text-base font-semibold">
             <v-icon icon="mdi-alert-circle-outline" color="#f87171" size="20" />
             Mark transmission as faulty
@@ -1468,8 +1468,8 @@
       </v-dialog>
 
       <!-- Help / how-it-works overlay (first-run + reopenable via the ? button) -->
-      <v-dialog v-model="showHelp" max-width="560" scrollable>
-        <v-card class="bg-[#0b1220] text-white border border-white/10">
+      <v-dialog v-model="showHelp" max-width="560" scrollable :content-class="pmTheme === 'light' ? 'pm-dialog-light' : ''">
+        <v-card :class="pmTheme === 'light' ? 'bg-white text-[#0f1420] border border-black/10' : 'bg-[#0b1220] text-white border border-white/10'">
           <v-card-title class="d-flex align-center justify-space-between gap-2">
             <span class="text-base font-semibold">{{ helpContent.title }}</span>
             <v-btn size="small" variant="tonal" color="cyan" @click="toggleHelpLang">
@@ -5615,44 +5615,64 @@ onUnmounted(() => {
 .pm-page[data-theme="light"] .text-white,
 .pm-page[data-theme="light"] .text-white\/90,
 .pm-page[data-theme="light"] .text-white\/85,
-.pm-page[data-theme="light"] .text-white\/80 {
+.pm-page[data-theme="light"] .text-white\/80,
+.pm-dialog-light .text-white,
+.pm-dialog-light .text-white\/90,
+.pm-dialog-light .text-white\/85,
+.pm-dialog-light .text-white\/80 {
   color: #0f1420;
 }
 
 .pm-page[data-theme="light"] .text-white\/70,
 .pm-page[data-theme="light"] .text-white\/65,
-.pm-page[data-theme="light"] .text-white\/60 {
+.pm-page[data-theme="light"] .text-white\/60,
+.pm-dialog-light .text-white\/70,
+.pm-dialog-light .text-white\/65,
+.pm-dialog-light .text-white\/60 {
   color: rgba(15, 20, 32, 0.75);
 }
 
 .pm-page[data-theme="light"] .text-white\/55,
 .pm-page[data-theme="light"] .text-white\/50,
 .pm-page[data-theme="light"] .text-white\/45,
-.pm-page[data-theme="light"] .text-white\/40 {
+.pm-page[data-theme="light"] .text-white\/40,
+.pm-dialog-light .text-white\/55,
+.pm-dialog-light .text-white\/50,
+.pm-dialog-light .text-white\/45,
+.pm-dialog-light .text-white\/40 {
   color: rgba(15, 20, 32, 0.55);
 }
 
 .pm-page[data-theme="light"] .text-white\/35,
-.pm-page[data-theme="light"] .text-white\/30 {
+.pm-page[data-theme="light"] .text-white\/30,
+.pm-dialog-light .text-white\/35,
+.pm-dialog-light .text-white\/30 {
   color: rgba(15, 20, 32, 0.38);
 }
 
 .pm-page[data-theme="light"] .border-white\/10,
-.pm-page[data-theme="light"] .border-white\/5 {
+.pm-page[data-theme="light"] .border-white\/5,
+.pm-dialog-light .border-white\/10,
+.pm-dialog-light .border-white\/5 {
   border-color: rgba(15, 20, 32, 0.14);
 }
 
-.pm-page[data-theme="light"] .bg-white\/5 {
+.pm-page[data-theme="light"] .bg-white\/5,
+.pm-dialog-light .bg-white\/5 {
   background-color: rgba(15, 20, 32, 0.035);
 }
 
 .pm-page[data-theme="light"] .bg-black\/30,
 .pm-page[data-theme="light"] .bg-black\/40,
-.pm-page[data-theme="light"] .bg-black\/55 {
+.pm-page[data-theme="light"] .bg-black\/55,
+.pm-dialog-light .bg-black\/30,
+.pm-dialog-light .bg-black\/40,
+.pm-dialog-light .bg-black\/55 {
   background-color: rgba(15, 20, 32, 0.05);
 }
 
-.pm-page[data-theme="light"] .ring-white\/5 {
+.pm-page[data-theme="light"] .ring-white\/5,
+.pm-dialog-light .ring-white\/5 {
   --tw-ring-color: rgba(15, 20, 32, 0.08);
 }
 
@@ -6263,6 +6283,14 @@ onUnmounted(() => {
   margin-top: 4px;
   padding-top: 6px;
   border-top: 1px solid var(--border);
+}
+.freq-manual--header {
+  margin-top: 0;
+  margin-bottom: 4px;
+  padding-top: 0;
+  padding-bottom: 6px;
+  border-top: none;
+  border-bottom: 1px solid var(--border);
 }
 .freq-manual-input {
   flex: 1 1 auto;
