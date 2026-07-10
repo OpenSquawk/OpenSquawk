@@ -254,49 +254,6 @@
               />
             </div>
 
-            <!-- Expected Communication (learning aid) -->
-            <div
-                v-show="activeTab === 'funk'"
-                v-if="learningMode && (displayControllerSay || displayExpectedPhrase)"
-                class="pm-block"
-            >
-              <v-card class="bg-white/5 border border-white/10">
-                <v-card-text class="space-y-3">
-                  <div class="flex items-center justify-between">
-                    <p class="text-xs uppercase tracking-[0.3em] text-white/40">Expected communication</p>
-                    <v-tooltip :text="showRadioPronunciation ? 'Switch to plain text' : 'Switch to radio pronunciation'" location="top">
-                      <template #activator="{ props: tip }">
-                        <v-btn
-                            v-bind="tip"
-                            :icon="showRadioPronunciation ? 'mdi-text' : 'mdi-radio'"
-                            size="x-small"
-                            variant="text"
-                            :color="showRadioPronunciation ? 'cyan' : 'white'"
-                            @click="showRadioPronunciation = !showRadioPronunciation"
-                        />
-                      </template>
-                    </v-tooltip>
-                  </div>
-
-                  <div v-if="displayControllerSay" class="space-y-2 rounded-2xl bg-green-500/10 border border-green-500/20 p-3 text-sm">
-                    <div class="flex items-center gap-2 text-green-300">
-                      <v-icon size="16">mdi-radio-tower</v-icon>
-                      <span class="text-xs uppercase font-semibold">ATC</span>
-                    </div>
-                    <p class="font-mono text-white">{{ displayControllerSay }}</p>
-                  </div>
-
-                  <div v-if="displayExpectedPhrase" class="space-y-2 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 text-sm">
-                    <div class="flex items-center gap-2 text-blue-300">
-                      <v-icon size="16">mdi-account-pilot</v-icon>
-                      <span class="text-xs uppercase font-semibold">Pilot (You)</span>
-                    </div>
-                    <p class="font-mono text-white">{{ displayExpectedPhrase }}</p>
-                  </div>
-                </v-card-text>
-              </v-card>
-            </div>
-
             <!-- Input mode switch: voice / text -->
             <div v-show="activeTab === 'funk'" class="pm-block">
               <div class="pm-seg">
@@ -321,62 +278,29 @@
               </div>
             </div>
 
-            <!-- Push to Talk (voice mode) -->
-            <div v-show="activeTab === 'funk' && inputMode === 'voice'" class="pm-block">
-              <v-sheet class="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/10 to-transparent p-4 shadow-lg">
-                <v-alert
-                    v-if="!micPermission"
-                    type="info"
-                    variant="tonal"
-                    class="bg-cyan-500/10 text-cyan-100 mb-4"
-                    density="compact"
-                >
-                  Microphone permission required for push-to-talk.
-                  <template #append>
-                    <v-btn color="cyan" size="small" variant="flat" @click="requestMicAccess">Allow</v-btn>
-                  </template>
-                </v-alert>
-
-                <ClientOnly>
-                  <div
-                      class="ptt-pad flex h-52 lg:h-60 items-center justify-center rounded-2xl border-2 text-center transition cursor-pointer"
-                      :class="isRecording ? 'ptt-pad--active border-green-400/50 ring-4 ring-green-400/40 bg-green-500/10' : 'ptt-pad--idle bg-black/40'"
-                      @touchstart.prevent="startRecording(false)"
-                      @touchend.prevent="stopRecording"
-                      @touchcancel.prevent="stopRecording"
-                      @mousedown.prevent="startRecording(false)"
-                      @mouseup.prevent="stopRecording"
-                      @mouseleave="stopRecording"
-                  >
-                    <div class="space-y-1">
-                      <v-icon
-                          :icon="isRecording ? 'mdi-access-point' : 'mdi-radio-handheld'"
-                          size="44"
-                          :class="isRecording ? 'text-green-400 animate-pulse' : 'text-cyan-300'"
-                      />
-                      <p
-                          class="text-[11px] uppercase tracking-[0.35em] mt-1"
-                          :class="isRecording ? 'text-green-300' : 'text-white/40'"
-                      >
-                        {{ isRecording ? 'Transmitting' : 'Hold to transmit' }}
-                      </p>
-                      <p
-                          v-if="bridgePttConnected"
-                          class="text-[10px] uppercase tracking-[0.25em] flex items-center justify-center gap-1.5"
-                          :class="isRecording ? 'text-green-300' : 'text-cyan-300/70'"
-                      >
-                        <span
-                            class="inline-block h-1.5 w-1.5 rounded-full"
-                            :class="isRecording ? 'bg-green-400 animate-pulse' : 'bg-cyan-300/60'"
-                        />
-                        {{ isRecording ? 'Hotkey transmitting' : 'Hotkey armed' }}
-                      </p>
-                      <p class="pt-2 text-4xl font-bold font-mono tracking-tight">{{ frequencies.active || '---' }}</p>
-                      <p class="text-xs text-white/45">Active frequency</p>
-                    </div>
-                  </div>
-                </ClientOnly>
-              </v-sheet>
+            <!-- Transmit block: the expected-comm hint is docked to the PTT pad so it
+                 reads as guidance for the next transmission, not as a separate card. -->
+            <div
+                v-show="activeTab === 'funk'"
+                v-if="inputMode === 'voice' || showExpectedComm"
+                class="pm-block transmit-stack"
+            >
+              <ExpectedCommStrip
+                  v-if="learningMode && (displayControllerSay || displayExpectedPhrase)"
+                  :controller-say="displayControllerSay"
+                  :expected-phrase="displayExpectedPhrase"
+                  v-model:show-pronunciation="showRadioPronunciation"
+              />
+              <PttPad
+                  v-show="inputMode === 'voice'"
+                  :is-recording="isRecording"
+                  :mic-permission="micPermission"
+                  :bridge-ptt-connected="bridgePttConnected"
+                  :active-frequency="frequencies.active"
+                  @start="startRecording(false)"
+                  @stop="stopRecording"
+                  @request-mic="requestMicAccess"
+              />
             </div>
 
             <!-- Manual text input (text mode) -->
@@ -1205,6 +1129,8 @@ import { usePmTheme } from '~/composables/usePmTheme'
 import { normalizeManualFreq } from '../../shared/utils/frequency'
 import { useFrequencyPresets } from '~/composables/useFrequencyPresets'
 import RadioPanel from '~/components/live-atc/cockpit/RadioPanel.vue'
+import ExpectedCommStrip from '~/components/live-atc/cockpit/ExpectedCommStrip.vue'
+import PttPad from '~/components/live-atc/cockpit/PttPad.vue'
 import { useAtisPlayback } from '~/composables/useAtisPlayback'
 import { usePttRecording } from '~/composables/usePttRecording'
 import { useBugReport } from '~/composables/useBugReport'
@@ -1388,6 +1314,9 @@ const activeTab = ref<'funk' | 'log'>('funk')
 const experienceMenu = ref(false)
 const inputMode = ref<'voice' | 'text'>('voice')
 const learningMode = ref(true)
+const showExpectedComm = computed(
+  () => learningMode.value && Boolean(displayControllerSay.value || displayExpectedPhrase.value),
+)
 
 // Overlays / sheets opened from HUD controls
 const showFlightSheet = ref(false)
@@ -1693,37 +1622,19 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.ptt-pad {
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-}
-
-/* Idle state needs a boundary that survives bright ambient light/glare — a
-   hairline low-opacity border reads as "no border at all" outdoors. Width +
-   opacity + a soft shadow together are more glare-resistant than opacity alone. */
-.ptt-pad--idle {
-  border-color: rgba(255, 255, 255, 0.28);
-  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.16), 0 14px 30px rgba(0, 0, 0, 0.35);
-}
-
-.pm-page[data-theme="light"] .ptt-pad--idle {
-  border-color: rgba(15, 20, 32, 0.24);
-  background-color: rgba(15, 20, 32, 0.045) !important;
-  box-shadow: 0 0 0 1px rgba(8, 145, 178, 0.22), 0 10px 24px rgba(15, 20, 32, 0.1);
-}
-
-.pm-page[data-theme="light"] .ptt-pad--active {
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.28);
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.animate-pulse {
-  animation: pulse 1s infinite;
+/* Expected-comm strip + PTT pad share one frame, so the hint reads as part of
+   the transmit control rather than as another card above it. */
+.transmit-stack {
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(165deg,
+      color-mix(in srgb, var(--bg2) 90%, transparent),
+      color-mix(in srgb, var(--bg) 96%, transparent));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--text) 6%, transparent),
+    0 20px 44px -28px rgba(0, 0, 0, 0.9);
 }
 
 /* ---------------------------------------------------------------------------
