@@ -165,130 +165,6 @@
             </div>
           </div>
 
-          <div class="hud-center">
-            <div class="freq-control-group" aria-label="Frequency controls">
-              <div class="freq-stack">
-                <HoldSelect
-                    :options="presetOptions"
-                    placement="down"
-                    title="Select standby frequency"
-                    dense
-                    menu-class="freq-hold-menu"
-                    @select="onPresetSelectStandby"
-                >
-                  <template #default="{ open }">
-                    <button type="button" class="freq-chip freq-chip-sby" :class="{ 'is-open': open }">
-                      <span class="freq-chip-tag">SBY</span>
-                      <span class="freq-chip-value-sm">{{ frequencies.standby || '---' }}</span>
-                    </button>
-                  </template>
-                  <template #option="{ option }">
-                    <v-tooltip :text="`Source: ${option.sourceLabel}`" location="end" open-delay="200">
-                      <template #activator="{ props: tip }">
-                        <div v-bind="tip" class="freq-option">
-                          <div class="freq-option-main">
-                            <span class="freq-option-label">{{ option.label }}</span>
-                            <span class="freq-option-sub">{{ option.sublabel }}</span>
-                          </div>
-                          <span class="freq-option-source" :aria-label="`Source ${option.sourceLabel}`">
-                            {{ option.sourceLabel }}
-                          </span>
-                        </div>
-                      </template>
-                    </v-tooltip>
-                  </template>
-                  <template #header="{ close }">
-                    <form class="freq-manual freq-manual--header" @submit.prevent="applyManualFrequency('standby', close)">
-                      <input
-                          v-model="manualFreqStandby"
-                          class="freq-manual-input"
-                          type="text"
-                          inputmode="decimal"
-                          placeholder="Manuell, z.B. 121.500"
-                          maxlength="7"
-                          aria-label="Manual standby frequency"
-                      >
-                      <button type="submit" class="freq-manual-btn" :disabled="!normalizeManualFreq(manualFreqStandby)">SET</button>
-                    </form>
-                  </template>
-                </HoldSelect>
-                <HoldSelect
-                    :options="presetOptions"
-                    placement="down"
-                    title="Select active frequency"
-                    dense
-                    menu-class="freq-hold-menu"
-                    @select="onPresetSelectActive"
-                >
-                  <template #default="{ open }">
-                    <button type="button" class="freq-chip freq-chip-act" :class="{ 'is-open': open }">
-                      <span class="freq-chip-tag">ACT</span>
-                      <span class="freq-chip-value">{{ frequencies.active || '---' }}</span>
-                    </button>
-                  </template>
-                  <template #option="{ option }">
-                    <v-tooltip :text="`Source: ${option.sourceLabel}`" location="end" open-delay="200">
-                      <template #activator="{ props: tip }">
-                        <div v-bind="tip" class="freq-option">
-                          <div class="freq-option-main">
-                            <span class="freq-option-label">{{ option.label }}</span>
-                            <span class="freq-option-sub">{{ option.sublabel }}</span>
-                          </div>
-                          <span class="freq-option-source" :aria-label="`Source ${option.sourceLabel}`">
-                            {{ option.sourceLabel }}
-                          </span>
-                        </div>
-                      </template>
-                    </v-tooltip>
-                  </template>
-                  <template #header="{ close }">
-                    <form class="freq-manual freq-manual--header" @submit.prevent="applyManualFrequency('active', close)">
-                      <input
-                          v-model="manualFreqActive"
-                          class="freq-manual-input"
-                          type="text"
-                          inputmode="decimal"
-                          placeholder="Manuell, z.B. 121.500"
-                          maxlength="7"
-                          aria-label="Manual active frequency"
-                      >
-                      <button type="submit" class="freq-manual-btn" :disabled="!normalizeManualFreq(manualFreqActive)">SET</button>
-                    </form>
-                  </template>
-                </HoldSelect>
-              </div>
-
-              <button
-                  type="button"
-                  class="freq-swap-btn"
-                  aria-label="Swap active and standby frequencies"
-                  @click="swapFrequencies"
-              >
-                <v-icon :class="{ 'swap-animation': swapAnimation }">mdi-swap-vertical</v-icon>
-              </button>
-            </div>
-
-            <HoldSelect
-                :options="readabilityOptions"
-                placement="down"
-                title="Readability"
-                @select="onReadabilitySelect"
-            >
-              <template #default="{ open }">
-                <button type="button" class="signal-chip" :class="{ 'is-open': open }" aria-label="Set readability">
-                  <span class="signal-bars">
-                    <span
-                        v-for="i in 5"
-                        :key="i"
-                        class="signal-bar"
-                        :class="{ 'signal-active': i <= signalStrength }"
-                    />
-                  </span>
-                </button>
-              </template>
-            </HoldSelect>
-          </div>
-
           <div class="hud-right">
             <v-tooltip
                 v-if="bridgeConnected"
@@ -355,6 +231,28 @@
         <main class="pm-main">
           <div class="pm-main-inner">
             <!-- =============== FUNK TAB =============== -->
+            <!-- Radio Panel: the primary frequency control (was: header freq chips) -->
+            <div v-show="activeTab === 'funk'" class="pm-block">
+              <RadioPanel
+                  :active="frequencies.active"
+                  :standby="frequencies.standby"
+                  :channels="displayAirportFrequencies"
+                  :preset-options="presetOptions"
+                  :readability-options="readabilityOptions"
+                  :signal-strength="signalStrength"
+                  :swap-animation="swapAnimation"
+                  :airport-name="airportName"
+                  v-model:manual-freq-active="manualFreqActive"
+                  v-model:manual-freq-standby="manualFreqStandby"
+                  @swap="swapFrequencies"
+                  @select-active="onPresetSelectActive"
+                  @select-standby="onPresetSelectStandby"
+                  @select-channel="setStandbyFrequencyFromList"
+                  @select-readability="onReadabilitySelect"
+                  @apply-manual="(target, close) => applyManualFrequency(target, close)"
+              />
+            </div>
+
             <!-- Expected Communication (learning aid) -->
             <div
                 v-show="activeTab === 'funk'"
@@ -1305,6 +1203,7 @@ import { useApi } from '~/composables/useApi'
 import { usePmTheme } from '~/composables/usePmTheme'
 import { normalizeManualFreq } from '../../shared/utils/frequency'
 import { useFrequencyPresets } from '~/composables/useFrequencyPresets'
+import RadioPanel from '~/components/live-atc/cockpit/RadioPanel.vue'
 import { useAtisPlayback } from '~/composables/useAtisPlayback'
 import { usePttRecording } from '~/composables/usePttRecording'
 import { useBugReport } from '~/composables/useBugReport'
@@ -1611,11 +1510,11 @@ const { stopCurrentSpeech } = speechInterrupt
 const freq = useFrequencyPresets(engine, stopCurrentSpeech)
 const {
   frequencies,
+  airportName,
+  displayAirportFrequencies,
   swapAnimation,
   manualFreqActive,
   manualFreqStandby,
-  frequencySourceLabels,
-  setActiveFrequencyFromList,
   setStandbyFrequencyFromList,
   swapFrequencies,
   presetOptions,
@@ -1741,7 +1640,6 @@ const {
   stopRecording,
 })
 
-
 const session = useLiveAtcSession(engine, {
   state,
   freq,
@@ -1816,30 +1714,6 @@ onUnmounted(() => {
 
 .pm-page[data-theme="light"] .ptt-pad--active {
   box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.28);
-}
-
-.signal-bar {
-  width: 3px;
-  height: 12px;
-  background: color-mix(in srgb, var(--text) 20%, transparent);
-  border-radius: 1px;
-  transition: all 0.3s ease;
-}
-
-.signal-bar:nth-child(1) { height: 4px; }
-.signal-bar:nth-child(2) { height: 6px; }
-.signal-bar:nth-child(3) { height: 8px; }
-.signal-bar:nth-child(4) { height: 10px; }
-.signal-bar:nth-child(5) { height: 12px; }
-
-.signal-bar.signal-active {
-  background: #22d3ee;
-  box-shadow: 0 0 4px #22d3ee;
-}
-
-.swap-animation {
-  transform: rotate(180deg);
-  transition: transform 0.5s ease;
 }
 
 @keyframes pulse {
@@ -1945,14 +1819,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   min-width: 0;
-}
-.hud-center {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 8px;
 }
 .hud-right {
   display: flex;
@@ -2283,7 +2149,6 @@ onUnmounted(() => {
     justify-content: center;
   }
   .hud-right .btn-label { display: none; }
-  .hud-center { padding: 0; }
 }
 
 .pm-body {
@@ -2409,207 +2274,6 @@ onUnmounted(() => {
   border-color: color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
-/* Frequency control group in the top bar: SBY (top) + ACT (bottom) + swap */
-.freq-control-group {
-  display: inline-flex;
-  align-items: stretch;
-  min-height: 56px;
-  overflow: hidden;
-  border-radius: 14px;
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  background: rgba(34, 211, 238, 0.09);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 3%, transparent);
-}
-.freq-stack {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.freq-chip {
-  display: flex;
-  align-items: baseline;
-  justify-content: flex-end;
-  gap: 8px;
-  min-width: 130px;
-  padding: 4px 12px;
-  background: transparent;
-  line-height: 1.1;
-  transition: background 120ms ease, transform 80ms ease;
-  cursor: pointer;
-}
-.freq-chip-sby {
-  border-bottom: 1px solid rgba(34, 211, 238, 0.18);
-  padding-top: 5px;
-  padding-bottom: 4px;
-}
-.freq-chip-act {
-  padding-top: 4px;
-  padding-bottom: 5px;
-}
-.freq-chip:hover {
-  background: rgba(34, 211, 238, 0.08);
-}
-.freq-chip.is-open {
-  background: rgba(34, 211, 238, 0.2);
-  transform: scale(0.99);
-}
-.freq-swap-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  min-height: 100%;
-  border-left: 1px solid rgba(34, 211, 238, 0.26);
-  color: #67e8f9;
-  background: rgba(34, 211, 238, 0.08);
-  transition: background 120ms ease, color 120ms ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.freq-swap-btn:hover {
-  color: #cffafe;
-  background: rgba(34, 211, 238, 0.16);
-}
-.freq-swap-btn:active {
-  background: rgba(34, 211, 238, 0.22);
-}
-.freq-chip-tag {
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  color: color-mix(in srgb, var(--text) 50%, transparent);
-}
-.freq-chip-value {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-}
-.freq-chip-value-sm {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 13px;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--text) 78%, transparent);
-}
-
-/* Dropdown option row with source label on the right */
-.freq-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-}
-.freq-option-main {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  min-width: 0;
-}
-.freq-option-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  line-height: 1.1;
-}
-.freq-option-sub {
-  font-size: 11px;
-  color: color-mix(in srgb, var(--text) 55%, transparent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  line-height: 1.1;
-}
-.freq-option-source {
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(103, 232, 249, 0.78);
-  padding: 2px 6px;
-  border-radius: 999px;
-  border: 1px solid rgba(34, 211, 238, 0.4);
-  background: rgba(34, 211, 238, 0.08);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-/* Manual free-tune frequency entry inside the freq hold-select menu */
-.freq-manual {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-  padding-top: 6px;
-  border-top: 1px solid var(--border);
-}
-.freq-manual--header {
-  margin-top: 0;
-  margin-bottom: 4px;
-  padding-top: 0;
-  padding-bottom: 6px;
-  border-top: none;
-  border-bottom: 1px solid var(--border);
-}
-.freq-manual-input {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 7px 10px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
-  background: color-mix(in srgb, var(--text) 4%, transparent);
-  color: var(--text);
-  font-size: 13px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  outline: none;
-}
-.freq-manual-input::placeholder {
-  color: var(--t4);
-  font-family: inherit;
-}
-.freq-manual-input:focus {
-  border-color: rgba(34, 211, 238, 0.6);
-  background: rgba(34, 211, 238, 0.06);
-}
-.freq-manual-btn {
-  flex-shrink: 0;
-  padding: 7px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(34, 211, 238, 0.4);
-  background: rgba(34, 211, 238, 0.12);
-  color: #67e8f9;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  transition: background 90ms ease, opacity 90ms ease;
-}
-.freq-manual-btn:hover {
-  background: rgba(34, 211, 238, 0.2);
-}
-.freq-manual-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Preset hold-select trigger buttons (freq tab) */
-.preset-action-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(34, 211, 238, 0.4);
-  background: rgba(34, 211, 238, 0.1);
-  color: #67e8f9;
-  font-size: 13px;
-  font-weight: 600;
-  transition: border-color 120ms ease, background 120ms ease, transform 80ms ease;
-}
-.preset-action-chip.standby {
-  border-color: rgba(245, 158, 11, 0.4);
-  background: rgba(245, 158, 11, 0.1);
-  color: #fbbf24;
-}
-.preset-action-chip.is-open {
-  transform: scale(0.97);
-}
-
 /* Unified segmented control (voice / text, etc.) */
 .pm-seg {
   display: flex;
@@ -2640,33 +2304,6 @@ onUnmounted(() => {
 .pm-seg-btn.is-active {
   color: #050910;
   background: #22d3ee;
-}
-
-/* Readability / signal trigger in the top bar */
-.signal-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  padding: 0;
-  border-radius: 14px;
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  background: rgba(34, 211, 238, 0.09);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 3%, transparent);
-  transition: background 120ms ease, transform 80ms ease;
-}
-.signal-chip:hover {
-  background: rgba(34, 211, 238, 0.16);
-}
-.signal-chip.is-open {
-  background: rgba(34, 211, 238, 0.18);
-  transform: scale(0.97);
-}
-.signal-chip .signal-bars {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 2px;
 }
 
 /* Tablet / desktop: use the extra space ----------------------------------- */
