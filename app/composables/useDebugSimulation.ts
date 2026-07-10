@@ -25,8 +25,6 @@ export function useDebugSimulation(
   } = engine
   const { setLastTransmission, clearLog, startDemoFlight } = deps
 
-  const debugMode = ref(true)
-
   const simulationRunning = ref(false)
   const simulationTrace = ref<SimulationTraceEntry[]>([])
   const simulationError = ref('')
@@ -297,7 +295,6 @@ export function useDebugSimulation(
     simulationTrace.value = []
     simulationError.value = ''
     recordedAtcStates.clear()
-    debugMode.value = true
 
     try {
       simulationTrace.value.push({
@@ -418,7 +415,6 @@ export function useDebugSimulation(
   }
 
   return {
-    debugMode,
     simulationRunning,
     simulationTrace,
     simulationError,
