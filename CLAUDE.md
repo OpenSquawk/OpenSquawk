@@ -6,7 +6,7 @@
 - **Shared types/utils** in `/shared`
 - MongoDB models in `/server/models`
 - **Python backend** — a separate repo, `OpenSquawk-LiveATC-api`, owns the authoritative
-  Live ATC (`/pm`) session state and routing decisions. It runs as its own service
+  Live ATC (`/live-atc`, formerly `/pm` — legacy path now redirects) session state and routing decisions. It runs as its own service
   (default `http://127.0.0.1:8000`). This Nuxt app owns STT, TTS, client audio, auth,
   the flow editor, and account/admin features.
 
@@ -16,21 +16,21 @@
 
 ## Key Files
 - `/app/composables/useRadioBackend.ts` — Typed client for the Python backend REST API
-  (`createSession`, `transmit`, `deleteSession`, `fetchFlows`). This is how `/pm` talks
+  (`createSession`, `transmit`, `deleteSession`, `fetchFlows`). This is how `/live-atc` talks
   to the decision engine.
-- `/shared/utils/communicationsEngine.ts` — Local state-machine composable used by `/pm`.
+- `/shared/utils/communicationsEngine.ts` — Local state-machine composable used by `/live-atc`.
   It mirrors the flow for cursor tracking and TTS scheduling; the **Python backend owns the
   authoritative state**. `fetchRuntimeTree()` loads the flow definition from the backend's
   `/api/decision-flows/runtime`.
 - `/server/services/decisionFlowService.ts` — Builds/edits MongoDB-backed decision trees.
-  Used **only by the flow editor** (`/server/api/editor/flows*`), not by `/pm`.
+  Used **only by the flow editor** (`/server/api/editor/flows*`), not by `/live-atc`.
 - `/server/utils/openai.ts` — `getOpenAIClient()` only. Used for TTS (`/api/atc/say`) and
   STT (`/api/atc/ptt`). It is **not** a decision router anymore.
-- `/app/pages/pm.vue` — Live ATC page (speech-to-text, PTT, text input).
+- `/app/pages/live-atc.vue` — Live ATC page (speech-to-text, PTT, text input).
 - `/app/pages/classroom.vue` — Classroom learning mode (separate system, does NOT use
   communicationsEngine).
 
-## Live ATC Flow (/pm)
+## Live ATC Flow (/live-atc)
 1. `startMonitoring()` → `fetchRuntimeTree('icao_atc_decision_tree', radioBackendUrl)`
    loads the flow definition from the Python backend into the local engine (cursor / TTS).
 2. `startMonitoring()` → `radioBackend.createSession(...)` creates the authoritative

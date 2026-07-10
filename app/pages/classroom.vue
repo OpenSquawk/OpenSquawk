@@ -1931,7 +1931,7 @@ const experiences: ExperienceOption[] = [
     icon: 'mdi-radio-handheld',
     to: '/bridge',
     target: '_blank',
-    matches: path => path.startsWith('/pm')
+    matches: path => path.startsWith('/live-atc') || path.startsWith('/pm')
   }
 ]
 

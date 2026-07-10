@@ -73,25 +73,25 @@
                 <div class="mt-6 space-y-4">
                   <div>
                     <p class="text-xs uppercase tracking-[0.3em] text-cyan-200/70">Delivery</p>
-                    <div class="mt-3 flex flex-wrap gap-2">
+                    <div class="delivery-seg mt-3">
                       <button
                         type="button"
-                        class="btn soft voice-toggle"
-                        :class="{ active: voiceMode === 'text' }"
+                        class="delivery-seg-btn"
+                        :class="{ 'is-active': voiceMode === 'text' }"
                         @click="setVoiceMode('text')"
                         :aria-pressed="voiceMode === 'text'"
                       >
-                        <v-icon icon="mdi-text" size="18" class="text-cyan-200" />
+                        <v-icon icon="mdi-text" size="18" />
                         Text only
                       </button>
                       <button
                         type="button"
-                        class="btn soft voice-toggle"
-                        :class="{ active: voiceMode === 'radio' }"
+                        class="delivery-seg-btn"
+                        :class="{ 'is-active': voiceMode === 'radio' }"
                         @click="setVoiceMode('radio')"
                         :aria-pressed="voiceMode === 'radio'"
                       >
-                        <v-icon icon="mdi-radio-handheld" size="18" class="text-cyan-200" />
+                        <v-icon icon="mdi-radio-handheld" size="18" />
                         Radio voice
                       </button>
                     </div>
@@ -916,23 +916,39 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.voice-toggle {
-  transition: border-color 0.25s ease, background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+/* Single pill instead of two competing buttons — this is a delivery
+   preference, not a second call to action next to "Start guided tour". */
+.delivery-seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
 }
 
-.voice-toggle .v-icon {
-  color: color-mix(in srgb, var(--accent) 70%, white 30%);
+.delivery-seg-btn {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--t3);
+  transition: color 130ms ease, background 130ms ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.voice-toggle.active {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  color: var(--text);
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--accent) 26%, transparent);
+.delivery-seg-btn:hover {
+  color: color-mix(in srgb, var(--text) 85%, transparent);
 }
 
-.voice-toggle.active .v-icon {
-  color: color-mix(in srgb, var(--accent) 85%, white 15%);
+.delivery-seg-btn.is-active {
+  color: #050910;
+  background: #22d3ee;
 }
 
 .voice-replay {

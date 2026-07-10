@@ -1146,10 +1146,10 @@
                           variant="text"
                           color="cyan"
                           prepend-icon="mdi-play-circle-outline"
-                          :href="`/pm?restoreBugReport=${report.id}`"
+                          :href="`/live-atc?restoreBugReport=${report.id}`"
                           target="_blank"
                         >
-                          In /pm öffnen
+                          In Live ATC öffnen
                         </v-btn>
                       </div>
                     </div>

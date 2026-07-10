@@ -242,7 +242,9 @@ import {useHead} from '#imports'
 
 useHead({title: 'Bridge Downloads · OpenSquawk'})
 
-const showNotice = ref(true)
+// "Still in the works" heads-up — silenced for now per product decision, kept
+// around (rather than deleted) in case we want to bring it back for a future notice.
+const showNotice = ref(false)
 
 const downloads = [
   {

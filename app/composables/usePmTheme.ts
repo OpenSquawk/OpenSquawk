@@ -8,11 +8,12 @@ export type PmEffectiveTheme = 'light' | 'dark'
 const PM_THEME_COOKIE = 'os_pm_theme'
 
 /**
- * /pm-scoped light/dark toggle. Defaults to dark (matching the rest of the app)
+ * /live-atc-scoped light/dark toggle (formerly /pm — cookie name kept for
+ * backwards compatibility). Defaults to dark (matching the rest of the app)
  * until the user explicitly picks Light or System, at which point that choice is
- * remembered and wins over the default. Only /pm has a light theme today — the
- * Vuetify theme is reset back to the app-wide dark default on unmount so other
- * pages are unaffected.
+ * remembered and wins over the default. Only /live-atc has a light theme today —
+ * the Vuetify theme is reset back to the app-wide dark default on unmount so
+ * other pages are unaffected.
  */
 export function usePmTheme() {
   const vuetifyTheme = useTheme()
@@ -41,6 +42,16 @@ export function usePmTheme() {
     storedPreference.value = next
   }
 
+  // Mirrors effectiveTheme onto <html data-theme="..."> so the --bg/--text/--border
+  // CSS variables (defined in global.css) reach content that escapes .pm-page in the
+  // DOM — Vuetify teleports menus, dialogs, and tooltips to <body>, where they'd
+  // otherwise only see the app-wide dark defaults from :root.
+  function applyDocumentTheme() {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', effectiveTheme.value)
+    }
+  }
+
   if (typeof window !== 'undefined') {
     const media = window.matchMedia('(prefers-color-scheme: light)')
     systemPrefersLight.value = media.matches
@@ -53,10 +64,14 @@ export function usePmTheme() {
     onBeforeUnmount(() => {
       media.removeEventListener('change', handleChange)
       vuetifyTheme.global.name.value = 'opensquawkDark'
+      document.documentElement.removeAttribute('data-theme')
     })
   }
 
-  watch(effectiveTheme, applyVuetifyTheme, { immediate: true })
+  watch(effectiveTheme, () => {
+    applyVuetifyTheme()
+    applyDocumentTheme()
+  }, { immediate: true })
 
   return { preference, effectiveTheme, setPreference }
 }

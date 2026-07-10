@@ -79,7 +79,7 @@ const scheduleHotjarInitialization = () => {
 
 const resolveTrackedProduct = (path: string): 'classroom' | 'liveatc' | null => {
   if (path.startsWith('/classroom')) return 'classroom';
-  if (path.startsWith('/pm') || path.startsWith('/copilot') || path.startsWith('/bridge')) return 'liveatc';
+  if (path.startsWith('/live-atc') || path.startsWith('/pm') || path.startsWith('/copilot') || path.startsWith('/bridge')) return 'liveatc';
   return null;
 };
 
