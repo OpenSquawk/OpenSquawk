@@ -60,7 +60,7 @@ export default defineNuxtConfig({
             radioBackendUrl: process.env.NUXT_PUBLIC_RADIO_BACKEND_URL || 'http://127.0.0.1:8000',
             // Minimum word count for a voice (PTT) transmission to be used. Below
             // this the transcript is treated as STT noise/hallucination and
-            // ignored. See the "STT MINIMUM-WORD GATE" in pages/pm.vue.
+            // ignored. See the "STT MINIMUM-WORD GATE" in pages/live-atc.vue.
             pttMinWords: Number(process.env.NUXT_PUBLIC_PTT_MIN_WORDS || 2),
         },
     },
@@ -85,7 +85,7 @@ export default defineNuxtConfig({
                             'on-surface': '#ffffff'
                         }
                     },
-                    // Only used on /pm today (see app/composables/usePmTheme.ts) — not the app default.
+                    // Only used on /live-atc today (see app/composables/usePmTheme.ts) — not the app default.
                     opensquawkLight: {
                         dark: false,
                         colors: {

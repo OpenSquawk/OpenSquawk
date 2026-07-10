@@ -58,7 +58,7 @@
 
         <NuxtLink
           v-if="liveAtcUnlocked"
-          to="/pm"
+          to="/live-atc"
           class="relative flex h-full flex-col gap-3 overflow-hidden rounded-2xl border border-amber-400/30 bg-amber-400/[0.06] p-5 transition hover:border-amber-400/50 hover:bg-amber-400/10"
         >
           <svg
