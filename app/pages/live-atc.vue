@@ -11,263 +11,48 @@
       <p class="text-sm text-white/80">{{ sessionStartingMessage }}</p>
     </div>
 
-    <div v-if="currentScreen !== 'monitor'" class="mx-auto w-full max-w-[420px] px-4 pb-24 pt-6 sm:px-6">
-      <!-- Login/Flight Selection Screen -->
-      <section v-if="currentScreen === 'login'" class="space-y-6">
-        <v-card class="bg-white/5 backdrop-blur border border-white/10">
-          <v-card-text class="space-y-4">
-            <div>
-              <h2 class="text-lg font-semibold">VATSIM Integration</h2>
-              <p class="text-sm text-white/70">Enter your CID to load your filtered flight plans.</p>
-            </div>
-            <v-text-field
-                v-model="vatsimId"
-                label="VATSIM CID"
-                variant="outlined"
-                density="comfortable"
-                color="cyan"
-                prepend-inner-icon="mdi-account-circle"
-                hide-details
-                inputmode="numeric"
-            />
-            <v-btn
-                block
-                color="cyan"
-                variant="flat"
-                :loading="loading"
-                @click="loadFlightPlans"
-            >
-              Load flight plans
-            </v-btn>
-            <v-alert
-                v-if="error"
-                type="warning"
-                density="compact"
-                variant="tonal"
-                class="bg-amber-500/10 text-amber-200"
-            >
-              {{ error }}
-            </v-alert>
-          </v-card-text>
-        </v-card>
+    <div v-if="currentScreen !== 'monitor'" class="pm-setup">
+      <RadarBackdrop />
+      <div class="pm-setup__inner mx-auto w-full max-w-[420px] px-4 pb-24 pt-6 sm:px-6">
+        <FlightSourceStep
+            v-if="currentScreen === 'login'"
+            v-model:vatsim-id="vatsimId"
+            :loading="loading"
+            :error="error"
+            @load-flight-plans="loadFlightPlans"
+            @start-demo="startDemoFlight"
+        />
 
-        <!-- Demo Mode -->
-        <v-card class="bg-white/5 backdrop-blur border border-white/10">
-          <v-card-text class="space-y-4">
-            <div>
-              <h2 class="text-lg font-semibold">Demo Mode</h2>
-              <p class="text-sm text-white/70">Start with a sample flight plan for testing.</p>
-            </div>
-            <v-btn
-                block
-                color="orange"
-                variant="outlined"
-                @click="startDemoFlight"
-            >
-              Start demo (DLH39A EDDF→EDDM)
-            </v-btn>
-          </v-card-text>
-        </v-card>
-      </section>
+        <FlightSelectStep
+            v-else-if="currentScreen === 'flightselect'"
+            :flight-plans="flightPlans"
+            :loading="loading"
+            :vatsim-id="vatsimId"
+            @select-plan="plan => { selectedPlan = plan; currentScreen = 'scenario' }"
+            @back="currentScreen = 'login'"
+        />
 
-      <!-- Flight Selection Screen -->
-      <section v-else-if="currentScreen === 'flightselect'" class="space-y-6">
-        <div class="flex items-center justify-between">
-          <v-btn icon @click="currentScreen = 'login'" class="text-cyan-300">
-            <v-icon>mdi-arrow-left</v-icon>
-          </v-btn>
-          <h2 class="text-lg font-semibold">Available flight plans</h2>
-          <v-chip color="cyan" variant="outlined" size="small">{{ vatsimId }}</v-chip>
-        </div>
+        <ScenarioPickerStep
+            v-else-if="currentScreen === 'scenario'"
+            :chain-groups="CHAIN_GROUPS"
+            :drill-scenarios="DRILL_SCENARIOS"
+            :selected-plan="selectedPlan"
+            :error="error"
+            @launch="launchScenario"
+            @back="currentScreen = flightPlans.length > 0 ? 'flightselect' : 'login'"
+            @dismiss-error="error = ''"
+        />
 
-        <div v-if="loading" class="text-center py-8">
-          <v-progress-circular indeterminate color="cyan" class="mb-4" />
-          <p class="text-sm text-white/70">Loading flight plans from VATSIM…</p>
-        </div>
-
-        <div v-else-if="flightPlans.length === 0" class="text-center py-8">
-          <v-icon size="48" class="text-white/30 mb-4">mdi-airplane-off</v-icon>
-          <p class="text-white/70">No flight plans found</p>
-          <v-btn color="cyan" variant="outlined" class="mt-4" @click="currentScreen = 'login'">
-            Back
-          </v-btn>
-        </div>
-
-        <div v-else class="space-y-3">
-          <v-card
-              v-for="plan in flightPlans"
-              :key="plan.id"
-              class="bg-white/5 border border-white/10 backdrop-blur transition hover:border-cyan-400/60 cursor-pointer"
-              @click="selectedPlan = plan; currentScreen = 'scenario'"
-          >
-            <v-card-text class="space-y-2">
-              <div class="flex items-baseline justify-between">
-                <h3 class="text-xl font-semibold tracking-tight">{{ plan.callsign }}</h3>
-                <span class="text-xs uppercase text-white/50">{{ plan.aircraft?.split('/')[0] }}</span>
-              </div>
-              <div class="flex flex-col gap-1 text-sm text-white/70">
-                <div class="flex items-center gap-2">
-                  <v-icon icon="mdi-map-marker" size="16" class="text-cyan-300" />
-                  <span>{{ plan.dep }} → {{ plan.arr }}</span>
-                </div>
-                <div v-if="plan.altitude" class="flex items-center gap-2">
-                  <v-icon icon="mdi-airplane-takeoff" size="16" class="text-cyan-300" />
-                  <span>FL{{ Math.floor(parseInt(plan.altitude) / 100) }}</span>
-                </div>
-                <div v-if="plan.assignedsquawk" class="flex items-start gap-2">
-                  <v-icon icon="mdi-radar" size="16" class="text-cyan-300" />
-                  <span class="text-xs text-white/60">Squawk: {{ plan.assignedsquawk }}</span>
-                </div>
-              </div>
-            </v-card-text>
-          </v-card>
-        </div>
-      </section>
-
-      <!-- ── Scenario Picker ─────────────────────────────────────────────── -->
-      <section v-else-if="currentScreen === 'scenario'" class="space-y-6">
-        <!-- Header -->
-        <div class="flex items-center gap-3">
-          <v-btn icon variant="text" @click="currentScreen = flightPlans.length > 0 ? 'flightselect' : 'login'" class="text-cyan-300">
-            <v-icon>mdi-arrow-left</v-icon>
-          </v-btn>
-          <div>
-            <h2 class="text-lg font-semibold">Choose your scenario</h2>
-            <p v-if="selectedPlan" class="text-sm text-white/50">
-              {{ selectedPlan.callsign }} · {{ selectedPlan.dep }} → {{ selectedPlan.arr }}
-            </p>
-          </div>
-        </div>
-
-        <v-alert
-            v-if="error"
-            type="warning"
-            density="compact"
-            variant="tonal"
-            closable
-            class="bg-amber-500/10 text-amber-200"
-            @click:close="error = ''"
-        >
-          {{ error }}
-        </v-alert>
-
-        <!-- Scenarios grouped by journey, each chain shown as a flow -->
-        <div v-for="grp in CHAIN_GROUPS" :key="grp.category" class="space-y-3">
-          <p class="text-[11px] font-semibold uppercase tracking-widest text-white/35">
-            {{ grp.category }}
-          </p>
-
-          <v-card
-              v-for="chain in grp.chains"
-              :key="chain.id"
-              class="bg-white/5 border border-white/10 backdrop-blur"
-              rounded="lg"
-          >
-            <v-card-text class="p-4 space-y-3">
-              <!-- Chain header + run-the-whole-thing button -->
-              <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2 min-w-0">
-                  <v-icon :icon="chain.complete.icon" class="text-cyan-300 shrink-0" size="24" />
-                  <div class="min-w-0">
-                    <div class="font-semibold text-sm leading-tight">{{ chain.complete.name }}</div>
-                    <div class="text-[11px] text-white/45 leading-snug truncate">{{ chain.complete.subtitle }}</div>
-                  </div>
-                </div>
-                <v-btn size="small" color="cyan" variant="flat" class="shrink-0" @click="launchScenario(chain.complete)">
-                  Fly full
-                </v-btn>
-              </div>
-
-              <!-- Phase flow: tap a step to practise just that phase -->
-              <div class="pm-flow">
-                <template v-for="(seg, i) in chain.segments" :key="seg.id">
-                  <button
-                      type="button"
-                      class="pm-flow-node"
-                      :title="seg.subtitle"
-                      @click="launchScenario(seg)"
-                  >
-                    <v-icon :icon="seg.icon" size="13" />
-                    <span>{{ seg.name }}</span>
-                  </button>
-                  <v-icon v-if="i < chain.segments.length - 1" size="13" class="pm-flow-arrow">
-                    mdi-arrow-right
-                  </v-icon>
-                </template>
-              </div>
-            </v-card-text>
-          </v-card>
-        </div>
-
-        <!-- Standalone drills -->
-        <div v-if="DRILL_SCENARIOS.length" class="space-y-3">
-          <p class="text-[11px] font-semibold uppercase tracking-widest text-white/35">
-            Drills
-          </p>
-          <v-card
-              v-for="drill in DRILL_SCENARIOS"
-              :key="drill.id"
-              class="bg-white/5 border border-white/10 backdrop-blur"
-              rounded="lg"
-          >
-            <v-card-text class="p-4">
-              <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2 min-w-0">
-                  <v-icon :icon="drill.icon" class="text-cyan-300 shrink-0" size="24" />
-                  <div class="min-w-0">
-                    <div class="font-semibold text-sm leading-tight">{{ drill.name }}</div>
-                    <div class="text-[11px] text-white/45 leading-snug truncate">{{ drill.subtitle }}</div>
-                  </div>
-                </div>
-                <v-btn size="small" color="cyan" variant="flat" class="shrink-0" @click="launchScenario(drill)">
-                  Start
-                </v-btn>
-              </div>
-            </v-card-text>
-          </v-card>
-        </div>
-
-        <p class="text-[10px] text-white/30 text-center">
-          Tap a step to practise just that phase · “Fly full” runs the whole chain.
-        </p>
-      </section>
-
-      <!-- ── Completion Screen ───────────────────────────────────────────── -->
-      <section v-else-if="currentScreen === 'complete'" class="space-y-6">
-        <div class="text-center space-y-3 pt-10 pb-6">
-          <v-icon size="72" class="text-green-400">mdi-check-circle-outline</v-icon>
-          <h2 class="text-2xl font-semibold">
-            {{ completedScenario?.name ?? 'Session' }} complete
-          </h2>
-          <p class="text-white/50 text-sm">
-            {{ selectedPlan?.callsign }} ·
-            {{ selectedPlan?.dep }} → {{ selectedPlan?.arr }}
-          </p>
-        </div>
-
-        <div class="space-y-3">
-          <v-btn block color="cyan" variant="flat" @click="flyAgain">
-            <v-icon start>mdi-refresh</v-icon>
-            Fly again
-          </v-btn>
-
-          <v-btn
-              v-if="oppositeScenario"
-              block
-              color="white"
-              variant="outlined"
-              @click="launchScenario(oppositeScenario!)"
-          >
-            <v-icon start>{{ oppositeScenario.icon }}</v-icon>
-            Try {{ oppositeScenario.name }}
-          </v-btn>
-
-          <v-btn block variant="text" class="text-white/60" @click="currentScreen = 'scenario'">
-            Back to scenarios
-          </v-btn>
-        </div>
-      </section>
-
+        <SessionCompleteStep
+            v-else-if="currentScreen === 'complete'"
+            :completed-scenario="completedScenario"
+            :selected-plan="selectedPlan"
+            :opposite-scenario="oppositeScenario"
+            @fly-again="flyAgain"
+            @try-opposite="launchScenario"
+            @back-to-scenarios="currentScreen = 'scenario'"
+        />
+      </div>
     </div>
 
     <!-- Main Monitoring Screen (full app shell) -->
@@ -1526,6 +1311,10 @@ import { useBugReport } from '~/composables/useBugReport'
 import { useDebugSimulation } from '~/composables/useDebugSimulation'
 import { useSimBridgeSync } from '~/composables/useSimBridgeSync'
 import { CHAIN_GROUPS, DRILL_SCENARIOS } from '../../shared/constants/scenarios'
+import FlightSourceStep from '~/components/live-atc/FlightSourceStep.vue'
+import FlightSelectStep from '~/components/live-atc/FlightSelectStep.vue'
+import ScenarioPickerStep from '~/components/live-atc/ScenarioPickerStep.vue'
+import SessionCompleteStep from '~/components/live-atc/SessionCompleteStep.vue'
 import { useLiveAtcSession } from '~/composables/useLiveAtcSession'
 import { useSessionState } from '~/composables/useSessionState'
 import { useSpeechInterrupt } from '~/composables/useSpeechInterrupt'
@@ -2566,33 +2355,15 @@ onUnmounted(() => {
 .pm-readback-expected { color: var(--text); font-weight: 600; }
 .pm-readback-forms { color: var(--t4); }
 
-/* Scenario chooser — phase flow with arrows */
-.pm-flow {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
+/* Setup screens sit above the shared radar backdrop. */
+.pm-setup {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
 }
-.pm-flow-node {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 9px;
-  border-radius: 8px;
-  background: var(--pm-surface-1);
-  border: 1px solid var(--border);
-  font-size: 11.5px;
-  line-height: 1.2;
-  color: var(--t2);
-  transition: border-color .15s, background .15s, color .15s;
-}
-.pm-flow-node:hover {
-  border-color: rgba(34, 211, 238, 0.6);
-  background: rgba(34, 211, 238, 0.1);
-  color: var(--text);
-}
-.pm-flow-arrow {
-  color: var(--t4);
+.pm-setup__inner {
+  position: relative;
+  z-index: 1;
 }
 
 .pm-bottomnav {
