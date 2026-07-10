@@ -488,564 +488,41 @@
         </button>
       </nav>
 
-      <!-- Debug FAB (bottom-left) -->
-      <button
+      <DebugPanel
           v-if="debugMode"
-          type="button"
-          class="debug-fab"
-          :class="{ 'is-open': showDebugDrawer }"
-          :aria-pressed="showDebugDrawer ? 'true' : 'false'"
-          :aria-label="showDebugDrawer ? 'Close debug panel' : 'Open debug panel'"
-          title="Debug panel"
-          @click="showDebugDrawer = !showDebugDrawer"
-      >
-        <v-icon size="22">{{ showDebugDrawer ? 'mdi-close' : 'mdi-bug' }}</v-icon>
-      </button>
+          :engine="engine"
+          :session-label="sessionLabel"
+          :set-last-transmission="setLastTransmission"
+          :clear-log="clearLog"
+          :start-demo-flight="startDemoFlight"
+      />
 
-      <!-- Debug drawer (left, non-blocking) -->
-      <Transition name="debug-drawer">
-        <aside
-            v-if="showDebugDrawer && debugMode"
-            class="debug-drawer"
-            role="complementary"
-            aria-label="Debug panel"
-        >
-          <header class="debug-drawer-head">
-            <div class="flex items-center gap-2">
-              <v-icon size="18" color="orange">mdi-bug</v-icon>
-              <h3 class="text-base font-semibold">Debug</h3>
-              <v-chip size="x-small" color="grey" variant="outlined">LLM</v-chip>
-            </div>
-            <button
-                type="button"
-                class="debug-drawer-close"
-                aria-label="Close debug panel"
-                @click="showDebugDrawer = false"
-            >
-              <v-icon size="18">mdi-close</v-icon>
-            </button>
-          </header>
+      <FlightInfoSheet
+          v-model="showFlightSheet"
+          :flight-context="flightContext"
+          :flags="flags"
+          :vars="vars"
+          :log-length="log.length"
+          :theme="pmTheme"
+          @back-to-setup="backToSetup"
+      />
 
-          <div class="debug-drawer-body">
-            <v-card
-                v-if="simulationRunning || simulationTrace.length"
-                class="bg-white/5 border border-white/10 mb-3"
-            >
-              <v-card-text class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <h4 class="text-sm font-semibold">Simulation Trace</h4>
-                    <v-chip size="x-small" color="cyan" variant="outlined">
-                      {{ completedPilotSteps }} / {{ simulationStepCount }}
-                    </v-chip>
-                  </div>
-                  <v-chip size="x-small" :color="simulationRunning ? 'orange' : 'grey'" variant="tonal">
-                    {{ simulationRunning ? 'Running' : 'Ready' }}
-                  </v-chip>
-                </div>
+      <SettingsSheet
+          v-model="showSettingsSheet"
+          :theme="pmTheme"
+          :theme-preference="pmThemePreference"
+          :speech-speed-label="speechSpeedLabel"
+          v-model:speech-speed="speechSpeed"
+          v-model:radio-effects-enabled="radioEffectsEnabled"
+          v-model:readback-enabled="readbackEnabled"
+          v-model:learning-mode="learningMode"
+          v-model:debug-mode="debugMode"
+          v-model:prerec-enabled="prerecEnabled"
+          v-model:prerec-seconds="prerecSeconds"
+          @set-theme="setPmTheme"
+      />
 
-                <v-alert
-                    v-if="simulationError"
-                    type="warning"
-                    variant="tonal"
-                    density="compact"
-                    class="bg-amber-500/10 text-amber-200"
-                >
-                  {{ simulationError }}
-                </v-alert>
-
-                <div
-                    v-if="simulationRunning && simulationTrace.length === 0"
-                    class="text-xs text-white/60"
-                >
-                  Simulation initializing...
-                </div>
-
-                <div v-else class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  <div
-                      v-for="(entry, idx) in simulationTrace"
-                      :key="idx"
-                      class="rounded-xl border border-white/10 bg-black/40 p-2 space-y-1"
-                  >
-                    <div class="flex items-center justify-between text-[10px] uppercase tracking-[0.25em] text-white/40">
-                      <span>{{ entry.label }}</span>
-                      <span class="text-white/60">{{ entry.id }}</span>
-                    </div>
-                    <div v-if="entry.kind === 'pilot' || entry.kind === 'atc'" class="space-y-1">
-                      <p class="text-xs font-mono text-white">{{ entry.payload?.text }}</p>
-                      <p class="text-[10px] text-white/50 font-mono">{{ entry.payload?.normalized }}</p>
-                    </div>
-                    <pre
-                        v-else-if="entry.payload"
-                        class="text-[10px] text-white/60 font-mono whitespace-pre-wrap"
-                    >{{ formatTracePayload(entry.payload) }}</pre>
-                  </div>
-                </div>
-              </v-card-text>
-            </v-card>
-
-            <v-card class="bg-white/5 border border-white/10">
-              <v-card-text class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <h4 class="text-sm font-semibold">Flow Insights</h4>
-                </div>
-
-                <div class="flex items-center justify-between text-[10px] text-white/50">
-                  <span>Session: {{ sessionLabel }}</span>
-                  <div class="flex flex-wrap gap-1" v-if="traceAutoSelection || (traceFallback?.used) || timelineUsedFallback">
-                    <v-chip v-if="traceAutoSelection" size="x-small" color="cyan" variant="outlined">
-                      Auto: {{ traceAutoSelection.id }}
-                    </v-chip>
-                    <v-chip v-if="timelineUsedFallback" size="x-small" color="orange" variant="tonal">
-                      Fallback candidates
-                    </v-chip>
-                    <v-chip v-if="traceFallback?.used" size="x-small" color="red" variant="tonal">
-                      Fallback: {{ traceFallback.reason || 'triggered' }}
-                    </v-chip>
-                  </div>
-                </div>
-
-                <div class="space-y-2 rounded-xl border border-white/10 bg-black/30 p-2">
-                  <p class="text-[10px] uppercase tracking-[0.25em] text-white/40">Current node</p>
-                  <p class="font-mono text-xs text-white">{{ debugState?.id || '—' }}</p>
-                  <p class="text-[10px] text-white/50">
-                    {{ debugState ? `${debugState.role} • ${debugState.phase}` : 'N/A' }}
-                    <span v-if="debugState?.frequencyName" class="ml-1 text-white/40">({{ debugState.frequencyName }})</span>
-                  </p>
-                  <p v-if="debugState?.sayPlain" class="text-[11px] text-white/70">
-                    Auto (LLM): <span class="font-mono text-white">{{ debugState.sayPlain }}</span>
-                  </p>
-                  <p v-if="debugState?.sayNormalized" class="text-[10px] text-white/40">
-                    Radio: {{ debugState.sayNormalized }}
-                  </p>
-                </div>
-
-                <div>
-                  <p class="text-[10px] uppercase tracking-[0.25em] text-white/40 mb-2">Upcoming decisions</p>
-                  <div v-if="debugNextStates.length" class="space-y-2">
-                    <div
-                        v-for="state in debugNextStates"
-                        :key="state.id"
-                        class="space-y-1 rounded-xl border border-white/10 bg-black/30 p-2"
-                    >
-                      <div class="flex items-start justify-between gap-2">
-                        <div>
-                          <p class="font-mono text-xs text-white">{{ state.id }}</p>
-                          <p class="text-[10px] text-white/50">
-                            {{ state.role || '—' }} • {{ state.phase || '—' }}
-                            <span v-if="state.frequencyName" class="ml-1 text-white/40">({{ state.frequencyName }})</span>
-                          </p>
-                        </div>
-                        <v-chip
-                            size="x-small"
-                            color="cyan"
-                            variant="outlined"
-                            class="cursor-pointer"
-                            @click="forceMove(state.id)"
-                        >
-                          Jump
-                        </v-chip>
-                      </div>
-                      <p v-if="state.sayPlain" class="text-[11px] text-white/70">
-                        ATC: <span class="font-mono text-white">{{ state.sayPlain }}</span>
-                      </p>
-                      <p v-if="state.sayNormalized" class="text-[10px] text-white/40">
-                        Radio: {{ state.sayNormalized }}
-                      </p>
-                    </div>
-                  </div>
-                  <p v-else class="text-[10px] text-white/50">No further decisions available.</p>
-                </div>
-
-                <div class="space-y-2 rounded-xl border border-white/10 bg-black/30 p-2">
-                  <p class="text-[10px] uppercase tracking-[0.25em] text-white/40">Decision timeline</p>
-                  <div v-if="timelineSteps.length" class="space-y-2">
-                    <div
-                      v-for="(step, index) in timelineSteps"
-                      :key="`${step.stage}-${index}`"
-                      class="space-y-2 rounded-lg border border-white/10 bg-black/40 p-2"
-                    >
-                      <div class="flex items-start justify-between gap-2">
-                        <div>
-                          <p class="font-semibold text-xs text-white">{{ step.label }}</p>
-                          <p class="text-[10px] text-white/50 uppercase tracking-[0.2em]">{{ step.stage }}</p>
-                        </div>
-                        <v-chip size="x-small" color="cyan" variant="outlined">
-                          {{ step.candidates.length }} cand.
-                        </v-chip>
-                      </div>
-                      <p v-if="step.note" class="text-[10px] text-white/50">{{ step.note }}</p>
-                      <div v-if="step.candidates.length" class="space-y-1">
-                        <div
-                          v-for="candidate in step.candidates"
-                          :key="candidate.id"
-                          class="rounded-md border border-white/10 bg-black/30 p-1.5"
-                        >
-                          <div class="flex items-center justify-between gap-2">
-                            <span class="font-mono text-[11px] text-white">{{ candidate.id }}</span>
-                            <span class="text-[10px] text-white/50">{{ candidate.flow || 'current' }}</span>
-                          </div>
-                          <p v-if="candidate.summary" class="text-[10px] text-white/60 mt-0.5">{{ candidate.summary }}</p>
-                        </div>
-                      </div>
-                      <div v-if="step.eliminated?.length" class="space-y-1">
-                        <p class="text-[10px] text-red-200/80 uppercase tracking-[0.25em]">Eliminated</p>
-                        <div
-                          v-for="elim in step.eliminated"
-                          :key="`${step.stage}-${elim.candidate.id}`"
-                          class="space-y-1 rounded-md border border-red-400/30 bg-red-500/10 p-1.5 text-[10px] text-red-100"
-                        >
-                          <div class="flex items-center justify-between gap-2">
-                            <span class="font-mono text-[11px]">{{ elim.candidate.id }}</span>
-                            <span class="text-[10px] text-red-200/80">{{ elim.kind }}</span>
-                          </div>
-                          <p class="text-[10px] text-red-100/80">{{ elim.reason }}</p>
-                          <p v-if="describeElimination(elim)" class="text-[10px] text-red-100/70">{{ describeElimination(elim) }}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <p v-else class="text-[10px] text-white/50">No decision timeline available yet.</p>
-                </div>
-              </v-card-text>
-            </v-card>
-          </div>
-        </aside>
-      </Transition>
-
-      <!-- Flight info sheet (opened via hud-context click) -->
-      <v-dialog v-model="showFlightSheet" max-width="520" :content-class="pmTheme === 'light' ? 'pm-dialog-light' : ''">
-        <v-card :class="pmTheme === 'light' ? 'bg-white border border-black/10 text-[#0f1420]' : 'bg-[#0b101d] border border-white/10 text-white'">
-          <v-card-title class="flex items-center justify-between gap-2 text-base font-semibold">
-            <div class="flex items-center gap-2">
-              <v-icon icon="mdi-airplane" size="20" color="cyan" />
-              Flight info
-            </div>
-            <v-btn icon="mdi-close" variant="text" size="small" @click="showFlightSheet = false" />
-          </v-card-title>
-          <v-card-text class="space-y-4">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-xs uppercase tracking-[0.3em] text-white/50">Active flight</p>
-                <h2 class="text-2xl font-semibold">{{ flightContext.callsign || 'N/A' }}</h2>
-                <p class="text-sm text-white/70">{{ flightContext.dep }} → {{ flightContext.dest }}</p>
-              </div>
-              <div class="text-right space-y-1">
-                <v-chip
-                    :color="flags.in_air ? 'green' : 'grey'"
-                    variant="flat"
-                    size="small"
-                >
-                  {{ flags.in_air ? 'IN-AIR' : 'GROUND' }}
-                </v-chip>
-                <div class="flex gap-1 justify-end">
-                  <v-chip size="x-small" :color="flags.emergency_active ? 'red' : 'grey'" variant="outlined">
-                    EMERG
-                  </v-chip>
-                  <v-chip size="x-small" color="cyan" variant="outlined">
-                    {{ flags.current_unit }}
-                  </v-chip>
-                </div>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-              <div>
-                <p class="text-xs text-white/40 uppercase tracking-wider">Stand</p>
-                <p class="text-white/80 font-mono">{{ vars.stand }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-white/40 uppercase tracking-wider">Runway</p>
-                <p class="text-white/80 font-mono">{{ vars.runway }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-white/40 uppercase tracking-wider">Squawk</p>
-                <p class="text-white/80 font-mono">{{ vars.squawk }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-white/40 uppercase tracking-wider">SID</p>
-                <p class="text-white/80 font-mono">{{ vars.sid }}</p>
-              </div>
-            </div>
-
-            <div class="flex justify-between pt-2 border-t border-white/10">
-              <div class="text-center">
-                <p class="text-lg font-semibold text-cyan-300">{{ flags.radio_checks_done || 0 }}</p>
-                <p class="text-xs text-white/40 uppercase tracking-wider">Radio Checks</p>
-              </div>
-              <div class="text-center">
-                <p class="text-lg font-semibold text-orange-300">{{ flags.off_schema_count || 0 }}</p>
-                <p class="text-xs text-white/40 uppercase tracking-wider">Off-Schema</p>
-              </div>
-              <div class="text-center">
-                <p class="text-lg font-semibold text-white">{{ log.length }}</p>
-                <p class="text-xs text-white/40 uppercase tracking-wider">Transmissions</p>
-              </div>
-            </div>
-
-            <v-btn
-                block
-                color="grey"
-                variant="outlined"
-                size="small"
-                prepend-icon="mdi-airplane-off"
-                @click="backToSetup"
-            >
-              Select new flight
-            </v-btn>
-          </v-card-text>
-        </v-card>
-      </v-dialog>
-
-      <!-- Settings sheet (opened via Settings button in HUD) -->
-      <v-dialog v-model="showSettingsSheet" max-width="560" :content-class="pmTheme === 'light' ? 'pm-dialog-light' : ''">
-        <v-card :class="pmTheme === 'light' ? 'bg-white border border-black/10 text-[#0f1420]' : 'bg-[#0b101d] border border-white/10 text-white'">
-          <v-card-title class="flex items-center justify-between gap-2 text-base font-semibold">
-            <div class="flex items-center gap-2">
-              <v-icon icon="mdi-cog" size="20" color="cyan" />
-              Settings
-            </div>
-            <v-btn icon="mdi-close" variant="text" size="small" @click="showSettingsSheet = false" />
-          </v-card-title>
-          <v-card-text class="space-y-4">
-            <div>
-              <label class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2 block">Theme</label>
-              <div class="pm-seg">
-                <button
-                    type="button"
-                    class="pm-seg-btn"
-                    :class="{ 'is-active': pmThemePreference === 'dark' }"
-                    @click="setPmTheme('dark')"
-                >
-                  <v-icon size="16">mdi-weather-night</v-icon>
-                  Dark
-                </button>
-                <button
-                    type="button"
-                    class="pm-seg-btn"
-                    :class="{ 'is-active': pmThemePreference === 'light' }"
-                    @click="setPmTheme('light')"
-                >
-                  <v-icon size="16">mdi-white-balance-sunny</v-icon>
-                  Light
-                </button>
-                <button
-                    type="button"
-                    class="pm-seg-btn"
-                    :class="{ 'is-active': pmThemePreference === 'system' }"
-                    @click="setPmTheme('system')"
-                >
-                  <v-icon size="16">mdi-theme-light-dark</v-icon>
-                  System
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <label class="text-xs uppercase tracking-[0.3em] text-white/40">
-                  Speech speed
-                </label>
-                <span class="text-xs font-mono text-white/60">{{ speechSpeedLabel }}</span>
-              </div>
-              <v-slider
-                  v-model="speechSpeed"
-                  :min="0.7"
-                  :max="1.3"
-                  :step="0.05"
-                  color="cyan"
-                  thumb-label
-                  hide-details
-              />
-            </div>
-
-            <div class="grid gap-3 sm:grid-cols-2">
-              <v-switch
-                  v-model="radioEffectsEnabled"
-                  color="cyan"
-                  inset
-                  label="Radio effects"
-                  hide-details
-              />
-              <v-switch
-                  v-model="readbackEnabled"
-                  color="cyan"
-                  inset
-                  label="Readback voice"
-                  hide-details
-              />
-              <v-switch
-                  v-model="learningMode"
-                  color="cyan"
-                  inset
-                  label="Learning aid (expected comm)"
-                  hide-details
-              />
-              <v-switch
-                  v-model="debugMode"
-                  color="orange"
-                  inset
-                  label="Developer debug"
-                  hide-details
-              />
-            </div>
-
-            <div class="pt-2 border-t border-white/10 space-y-3">
-              <div>
-                <p class="text-xs uppercase tracking-[0.3em] text-white/40">Voice input</p>
-                <p class="text-[11px] text-white/50 mt-1">
-                  Pre-recording keeps the mic listening in the background so the start of your transmission isn't clipped.
-                </p>
-              </div>
-              <v-switch
-                  v-model="prerecEnabled"
-                  color="cyan"
-                  inset
-                  label="Pre-recording (rolling buffer)"
-                  hide-details
-              />
-              <div :class="{ 'opacity-50 pointer-events-none': !prerecEnabled }">
-                <div class="flex items-center justify-between mb-2">
-                  <label class="text-xs uppercase tracking-[0.3em] text-white/40">
-                    Pre-recording lead-in
-                  </label>
-                  <span class="text-xs font-mono text-white/60">{{ prerecSeconds.toFixed(1) }}s</span>
-                </div>
-                <v-slider
-                    v-model="prerecSeconds"
-                    :min="0.3"
-                    :max="2.5"
-                    :step="0.1"
-                    color="cyan"
-                    thumb-label
-                    hide-details
-                    :disabled="!prerecEnabled"
-                />
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-dialog>
-
-      <!-- Bug Report Dialog -->
-      <v-dialog v-model="showBugReportDialog" max-width="680" scrollable :content-class="pmTheme === 'light' ? 'pm-dialog-light' : ''">
-        <v-card :class="pmTheme === 'light' ? 'bg-white border border-black/10 text-[#0f1420]' : 'bg-[#0b101d] border border-white/10 text-white'">
-          <v-card-title class="flex items-center gap-2 text-base font-semibold pt-4 px-5">
-            <v-icon icon="mdi-bug-outline" color="#f87171" size="20" />
-            Fehler melden
-          </v-card-title>
-          <v-card-text class="space-y-4 px-5 pb-2">
-            <div v-if="bugReportSuccess" class="rounded-xl bg-emerald-500/10 border border-emerald-400/30 p-4 text-center">
-              <v-icon icon="mdi-check-circle-outline" color="emerald" size="32" class="mb-2" />
-              <p class="text-emerald-300 font-semibold">Danke! Bug Report wurde gesendet.</p>
-            </div>
-            <template v-else>
-              <div v-if="bugReportScreenshot" class="space-y-2">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex items-start gap-2">
-                    <v-icon size="18" color="red" class="mt-0.5">mdi-gesture-tap-button</v-icon>
-                    <div>
-                      <p class="text-sm font-semibold text-white/90">Wo ist der Fehler? Zeichne einen Pfeil hin.</p>
-                      <p class="text-xs text-white/55 leading-snug">
-                        Klicke auf die Stelle und ziehe mit gedrückter Maustaste (am Handy: mit dem Finger)
-                        zur Problemstelle. Du kannst mehrere Pfeile setzen.
-                      </p>
-                    </div>
-                  </div>
-                  <v-btn
-                    v-if="bugReportArrows.length > 0"
-                    size="x-small"
-                    variant="text"
-                    color="red"
-                    prepend-icon="mdi-undo"
-                    class="shrink-0"
-                    @click="undoLastArrow"
-                  >
-                    Pfeil zurück
-                  </v-btn>
-                </div>
-                <div class="relative rounded-xl overflow-hidden border border-white/10" style="line-height:0">
-                  <img
-                    ref="bugReportImgRef"
-                    :src="bugReportScreenshot"
-                    class="w-full block"
-                    alt="Screenshot"
-                    @load="setupAnnotationCanvas"
-                  />
-                  <canvas
-                    ref="bugReportCanvasRef"
-                    class="absolute inset-0 w-full h-full cursor-crosshair select-none"
-                    style="touch-action:none"
-                    @pointerdown="onCanvasMouseDown"
-                    @pointermove="onCanvasMouseMove"
-                    @pointerup="onCanvasMouseUp"
-                    @pointerleave="onCanvasMouseLeave"
-                    @pointercancel="onCanvasMouseLeave"
-                  />
-                  <span
-                    v-if="bugReportArrows.length === 0"
-                    class="pointer-events-none absolute inset-0 flex items-center justify-center text-center px-4"
-                  >
-                    <span class="rounded-full bg-black/55 px-3 py-1 text-xs text-white/85 backdrop-blur">
-                      ✏️ Hier ziehen, um einen Pfeil zur Fehlerstelle zu zeichnen
-                    </span>
-                  </span>
-                </div>
-              </div>
-              <div v-else class="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm text-white/50">
-                Kein Screenshot verfügbar
-              </div>
-
-              <v-textarea
-                v-model="bugReportComment"
-                label="Was ist kaputt? Was sollte stattdessen passieren?"
-                variant="outlined"
-                color="red"
-                rows="3"
-                auto-grow
-                maxlength="2000"
-                counter="2000"
-                hide-details="auto"
-                :disabled="bugReportLoading"
-              />
-
-              <v-text-field
-                v-model="bugReportContact"
-                label="Dein Name / Kontakt"
-                variant="outlined"
-                color="red"
-                density="comfortable"
-                hide-details
-                :disabled="bugReportLoading"
-              />
-
-              <v-alert
-                v-if="bugReportError"
-                type="error"
-                density="compact"
-                variant="tonal"
-                class="bg-red-500/10 text-red-200"
-              >
-                {{ bugReportError }}
-              </v-alert>
-            </template>
-          </v-card-text>
-          <v-card-actions v-if="!bugReportSuccess" class="justify-end gap-2 px-5 pb-4">
-            <v-btn variant="text" color="grey" :disabled="bugReportLoading" @click="showBugReportDialog = false">
-              Abbrechen
-            </v-btn>
-            <v-btn
-              color="red"
-              variant="flat"
-              :loading="bugReportLoading"
-              :disabled="!bugReportComment.trim()"
-              @click="submitBugReport"
-            >
-              Bug melden
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+      <BugReportDialog :bug="bugReport" :theme="pmTheme" />
 
       <!-- Transmission issue dialog -->
       <v-dialog v-model="showTransmissionIssueDialog" max-width="420" :content-class="pmTheme === 'light' ? 'pm-dialog-light' : ''">
@@ -1134,8 +611,11 @@ import PttPad from '~/components/live-atc/cockpit/PttPad.vue'
 import { useAtisPlayback } from '~/composables/useAtisPlayback'
 import { usePttRecording } from '~/composables/usePttRecording'
 import { useBugReport } from '~/composables/useBugReport'
-import { useDebugSimulation } from '~/composables/useDebugSimulation'
 import { useSimBridgeSync } from '~/composables/useSimBridgeSync'
+import FlightInfoSheet from '~/components/live-atc/cockpit/FlightInfoSheet.vue'
+import SettingsSheet from '~/components/live-atc/cockpit/SettingsSheet.vue'
+import BugReportDialog from '~/components/live-atc/cockpit/BugReportDialog.vue'
+import DebugPanel from '~/components/live-atc/cockpit/DebugPanel.vue'
 import { CHAIN_GROUPS, DRILL_SCENARIOS } from '../../shared/constants/scenarios'
 import FlightSourceStep from '~/components/live-atc/FlightSourceStep.vue'
 import FlightSelectStep from '~/components/live-atc/FlightSelectStep.vue'
@@ -1287,27 +767,10 @@ const radioEffectsEnabled = ref(true)
 const readbackEnabled = ref(false)
 
 // ── Bug Report ───────────────────────────────────────────────────────────────
-const {
-  showBugReportDialog,
-  bugReportComment,
-  bugReportContact,
-  bugReportScreenshot,
-  bugReportArrows,
-  bugReportLoading,
-  bugReportCapturing,
-  bugReportError,
-  bugReportSuccess,
-  bugReportCanvasRef,
-  bugReportImgRef,
-  setupAnnotationCanvas,
-  onCanvasMouseDown,
-  onCanvasMouseMove,
-  onCanvasMouseUp,
-  onCanvasMouseLeave,
-  undoLastArrow,
-  openBugReport,
-  submitBugReport,
-} = useBugReport(engine, { activeScenario })
+// Owned here rather than by the dialog: the HUD button starts the screenshot
+// capture before the dialog ever renders. The dialog gets the whole handle.
+const bugReport = useBugReport(engine, { activeScenario })
+const { bugReportCapturing, openBugReport } = bugReport
 
 // Layout / view state
 const activeTab = ref<'funk' | 'log'>('funk')
@@ -1321,8 +784,10 @@ const showExpectedComm = computed(
 // Overlays / sheets opened from HUD controls
 const showFlightSheet = ref(false)
 const showSettingsSheet = ref(false)
-const showDebugDrawer = ref(false)
 const hudStatusMenu = ref(false)
+
+/** The one gate for developer tooling: DebugPanel is not mounted while this is off. */
+const debugMode = ref(true)
 
 type PmTab = {
   id: 'funk' | 'log'
@@ -1594,25 +1059,6 @@ const {
   sendPilotText,
   restoreBugReportState,
 } = session
-
-// Debug drawer: scripted simulation + decision-trace inspectors.
-const {
-  debugMode,
-  simulationRunning,
-  simulationTrace,
-  simulationError,
-  simulationStepCount,
-  completedPilotSteps,
-  timelineSteps,
-  timelineUsedFallback,
-  traceAutoSelection,
-  traceFallback,
-  debugState,
-  debugNextStates,
-  describeElimination,
-  formatTracePayload,
-  runFullSimulation,
-} = useDebugSimulation(engine, { setLastTransmission, clearLog, startDemoFlight })
 
 onUnmounted(() => {
   stopAtisLoop()
@@ -2263,110 +1709,6 @@ onUnmounted(() => {
   .pm-log-tab {
     display: none !important;
   }
-  /* No bottom nav on desktop: drop the FAB back down to the corner. */
-  .debug-fab {
-    bottom: calc(env(safe-area-inset-bottom) + 16px);
-  }
-  .debug-drawer {
-    bottom: calc(env(safe-area-inset-bottom) + 16px);
-  }
 }
 
-/* =========================================================================
- * Debug FAB + drawer (left, non-blocking, can stay open in parallel)
- * ======================================================================= */
-.debug-fab {
-  position: fixed;
-  left: 16px;
-  /* Clear the mobile bottom nav (~64px) by default; desktop overrides below. */
-  bottom: calc(env(safe-area-inset-bottom) + 78px);
-  z-index: 60;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  border: 1px solid rgba(249, 115, 22, 0.45);
-  background: rgba(249, 115, 22, 0.16);
-  color: #fdba74;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  cursor: pointer;
-  transition: background 160ms ease, color 160ms ease, transform 160ms ease, border-color 160ms ease;
-}
-.debug-fab:hover {
-  background: rgba(249, 115, 22, 0.26);
-  color: #fed7aa;
-  transform: translateY(-1px);
-}
-.debug-fab.is-open {
-  background: rgba(249, 115, 22, 0.35);
-  border-color: rgba(249, 115, 22, 0.7);
-  color: #fff;
-}
-
-.debug-drawer {
-  position: fixed;
-  top: 72px;
-  left: 12px;
-  bottom: calc(env(safe-area-inset-bottom) + 76px);
-  width: min(420px, calc(100vw - 24px));
-  z-index: 55;
-  display: flex;
-  flex-direction: column;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(8, 13, 24, 0.96);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(14px);
-  pointer-events: auto;
-}
-.debug-drawer-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-.debug-drawer-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.6);
-  background: transparent;
-  transition: background 120ms ease, color 120ms ease;
-}
-.debug-drawer-close:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-.debug-drawer-body {
-  padding: 12px 14px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.debug-drawer-enter-active,
-.debug-drawer-leave-active {
-  transition: transform 220ms ease, opacity 220ms ease;
-}
-.debug-drawer-enter-from,
-.debug-drawer-leave-to {
-  transform: translateX(-12px);
-  opacity: 0;
-}
-
-@media (max-width: 640px) {
-  .debug-drawer {
-    top: 64px;
-    left: 8px;
-    right: 8px;
-    width: auto;
-    bottom: calc(env(safe-area-inset-bottom) + 84px);
-  }
-}
 </style>
