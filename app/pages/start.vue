@@ -1,17 +1,6 @@
 <template>
   <div class="learn-theme relative flex min-h-screen items-center justify-center overflow-hidden bg-[#070d1a] px-4 py-16 text-white">
-    <div class="pointer-events-none absolute inset-0 start-bg" aria-hidden="true">
-      <div class="start-bg__glow start-bg__glow--cyan" />
-      <div class="start-bg__glow start-bg__glow--amber" />
-      <div class="start-bg__grid" />
-      <svg class="start-bg__radar" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="200" cy="200" r="60" stroke="currentColor" stroke-width="1" />
-        <circle cx="200" cy="200" r="120" stroke="currentColor" stroke-width="1" />
-        <circle cx="200" cy="200" r="180" stroke="currentColor" stroke-width="1" />
-        <line x1="200" y1="20" x2="200" y2="380" stroke="currentColor" stroke-width="1" />
-        <line x1="20" y1="200" x2="380" y2="200" stroke="currentColor" stroke-width="1" />
-      </svg>
-    </div>
+    <RadarBackdrop />
 
     <div class="relative w-full max-w-3xl space-y-8">
       <div class="space-y-3 text-center">
@@ -166,54 +155,3 @@ function goToClassroom() {
 }
 </script>
 
-<style scoped>
-.start-bg__glow {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(90px);
-  opacity: 0.35;
-}
-
-.start-bg__glow--cyan {
-  top: -10%;
-  left: -8%;
-  width: 32rem;
-  height: 32rem;
-  background: radial-gradient(circle, rgba(103, 232, 249, 0.35), transparent 70%);
-}
-
-.start-bg__glow--amber {
-  bottom: -15%;
-  right: -10%;
-  width: 30rem;
-  height: 30rem;
-  background: radial-gradient(circle, rgba(251, 191, 36, 0.25), transparent 70%);
-}
-
-.start-bg__grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 80%);
-}
-
-.start-bg__radar {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 44rem;
-  height: 44rem;
-  transform: translate(-50%, -50%);
-  color: rgba(103, 232, 249, 0.08);
-  animation: start-bg-spin 60s linear infinite;
-}
-
-@keyframes start-bg-spin {
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
-}
-</style>
