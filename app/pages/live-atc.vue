@@ -1523,6 +1523,7 @@ import { loadPizzicatoLite } from '../../shared/utils/pizzicatoLite'
 import type { PizzicatoLite } from '../../shared/utils/pizzicatoLite'
 import { createNoiseGenerators, getReadabilityProfile } from '../../shared/utils/radioEffects'
 import { createAtisAudioLoop, type AtisAudioLoop } from '../../shared/utils/atisAudioLoop'
+import { normalizeManualFreq } from '../../shared/utils/frequency'
 import type {
   CandidateTraceElimination,
   CandidateTraceEntry,
@@ -4936,17 +4937,6 @@ const onPresetSelectStandby = (opt: { value: string | number }) => {
 // --- Manual frequency entry (free-tune any VHF airband channel) --------------
 const manualFreqActive = ref('')
 const manualFreqStandby = ref('')
-
-// Accepts inputs like "121.5", "121,500" or "118" and normalises to a valid
-// VHF airband frequency string (118.000–136.975). Returns null when invalid so
-// callers/UI can disable the action.
-function normalizeManualFreq(input: string): string | null {
-  const raw = input.trim().replace(',', '.')
-  if (!raw) return null
-  const num = Number(raw)
-  if (!Number.isFinite(num) || num < 118 || num >= 137) return null
-  return num.toFixed(3)
-}
 
 function applyManualFrequency(target: 'active' | 'standby', close?: () => void) {
   const model = target === 'active' ? manualFreqActive : manualFreqStandby
