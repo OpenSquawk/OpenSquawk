@@ -305,39 +305,12 @@
 
             <!-- Manual text input (text mode) -->
             <div v-show="activeTab === 'funk' && inputMode === 'text'" class="pm-block">
-              <v-card class="bg-white/5 border border-white/10">
-                <v-card-text class="space-y-3">
-                  <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold">Text Input</h3>
-                    <v-chip size="small" color="cyan" variant="outlined" class="font-mono">{{ frequencies.active || '---' }}</v-chip>
-                  </div>
-                  <v-text-field
-                      v-model="pilotInput"
-                      label="Pilot Transmission (Text)"
-                      variant="outlined"
-                      color="cyan"
-                      hide-details
-                      @keyup.enter="sendPilotText"
-                      append-inner-icon="mdi-send"
-                      @click:append-inner="sendPilotText"
-                  />
-
-                  <div v-if="backendExpectedPhrase" class="space-y-1">
-                    <p class="text-[11px] uppercase tracking-[0.25em] text-white/40">Suggested phrase</p>
-                    <div class="flex flex-wrap gap-2">
-                      <v-chip
-                          size="small"
-                          color="cyan"
-                          variant="outlined"
-                          class="cursor-pointer text-xs font-mono"
-                          @click="pilotInput = backendExpectedPhrase"
-                      >
-                        {{ backendExpectedPhrase }}
-                      </v-chip>
-                    </div>
-                  </div>
-                </v-card-text>
-              </v-card>
+              <TextInputPanel
+                  v-model="pilotInput"
+                  :active-frequency="frequencies.active"
+                  :expected-phrase="backendExpectedPhrase"
+                  @send="sendPilotText"
+              />
             </div>
 
             <!-- Last Transmission (funk) -->
@@ -346,92 +319,13 @@
                 v-if="lastTransmission"
                 class="pm-block"
             >
-              <v-card
-                  :class="[
-                    'border backdrop-blur',
-                    lastTransmissionFaulty
-                      ? 'bg-red-500/10 border-red-400/30'
-                      : 'bg-cyan-500/10 border-cyan-400/20'
-                  ]"
-              >
-                <v-card-text class="space-y-3">
-                  <div class="flex flex-wrap items-center justify-between gap-2">
-                    <div class="flex items-center gap-2">
-                      <v-icon
-                          icon="mdi-microphone-outline"
-                          size="16"
-                          :class="lastTransmissionFaulty ? 'text-red-300' : 'text-cyan-300'"
-                      />
-                      <span
-                          class="text-xs uppercase tracking-[0.3em]"
-                          :class="lastTransmissionFaulty ? 'text-red-300' : 'text-cyan-300'"
-                      >
-                        Last transmission
-                      </span>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-1">
-                      <v-chip
-                          v-if="lastTransmissionFaulty"
-                          size="x-small"
-                          color="red"
-                          variant="flat"
-                      >
-                        Faulty
-                      </v-chip>
-                      <v-btn
-                          variant="text"
-                          size="small"
-                          :color="lastTransmissionFaulty ? 'red' : 'amber'"
-                          class="text-[0.65rem] uppercase tracking-[0.3em]"
-                          @click="startTransmissionIssueFlow"
-                      >
-                        <template #prepend>
-                          <v-icon size="16">mdi-alert-circle-outline</v-icon>
-                        </template>
-                        {{ lastTransmissionFaulty ? 'Edit issue' : 'Mark as faulty' }}
-                      </v-btn>
-                      <v-btn
-                          v-if="lastTransmissionFaulty"
-                          variant="text"
-                          size="small"
-                          color="cyan"
-                          class="text-[0.65rem] uppercase tracking-[0.3em]"
-                          @click="resetLastTransmissionFault"
-                      >
-                        <template #prepend>
-                          <v-icon size="16">mdi-restore</v-icon>
-                        </template>
-                        Reset
-                      </v-btn>
-                      <v-btn
-                          variant="text"
-                          size="small"
-                          color="cyan"
-                          class="text-[0.65rem] uppercase tracking-[0.3em]"
-                          @click="clearLastTransmission"
-                      >
-                        <template #prepend>
-                          <v-icon size="16">mdi-close</v-icon>
-                        </template>
-                        Delete
-                      </v-btn>
-                    </div>
-                  </div>
-                  <p class="text-sm text-white font-mono whitespace-pre-line">{{ lastTransmission }}</p>
-                  <div
-                      v-if="lastTransmissionFaulty"
-                      class="space-y-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2"
-                  >
-                    <p class="text-xs uppercase tracking-[0.25em] text-red-200/80">Issue description</p>
-                    <p v-if="lastTransmissionFaultNote" class="text-sm text-red-100">
-                      {{ lastTransmissionFaultNote }}
-                    </p>
-                    <p v-else class="text-xs text-red-200/70">
-                      Marked as faulty.
-                    </p>
-                  </div>
-                </v-card-text>
-              </v-card>
+              <LastTransmissionCard
+                  :text="lastTransmission"
+                  :faulty="lastTransmissionFaulty"
+                  :fault-note="lastTransmissionFaultNote"
+                  @flag-issue="startTransmissionIssueFlow"
+                  @clear="clearLastTransmission"
+              />
             </div>
 
             <!-- =============== LOG TAB (mobile only) =============== -->
@@ -444,32 +338,12 @@
 
         <!-- Desktop log rail -->
         <aside class="pm-lograil">
-          <!-- STT readback check: what was recognised vs missing in the last call. -->
-          <div v-if="lastReadbackReport.length" class="pm-readback-check">
-            <div class="pm-readback-head">
-              <v-icon size="15">mdi-magnify-scan</v-icon>
-              <span>Readback check</span>
-            </div>
-            <p v-if="lastReadbackTranscript" class="pm-readback-heard">heard: “{{ lastReadbackTranscript }}”</p>
-            <div
-                v-for="r in lastReadbackReport"
-                :key="r.field"
-                class="pm-readback-row"
-                :class="r.matched ? 'is-ok' : 'is-missing'"
-            >
-              <v-icon size="13">{{ r.matched ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon>
-              <span class="pm-readback-text">
-                <span class="pm-readback-field">{{ r.field }}</span>
-                = <span class="pm-readback-expected">{{ r.expected || '—' }}</span>
-                <template v-if="r.matched"> → “{{ r.matched_via }}”</template>
-                <template v-else>
-                  → not recognised<span v-if="r.accepted_forms.length" class="pm-readback-forms">
-                    (say: {{ r.accepted_forms.join(' / ') }})</span>
-                </template>
-              </span>
-            </div>
-          </div>
-          <CommLog :entries="log" :limit="30" dense @clear="clearLog" />
+          <CommLogRail
+              :log="log"
+              :readback-report="lastReadbackReport"
+              :readback-transcript="lastReadbackTranscript"
+              @clear="clearLog"
+          />
         </aside>
       </div>
 
@@ -608,6 +482,9 @@ import { useFrequencyPresets } from '~/composables/useFrequencyPresets'
 import RadioPanel from '~/components/live-atc/cockpit/RadioPanel.vue'
 import ExpectedCommStrip from '~/components/live-atc/cockpit/ExpectedCommStrip.vue'
 import PttPad from '~/components/live-atc/cockpit/PttPad.vue'
+import TextInputPanel from '~/components/live-atc/cockpit/TextInputPanel.vue'
+import LastTransmissionCard from '~/components/live-atc/cockpit/LastTransmissionCard.vue'
+import CommLogRail from '~/components/live-atc/cockpit/CommLogRail.vue'
 import { useAtisPlayback } from '~/composables/useAtisPlayback'
 import { usePttRecording } from '~/composables/usePttRecording'
 import { useBugReport } from '~/composables/useBugReport'
@@ -750,7 +627,6 @@ const {
   transmissionIssueNote,
   setLastTransmission,
   clearLastTransmission,
-  resetLastTransmissionFault,
   startTransmissionIssueFlow,
   confirmTransmissionIssue,
   removeTransmissionIssue,
@@ -1563,44 +1439,6 @@ onUnmounted(() => {
 .pm-lograil {
   display: none;
 }
-
-.pm-readback-check {
-  margin-bottom: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--text) 4%, transparent);
-  font-size: 11.5px;
-}
-.pm-readback-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  text-transform: uppercase;
-  letter-spacing: .12em;
-  font-size: 10px;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--text) 55%, transparent);
-  margin-bottom: 6px;
-}
-.pm-readback-heard {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: color-mix(in srgb, var(--text) 50%, transparent);
-  margin-bottom: 6px;
-  font-size: 11px;
-}
-.pm-readback-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  line-height: 1.5;
-}
-.pm-readback-row.is-ok { color: #6ee7a8; }
-.pm-readback-row.is-missing { color: #fca5a5; }
-.pm-readback-field { color: var(--t2); }
-.pm-readback-expected { color: var(--text); font-weight: 600; }
-.pm-readback-forms { color: var(--t4); }
 
 /* Setup screens sit above the shared radar backdrop. */
 .pm-setup {
