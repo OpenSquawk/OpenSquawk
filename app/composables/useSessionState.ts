@@ -2,6 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { normalizeRadioPhrase, DEFAULT_AIRLINE_TELEPHONY } from '../../shared/utils/radioSpeech'
 import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
 import type { ReadbackFieldDetail } from '~/composables/useRadioBackend'
+import { SCENARIOS, type Scenario } from '../../shared/constants/scenarios'
 
 /**
  * Reactive state of one /live-atc session: which screen we're on, the backend
@@ -21,6 +22,31 @@ export function useSessionState(engine: ReturnType<typeof useCommunicationsEngin
   const loading = ref(false)
   const error = ref('')
   const pilotInput = ref('')
+
+  // VATSIM flight selection
+  const vatsimId = ref('1857215')
+  const flightPlans = ref<any[]>([])
+  const selectedPlan = ref<any>(null)
+
+  /** The scenario the user just finished (used on the completion screen). */
+  const completedScenario = ref<Scenario | null>(null)
+  /** The scenario currently being flown. */
+  const activeScenario = ref<Scenario | null>(null)
+
+  const oppositeScenario = computed<Scenario | null>(() => {
+    if (!completedScenario.value) return null
+    if (completedScenario.value.id === 'ifr-departure')
+      return SCENARIOS.find(s => s.id === 'vfr-arrival') ?? null
+    if (completedScenario.value.id === 'vfr-arrival')
+      return SCENARIOS.find(s => s.id === 'ifr-departure') ?? null
+    return null
+  })
+
+  // Overlay shown while a session is being created. For taxi flows the backend
+  // computes a real OSM taxi route synchronously, so the create call can take a
+  // few seconds — the spinner tells the user that work is happening.
+  const sessionStarting = ref(false)
+  const sessionStartingMessage = ref('Starting session…')
 
   const backendSessionId = ref<string | null>(null)
   // Last ATC utterance returned by the backend (pre-rendered, correct variables).
@@ -124,6 +150,14 @@ export function useSessionState(engine: ReturnType<typeof useCommunicationsEngin
     loading,
     error,
     pilotInput,
+    vatsimId,
+    flightPlans,
+    selectedPlan,
+    completedScenario,
+    activeScenario,
+    oppositeScenario,
+    sessionStarting,
+    sessionStartingMessage,
     backendSessionId,
     lastControllerSay,
     backendExpectedPhrase,
