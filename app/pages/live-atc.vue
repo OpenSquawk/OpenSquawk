@@ -191,26 +191,26 @@
                 </NuxtLink>
               </template>
             </v-tooltip>
+            <!-- Report issue carries a filled treatment: it is the most-reached-for
+                 secondary tool, so it outranks the neighbouring ghost icons. -->
             <button
                 type="button"
-                class="btn ghost"
+                class="btn hud-report-btn"
                 title="Fehler melden"
                 :disabled="bugReportCapturing"
                 @click="openBugReport"
             >
               <v-icon size="18">{{ bugReportCapturing ? 'mdi-loading mdi-spin' : 'mdi-bug-outline' }}</v-icon>
-              <span class="btn-label">{{ bugReportCapturing ? '…' : 'Bug' }}</span>
+              <span class="btn-label">{{ bugReportCapturing ? '…' : 'Report issue' }}</span>
             </button>
             <button
                 type="button"
-                class="btn ghost"
+                class="btn ghost hud-icon-btn"
                 title="Settings"
                 @click="showSettingsSheet = true"
             >
               <v-icon size="18">mdi-cog</v-icon>
-              <span class="btn-label">Settings</span>
             </button>
-            <div class="hud-divider" aria-hidden="true"></div>
             <button
                 type="button"
                 class="btn ghost hud-icon-btn"
@@ -219,6 +219,7 @@
             >
               <v-icon size="18">mdi-help-circle-outline</v-icon>
             </button>
+            <div class="hud-divider" aria-hidden="true"></div>
             <NuxtLink class="btn ghost hud-icon-btn" to="/logout" title="Logout">
               <v-icon size="18">mdi-logout</v-icon>
             </NuxtLink>
@@ -1843,6 +1844,30 @@ onUnmounted(() => {
   padding: 8px;
   min-width: 40px;
   justify-content: center;
+}
+.hud-report-btn {
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
+  font-weight: 600;
+  font-size: 0.82rem;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.hud-report-btn:hover:not(:disabled),
+.hud-report-btn:focus-visible:not(:disabled) {
+  background: rgba(245, 158, 11, 0.28);
+  border-color: rgba(245, 158, 11, 0.7);
+  color: #fde68a;
+  outline: none;
+}
+.hud-report-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.pm-page[data-theme="light"] .hud-report-btn {
+  background: rgba(180, 83, 9, 0.12);
+  border-color: rgba(180, 83, 9, 0.4);
+  color: #92400e;
 }
 .bridge-badge {
   display: inline-flex;

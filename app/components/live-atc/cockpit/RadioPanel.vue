@@ -84,61 +84,8 @@ const channelLabel = (entry: DisplayAirportFrequencyEntry) => FREQ_ROLE_LABEL[en
       </HoldSelect>
     </header>
 
+    <!-- ACTIVE sits left of STANDBY, matching real avionics (Garmin GTN et al.). -->
     <div class="radio-panel__windows">
-      <HoldSelect
-          :options="presetOptions"
-          placement="down"
-          title="Select standby frequency"
-          menu-class="freq-hold-menu"
-          @select="emit('select-standby', $event)"
-      >
-        <template #default="{ open }">
-          <button type="button" class="freq-window freq-window--sby" :class="{ 'is-open': open }">
-            <span class="freq-window__tag">STANDBY</span>
-            <span class="freq-window__value">{{ standby || '---.---' }}</span>
-            <span class="freq-window__station">{{ standbyStation || '—' }}</span>
-          </button>
-        </template>
-        <template #option="{ option }">
-          <v-tooltip :text="`Source: ${option.sourceLabel}`" location="end" open-delay="200">
-            <template #activator="{ props: tip }">
-              <div v-bind="tip" class="freq-option">
-                <div class="freq-option-main">
-                  <span class="freq-option-label">{{ option.label }}</span>
-                  <span class="freq-option-sub">{{ option.sublabel }}</span>
-                </div>
-                <span class="freq-option-source" :aria-label="`Source ${option.sourceLabel}`">
-                  {{ option.sourceLabel }}
-                </span>
-              </div>
-            </template>
-          </v-tooltip>
-        </template>
-        <template #header="{ close }">
-          <form class="freq-manual" @submit.prevent="emit('apply-manual', 'standby', close)">
-            <input
-                v-model="manualFreqStandby"
-                class="freq-manual-input"
-                type="text"
-                inputmode="decimal"
-                placeholder="Manuell, z.B. 121.500"
-                maxlength="7"
-                aria-label="Manual standby frequency"
-            >
-            <button type="submit" class="freq-manual-btn" :disabled="!normalizeManualFreq(manualFreqStandby)">SET</button>
-          </form>
-        </template>
-      </HoldSelect>
-
-      <button
-          type="button"
-          class="freq-swap-btn"
-          aria-label="Swap active and standby frequencies"
-          @click="emit('swap')"
-      >
-        <v-icon :class="{ 'swap-animation': swapAnimation }">mdi-swap-horizontal</v-icon>
-      </button>
-
       <HoldSelect
           :options="presetOptions"
           placement="down"
@@ -180,6 +127,60 @@ const channelLabel = (entry: DisplayAirportFrequencyEntry) => FREQ_ROLE_LABEL[en
                 aria-label="Manual active frequency"
             >
             <button type="submit" class="freq-manual-btn" :disabled="!normalizeManualFreq(manualFreqActive)">SET</button>
+          </form>
+        </template>
+      </HoldSelect>
+
+      <button
+          type="button"
+          class="freq-swap-btn"
+          aria-label="Swap active and standby frequencies"
+          @click="emit('swap')"
+      >
+        <v-icon :class="{ 'swap-animation': swapAnimation }">mdi-swap-horizontal</v-icon>
+      </button>
+
+      <HoldSelect
+          :options="presetOptions"
+          placement="down"
+          title="Select standby frequency"
+          menu-class="freq-hold-menu"
+          @select="emit('select-standby', $event)"
+      >
+        <template #default="{ open }">
+          <button type="button" class="freq-window freq-window--sby" :class="{ 'is-open': open }">
+            <span class="freq-window__tag">STANDBY</span>
+            <span class="freq-window__value">{{ standby || '---.---' }}</span>
+            <span class="freq-window__station">{{ standbyStation || '—' }}</span>
+          </button>
+        </template>
+        <template #option="{ option }">
+          <v-tooltip :text="`Source: ${option.sourceLabel}`" location="end" open-delay="200">
+            <template #activator="{ props: tip }">
+              <div v-bind="tip" class="freq-option">
+                <div class="freq-option-main">
+                  <span class="freq-option-label">{{ option.label }}</span>
+                  <span class="freq-option-sub">{{ option.sublabel }}</span>
+                </div>
+                <span class="freq-option-source" :aria-label="`Source ${option.sourceLabel}`">
+                  {{ option.sourceLabel }}
+                </span>
+              </div>
+            </template>
+          </v-tooltip>
+        </template>
+        <template #header="{ close }">
+          <form class="freq-manual" @submit.prevent="emit('apply-manual', 'standby', close)">
+            <input
+                v-model="manualFreqStandby"
+                class="freq-manual-input"
+                type="text"
+                inputmode="decimal"
+                placeholder="Manuell, z.B. 121.500"
+                maxlength="7"
+                aria-label="Manual standby frequency"
+            >
+            <button type="submit" class="freq-manual-btn" :disabled="!normalizeManualFreq(manualFreqStandby)">SET</button>
           </form>
         </template>
       </HoldSelect>
