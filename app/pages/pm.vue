@@ -519,74 +519,6 @@
                 </span>
               </template>
             </v-tooltip>
-            <v-menu v-model="themeMenu" :offset="[0, 8]" location="bottom end" transition="scale-transition">
-              <template #activator="{ props }">
-                <button
-                    class="btn ghost"
-                    type="button"
-                    v-bind="props"
-                    title="Theme"
-                    aria-haspopup="menu"
-                    :aria-expanded="themeMenu ? 'true' : 'false'"
-                >
-                  <v-icon size="18">{{ themeIcon }}</v-icon>
-                  <span class="btn-label">Theme</span>
-                </button>
-              </template>
-              <div class="experience-menu" role="menu" aria-label="Select theme">
-                <button
-                    type="button"
-                    role="menuitemradio"
-                    class="experience-option"
-                    :class="{ 'is-active': pmThemePreference === 'dark' }"
-                    :aria-checked="pmThemePreference === 'dark'"
-                    @click="setPmTheme('dark')"
-                >
-                  <v-icon size="18" class="experience-option-icon">mdi-weather-night</v-icon>
-                  <div class="experience-option-body">
-                    <div class="experience-option-title">Dark</div>
-                  </div>
-                  <v-icon v-if="pmThemePreference === 'dark'" size="16" class="experience-option-check">mdi-check</v-icon>
-                </button>
-                <button
-                    type="button"
-                    role="menuitemradio"
-                    class="experience-option"
-                    :class="{ 'is-active': pmThemePreference === 'light' }"
-                    :aria-checked="pmThemePreference === 'light'"
-                    @click="setPmTheme('light')"
-                >
-                  <v-icon size="18" class="experience-option-icon">mdi-white-balance-sunny</v-icon>
-                  <div class="experience-option-body">
-                    <div class="experience-option-title">Light</div>
-                  </div>
-                  <v-icon v-if="pmThemePreference === 'light'" size="16" class="experience-option-check">mdi-check</v-icon>
-                </button>
-                <button
-                    type="button"
-                    role="menuitemradio"
-                    class="experience-option"
-                    :class="{ 'is-active': pmThemePreference === 'system' }"
-                    :aria-checked="pmThemePreference === 'system'"
-                    @click="setPmTheme('system')"
-                >
-                  <v-icon size="18" class="experience-option-icon">mdi-theme-light-dark</v-icon>
-                  <div class="experience-option-body">
-                    <div class="experience-option-title">Use system</div>
-                  </div>
-                  <v-icon v-if="pmThemePreference === 'system'" size="16" class="experience-option-check">mdi-check</v-icon>
-                </button>
-              </div>
-            </v-menu>
-            <button
-                type="button"
-                class="btn ghost"
-                :title="helpLang === 'de' ? 'Hilfe — wie funktioniert /pm' : 'Help — how /pm works'"
-                @click="openHelp"
-            >
-              <v-icon size="18">mdi-help-circle-outline</v-icon>
-              <span class="btn-label">{{ helpLang === 'de' ? 'Hilfe' : 'Help' }}</span>
-            </button>
             <button
                 type="button"
                 class="btn ghost"
@@ -597,10 +529,6 @@
               <v-icon size="18">{{ bugReportCapturing ? 'mdi-loading mdi-spin' : 'mdi-bug-outline' }}</v-icon>
               <span class="btn-label">{{ bugReportCapturing ? '…' : 'Bug' }}</span>
             </button>
-            <NuxtLink class="btn ghost hud-feedback-btn" to="/feedback" title="Share feedback or ideas">
-              <v-icon size="18">mdi-message-draw</v-icon>
-              <span class="btn-label">Feedback</span>
-            </NuxtLink>
             <button
                 type="button"
                 class="btn ghost"
@@ -610,9 +538,17 @@
               <v-icon size="18">mdi-cog</v-icon>
               <span class="btn-label">Settings</span>
             </button>
-            <NuxtLink class="btn ghost" to="/logout" title="Logout">
+            <div class="hud-divider" aria-hidden="true"></div>
+            <button
+                type="button"
+                class="btn ghost hud-icon-btn"
+                :title="helpLang === 'de' ? 'Hilfe — wie funktioniert /pm' : 'Help — how /pm works'"
+                @click="openHelp"
+            >
+              <v-icon size="18">mdi-help-circle-outline</v-icon>
+            </button>
+            <NuxtLink class="btn ghost hud-icon-btn" to="/logout" title="Logout">
               <v-icon size="18">mdi-logout</v-icon>
-              <span class="btn-label">Logout</span>
             </NuxtLink>
           </div>
         </nav>
@@ -1254,6 +1190,39 @@
           </v-card-title>
           <v-card-text class="space-y-4">
             <div>
+              <label class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2 block">Theme</label>
+              <div class="pm-seg">
+                <button
+                    type="button"
+                    class="pm-seg-btn"
+                    :class="{ 'is-active': pmThemePreference === 'dark' }"
+                    @click="setPmTheme('dark')"
+                >
+                  <v-icon size="16">mdi-weather-night</v-icon>
+                  Dark
+                </button>
+                <button
+                    type="button"
+                    class="pm-seg-btn"
+                    :class="{ 'is-active': pmThemePreference === 'light' }"
+                    @click="setPmTheme('light')"
+                >
+                  <v-icon size="16">mdi-white-balance-sunny</v-icon>
+                  Light
+                </button>
+                <button
+                    type="button"
+                    class="pm-seg-btn"
+                    :class="{ 'is-active': pmThemePreference === 'system' }"
+                    @click="setPmTheme('system')"
+                >
+                  <v-icon size="16">mdi-theme-light-dark</v-icon>
+                  System
+                </button>
+              </div>
+            </div>
+
+            <div>
               <div class="flex items-center justify-between mb-2">
                 <label class="text-xs uppercase tracking-[0.3em] text-white/40">
                   Speech speed
@@ -1584,11 +1553,6 @@ const engine = useCommunicationsEngine()
 const auth = useAuthStore()
 const api = useApi()
 const { effectiveTheme: pmTheme, preference: pmThemePreference, setPreference: setPmTheme } = usePmTheme()
-const themeMenu = ref(false)
-const themeIcon = computed(() => {
-  if (pmThemePreference.value === 'system') return 'mdi-theme-light-dark'
-  return pmThemePreference.value === 'light' ? 'mdi-white-balance-sunny' : 'mdi-weather-night'
-})
 const router = useRouter()
 const route = useRoute()
 const radioBackend = useRadioBackend()
@@ -5744,6 +5708,11 @@ onUnmounted(() => {
 .hud-right .btn-label {
   white-space: nowrap;
 }
+.hud-right .hud-icon-btn {
+  padding: 8px;
+  min-width: 40px;
+  justify-content: center;
+}
 .bridge-badge {
   display: inline-flex;
   align-items: center;
@@ -6023,7 +5992,6 @@ onUnmounted(() => {
   }
   .hud-right .btn-label { display: none; }
   .hud-center { padding: 0; }
-  .hud-feedback-btn { display: none; }
 }
 
 .pm-body {
