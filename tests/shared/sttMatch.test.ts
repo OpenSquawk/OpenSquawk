@@ -276,6 +276,64 @@ describe('matchTranscriptionToFields — callsign tolerance', () => {
   })
 })
 
+describe('matchTranscriptionToFields — callsign digit strictness', () => {
+  // A single wrong digit is a DIFFERENT flight. The generous fuzzy tolerance
+  // may only ever forgive the airline name, never the flight number.
+  const lufthansa = {
+    key: 'callsign',
+    expected: 'DLH359',
+    alternatives: ['DLH359', 'DLH 359', 'Lufthansa 359', 'Lufthansa three five niner'],
+    isCallsign: true,
+  } as const
+
+  it('does not match a flight number that differs in the last digit (spoken form)', () => {
+    // Whisper heard "three five zero" — that is DLH350, not DLH359.
+    const result = matchTranscriptionToFields('Lufthansa three five zero', [lufthansa])
+    assert.equal(result.matches['callsign'], undefined)
+  })
+
+  it('does not match a flight number that differs in the last digit (written form)', () => {
+    const result = matchTranscriptionToFields('Lufthansa 350', [lufthansa])
+    assert.equal(result.matches['callsign'], undefined)
+  })
+
+  it('does not match transposed flight-number digits (271 vs spoken 217)', () => {
+    const result = matchTranscriptionToFields('Speedbird two one seven', [
+      {
+        key: 'callsign',
+        expected: 'BAW271',
+        alternatives: ['BAW271', 'BAW 271', 'Speedbird 271', 'Speedbird two seven one'],
+        isCallsign: true,
+      },
+    ])
+    assert.equal(result.matches['callsign'], undefined)
+  })
+
+  it('matches a single-digit flight number despite an airline-name typo', () => {
+    const result = matchTranscriptionToFields('Lufthana four', [
+      {
+        key: 'callsign',
+        expected: 'DLH4',
+        alternatives: ['DLH4', 'DLH 4', 'Lufthansa 4', 'Lufthansa four'],
+        isCallsign: true,
+      },
+    ])
+    assert.equal(result.matches['callsign'], 'DLH4')
+  })
+
+  it('does not match a single-digit flight number with the wrong digit', () => {
+    const result = matchTranscriptionToFields('Lufthansa five', [
+      {
+        key: 'callsign',
+        expected: 'DLH4',
+        alternatives: ['DLH4', 'DLH 4', 'Lufthansa 4', 'Lufthansa four'],
+        isCallsign: true,
+      },
+    ])
+    assert.equal(result.matches['callsign'], undefined)
+  })
+})
+
 describe('matchTranscriptionToFields — realistic radio-check', () => {
   it('handles a full spoken radio check readback', () => {
     const result = matchTranscriptionToFields(

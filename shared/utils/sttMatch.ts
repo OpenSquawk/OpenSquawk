@@ -168,49 +168,64 @@ export function fuzzyContains(haystack: string, needle: string, extraTolerance =
   return false
 }
 
-/** Split a callsign-style candidate ("lufthansa 359", "dlh 359", "baw27") into
- *  its alphabetic prefix and trailing digit run.  If either side is missing we
- *  return null and fall back to whole-string matching. */
+/** Split a callsign-style candidate ("lufthansa 359", "dlh 359", "baw27",
+ *  "dlh4") into its alphabetic prefix and trailing digit run.  Returns null
+ *  when the candidate doesn't have that shape — the caller then refuses to
+ *  fuzzy-match it if it carries digits (an unanchored flight number must
+ *  never ride on string-wide tolerance). */
 function splitCallsignParts(candidate: string): { alpha: string; digits: string } | null {
   // Accept either "alpha digits" with a space or "alphaDigits" glued together.
+  // Single-digit flight numbers ("DLH4") are valid callsigns and need the same
+  // strict digit anchoring as longer ones.
   const spaced = candidate.match(/^([a-z][a-z ]*?)\s+(\d{1,5})[a-z]?$/i)
   if (spaced) {
     const alpha = spaced[1]!.trim()
     const digits = spaced[2]!
-    if (alpha.length >= 3 && digits.length >= 2) return { alpha, digits }
+    if (alpha.length >= 3 && digits.length >= 1) return { alpha, digits }
   }
   const glued = candidate.match(/^([a-z]{2,})(\d{1,5})[a-z]?$/i)
   if (glued) {
     const alpha = glued[1]!
     const digits = glued[2]!
-    if (alpha.length >= 3 && digits.length >= 2) return { alpha, digits }
+    if (alpha.length >= 3 && digits.length >= 1) return { alpha, digits }
   }
   return null
 }
 
-/** Callsign-tolerant match: try the candidate whole, then split into the
- *  airline prefix + flight number and require BOTH parts to appear (with fuzz)
- *  in the haystack.  This rescues common Whisper errors like:
+/** Callsign-tolerant match: split the candidate into airline prefix + flight
+ *  number, require the flight number VERBATIM and only fuzz the airline name.
+ *  This rescues common Whisper errors like:
  *    - "Loftansa three five niner"  → matches "Lufthansa 359"
  *    - "Speed bird 27"              → matches "Speedbird 27"
  *    - "Lufthana 359"               → matches "Lufthansa 359" (typo)
  *    - "easy 25"                    → matches "EZY25" via alts
+ *  while refusing digit confusions ("Lufthansa 350" is a DIFFERENT flight and
+ *  must never fuzzy-match "Lufthansa 359"). Fuzzy tolerance therefore never
+ *  spans the digits: a candidate that carries a flight number either anchors
+ *  it exactly in the haystack or doesn't match at all.
  */
 function callsignMatches(haystack: string, candidate: string): boolean {
   if (!candidate || !haystack) return false
   if (candidate.length >= 3 && haystack.includes(candidate)) return true
-  // Generous whole-string fuzzy (alphabetic typos in airline name).
-  if (fuzzyContains(haystack, candidate, 3)) return true
 
-  const parts = splitCallsignParts(candidate)
+  // Fold spoken digit words ("three five niner" → "359") so word-form
+  // alternatives face the same strict digit anchoring as written ones —
+  // otherwise they contain no digit characters and would dodge it entirely.
+  const folded = normalizeForMatch(denormalizeSpokenAtc(candidate))
+  const effective = /\d/.test(folded) ? folded : candidate
+
+  // No digits anywhere: pure-alpha candidates may use the generous
+  // whole-string fuzzy — there is no flight number to confuse.
+  if (!/\d/.test(effective)) return fuzzyContains(haystack, candidate, 3)
+
+  const parts = splitCallsignParts(effective)
   if (!parts) return false
   const { alpha, digits } = parts
 
-  // Digit part is the strong anchor — it must be present, allowing a single
-  // typo on longer flight numbers.
-  const digitsOk = haystack.includes(digits)
-    || (digits.length >= 3 && fuzzyContains(haystack, digits, 1))
-  if (!digitsOk) return false
+  // The flight number is the identity of the flight — one wrong digit means a
+  // different aircraft. Require it verbatim, with non-digit boundaries so
+  // "359" cannot hit inside "3590". No fuzzy tolerance on digits, ever.
+  if (!new RegExp(`(^|\\D)${digits}(\\D|$)`).test(haystack)) return false
 
   // Alpha part may be misspelled by Whisper or split across whitespace; we
   // allow ~25% character distance plus the base allowance.
