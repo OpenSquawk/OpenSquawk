@@ -462,6 +462,9 @@ const handlePilotTransmission = (message: string, source: 'text' | 'ptt' = 'text
 const applyBackendDecision = (
   response: import('~/composables/useRadioBackend').RadioTransmitResponse,
 ) => session.applyBackendDecision(response)
+const handleSimControlResult = (
+  result: import('../../shared/utils/simControl').SimControlCommandResult,
+) => session.handleSimControlResult(result)
 
 const speech = useRadioSpeech(engine, freq, speechInterrupt, {
   setLastTransmission,
@@ -539,6 +542,7 @@ watch(prerecEnabled, (val) => {
 })
 
 const {
+  bridgeToken,
   bridgeConnected,
   bridgeSimActiveFreq,
   bridgePosition,
@@ -551,6 +555,7 @@ const {
   resumePrerecIfSuspended,
   startRecording,
   stopRecording,
+  onCommandResult: handleSimControlResult,
 })
 
 const session = useLiveAtcSession(engine, {
@@ -564,6 +569,7 @@ const session = useLiveAtcSession(engine, {
   isRecording,
   bridgeConnected,
   bridgePosition,
+  bridgeToken,
   persistSelectedPlan,
   maybeShowFirstRunHelp,
 })

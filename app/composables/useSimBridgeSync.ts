@@ -2,6 +2,7 @@ import { computed, onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { normalizeSimFreq, normalizeBridgeTelemetry, telemetrySignature } from '../../shared/utils/bridgeTelemetry'
 import { pmLog } from '../../shared/utils/pmLog'
+import type { SimControlCommandResult } from '../../shared/utils/simControl'
 import type { useFrequencyPresets } from '~/composables/useFrequencyPresets'
 
 export interface SimBridgeSyncDeps {
@@ -14,6 +15,8 @@ export interface SimBridgeSyncDeps {
   resumePrerecIfSuspended: () => Promise<void> | void
   startRecording: (fromPad: boolean) => Promise<void> | void
   stopRecording: () => void
+  /** A frequency-sim-control command the bridge has finished (or the server expired). */
+  onCommandResult: (result: SimControlCommandResult) => void
 }
 
 /**
@@ -33,7 +36,7 @@ export function useSimBridgeSync(
   const { frequencies } = freq
   const {
     backendSessionId, radioBackend, applyBackendDecision, stopCurrentSpeech,
-    resumePrerecIfSuspended, startRecording, stopRecording,
+    resumePrerecIfSuspended, startRecording, stopRecording, onCommandResult,
   } = deps
 
   const bridgeToken = computed(() => {
@@ -88,10 +91,23 @@ export function useSimBridgeSync(
     const token = bridgeToken.value
     if (!token) return
     try {
-      const res = await $fetch<{ connected: boolean; lastTelemetryAt: string | null; telemetry: any }>(
+      const res = await $fetch<{
+        connected: boolean
+        lastTelemetryAt: string | null
+        telemetry: any
+        commandResults?: SimControlCommandResult[]
+      }>(
         '/api/bridge/live',
         { headers: { 'x-bridge-token': token } },
       )
+
+      // Frequency-sim-control results (design §4): announce regardless of
+      // telemetry freshness below — a command can resolve/expire even on the
+      // poll where the bridge itself has just gone quiet.
+      for (const result of res.commandResults ?? []) {
+        onCommandResult(result)
+      }
+
       const ts = res.lastTelemetryAt ? Date.parse(res.lastTelemetryAt) : null
       const fresh = Boolean(res.connected && ts && Date.now() - ts < BRIDGE_TELEMETRY_STALE_MS)
       bridgeConnected.value = fresh

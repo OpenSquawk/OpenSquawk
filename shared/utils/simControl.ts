@@ -165,3 +165,96 @@ export function parseSimControl(input: string): SimControlParseResult {
 
   return noMatch('no_intent', text)
 }
+
+// --- Wire contract: server ⇄ bridge command channel (design §4) -------------
+// The Nuxt server queues parsed commands per bridge token and piggybacks them
+// on the existing telemetry POST response; the bridge executes and reports
+// back by id. Kept here, next to the command type it carries, as the single
+// source of truth for both server and client.
+
+export interface PendingCommand {
+  /** UUID, correlates the bridge's async command-result POST. */
+  id: string
+  /** ISO timestamp; the bridge/server discard commands older than the TTL. */
+  issued_at: string
+  command: SimControlCommand
+}
+
+export type SimControlCommandStatus = 'ok' | 'failed' | 'expired'
+
+export interface SimControlCommandResult {
+  id: string
+  command: SimControlCommand
+  status: SimControlCommandStatus
+  reason: string | null
+}
+
+/**
+ * Defensive re-validation for commands arriving over the wire (the enqueue
+ * endpoint receives whatever the client posts, not necessarily this parser's
+ * own output). Reuses SIM_CONTROL_LIMITS so there is exactly one place value
+ * ranges are defined, per the fail-closed design.
+ */
+export function isValidSimControlCommand(value: unknown): value is SimControlCommand {
+  if (!value || typeof value !== 'object') return false
+  const cmd = value as Record<string, unknown>
+
+  switch (cmd.type) {
+    case 'set_altitude':
+      return typeof cmd.altitude_ft === 'number' && inRange(cmd.altitude_ft, SIM_CONTROL_LIMITS.altitude_ft)
+    case 'set_heading':
+      return typeof cmd.heading_deg === 'number' && inRange(cmd.heading_deg, SIM_CONTROL_LIMITS.heading_deg)
+    case 'set_speed':
+      return typeof cmd.ias_kts === 'number' && inRange(cmd.ias_kts, SIM_CONTROL_LIMITS.ias_kts)
+    case 'setup_approach': {
+      if (typeof cmd.airport_icao !== 'string' || !/^[A-Z]{4}$/.test(cmd.airport_icao)) return false
+      if (typeof cmd.runway !== 'string' || !/^(\d{2})[LRC]?$/.test(cmd.runway)) return false
+      if (!inRange(Number(cmd.runway.slice(0, 2)), { min: 1, max: 36 })) return false
+      if (cmd.altitude_ft !== undefined) {
+        if (typeof cmd.altitude_ft !== 'number' || !inRange(cmd.altitude_ft, SIM_CONTROL_LIMITS.altitude_ft)) return false
+      }
+      if (cmd.final_distance_nm !== undefined) {
+        if (typeof cmd.final_distance_nm !== 'number' || !inRange(cmd.final_distance_nm, SIM_CONTROL_LIMITS.final_distance_nm)) return false
+      }
+      return true
+    }
+    default:
+      return false
+  }
+}
+
+/** Short "say again" ATC reply for a gate-hit transmission whose slots failed to parse. */
+export function simControlRejectionSpeech(reason: Exclude<SimControlNoMatchReason, 'no_intent'>): string {
+  switch (reason) {
+    case 'missing_value': return 'say again with a value'
+    case 'missing_unit': return 'say again with altitude in feet'
+    case 'out_of_range': return 'unable, value out of range, say again'
+    case 'invalid_runway': return 'unable, invalid runway, say again'
+    case 'missing_runway': return 'say again with the runway'
+    case 'missing_airport': return 'say again with the airport'
+  }
+}
+
+/** TTS confirmation/failure line for a resolved (or expired) bridge command. */
+export function simControlResultSpeech(result: SimControlCommandResult): string {
+  if (result.status === 'expired') return 'bridge did not respond'
+  if (result.status === 'failed') return result.reason ? `unable, ${result.reason}` : 'unable to comply'
+
+  const command = result.command
+  switch (command.type) {
+    case 'setup_approach':
+      if (command.final_distance_nm) {
+        return `repositioned, ${command.final_distance_nm} mile final runway ${command.runway}`
+      }
+      if (command.altitude_ft) {
+        return `repositioned, runway ${command.runway} approach from ${command.altitude_ft} feet`
+      }
+      return `repositioned, runway ${command.runway} approach`
+    case 'set_altitude':
+      return `altitude set, ${command.altitude_ft} feet`
+    case 'set_heading':
+      return `heading set, ${command.heading_deg}`
+    case 'set_speed':
+      return `speed set, ${command.ias_kts} knots`
+  }
+}

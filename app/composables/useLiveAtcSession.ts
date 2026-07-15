@@ -7,6 +7,13 @@ import type { useSessionState } from '~/composables/useSessionState'
 import { useApi } from '~/composables/useApi'
 import type { useRadioSpeech } from '~/composables/useRadioSpeech'
 import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
+import {
+  parseSimControl,
+  simControlRejectionSpeech,
+  simControlResultSpeech,
+  type SimControlCommand,
+  type SimControlCommandResult,
+} from '../../shared/utils/simControl'
 
 export interface LiveAtcSessionDeps {
   state: ReturnType<typeof useSessionState>
@@ -22,6 +29,8 @@ export interface LiveAtcSessionDeps {
   isRecording: Ref<boolean>
   bridgeConnected: Ref<boolean>
   bridgePosition: Ref<{ lat: number; lon: number } | null>
+  /** ?token=… from the route — auths the frequency-sim-control channel (design §4). */
+  bridgeToken: Ref<string>
   persistSelectedPlan: (plan: any | null) => void
   maybeShowFirstRunHelp: () => void
 }
@@ -47,7 +56,8 @@ export function useLiveAtcSession(
 
   const {
     state, freq, speech, radioBackend, api, config, prefetchAtisAudio,
-    isRecording, bridgeConnected, bridgePosition, persistSelectedPlan, maybeShowFirstRunHelp,
+    isRecording, bridgeConnected, bridgePosition, bridgeToken,
+    persistSelectedPlan, maybeShowFirstRunHelp,
   } = deps
 
   const {
@@ -205,6 +215,33 @@ export function useLiveAtcSession(
     armSilenceTimer()
   }
 
+  // --- Frequency-sim-control (design doc §4) ------------------------------------
+  // A matched command from handlePilotTransmission is queued server-side for the
+  // bridge to execute; the result comes back asynchronously via the /api/bridge/live
+  // poll (see handleSimControlResult below), so this call itself stays silent on
+  // success — only a network/enqueue failure gets an immediate ATC reply.
+  const sendSimControlCommand = async (command: SimControlCommand) => {
+    try {
+      await $fetch('/api/bridge/command', {
+        method: 'POST',
+        headers: { 'x-bridge-token': bridgeToken.value },
+        body: { command },
+      })
+    } catch (e) {
+      pmLog.warn('SIM CONTROL enqueue failed', e)
+      const reply = 'unable to reach bridge, say again'
+      scheduleControllerSpeech(reply)
+      appendLogEntry('atc', reply, currentState.value?.id ?? '', { frequency: frequencies.value.active })
+    }
+  }
+
+  /** Speak the outcome of a bridge command surfaced by useSimBridgeSync's telemetry poll. */
+  const handleSimControlResult = (result: SimControlCommandResult) => {
+    const reply = simControlResultSpeech(result)
+    scheduleControllerSpeech(reply)
+    appendLogEntry('atc', reply, currentState.value?.id ?? '', { frequency: frequencies.value.active })
+  }
+
   const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' = 'text') => {
     const transcript = message.trim()
     // Ignore empty or content-free transmissions: silence, a stray PTT tap, or
@@ -276,6 +313,26 @@ export function useLiveAtcSession(
       scheduleControllerSpeech(reply)
       appendLogEntry('atc', reply, currentState.value?.id ?? '', { frequency: frequencies.value.active })
       return
+    }
+
+    // --- Sim control (frequency-driven simulator command) ---
+    // A meta channel: the pilot talking to their OWN simulator, not ATC — so it
+    // runs before the frequency gate (like radio check) and, unlike every other
+    // transmission, never reaches radioBackend.transmit()/the decision flow.
+    // Only live while a bridge is actually connected (design doc §4); parseSimControl's
+    // anchors already keep it from ever matching real ICAO phraseology either way.
+    if (bridgeConnected.value) {
+      const simResult = parseSimControl(transcript)
+      if (simResult.matched) {
+        void sendSimControlCommand(simResult.command)
+        return
+      }
+      if (simResult.reason !== 'no_intent') {
+        const reply = simControlRejectionSpeech(simResult.reason)
+        scheduleControllerSpeech(reply)
+        appendLogEntry('atc', reply, currentState.value?.id ?? '', { frequency: frequencies.value.active })
+        return
+      }
     }
 
     // --- Frequency check ---
@@ -700,6 +757,7 @@ export function useLiveAtcSession(
     clearSilenceTimer,
     applyBackendDecision,
     handlePilotTransmission,
+    handleSimControlResult,
     loadFlightPlans,
     startMonitoring,
     startDemoFlight,

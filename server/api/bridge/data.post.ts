@@ -3,6 +3,7 @@ import {BridgeToken} from '../../models/BridgeToken'
 import {getBridgeTokenFromHeader} from '../../utils/bridge'
 import {logBridgeEvent} from '../../utils/bridgeLog'
 import {flightlabTelemetryStore} from '../../utils/flightlabTelemetry'
+import {simControlQueue} from '../../utils/simControlQueue'
 import type {FlightLabTelemetryState} from '../../../shared/data/flightlab/types'
 
 type DomeLightMode = 'off' | 'white' | 'amber'
@@ -176,5 +177,8 @@ export default defineEventHandler(async (event) => {
         // gear und parking break togglen
         // gear_handle: !mapped.GEAR_HANDLE_POSITION,
         parking_brake: !mapped.BRAKE_PARKING_POSITION,
+        // frequency-sim-control (design §4): any commands queued for this bridge
+        // token since the last telemetry POST, piggybacked on this response.
+        commands: simControlQueue.drainPending(bridgeToken),
     }
 })
