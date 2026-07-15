@@ -1,7 +1,12 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { parseSimControl } from '~~/shared/utils/simControl'
+import {
+  parseSimControl,
+  isValidSimControlCommand,
+  simControlRejectionSpeech,
+  simControlResultSpeech,
+} from '~~/shared/utils/simControl'
 
 function expectCommand(input: string) {
   const result = parseSimControl(input)
@@ -144,5 +149,130 @@ describe('parseSimControl — must NEVER match ATC dialogue', () => {
 
   it('does not match an unanchored altitude mention ("set me up at 8000")', () => {
     expectNoMatch('set me up at 8000')
+  })
+})
+
+describe('isValidSimControlCommand', () => {
+  it('accepts each command type at valid values', () => {
+    assert.equal(isValidSimControlCommand({ type: 'set_altitude', altitude_ft: 8000 }), true)
+    assert.equal(isValidSimControlCommand({ type: 'set_heading', heading_deg: 270 }), true)
+    assert.equal(isValidSimControlCommand({ type: 'set_speed', ias_kts: 210 }), true)
+    assert.equal(
+      isValidSimControlCommand({ type: 'setup_approach', airport_icao: 'EDDF', runway: '07R' }),
+      true,
+    )
+    assert.equal(
+      isValidSimControlCommand({
+        type: 'setup_approach',
+        airport_icao: 'EDDF',
+        runway: '25',
+        altitude_ft: 5000,
+        final_distance_nm: 5,
+      }),
+      true,
+    )
+  })
+
+  it('rejects out-of-range values', () => {
+    assert.equal(isValidSimControlCommand({ type: 'set_altitude', altitude_ft: 80000 }), false)
+    assert.equal(isValidSimControlCommand({ type: 'set_heading', heading_deg: 400 }), false)
+    assert.equal(isValidSimControlCommand({ type: 'set_speed', ias_kts: 10 }), false)
+    assert.equal(
+      isValidSimControlCommand({ type: 'setup_approach', airport_icao: 'EDDF', runway: '07R', altitude_ft: -1 }),
+      false,
+    )
+  })
+
+  it('rejects malformed shapes', () => {
+    assert.equal(isValidSimControlCommand(null), false)
+    assert.equal(isValidSimControlCommand({}), false)
+    assert.equal(isValidSimControlCommand({ type: 'teleport' }), false)
+    assert.equal(isValidSimControlCommand({ type: 'set_altitude', altitude_ft: '8000' }), false)
+    assert.equal(
+      isValidSimControlCommand({ type: 'setup_approach', airport_icao: 'eddf', runway: '07R' }),
+      false,
+    )
+    assert.equal(
+      isValidSimControlCommand({ type: 'setup_approach', airport_icao: 'EDDF', runway: '99' }),
+      false,
+    )
+  })
+})
+
+describe('simControlRejectionSpeech', () => {
+  it('has a distinct short reply for every non-no_intent reason', () => {
+    const reasons = [
+      'missing_value', 'missing_unit', 'out_of_range',
+      'invalid_runway', 'missing_runway', 'missing_airport',
+    ] as const
+    const seen = new Set<string>()
+    for (const reason of reasons) {
+      const speech = simControlRejectionSpeech(reason)
+      assert.equal(typeof speech, 'string')
+      assert.ok(speech.length > 0)
+      seen.add(speech)
+    }
+    assert.equal(seen.size, reasons.length)
+  })
+})
+
+describe('simControlResultSpeech', () => {
+  it('confirms an approach setup with a final distance', () => {
+    const speech = simControlResultSpeech({
+      id: '1',
+      status: 'ok',
+      reason: null,
+      command: { type: 'setup_approach', airport_icao: 'EDDF', runway: '07R', final_distance_nm: 5 },
+    })
+    assert.equal(speech, 'repositioned, 5 mile final runway 07R')
+  })
+
+  it('confirms an approach setup without a final distance but with altitude', () => {
+    const speech = simControlResultSpeech({
+      id: '1',
+      status: 'ok',
+      reason: null,
+      command: { type: 'setup_approach', airport_icao: 'EDDF', runway: '07R', altitude_ft: 5000 },
+    })
+    assert.equal(speech, 'repositioned, runway 07R approach from 5000 feet')
+  })
+
+  it('confirms altitude/heading/speed changes', () => {
+    assert.equal(
+      simControlResultSpeech({ id: '1', status: 'ok', reason: null, command: { type: 'set_altitude', altitude_ft: 8000 } }),
+      'altitude set, 8000 feet',
+    )
+    assert.equal(
+      simControlResultSpeech({ id: '1', status: 'ok', reason: null, command: { type: 'set_heading', heading_deg: 270 } }),
+      'heading set, 270',
+    )
+    assert.equal(
+      simControlResultSpeech({ id: '1', status: 'ok', reason: null, command: { type: 'set_speed', ias_kts: 210 } }),
+      'speed set, 210 knots',
+    )
+  })
+
+  it('relays a failure reason from the bridge', () => {
+    const speech = simControlResultSpeech({
+      id: '1',
+      status: 'failed',
+      reason: 'aircraft on ground, airborne reposition refused',
+      command: { type: 'set_heading', heading_deg: 270 },
+    })
+    assert.equal(speech, 'unable, aircraft on ground, airborne reposition refused')
+  })
+
+  it('falls back to a generic failure line when no reason is given', () => {
+    const speech = simControlResultSpeech({
+      id: '1', status: 'failed', reason: null, command: { type: 'set_heading', heading_deg: 270 },
+    })
+    assert.equal(speech, 'unable to comply')
+  })
+
+  it('announces an expired (unanswered) command', () => {
+    const speech = simControlResultSpeech({
+      id: '1', status: 'expired', reason: null, command: { type: 'set_heading', heading_deg: 270 },
+    })
+    assert.equal(speech, 'bridge did not respond')
   })
 })
