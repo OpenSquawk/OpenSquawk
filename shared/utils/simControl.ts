@@ -38,9 +38,26 @@ export type SimControlNoMatchReason =
   | 'missing_runway'
   | 'missing_airport'
 
-export type SimControlParseResult =
-  | { matched: true; command: SimControlCommand; text: string }
-  | { matched: false; reason: SimControlNoMatchReason; text: string }
+export type SimControlMatch = { matched: true; command: SimControlCommand; text: string }
+export type SimControlRejection = { matched: false; reason: SimControlNoMatchReason; text: string }
+
+export type SimControlParseResult = SimControlMatch | SimControlRejection
+
+/**
+ * Narrowing helpers. This union is discriminated by a boolean, and the project
+ * builds with `strict: false` (nuxt.config.ts) — so `strictNullChecks` is off,
+ * and without it TypeScript does not treat `true`/`false` literal types as
+ * discriminants. `if (result.matched) … else result.reason` therefore does NOT
+ * narrow and fails to compile. An explicit type predicate narrows regardless,
+ * which is why callers must go through these rather than testing `.matched`.
+ */
+export function isSimControlMatch(result: SimControlParseResult): result is SimControlMatch {
+  return result.matched
+}
+
+export function isSimControlRejection(result: SimControlParseResult): result is SimControlRejection {
+  return !result.matched
+}
 
 /** Hard value ranges; anything outside is a refusal, never a clamp. */
 export const SIM_CONTROL_LIMITS = {
