@@ -16,6 +16,7 @@ const DATA_INTERVAL_MS = 2000
 const STATUS_INTERVAL_MS = 10000
 
 export function useWebSimBridgeClient(model: ReturnType<typeof useWebSimFlightModel>) {
+  const auth = useAuthStore()
   const bridgeToken = ref('')
   const connected = ref(false)
   const liveAtcUrl = computed(() => (bridgeToken.value ? `/live-atc?token=${bridgeToken.value}` : ''))
@@ -36,6 +37,17 @@ export function useWebSimBridgeClient(model: ReturnType<typeof useWebSimFlightMo
 
   function autoEngageApIfOff() {
     if (model.state.apMode === 'OFF') model.setApMode('SELECTED')
+  }
+
+  function bridgeConnectHeaders(token: string): Record<string, string> {
+    // The composable can be created during SSR before Pinia hydrates. Fall
+    // back to the persisted token so the first bridge connect after a dev
+    // login is authenticated as well.
+    const accessToken = auth.accessToken || (import.meta.client ? window.localStorage.getItem('os_access_token') || '' : '')
+    return {
+      'x-bridge-token': token,
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    }
   }
 
   /** setup_approach: reposition onto the requested runway's ILS. False if we don't have data for that airport/runway. */
@@ -133,7 +145,7 @@ export function useWebSimBridgeClient(model: ReturnType<typeof useWebSimFlightMo
     const token = ensureToken()
     if (!token) return
     try {
-      await $fetch('/api/bridge/connect', { method: 'POST', headers: { 'x-bridge-token': token } })
+      await $fetch('/api/bridge/connect', { method: 'POST', headers: bridgeConnectHeaders(token) })
     } catch {
       // The page requires login, so this should always succeed; telemetry POSTs will keep retrying regardless.
     }
