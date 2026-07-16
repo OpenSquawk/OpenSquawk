@@ -8,6 +8,8 @@ import { useApi } from '~/composables/useApi'
 import type { useRadioSpeech } from '~/composables/useRadioSpeech'
 import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
 import {
+  isSimControlMatch,
+  isSimControlRejection,
   parseSimControl,
   simControlRejectionSpeech,
   simControlResultSpeech,
@@ -331,11 +333,14 @@ export function useLiveAtcSession(
     // anchors already keep it from ever matching real ICAO phraseology either way.
     if (bridgeConnected.value) {
       const simResult = parseSimControl(transcript)
-      if (simResult.matched) {
+      if (isSimControlMatch(simResult)) {
         void sendSimControlCommand(simResult.command)
         return
       }
-      if (simResult.reason !== 'no_intent') {
+      // A rejection with a reason means the pilot clearly addressed their sim but
+      // got something wrong — tell them. 'no_intent' just means this was ordinary
+      // radio traffic, so it falls through to the flow untouched.
+      if (isSimControlRejection(simResult) && simResult.reason !== 'no_intent') {
         const reply = simControlRejectionSpeech(simResult.reason)
         scheduleControllerSpeech(reply)
         appendLogEntry('atc', reply, currentState.value?.id ?? '', { frequency: frequencies.value.active })
