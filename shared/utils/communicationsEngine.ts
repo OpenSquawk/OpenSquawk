@@ -204,6 +204,17 @@ export default function useCommunicationsEngine() {
     const ready = ref(false)
     const lastDecisionTrace = ref<LLMDecisionTrace | null>(null)
 
+    // The pre-backend engine used to walk states on its own (single-eligible-
+    // transition auto-advance, timed auto_transitions). /live-atc now gets state
+    // changes exclusively from the Python backend via moveToSilent(); this
+    // walker is neutralized there (never opted in) so it can't race the backend
+    // or self-answer pilot states. Kept (not deleted) for the flow editor/debug
+    // tooling that may still want it.
+    const autonomousAutoAdvanceEnabled = ref(false)
+    function setAutonomousAutoAdvance(enabled: boolean) {
+        autonomousAutoAdvanceEnabled.value = enabled
+    }
+
     const flowSnapshots = reactive<Record<string, FlowSnapshot>>({})
 
     const states = computed<Record<string, RuntimeDecisionState>>(() => tree.value?.states ?? {})
@@ -1068,8 +1079,11 @@ export default function useCommunicationsEngine() {
 
             if (!nextId || !states.value[nextId]) break
 
-            // Advance to the next state (moveTo handles logging, actions, handoffs)
-            moveTo(nextId)
+            // Advance to the next state. moveToSilent handles logging, actions and
+            // handoffs but — unlike moveTo — does not itself schedule further
+            // auto-transitions; this walker's own while-loop is the only driver,
+            // so the backend (which owns state after the initial walk) never races it.
+            moveToSilent(nextId)
         }
 
         return messages
@@ -1162,6 +1176,7 @@ export default function useCommunicationsEngine() {
     let pendingSimpleAutoTransition: { from: string; to: string } | null = null
 
     function evaluateSimpleAutoFlow(loopGuard = 0) {
+        if (!autonomousAutoAdvanceEnabled.value) return
         if (!ready.value || loopGuard > 20) return
         if (pendingSimpleAutoTransition?.from === currentStateId.value) {
             return
@@ -1217,6 +1232,7 @@ export default function useCommunicationsEngine() {
     }
 
     function evaluateAutoTransitions(loopGuard = 0) {
+        if (!autonomousAutoAdvanceEnabled.value) return
         if (!ready.value || loopGuard > 8) return
         const state = currentState.value
         if (!state) return
@@ -1301,7 +1317,7 @@ export default function useCommunicationsEngine() {
     // Like moveTo but does NOT schedule auto-transitions — used when the backend
     // is driving state and we only need to sync the local cursor + side-effects
     // (actions, handoffs, communication log) without the engine trying to advance further.
-    function moveToSilent(stateId: string) {
+    function moveToSilent(stateId: string, opts: { suppressSay?: boolean } = {}) {
         ensureTree()
         if (!states.value[stateId]) {
             console.warn(`[Engine] Unknown state for silent move: ${stateId}`)
@@ -1332,7 +1348,10 @@ export default function useCommunicationsEngine() {
             }
         }
 
-        const sayTplSilent = stateSayTpl(s)
+        // suppressSay: the caller (applyBackendDecision) already appends the
+        // backend-rendered say to the log itself — logging it again here would
+        // duplicate the ATC line for every auto-advanced/say-carrying state.
+        const sayTplSilent = opts.suppressSay ? null : stateSayTpl(s)
         if (sayTplSilent) {
             speak(s.role, sayTplSilent, s.id!)
         }
@@ -1562,6 +1581,7 @@ export default function useCommunicationsEngine() {
         // Flow Control
         moveTo,
         moveToSilent,
+        setAutonomousAutoAdvance,
 
         // Utilities
         normalizeATCText,

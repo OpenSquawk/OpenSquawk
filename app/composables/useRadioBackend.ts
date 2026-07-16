@@ -63,6 +63,12 @@ export function useRadioBackend() {
         return (config.public.radioBackendUrl as string) || 'http://127.0.0.1:8000'
     }
 
+    // Without a timeout, a hung Python-backend call never resolves — its
+    // `finally` (which clears transmitInFlightCount / re-arms the silence timer)
+    // never runs either, so the session reads as permanently stuck.
+    const TRANSMIT_TIMEOUT_MS = 30_000
+    const CREATE_SESSION_TIMEOUT_MS = 60_000 // taxi-route computation is slow
+
     async function createSession(
         flowSlug: string,
         variables?: Record<string, any>,
@@ -84,6 +90,7 @@ export function useRadioBackend() {
                 aircraft_lat: aircraftPosition?.lat ?? null,
                 aircraft_lon: aircraftPosition?.lon ?? null,
             },
+            signal: AbortSignal.timeout(CREATE_SESSION_TIMEOUT_MS),
         })
     }
 
@@ -93,6 +100,7 @@ export function useRadioBackend() {
             {
                 method: 'POST',
                 body: { pilot_utterance: pilotUtterance },
+                signal: AbortSignal.timeout(TRANSMIT_TIMEOUT_MS),
             },
         )
     }
@@ -111,6 +119,7 @@ export function useRadioBackend() {
             {
                 method: 'POST',
                 body: { telemetry },
+                signal: AbortSignal.timeout(TRANSMIT_TIMEOUT_MS),
             },
         )
     }
@@ -123,7 +132,7 @@ export function useRadioBackend() {
     async function timeout(sessionId: string): Promise<RadioTransmitResponse> {
         return await $fetch<RadioTransmitResponse>(
             `${baseUrl()}/api/radio/session/${sessionId}/timeout`,
-            { method: 'POST' },
+            { method: 'POST', signal: AbortSignal.timeout(TRANSMIT_TIMEOUT_MS) },
         )
     }
 
