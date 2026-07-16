@@ -214,10 +214,16 @@ export function useRadioSpeech(
     }
   }
 
+  /** A hung /api/atc/say request would otherwise block the whole speech queue
+   *  forever (enqueueSpeech serializes playback on one promise chain) — the
+   *  session would read as "frozen" with a dead frequency. */
+  const TTS_FETCH_TIMEOUT_MS = 20_000
+
   /** Kick off TTS generation immediately (parallel to whatever is playing). */
   const fetchSpeechAudio = (prepared: PreparedSpeech, options: SpeechOptions = {}): Promise<any | null> => {
     const abort = new AbortController()
     addPendingAbort(abort)
+    const watchdog = setTimeout(() => abort.abort(), TTS_FETCH_TIMEOUT_MS)
     return (async () => {
       try {
         const speed = options.speed ?? speechSpeed.value
@@ -239,13 +245,14 @@ export function useRadioSpeech(
         return response
       } catch (err: any) {
         if (err?.name === 'AbortError' || abort.signal.aborted) {
-          pmLog.info('TTS cancelled (frequency change)')
+          pmLog.info('TTS cancelled (frequency change or timeout)')
           return null
         }
         pmLog.error('TTS FAILED', err)
         console.error('TTS failed:', err)
         return null
       } finally {
+        clearTimeout(watchdog)
         deletePendingAbort(abort)
       }
     })()

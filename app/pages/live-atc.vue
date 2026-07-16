@@ -169,7 +169,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import useCommunicationsEngine from "../../shared/utils/communicationsEngine";
 import { useAuthStore } from '~/stores/auth'
@@ -478,6 +478,10 @@ const applyBackendDecision = (
 const handleSimControlResult = (
   result: import('../../shared/utils/simControl').SimControlCommandResult,
 ) => session.handleSimControlResult(result)
+// Named distinctly from the `transmitInFlight` destructured from `session` below
+// (used for AI-traffic gating) — same underlying ref, just needed earlier here
+// for useSimBridgeSync, which is constructed before `session` exists.
+const bridgeSyncTransmitInFlight = computed(() => session.transmitInFlight.value)
 
 const speech = useRadioSpeech(engine, freq, speechInterrupt, {
   setLastTransmission,
@@ -576,6 +580,7 @@ const {
   startRecording,
   stopRecording,
   onCommandResult: handleSimControlResult,
+  transmitInFlight: bridgeSyncTransmitInFlight,
 })
 
 const session = useLiveAtcSession(engine, {

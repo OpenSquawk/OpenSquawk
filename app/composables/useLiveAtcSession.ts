@@ -107,6 +107,14 @@ export function useLiveAtcSession(
   // applyBackendDecision.
   let silenceTimer: ReturnType<typeof setTimeout> | null = null
 
+  // Consecutive silence-timeouts fired for the SAME state. If the backend keeps
+  // re-prompting the identical auto_advance_on_silence state (e.g. it re-asks the
+  // same read-back-less confirmation every timeout window), re-arming forever
+  // reads as ATC repeating itself on a loop. Reset on any pilot transmission or
+  // once the decision actually lands on a different state.
+  let silenceFireCount: { stateId: string | null; count: number } = { stateId: null, count: 0 }
+  const MAX_CONSECUTIVE_SILENCE_FIRES = 2
+
   function clearSilenceTimer() {
     if (silenceTimer) {
       clearTimeout(silenceTimer)
@@ -114,10 +122,23 @@ export function useLiveAtcSession(
     }
   }
 
+  function resetSilenceFireCount() {
+    silenceFireCount = { stateId: null, count: 0 }
+  }
+
   function armSilenceTimer() {
     clearSilenceTimer()
     const state = currentState.value as any
     if (!state?.auto_advance_on_silence || !backendSessionId.value) return
+
+    if (silenceFireCount.stateId !== state.id) {
+      silenceFireCount = { stateId: state.id, count: 0 }
+    }
+    if (silenceFireCount.count >= MAX_CONSECUTIVE_SILENCE_FIRES) {
+      pmLog.warn('SILENCE TIMER not re-armed — state fired', silenceFireCount.count, 'times already:', state.id)
+      return
+    }
+
     const ms = Math.max(1000, Number(state.auto_advance_timeout_ms ?? 30000))
     const sessionAtArm = backendSessionId.value
     const stateAtArm = state.id
@@ -134,6 +155,10 @@ export function useLiveAtcSession(
       }
       try {
         pmLog.info('SILENCE TIMEOUT fired →', stateAtArm)
+        silenceFireCount = {
+          stateId: stateAtArm,
+          count: (silenceFireCount.stateId === stateAtArm ? silenceFireCount.count : 0) + 1,
+        }
         const response = await radioBackend.timeout(sessionAtArm)
         applyBackendDecision(response)
       } catch (e: any) {
@@ -144,6 +169,15 @@ export function useLiveAtcSession(
     }
     silenceTimer = setTimeout(fire, ms)
   }
+
+  // Guards the ATC reply (log entry + TTS) against being applied twice for the
+  // same decision — applyBackendDecision can be reached from four sources
+  // (transmit reply, telemetry tick, silence timeout, bug-report restore) and
+  // two of them can legitimately fire back-to-back for the same outcome (e.g.
+  // a silence timeout racing an in-flight transmit reply), which otherwise
+  // spoke/logged the same confirmation 2-3x (design doc WP1 Fix 2).
+  let lastAppliedSay: { text: string; stateId: string; atMs: number } | null = null
+  const APPLIED_SAY_DEDUPE_MS = 15_000
 
   // Apply a backend decision (from a pilot transmission, a telemetry tick, or a
   // silence timeout) to the local engine + UI: sync the
@@ -166,14 +200,18 @@ export function useLiveAtcSession(
     }
 
     // Advance local cursor through every state the backend auto-walked, then the
-    // final state. moveToSilent updates current_unit, actions, handoffs and the
-    // communication log without scheduling further auto-transitions.
+    // final state. moveToSilent updates current_unit, actions and handoffs
+    // without scheduling further auto-transitions. suppressSay: the ATC line for
+    // this decision is logged exactly once below, from the backend-rendered
+    // sayText — logging each walked state's own say_tpl too would duplicate it
+    // (2-3x on chained flows with multiple auto-advanced ATC/system states).
+    // TTS is unaffected either way: only scheduleControllerSpeech below plays audio.
     for (const stateId of response.auto_advanced_states ?? []) {
       pmLog.debug('moveToSilent ← auto_advanced:', stateId)
-      moveToSilent(stateId)
+      moveToSilent(stateId, { suppressSay: true })
     }
     pmLog.debug('moveToSilent ← next_state_id:', response.next_state_id)
-    moveToSilent(response.next_state_id)
+    moveToSilent(response.next_state_id, { suppressSay: true })
 
     // Capture the per-field readback diagnostic for the STT debug panel.
     lastReadbackReport.value = response.readback_report ?? []
@@ -201,13 +239,23 @@ export function useLiveAtcSession(
       sayText = `Readback correct. ${sayText}`
     }
     if (sayText) {
-      pmLog.info('TTS →', sayText)
-      lastControllerSay.value = sayText
-      scheduleControllerSpeech(sayText)
-      appendLogEntry('atc', sayText, response.next_state_id, {
-        flow: response.active_flow,
-        frequency: frequencies.value.active,
-      })
+      const isDuplicate =
+        lastAppliedSay
+        && lastAppliedSay.text === sayText
+        && lastAppliedSay.stateId === response.next_state_id
+        && Date.now() - lastAppliedSay.atMs < APPLIED_SAY_DEDUPE_MS
+      if (isDuplicate) {
+        pmLog.info('TTS SKIPPED (duplicate of last-applied decision) →', sayText)
+      } else {
+        pmLog.info('TTS →', sayText)
+        lastControllerSay.value = sayText
+        scheduleControllerSpeech(sayText)
+        appendLogEntry('atc', sayText, response.next_state_id, {
+          flow: response.active_flow,
+          frequency: frequencies.value.active,
+        })
+        lastAppliedSay = { text: sayText, stateId: response.next_state_id, atMs: Date.now() }
+      }
     }
 
     if (response.fallback_used) {
@@ -393,9 +441,11 @@ export function useLiveAtcSession(
 
     transmitInFlightCount.value++
     try {
-      // The pilot spoke — a pending silence auto-advance no longer applies. The
-      // response re-arms it if the next state also allows silence.
+      // The pilot spoke — a pending silence auto-advance no longer applies, and
+      // a live transmission means the loop-guard's job is done for this state.
+      // The response re-arms it (fresh count) if the next state also allows silence.
       clearSilenceTimer()
+      resetSilenceFireCount()
       const response = await radioBackend.transmit(backendSessionId.value, transcript)
 
       // Drop a stale reply if the pilot already transmitted again while this call
@@ -432,9 +482,14 @@ export function useLiveAtcSession(
         currentScreen.value = 'scenario'
         return
       }
-      pmLog.error('TRANSMIT FAILED', { transcript, session: backendSessionId.value, error: e })
+      const isTimeout =
+        e?.name === 'TimeoutError'
+        || e?.name === 'AbortError'
+        || e?.cause?.name === 'TimeoutError'
+        || e?.cause?.name === 'AbortError'
+      pmLog.error(isTimeout ? 'TRANSMIT TIMED OUT' : 'TRANSMIT FAILED', { transcript, session: backendSessionId.value, error: e })
       console.error('Backend transmission failed', e)
-      setLastTransmission(`${prefix}: ${transcript} (backend failed)`)
+      setLastTransmission(`${prefix}: ${transcript} (${isTimeout ? 'backend timeout' : 'backend failed'})`)
     } finally {
       transmitInFlightCount.value = Math.max(0, transmitInFlightCount.value - 1)
     }

@@ -17,6 +17,13 @@ export interface SimBridgeSyncDeps {
   stopRecording: () => void
   /** A frequency-sim-control command the bridge has finished (or the server expired). */
   onCommandResult: (result: SimControlCommandResult) => void
+  /**
+   * True while a pilot transmission is out at the backend (useLiveAtcSession).
+   * A telemetry-fired decision landing mid-transmit would apply on top of (or
+   * race) the transmit reply — double-says, conflicting cursor moves — so
+   * telemetry forwarding pauses until the transmission settles.
+   */
+  transmitInFlight: Ref<boolean>
 }
 
 /**
@@ -37,6 +44,7 @@ export function useSimBridgeSync(
   const {
     backendSessionId, radioBackend, applyBackendDecision, stopCurrentSpeech,
     resumePrerecIfSuspended, startRecording, stopRecording, onCommandResult,
+    transmitInFlight,
   } = deps
 
   const bridgeToken = computed(() => {
@@ -62,14 +70,25 @@ export function useSimBridgeSync(
   // Only forward telemetry that meaningfully changed, so idle cruise doesn't POST
   // an identical tick every poll. Rounded so tiny jitter doesn't count as change.
   let lastSentTelemetrySig: string | null = null
+  // Guards against a second telemetry POST going out while one is still awaiting
+  // its response — a slow backend + the 3s poll interval could otherwise stack
+  // concurrent requests, each capable of firing its own (possibly conflicting) decision.
+  let telemetryPostInFlight = false
 
   async function forwardTelemetryToBackend(rawTelemetry: any) {
     if (!backendSessionId.value) return
+    // A pilot transmission is awaiting its backend reply — a telemetry-fired
+    // decision landing in the middle of that would race/duplicate the reply
+    // (design doc WP1 Fix 4). Skip this tick without recording the signature,
+    // so the next poll (once the transmission has settled) retries it.
+    if (transmitInFlight.value) return
+    if (telemetryPostInFlight) return
     const normalized = normalizeBridgeTelemetry(rawTelemetry)
     if (!normalized) return
     const sig = telemetrySignature(normalized)
     if (sig === lastSentTelemetrySig) return  // nothing meaningful changed
     lastSentTelemetrySig = sig
+    telemetryPostInFlight = true
     try {
       const response = await radioBackend.sendTelemetry(backendSessionId.value, normalized)
       if (response.telemetry_fired) {
@@ -84,6 +103,8 @@ export function useSimBridgeSync(
       } else {
         pmLog.warn('TELEMETRY forward failed', e)
       }
+    } finally {
+      telemetryPostInFlight = false
     }
   }
 
