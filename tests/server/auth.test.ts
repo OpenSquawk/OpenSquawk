@@ -5,6 +5,8 @@ import { createHmac } from 'node:crypto'
 import {
   createAccessToken,
   createRefreshToken,
+  DEV_BYPASS_USER_ID,
+  getDevBypassUser,
   hasAdminRole,
   hashPassword,
   requireUserSession,
@@ -101,6 +103,11 @@ describe('auth utils', () => {
     assert.equal(hasAdminRole({ role: 'dev' } as any), true)
     assert.equal(hasAdminRole({ role: 'user' } as any), false)
     assert.equal(hasAdminRole(null), false)
+  })
+
+  it('uses a bridge-compatible ObjectId for the local dev bypass user', () => {
+    assert.match(DEV_BYPASS_USER_ID, /^[a-f\d]{24}$/i)
+    assert.equal(String(getDevBypassUser()._id), DEV_BYPASS_USER_ID)
   })
 
   it('resolves user from valid bearer access token', async () => {

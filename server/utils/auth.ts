@@ -134,9 +134,11 @@ function parseAuthorizationHeader(event: H3Event) {
 // Local-dev-only bypass session (server/api/dev/login.post.ts): a fixed,
 // entirely in-memory "user" that never touches MongoDB, so require-auth
 // pages are reachable for local testing even when the dev DB is unreachable.
-// The sub value is deliberately not a real ObjectId — resolveUserFromToken
-// below matches it BEFORE ever calling User.findById.
-export const DEV_BYPASS_USER_ID = 'dev-bypass-user'
+// This fixed ObjectId never resolves to a real User document: resolveUserFromToken
+// below matches it BEFORE ever calling User.findById. It must nevertheless be a
+// valid ObjectId because BridgeToken.user is stored as an ObjectId when WebSim
+// connects to the real bridge endpoints.
+export const DEV_BYPASS_USER_ID = '000000000000000000000001'
 const DEV_BYPASS_EMAIL = 'dev-claude@localhost.test'
 
 export function getDevBypassUser(): UserDocument {
@@ -240,4 +242,3 @@ export async function rotateRefreshToken(event: H3Event) {
     throw createError({ statusCode: 401, statusMessage: 'Refresh token invalid' })
   }
 }
-
