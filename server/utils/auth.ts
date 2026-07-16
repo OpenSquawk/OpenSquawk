@@ -131,6 +131,28 @@ function parseAuthorizationHeader(event: H3Event) {
   return token
 }
 
+// Local-dev-only bypass session (server/api/dev/login.post.ts): a fixed,
+// entirely in-memory "user" that never touches MongoDB, so require-auth
+// pages are reachable for local testing even when the dev DB is unreachable.
+// The sub value is deliberately not a real ObjectId — resolveUserFromToken
+// below matches it BEFORE ever calling User.findById.
+export const DEV_BYPASS_USER_ID = 'dev-bypass-user'
+const DEV_BYPASS_EMAIL = 'dev-claude@localhost.test'
+
+export function getDevBypassUser(): UserDocument {
+  return {
+    _id: DEV_BYPASS_USER_ID,
+    email: DEV_BYPASS_EMAIL,
+    name: 'Dev Test User',
+    role: 'user',
+    tokenVersion: 0,
+    createdAt: new Date(0),
+    invitationCodesIssued: 0,
+    acceptedTermsAt: new Date(0),
+    acceptedPrivacyAt: new Date(0),
+  } as unknown as UserDocument
+}
+
 export async function resolveUserFromToken(event: H3Event) {
   const token = parseAuthorizationHeader(event)
   if (!token) return null
@@ -138,6 +160,9 @@ export async function resolveUserFromToken(event: H3Event) {
     const { accessSecret } = getSecrets()
     const payload = verifyJwtToken(token, accessSecret)
     if (!payload?.sub) return null
+    if (payload.sub === DEV_BYPASS_USER_ID && process.env.NODE_ENV !== 'production') {
+      return getDevBypassUser()
+    }
     const user = await User.findById(payload.sub)
     if (!user) return null
     if (typeof payload.version === 'number' && payload.version !== user.tokenVersion) {

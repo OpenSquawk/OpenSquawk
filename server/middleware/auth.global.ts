@@ -15,6 +15,9 @@ export default defineEventHandler(async (event) => {
     if (url.pathname.startsWith('/api/copilot/')) {
         return
     }
+    if (url.pathname.startsWith('/api/dev/')) {
+        return
+    }
     if (event.node.req.method === 'OPTIONS') {
         return
     }
