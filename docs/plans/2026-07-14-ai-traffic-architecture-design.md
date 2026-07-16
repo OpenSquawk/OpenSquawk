@@ -6,6 +6,28 @@ wo zwingend nötig** (Ergebnis vorweg: für v1 ist *nichts* zwingend LLM-gestüt
 siehe Frage 5). Kein Implementierungscode — nur Architektur, Datenmodelle,
 Regeltabellen und Integrationspunkte.
 
+> **Status (2026-07-16): implementiert.** Sim-Kern als reine Module unter
+> `shared/utils/aiTraffic/` (+ `shared/data/simAircraftTypes.ts`,
+> `shared/data/trafficTiers.ts`, `shared/utils/voicePool.ts`), Client-Anbindung in
+> `app/composables/useAiTraffic.ts`, Toggle in `SettingsSheet.vue`. Tests unter
+> `tests/shared/aiTraffic*.test.ts`. Das Python-Backend blieb wie in § 0/§ 6
+> vorgesehen unangetastet.
+>
+> Zwei Punkte, an denen die Umsetzung von diesem Entwurf abweicht — beide, weil
+> der Entwurf sie nicht vorhergesehen hat:
+>
+> 1. **Instruktions-Cooldown (`SimAircraft.quietUntilSec`)** — nicht im Entwurf.
+>    Die Regeltabelle in § 3 sagt „pro Tick, erste zutreffende Zeile gewinnt",
+>    aber nicht, dass eine Anweisung wirken darf, bevor die nächste kommt. Ohne
+>    Cooldown prüft der Planer die noch unaufgelöste Bedingung jede Sekunde neu
+>    und gibt demselben Flieger im Sekundentakt denselben Vector: gemessen 624
+>    Funksprüche/30 min statt der jetzigen 90.
+> 2. **Airline-Pool** — nur die 14 Designatoren aus `DEFAULT_AIRLINE_TELEPHONY`
+>    (`shared/utils/radioSpeech.ts`). Die in § 3/Frage 1 zusätzlich genannten
+>    UAE/AUA/WZZ kennt der Radiotelephonie-Normalizer nicht und würde sie
+>    buchstabieren statt als Airline-Namen zu sprechen. Erweiterung gehört in
+>    jene Map, nicht in eine zweite Tabelle im Traffic-Code.
+
 ---
 
 ## 0. Kernentscheidung: Der Traffic lebt vollständig im Client

@@ -1,4 +1,4 @@
-import { nextTick, onUnmounted } from 'vue'
+import { computed, nextTick, onUnmounted, ref } from 'vue'
 import type { Ref } from 'vue'
 import { pmLog } from '../../shared/utils/pmLog'
 import { SCENARIOS, type Scenario } from '../../shared/constants/scenarios'
@@ -86,6 +86,14 @@ export function useLiveAtcSession(
   // Monotonic counter so a newer pilot transmission supersedes an older one still
   // awaiting its backend response — only the latest result is applied (#16).
   let transmitGeneration = 0
+
+  // True while a pilot transmission is out at the backend. Read by useAiTraffic's
+  // gating chain: simulated traffic must not key up in the window between the
+  // user finishing their call and ATC answering it, or the traffic call reads as
+  // the reply. A counter rather than a boolean, so two overlapping transmissions
+  // can't have the first one's finally clear the flag out from under the second.
+  const transmitInFlightCount = ref(0)
+  const transmitInFlight = computed(() => transmitInFlightCount.value > 0)
 
   // --- Silence auto-advance ----------------------------------------------------
   // Some pilot states let ATC continue on its own when the pilot stays quiet
@@ -378,6 +386,7 @@ export function useLiveAtcSession(
       pmLog.info('session_id  :', backendSessionId.value)
     })
 
+    transmitInFlightCount.value++
     try {
       // The pilot spoke — a pending silence auto-advance no longer applies. The
       // response re-arms it if the next state also allows silence.
@@ -421,6 +430,8 @@ export function useLiveAtcSession(
       pmLog.error('TRANSMIT FAILED', { transcript, session: backendSessionId.value, error: e })
       console.error('Backend transmission failed', e)
       setLastTransmission(`${prefix}: ${transcript} (backend failed)`)
+    } finally {
+      transmitInFlightCount.value = Math.max(0, transmitInFlightCount.value - 1)
     }
   }
 
@@ -755,6 +766,7 @@ export function useLiveAtcSession(
 
   return {
     clearSilenceTimer,
+    transmitInFlight,
     applyBackendDecision,
     handlePilotTransmission,
     handleSimControlResult,

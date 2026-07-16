@@ -1,5 +1,11 @@
 # Live ATC Cockpit Redesign Implementation Plan
 
+> **Status (2026-07-16): implementiert.** Alle Milestones sind committed
+> (`CockpitShell`, `RadioPanel`, `TextInputPanel`, `LastTransmissionCard`,
+> `CommLogRail`, Setup-Step-Komponenten, Sheets, Session-Composables). Milestone 6
+> ("Full regression pass") ist ein manueller Verifikations-Checkpunkt ohne eigenen
+> Commit — vor einem Release lohnt sich ein erneuter Durchlauf der dortigen Checkliste.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Break up the 6573-line `app/pages/live-atc.vue` into composables + components

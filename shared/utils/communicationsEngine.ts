@@ -97,6 +97,12 @@ export interface EngineLog {
     radioCheck?: boolean
     offSchema?: boolean
     flow?: string
+    /**
+     * Simulated background traffic (useAiTraffic), not part of the user's own
+     * exchange with ATC. Purely cosmetic — it lets the log tone these lines down
+     * so they read as scenery rather than as something to act on.
+     */
+    traffic?: boolean
 }
 
 interface FlowSnapshot {
@@ -1423,7 +1429,7 @@ export default function useCommunicationsEngine() {
         speaker: Role,
         message: string,
         stateId: string,
-        options: { frequency?: string; flow?: string; radioCheck?: boolean; offSchema?: boolean } = {},
+        options: { frequency?: string; flow?: string; radioCheck?: boolean; offSchema?: boolean; traffic?: boolean } = {},
     ) {
         const entry: EngineLog = {
             timestamp: new Date(),
@@ -1435,6 +1441,7 @@ export default function useCommunicationsEngine() {
             flow: options.flow ?? (activeFlowSlug.value || undefined),
             radioCheck: options.radioCheck,
             offSchema: options.offSchema,
+            traffic: options.traffic,
         }
         communicationLog.value.push(entry)
     }

@@ -18,5 +18,12 @@ Roadmap-Architekturfragen.
    [../2026-07-14-frequency-sim-control-design.md](../2026-07-14-frequency-sim-control-design.md),
    Parser in `shared/utils/simControl.ts` + `tests/shared/simControl.test.ts`.
 3. [3-ai-traffic-architecture.md](3-ai-traffic-architecture.md) — Architekturskizze für Roadmap-Feature "ai-traffic".
-   ✅ Erledigt 2026-07-14: Architektur-Entwurf in
+   ✅ Architektur-Entwurf erledigt 2026-07-14, in
    [../2026-07-14-ai-traffic-architecture-design.md](../2026-07-14-ai-traffic-architecture-design.md).
+4. [4-ai-traffic-implementation.md](4-ai-traffic-implementation.md) — Umsetzung von
+   Punkt 3 zu Code (Composables, Module, Tests). Python-Backend laut Entwurf
+   NICHT betroffen — siehe Datei für die Begründung.
+   ✅ Erledigt 2026-07-16: Sim-Kern in `shared/utils/aiTraffic/`, Composable
+   `app/composables/useAiTraffic.ts`, Toggle in `SettingsSheet.vue`, Tests in
+   `tests/shared/aiTraffic*.test.ts`. Python-Repo tatsächlich nicht angefasst.
+   Abweichungen vom Entwurf oben im Entwurfsdokument dokumentiert.

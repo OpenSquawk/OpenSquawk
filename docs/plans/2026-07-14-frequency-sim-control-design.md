@@ -5,6 +5,13 @@ Der Kernparser ist **implementiert und getestet**: `shared/utils/simControl.ts`
 mit Suite `tests/shared/simControl.test.ts` (22 Tests, alle grün; die im Prompt
 geforderten 15+ Beispiel-Sprüche sind die Testsuite selbst, Tabelle unten).
 
+> **Status (2026-07-16): vollständig implementiert.** Der End-to-End-Command-Channel
+> aus §4/"Offen für die Implementierungsphase" ist umgesetzt (Commit `be4beb5`):
+> `server/utils/simControlQueue.ts` (TTL-Queue je Bridge-Token), neue Endpoints
+> `server/api/bridge/command.post.ts` und `server/api/bridge/command-result.post.ts`,
+> `server/api/bridge/data.post.ts`/`live.get.ts` erweitert um `commands` /
+> `commandResults`, plus Client-Gate und TTS-Bestätigung.
+
 ---
 
 ## 1. Kommando-Schema

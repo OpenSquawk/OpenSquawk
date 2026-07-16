@@ -28,12 +28,33 @@ export type SpeechOptions = {
   useNormalizedForTTS?: boolean
   speed?: number
   lessonId?: string
+  /**
+   * Re-checked inside the queued task, immediately before playback. Enqueue time
+   * and play time can be seconds apart, so a caller whose right to the frequency
+   * can lapse in between (today: useAiTraffic's gating chain) passes this and the
+   * task drops itself instead of talking over whoever now owns it.
+   */
+  gate?: () => boolean
+  /** Called when `gate` returned false — the caller can re-queue its event. */
+  onGateClosed?: () => void
+  /**
+   * Called once the task has committed to this transmission and run it. The
+   * counterpart to `onGateClosed`: exactly one of the two fires, so a caller can
+   * apply state changes only for what was actually said.
+   */
+  onSpoken?: () => void
 }
 
 export interface RadioSpeechDeps {
   setLastTransmission: (text: string) => void
   handlePilotTransmission: (message: string, source: 'text' | 'ptt') => Promise<void>
   lastControllerSay: Ref<string | null>
+  /**
+   * Stamped by scheduleControllerSpeech — opens the readback window that keeps
+   * simulated traffic silent (useAiTraffic). Only the user-facing ATC reply goes
+   * through that function, so traffic never opens a window against itself.
+   */
+  lastControllerSpeechAtMs: Ref<number | null>
   signalStrength: Ref<number>
   speechSpeed: Ref<number>
   radioCheckLoading: Ref<boolean>
@@ -56,7 +77,7 @@ export function useRadioSpeech(
     setCurrentAudio, setCurrentPizzicatoSound, addPendingAbort, deletePendingAbort,
   } = speechInterrupt
   const {
-    setLastTransmission, handlePilotTransmission, lastControllerSay,
+    setLastTransmission, handlePilotTransmission, lastControllerSay, lastControllerSpeechAtMs,
     signalStrength, speechSpeed, radioCheckLoading, radioEffectsEnabled, readbackEnabled,
   } = deps
   const api = useApi()
@@ -263,6 +284,11 @@ export function useRadioSpeech(
         await wait(delay)
       }
       if (generation !== getSpeechGeneration()) return // stopped while waiting
+      if (options.gate && !options.gate()) {
+        options.onGateClosed?.()
+        return // the frequency stopped being ours while we sat in the queue
+      }
+      options.onSpoken?.()
       await speakPrepared(prepared, options, audioPromise)
     })
   }
@@ -303,6 +329,9 @@ export function useRadioSpeech(
 
   const scheduleControllerSpeech = (tpl: string) => {
     const plain = renderATCMessage(tpl)
+    // Opens the readback window: from here until the pilot answers (and for at
+    // least readbackProtectionMs), background traffic stays off the frequency.
+    lastControllerSpeechAtMs.value = Date.now()
     speakWithRadioEffects(tpl, {
       delayMs: 800 + Math.random() * 2000,
       tag: 'controller-reply',
