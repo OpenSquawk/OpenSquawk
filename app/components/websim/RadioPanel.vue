@@ -27,7 +27,7 @@ function stepStandby(delta: number) {
 </script>
 
 <template>
-  <div class="rounded-2xl border border-white/10 bg-[#0b1328]/90 p-3 space-y-2.5">
+  <div class="rounded-2xl border border-white/10 bg-[#0b1328]/90 p-3 space-y-2.5 h-full flex flex-col">
     <span class="text-[10px] uppercase tracking-widest text-white/30">Radio / Systeme</span>
 
     <div class="rounded-lg border border-white/10 bg-black/40 px-2 py-1.5">

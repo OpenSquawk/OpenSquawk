@@ -39,7 +39,7 @@ const modeLabel = computed<Record<WebSimApMode, string>>(() => ({
 </script>
 
 <template>
-  <div class="rounded-2xl border border-white/10 bg-[#0b1328]/90 p-3">
+  <div class="rounded-2xl border border-white/10 bg-[#0b1328]/90 p-3 h-full flex flex-col">
     <div class="flex items-center justify-between mb-2">
       <span class="text-[10px] uppercase tracking-widest text-white/30">FCU</span>
       <span class="text-[10px] font-mono" :class="apEngaged ? 'text-cyan-300' : 'text-white/30'">{{ modeLabel[apMode] }}</span>

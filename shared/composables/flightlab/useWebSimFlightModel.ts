@@ -1,14 +1,22 @@
 // shared/composables/flightlab/useWebSimFlightModel.ts
 //
 // Vue wrapper around shared/utils/webSimPhysics.ts: holds reactive state,
-// drives it with a requestAnimationFrame loop, and exposes the actions the
+// drives it with a Web Worker tick (see below), and exposes the actions the
 // WebSim cockpit UI (sidestick, FCU, radio/systems panel) calls.
 // docs/plans/2026-07-16-websim-design.md
+// docs/plans/2026-07-16-codex-fixes-live-atc-loop-websim.md (WP2 Fix 1)
 
 import { onBeforeUnmount, reactive } from 'vue'
 import { clamp, startEngines as pureStartEngines, stepWebSimPhysics, toBridgeTelemetryFields, type WebSimControlInput, type WebSimState } from '../../utils/webSimPhysics'
+import { createIntervalWorker } from '../../utils/intervalWorker'
 import { WEBSIM_AIRPORTS } from '../../data/websim/spawnPresets'
 import type { WebSimApMode, WebSimSpawnPreset } from '../../data/websim/types'
+
+// The intended usage is WebSim in one tab and /live-atc in a second tab, so
+// the WebSim tab is almost always backgrounded — a requestAnimationFrame loop
+// stops entirely once the tab isn't visible, freezing the aircraft. A Worker
+// tick isn't subject to that throttling (see intervalWorker.ts).
+const PHYSICS_TICK_MS = 100
 
 function stateFromPreset(preset: WebSimSpawnPreset): WebSimState {
   const s = preset.initialState
@@ -50,37 +58,56 @@ export function useWebSimFlightModel(initialPreset: WebSimSpawnPreset) {
   let animFrame: number | null = null
   let lastTime: number | null = null
   let running = false
+  let tickWorker: { stop: () => void } | null = null
 
   function airport() {
     return WEBSIM_AIRPORTS[currentIcao]!
   }
 
-  function tick(timestamp: number) {
+  // Real elapsed time between ticks, not the worker's nominal interval — a
+  // backgrounded/busy tab can deliver a tick late, and stepping physics with a
+  // stale fixed dt would either crawl or (worse) jump. Clamped so a long stall
+  // (e.g. the tab was fully suspended) doesn't apply one giant catch-up step.
+  function stepPhysics() {
     if (!running) return
+    const now = performance.now()
     if (lastTime === null) {
-      lastTime = timestamp
-      animFrame = requestAnimationFrame(tick)
+      lastTime = now
       return
     }
-    const dt = Math.min((timestamp - lastTime) / 1000, 0.1)
-    lastTime = timestamp
+    const dt = Math.min((now - lastTime) / 1000, 0.25)
+    lastTime = now
 
     const result = stepWebSimPhysics(state as WebSimState, manualInput, dt, airport(), smoothedPitchRate)
     Object.assign(state, result.state)
     smoothedPitchRate = result.smoothedPitchRate
+  }
 
-    animFrame = requestAnimationFrame(tick)
+  // rAF fallback for the (unlikely in a real browser) case Worker isn't
+  // available — keeps the sim running while the tab stays foregrounded rather
+  // than not running at all.
+  function rafTick() {
+    if (!running || tickWorker) return
+    stepPhysics()
+    animFrame = requestAnimationFrame(rafTick)
   }
 
   function start() {
     if (running) return
     running = true
     lastTime = null
-    animFrame = requestAnimationFrame(tick)
+    tickWorker = createIntervalWorker(PHYSICS_TICK_MS, stepPhysics)
+    if (!tickWorker) {
+      animFrame = requestAnimationFrame(rafTick)
+    }
   }
 
   function stop() {
     running = false
+    if (tickWorker) {
+      tickWorker.stop()
+      tickWorker = null
+    }
     if (animFrame !== null) {
       cancelAnimationFrame(animFrame)
       animFrame = null

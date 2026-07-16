@@ -60,34 +60,36 @@ function onWheel(e: WheelEvent) {
 </script>
 
 <template>
-  <div class="flex flex-col items-center gap-2">
+  <div class="rounded-2xl border border-white/10 bg-[#0b1328]/90 p-3 h-full flex flex-col">
     <span class="text-[10px] uppercase tracking-widest text-white/30">Sidestick + Thrust (Mausrad)</span>
-    <div
-      ref="pad"
-      class="relative w-48 h-48 rounded-2xl border border-white/10 bg-[#0b1328]/90 overflow-hidden select-none touch-none"
-      :class="disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'"
-      @pointerdown="onPointerDown"
-      @pointermove="onPointerMove"
-      @pointerup="onPointerUp"
-      @pointercancel="onPointerUp"
-      @wheel="onWheel"
-    >
-      <div class="absolute inset-0 pointer-events-none">
-        <div class="absolute left-1/2 top-0 bottom-0 w-px bg-white/5" />
-        <div class="absolute top-1/2 left-0 right-0 h-px bg-white/5" />
-      </div>
-      <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full border border-white/5" />
+    <div class="flex-1 flex items-center justify-center">
       <div
-        class="absolute w-10 h-10 rounded-full border-2 transition-transform duration-75"
-        :class="active ? 'border-cyan-400 bg-cyan-500/20' : 'border-white/20 bg-white/5'"
-        :style="{
-          left: `calc(${(stickX + 1) / 2 * 100}% - 20px)`,
-          top: `calc(${(1 - (stickY + 1) / 2) * 100}% - 20px)`,
-        }"
+        ref="pad"
+        class="relative w-48 h-48 rounded-lg border border-white/10 bg-black/40 overflow-hidden select-none touch-none"
+        :class="disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'"
+        @pointerdown="onPointerDown"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+        @wheel="onWheel"
       >
-        <div class="absolute inset-0 m-auto w-3 h-3 rounded-full" :class="active ? 'bg-cyan-400' : 'bg-white/30'" />
+        <div class="absolute inset-0 pointer-events-none">
+          <div class="absolute left-1/2 top-0 bottom-0 w-px bg-white/5" />
+          <div class="absolute top-1/2 left-0 right-0 h-px bg-white/5" />
+        </div>
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full border border-white/5" />
+        <div
+          class="absolute w-10 h-10 rounded-full border-2 transition-transform duration-75"
+          :class="active ? 'border-cyan-400 bg-cyan-500/20' : 'border-white/20 bg-white/5'"
+          :style="{
+            left: `calc(${(stickX + 1) / 2 * 100}% - 20px)`,
+            top: `calc(${(1 - (stickY + 1) / 2) * 100}% - 20px)`,
+          }"
+        >
+          <div class="absolute inset-0 m-auto w-3 h-3 rounded-full" :class="active ? 'bg-cyan-400' : 'bg-white/30'" />
+        </div>
+        <div class="absolute bottom-1 left-0 right-0 text-center text-[9px] text-white/20">Thrust {{ Math.round(throttle * 100) }}%</div>
       </div>
-      <div class="absolute bottom-1 left-0 right-0 text-center text-[9px] text-white/20">Thrust {{ Math.round(throttle * 100) }}%</div>
     </div>
   </div>
 </template>

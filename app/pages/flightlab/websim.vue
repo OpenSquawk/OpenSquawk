@@ -14,6 +14,16 @@ const bridgeClient = useWebSimBridgeClient(model)
 
 const hasSpawned = ref(false)
 
+// Three states instead of a boolean: a run of failed telemetry POSTs (e.g. the
+// server's Mongo connection down) otherwise reads as "verbindet…" forever,
+// indistinguishable from a normal first connect.
+const BRIDGE_ERROR_THRESHOLD = 2
+const bridgeStatus = computed<'connecting' | 'error' | 'connected'>(() => {
+  if (bridgeClient.connected.value) return 'connected'
+  if (bridgeClient.failureStreak.value >= BRIDGE_ERROR_THRESHOLD) return 'error'
+  return 'connecting'
+})
+
 function pickPreset(preset: WebSimSpawnPreset) {
   model.spawn(preset)
   model.start()
@@ -35,7 +45,9 @@ const distanceToRunwayNm = computed(() =>
     : Infinity,
 )
 
-const nearRunway = computed(() => distanceToRunwayNm.value < 3)
+// Wide enough that the runway strip is visible well before touching down on
+// final, not just in the last few NM (WP2 Fix 5).
+const nearRunway = computed(() => distanceToRunwayNm.value < 12)
 
 const runwayOffsetDeg = computed(() => {
   if (!targetRunway.value) return 0
@@ -45,7 +57,38 @@ const runwayOffsetDeg = computed(() => {
 
 const stickDisabled = computed(() => model.state.apMode !== 'OFF' && !model.state.on_ground)
 
+// FlightlabPfdContainer renders a fixed 631x550px canvas scaled by `scale` — a
+// hardcoded 0.85 clips the right edge (VS tape, altitude readout box) once the
+// PFD grid cell is narrower than that. Measure the actual cell and fit the PFD
+// inside it instead.
+const PFD_BASE_W = 631
+const PFD_BASE_H = 550
+const pfdCellRef = ref<HTMLElement | null>(null)
+const pfdScale = ref(0.85)
+let pfdResizeObserver: ResizeObserver | null = null
+
+function updatePfdScale() {
+  const el = pfdCellRef.value
+  if (!el) return
+  const w = el.clientWidth
+  const h = el.clientHeight
+  if (w <= 0 || h <= 0) return
+  const fit = Math.min(w / PFD_BASE_W, h / PFD_BASE_H)
+  pfdScale.value = Math.min(1.15, Math.max(0.5, fit))
+}
+
+watch(pfdCellRef, (el, previousEl) => {
+  if (previousEl) pfdResizeObserver?.unobserve(previousEl)
+  if (!el) return
+  if (!pfdResizeObserver && typeof ResizeObserver !== 'undefined') {
+    pfdResizeObserver = new ResizeObserver(updatePfdScale)
+  }
+  pfdResizeObserver?.observe(el)
+  updatePfdScale()
+})
+
 onBeforeUnmount(() => {
+  pfdResizeObserver?.disconnect()
   bridgeClient.stopBridgeClient()
   model.stop()
 })
@@ -64,9 +107,26 @@ onBeforeUnmount(() => {
           <span class="text-sm font-medium text-white/70">OpenSquawk WebSim</span>
         </div>
         <div class="flex items-center gap-3">
-          <div class="flex items-center gap-1.5 text-xs" :class="bridgeClient.connected.value ? 'text-emerald-300' : 'text-white/30'">
-            <div class="h-2 w-2 rounded-full" :class="bridgeClient.connected.value ? 'bg-emerald-400 animate-pulse' : 'bg-white/20'" />
-            Bridge {{ bridgeClient.connected.value ? 'verbunden' : 'verbindet…' }}
+          <div
+            class="flex items-center gap-1.5 text-xs"
+            :class="{
+              'text-emerald-300': bridgeStatus === 'connected',
+              'text-red-300': bridgeStatus === 'error',
+              'text-white/30': bridgeStatus === 'connecting',
+            }"
+            :title="bridgeStatus === 'error' ? bridgeClient.lastError.value ?? undefined : undefined"
+          >
+            <div
+              class="h-2 w-2 rounded-full"
+              :class="{
+                'bg-emerald-400 animate-pulse': bridgeStatus === 'connected',
+                'bg-red-400': bridgeStatus === 'error',
+                'bg-white/20': bridgeStatus === 'connecting',
+              }"
+            />
+            <template v-if="bridgeStatus === 'connected'">Bridge verbunden</template>
+            <template v-else-if="bridgeStatus === 'error'">Bridge Fehler{{ bridgeClient.lastError.value ? ` (${bridgeClient.lastError.value})` : '' }}</template>
+            <template v-else>Bridge verbindet…</template>
           </div>
           <a
             v-if="bridgeClient.liveAtcUrl.value"
@@ -80,19 +140,22 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <main class="flex-1 grid gap-2 p-2 overflow-hidden" style="grid-template-columns: 1fr 1.3fr 1fr; grid-template-rows: 1fr auto">
-        <div class="rounded-2xl overflow-hidden border border-white/5 bg-[#050a15]">
+      <main class="flex-1 grid gap-2 p-2 overflow-hidden" style="grid-template-columns: 1fr 1.3fr 1fr; grid-template-rows: minmax(0, 1fr) auto">
+        <div class="min-h-0 rounded-2xl overflow-hidden border border-white/5 bg-[#050a15]">
           <ClientOnly>
             <WebsimExteriorView
               :pitch="model.state.pitch_deg"
               :bank="model.state.bank_deg"
+              :altitude-ft="model.state.altitude_ft"
+              :field-elevation-ft="targetRunway?.elevation_ft ?? 0"
               :near-runway="nearRunway"
+              :distance-to-runway-nm="distanceToRunwayNm"
               :runway-offset-deg="runwayOffsetDeg"
             />
           </ClientOnly>
         </div>
 
-        <div class="rounded-2xl overflow-hidden border border-white/5 bg-black flex items-center justify-center">
+        <div ref="pfdCellRef" class="min-h-0 rounded-2xl overflow-hidden border border-white/5 bg-black flex items-center justify-center">
           <FlightlabPfdContainer
             :pitch="model.state.pitch_deg"
             :bank-angle="model.state.bank_deg"
@@ -101,17 +164,17 @@ onBeforeUnmount(() => {
             :altitude="model.state.altitude_ft"
             :vertical-speed="model.state.vs_fpm"
             :visible-elements="[...PFD_ELEMENTS]"
-            :scale="0.85"
+            :scale="pfdScale"
           />
         </div>
 
-        <div class="rounded-2xl overflow-hidden border border-white/5 bg-[#0b1328]">
+        <div class="min-h-0 rounded-2xl overflow-hidden border border-white/5 bg-[#0b1328]">
           <ClientOnly>
             <WebsimNdMap :lat="model.state.lat" :lon="model.state.lon" :heading="model.state.heading_deg" />
           </ClientOnly>
         </div>
 
-        <div class="col-span-3 grid grid-cols-3 gap-2">
+        <div class="col-span-3 grid grid-cols-3 gap-2 items-stretch">
           <WebsimSidestickPad
             :throttle="model.manualInput.throttle"
             :disabled="stickDisabled"

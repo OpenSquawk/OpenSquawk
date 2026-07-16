@@ -7,6 +7,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { destinationPoint, normalizeHeading } from '../../shared/utils/geo'
 import { glideslopeAltitudeFt } from '../../shared/utils/webSimPhysics'
+import { createIntervalWorker } from '../../shared/utils/intervalWorker'
 import { WEBSIM_AIRPORTS } from '../../shared/data/websim/spawnPresets'
 import type { PendingCommand, SimControlCommand } from '../../shared/utils/simControl'
 import type { useWebSimFlightModel } from '../../shared/composables/flightlab/useWebSimFlightModel'
@@ -20,9 +21,18 @@ export function useWebSimBridgeClient(model: ReturnType<typeof useWebSimFlightMo
   const bridgeToken = ref('')
   const connected = ref(false)
   const liveAtcUrl = computed(() => (bridgeToken.value ? `/live-atc?token=${bridgeToken.value}` : ''))
+  // Surfaced in the header badge so a broken bridge (e.g. the server's Mongo
+  // connection down) reads as an actual error instead of "verbindet…" forever.
+  const lastError = ref<string | null>(null)
+  const failureStreak = ref(0)
 
-  let dataInterval: ReturnType<typeof setInterval> | null = null
-  let statusInterval: ReturnType<typeof setInterval> | null = null
+  // A plain setInterval here would get throttled down to ~1/min once the
+  // WebSim tab is backgrounded for a few minutes (the intended usage is WebSim
+  // in one tab, /live-atc in another) — the server's 12s staleness window
+  // would then drop the "Bridge connected" badge on the /live-atc side. A
+  // Worker tick isn't subject to that throttling.
+  let dataTickWorker: { stop: () => void } | null = null
+  let statusTickWorker: { stop: () => void } | null = null
 
   function ensureToken(): string {
     if (typeof window === 'undefined') return ''
@@ -119,11 +129,16 @@ export function useWebSimBridgeClient(model: ReturnType<typeof useWebSimFlightMo
         body: model.bridgeTelemetryFields(),
       })
       connected.value = true
+      lastError.value = null
+      failureStreak.value = 0
       for (const pending of response.commands ?? []) {
         void applyCommand(pending)
       }
-    } catch {
+    } catch (e: any) {
       connected.value = false
+      failureStreak.value++
+      const status = e?.status ?? e?.response?.status
+      lastError.value = status ? `HTTP ${status}` : (e?.message || 'network error')
     }
   }
 
@@ -152,18 +167,18 @@ export function useWebSimBridgeClient(model: ReturnType<typeof useWebSimFlightMo
     void postTelemetry()
     void postStatus()
     stopBridgeClient()
-    dataInterval = setInterval(postTelemetry, DATA_INTERVAL_MS)
-    statusInterval = setInterval(postStatus, STATUS_INTERVAL_MS)
+    dataTickWorker = createIntervalWorker(DATA_INTERVAL_MS, () => void postTelemetry())
+    statusTickWorker = createIntervalWorker(STATUS_INTERVAL_MS, () => void postStatus())
   }
 
   function stopBridgeClient() {
-    if (dataInterval) {
-      clearInterval(dataInterval)
-      dataInterval = null
+    if (dataTickWorker) {
+      dataTickWorker.stop()
+      dataTickWorker = null
     }
-    if (statusInterval) {
-      clearInterval(statusInterval)
-      statusInterval = null
+    if (statusTickWorker) {
+      statusTickWorker.stop()
+      statusTickWorker = null
     }
   }
 
@@ -173,6 +188,8 @@ export function useWebSimBridgeClient(model: ReturnType<typeof useWebSimFlightMo
     bridgeToken,
     connected,
     liveAtcUrl,
+    lastError,
+    failureStreak,
     startBridgeClient,
     stopBridgeClient,
   }
