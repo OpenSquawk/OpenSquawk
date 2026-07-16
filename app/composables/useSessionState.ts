@@ -51,6 +51,9 @@ export function useSessionState(engine: ReturnType<typeof useCommunicationsEngin
   const backendSessionId = ref<string | null>(null)
   // Last ATC utterance returned by the backend (pre-rendered, correct variables).
   const lastControllerSay = ref<string | null>(null)
+  // When that utterance was scheduled — opens the readback window during which
+  // simulated background traffic must stay silent (useAiTraffic's gating chain).
+  const lastControllerSpeechAtMs = ref<number | null>(null)
   // Authoritative expected pilot phrase from the backend — replaces local engine rendering.
   const backendExpectedPhrase = ref<string | null>(null)
   // Per-field readback diagnostic from the last transmission (STT debug panel).
@@ -160,6 +163,7 @@ export function useSessionState(engine: ReturnType<typeof useCommunicationsEngin
     sessionStartingMessage,
     backendSessionId,
     lastControllerSay,
+    lastControllerSpeechAtMs,
     backendExpectedPhrase,
     lastReadbackReport,
     lastReadbackTranscript,

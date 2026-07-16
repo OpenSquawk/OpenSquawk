@@ -19,6 +19,20 @@ const learningMode = defineModel<boolean>('learningMode', { required: true })
 const debugMode = defineModel<boolean>('debugMode', { required: true })
 const prerecEnabled = defineModel<boolean>('prerecEnabled', { required: true })
 const prerecSeconds = defineModel<number>('prerecSeconds', { required: true })
+const aiTrafficEnabled = defineModel<boolean>('aiTrafficEnabled', { required: true })
+
+/**
+ * Shown while AI traffic is on. These are deliberate v1 boundaries from the
+ * architecture design, not bugs — stating them up front is cheaper than having
+ * someone discover them mid-session and file them as defects.
+ */
+const AI_TRAFFIC_LIMITS = [
+  'Background scenery only — it never affects how your own radio work is scored.',
+  'Audible on the tuned frequency only. Other frequencies stay busy, just silent.',
+  'Never transmits while you hold PTT, while ATC is answering you, or in the ~12s after an instruction.',
+  'Fixed phraseology, no AI text generation. Invented waypoint names, not real SIDs/STARs.',
+  'Traffic never conflicts with you: it always yields, and you get no extra instructions from it.',
+]
 </script>
 
 <template>
@@ -118,6 +132,34 @@ const prerecSeconds = defineModel<number>('prerecSeconds', { required: true })
 
         <div class="pt-2 border-t border-white/10 space-y-3">
           <div>
+            <p class="text-xs uppercase tracking-[0.3em] text-white/40">Frequency</p>
+            <p class="text-[11px] text-white/50 mt-1">
+              Simulated other aircraft on your frequency — callsigns, readbacks, handovers — so the
+              band sounds alive while you fly.
+            </p>
+          </div>
+          <v-switch
+              v-model="aiTrafficEnabled"
+              color="cyan"
+              inset
+              label="AI traffic (background chatter)"
+              hide-details
+          />
+          <!-- Surfaced rather than buried in a doc: every one of these is a
+               deliberate v1 boundary, and knowing them up front is what stops
+               them from reading as broken behaviour. -->
+          <v-expand-transition>
+            <ul v-if="aiTrafficEnabled" class="pm-ai-limits">
+              <li v-for="limit in AI_TRAFFIC_LIMITS" :key="limit">
+                <v-icon size="13" class="pm-ai-limits__icon">mdi-information-outline</v-icon>
+                <span>{{ limit }}</span>
+              </li>
+            </ul>
+          </v-expand-transition>
+        </div>
+
+        <div class="pt-2 border-t border-white/10 space-y-3">
+          <div>
             <p class="text-xs uppercase tracking-[0.3em] text-white/40">Voice input</p>
             <p class="text-[11px] text-white/50 mt-1">
               Pre-recording keeps the mic listening in the background so the start of your transmission isn't clipped.
@@ -155,6 +197,33 @@ const prerecSeconds = defineModel<number>('prerecSeconds', { required: true })
 </template>
 
 <style scoped>
+/* The AI-traffic caveats. Quiet by design — they inform, they don't warn. */
+.pm-ai-limits {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #22d3ee 22%, transparent);
+  background: color-mix(in srgb, #22d3ee 7%, transparent);
+  list-style: none;
+}
+.pm-ai-limits li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--t3);
+}
+.pm-ai-limits__icon {
+  flex: none;
+  margin-top: 1px;
+  color: #22d3ee;
+  opacity: 0.75;
+}
+
 /* Mirrors the page's segmented control so the sheet doesn't depend on
    live-atc.vue's scoped styles reaching a teleported dialog. */
 .pm-seg {

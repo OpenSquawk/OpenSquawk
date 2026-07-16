@@ -139,6 +139,7 @@
             v-model:debug-mode="debugMode"
             v-model:prerec-enabled="prerecEnabled"
             v-model:prerec-seconds="prerecSeconds"
+            v-model:ai-traffic-enabled="aiTrafficEnabled"
             @set-theme="setPmTheme"
         />
 
@@ -192,6 +193,7 @@ import FlightSourceStep from '~/components/live-atc/FlightSourceStep.vue'
 import FlightSelectStep from '~/components/live-atc/FlightSelectStep.vue'
 import ScenarioPickerStep from '~/components/live-atc/ScenarioPickerStep.vue'
 import SessionCompleteStep from '~/components/live-atc/SessionCompleteStep.vue'
+import { useAiTraffic } from '~/composables/useAiTraffic'
 import { useLiveAtcSession } from '~/composables/useLiveAtcSession'
 import { useSessionState } from '~/composables/useSessionState'
 import { useSpeechInterrupt } from '~/composables/useSpeechInterrupt'
@@ -212,6 +214,7 @@ const STORAGE_KEYS = {
   vatsimId: 'pm_vatsim_id',
   prerecEnabled: 'pm_prerec_enabled',
   prerecSeconds: 'pm_prerec_seconds',
+  aiTrafficEnabled: 'pm_ai_traffic_enabled',
   helpSeen: 'pm_help_seen',
   helpLang: 'pm_help_lang',
 } as const
@@ -281,6 +284,7 @@ const {
   sessionStartingMessage,
   backendSessionId,
   lastControllerSay,
+  lastControllerSpeechAtMs,
   backendExpectedPhrase,
   lastReadbackReport,
   lastReadbackTranscript,
@@ -308,6 +312,9 @@ const speechSpeed = ref(0.95)
 const radioCheckLoading = ref(false)
 const radioEffectsEnabled = ref(true)
 const readbackEnabled = ref(false)
+// Simulated background traffic. Off by default: it costs TTS per lively minute,
+// so it stays an opt-in the user turns on once they want the busier frequency.
+const aiTrafficEnabled = ref(false)
 
 // ── Bug Report ───────────────────────────────────────────────────────────────
 // Owned here rather than by the dialog: the HUD button starts the screenshot
@@ -370,6 +377,11 @@ onMounted(async () => {
       if (storedPrerecEnabled !== null) {
         prerecEnabled.value = storedPrerecEnabled === '1'
       }
+      const storedAiTraffic = window.localStorage.getItem(STORAGE_KEYS.aiTrafficEnabled)
+      if (storedAiTraffic !== null) {
+        aiTrafficEnabled.value = storedAiTraffic === '1'
+      }
+
       const storedPrerecSeconds = window.localStorage.getItem(STORAGE_KEYS.prerecSeconds)
       if (storedPrerecSeconds !== null) {
         const parsed = Number.parseFloat(storedPrerecSeconds)
@@ -433,6 +445,7 @@ const freq = useFrequencyPresets(engine, stopCurrentSpeech)
 const {
   frequencies,
   airportName,
+  activeAirportIcao,
   displayAirportFrequencies,
   swapAnimation,
   manualFreqActive,
@@ -470,6 +483,7 @@ const speech = useRadioSpeech(engine, freq, speechInterrupt, {
   setLastTransmission,
   handlePilotTransmission,
   lastControllerSay,
+  lastControllerSpeechAtMs,
   signalStrength,
   speechSpeed,
   radioCheckLoading,
@@ -541,6 +555,12 @@ watch(prerecEnabled, (val) => {
   }
 })
 
+watch(aiTrafficEnabled, (val) => {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(STORAGE_KEYS.aiTrafficEnabled, val ? '1' : '0')
+  }
+})
+
 const {
   bridgeToken,
   bridgeConnected,
@@ -574,6 +594,7 @@ const session = useLiveAtcSession(engine, {
   maybeShowFirstRunHelp,
 })
 const {
+  transmitInFlight,
   loadFlightPlans,
   startMonitoring,
   startDemoFlight,
@@ -584,10 +605,43 @@ const {
   restoreBugReportState,
 } = session
 
+// Simulated background traffic. A pure observer alongside the engine and the
+// session — it reads state and writes only to the speech queue and the log, and
+// never touches radioBackend. Constructed after `session` because it needs that
+// composable's transmitInFlight for its gating chain.
+const aiTraffic = useAiTraffic(engine, {
+  aiTrafficEnabled,
+  isRecording,
+  transmitInFlight,
+  backendSessionId,
+  backendExpectedPhrase,
+  lastControllerSpeechAtMs,
+  currentScreen,
+  freq,
+  speech,
+})
+
+// The single owner of the traffic lifecycle: it runs exactly while the toggle is
+// on, a backend session exists and we're on the monitor screen. Every entry and
+// exit the design lists — startMonitoring() succeeding, session_complete,
+// backToSetup, toggling mid-session — moves one of these three, so they need no
+// separate hooks. Toggling back on rebuilds from a fresh spawn-up.
+watch(
+  [backendSessionId, currentScreen, aiTrafficEnabled],
+  ([sessionId, screen, enabled]) => {
+    if (enabled && sessionId && screen === 'monitor') {
+      aiTraffic.start(sessionId, activeAirportIcao.value)
+    } else {
+      aiTraffic.stop()
+    }
+  },
+)
+
 onUnmounted(() => {
   stopAtisLoop()
   stopPrerecCapture()
   cancelAirportDataRefresh()
+  aiTraffic.stop()
 })
 </script>
 
