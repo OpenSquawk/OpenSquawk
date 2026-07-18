@@ -1,9 +1,36 @@
-# OpenSquawk
+# OpenSquawk Core
 
-OpenSquawk is an open, cost-efficient AI-ATC platform for flight simulators.
-Built with Nuxt 4, it provides a web interface that combines training, radio communication, and classroom content for simulator pilots.
-On the server side, via Node.js Open AI deliver speech synthesis, decision trees, and account management.
-Goal: a community-driven alternative to other costly AI-ATC solutions while being open and extensible.
+**OpenSquawk Core is the open-source training engine behind OpenSquawk.**
+
+It can be self-hosted for basic radio training. The official [OpenSquawk Cloud](https://opensquawk.de/pricing)
+adds hosted setup, premium voices, AI feedback, progress tracking and premium scenarios — and that hosted
+platform is what funds ongoing development.
+
+> **Open-source core. Paid hosted training.**
+> This repository is the core engine, not the whole product. Self-hosting gives you basic radio training;
+> the cloud, AI feedback, premium content, billing and the OpenSquawk brand are commercial. See
+> [`COMMERCIAL.md`](COMMERCIAL.md) and [`TRADEMARK.md`](TRADEMARK.md).
+
+Built with Nuxt 4, OpenSquawk helps aspiring VATSIM pilots practice aviation radio — clearances, readbacks
+and phraseology — before going live. Node.js server handlers deliver speech synthesis (TTS), transcription
+(STT), decision trees and account management.
+
+## What's open vs commercial
+
+| Area                 | Open? | License              |
+| -------------------- | ----- | -------------------- |
+| Core Training Engine | Yes   | AGPLv3               |
+| SDK / Plugin API     | Yes   | Apache-2.0           |
+| Simulator Connectors | Yes   | Apache-2.0           |
+| Basic Scenarios      | Yes   | CC BY 4.0 / AGPL     |
+| Hosted Cloud         | No    | Commercial           |
+| AI Feedback          | No    | Commercial           |
+| Premium Scenarios    | No    | Commercial           |
+| Billing / Accounts   | No    | Commercial           |
+| OpenSquawk brand     | No    | Trademark            |
+
+We say **open-source core** — not "fully open source". That distinction keeps the project credible and funded.
+See [`ROADMAP.md`](ROADMAP.md) for what is planned in Free Core vs Pro Cloud.
 
 ## Current Features
 

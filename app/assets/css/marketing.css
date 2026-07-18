@@ -1,0 +1,120 @@
+/* assets/css/marketing.css
+   Shared marketing/landing utilities used across the public site
+   (homepage, /pricing, /founder, /open-source, /self-host-vs-cloud and SEO pages).
+   Kept in one place so every marketing surface reads as one system. */
+
+.container-outer {
+  @apply mx-auto w-full max-w-screen-xl px-4 sm:px-6 md:px-8;
+}
+
+.marketing-page {
+  @apply bg-[#0b1020] text-white antialiased;
+}
+
+/* Buttons */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-medium transition sm:px-6;
+}
+
+.btn-primary {
+  @apply border border-cyan-300/40 bg-cyan-500 text-white hover:bg-cyan-400 shadow-[0_0_48px_rgba(34,211,238,.3)];
+}
+
+.btn-ghost {
+  @apply bg-white/5 text-white hover:bg-white/10;
+}
+
+.btn-outline {
+  @apply border border-white/20 bg-transparent text-white hover:border-cyan-300/60 hover:bg-white/5;
+}
+
+.btn-compact {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .btn-compact {
+    padding: 0.6rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Surfaces */
+.glass {
+  background: rgba(255, 255, 255, 0.065);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.card {
+  @apply rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6 md:p-7;
+  backdrop-filter: blur(14px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 22px 52px rgba(5, 12, 28, 0.3);
+}
+
+.pricing-card {
+  overflow: visible;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.035)),
+    rgba(11, 16, 32, 0.72);
+  min-height: 100%;
+}
+
+.pricing-card--highlight {
+  @apply border-2 border-cyan-400/40;
+  box-shadow: 0 0 40px rgba(34, 211, 238, 0.2);
+}
+
+.chip {
+  @apply inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1 text-xs tracking-[0.08em] text-white;
+}
+
+.chip-accent {
+  @apply border-cyan-400/50 bg-cyan-500/25 text-cyan-100;
+}
+
+.step-number {
+  @apply inline-flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/50 bg-cyan-400/10 text-lg font-semibold text-cyan-200;
+}
+
+/* Section heading helpers */
+.marketing-eyebrow {
+  @apply text-xs font-medium uppercase tracking-[0.18em] text-cyan-300/90;
+}
+
+/* Hero background matching the homepage gradient language */
+.marketing-hero {
+  background:
+    radial-gradient(1100px 560px at 12% -20%, rgba(6, 182, 212, 0.28), transparent),
+    radial-gradient(820px 480px at 100% 5%, rgba(59, 130, 246, 0.2), transparent),
+    linear-gradient(180deg, rgba(11, 16, 32, 0.92) 0%, rgba(11, 16, 32, 0.96) 60%, #0a0f1c 100%);
+}
+
+/* Comparison table used on /open-source and /self-host-vs-cloud */
+.compare-table {
+  @apply w-full border-collapse text-left text-sm;
+}
+
+.compare-table th,
+.compare-table td {
+  @apply border-b border-white/10 px-4 py-3 align-top;
+}
+
+.compare-table thead th {
+  @apply text-xs font-semibold uppercase tracking-[0.1em] text-white/60;
+}
+
+.compare-table tbody td:first-child {
+  @apply font-medium text-white;
+}
+
+.yes {
+  @apply font-semibold text-emerald-300;
+}
+
+.no {
+  @apply font-medium text-white/45;
+}

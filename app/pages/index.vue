@@ -16,18 +16,35 @@
         </NuxtLink>
 
         <div class="hidden lg:flex items-center gap-6 text-sm">
-          <NuxtLink
-            v-for="item in navLinks"
-            :key="item.to"
-            :to="item.to"
-            :class="[
-              'transition-colors hover:text-cyan-300',
-              isNavLinkActive(item.to) ? 'text-cyan-300' : 'text-white/70'
-            ]"
-            @click.prevent="handleAnchorNavigation(item.to)"
-          >
-            {{ item.label }}
-          </NuxtLink>
+          <template v-for="item in navLinks" :key="item.to">
+            <a
+              v-if="item.external"
+              :href="item.to"
+              target="_blank"
+              rel="noopener"
+              class="text-white/70 transition-colors hover:text-cyan-300"
+            >
+              {{ item.label }}
+            </a>
+            <NuxtLink
+              v-else-if="item.to.startsWith('#')"
+              :to="item.to"
+              :class="[
+                'transition-colors hover:text-cyan-300',
+                isNavLinkActive(item.to) ? 'text-cyan-300' : 'text-white/70'
+              ]"
+              @click.prevent="handleAnchorNavigation(item.to)"
+            >
+              {{ item.label }}
+            </NuxtLink>
+            <NuxtLink
+              v-else
+              :to="item.to"
+              class="text-white/70 transition-colors hover:text-cyan-300"
+            >
+              {{ item.label }}
+            </NuxtLink>
+          </template>
         </div>
 
         <div class="flex items-center gap-2 sm:gap-3">
@@ -108,35 +125,40 @@
       <div class="container-outer relative z-10 mt-10 pb-14 pt-16 sm:mt-12 sm:pb-20 sm:pt-24 md:pb-28 md:pt-32">
         <div class="hero-stack mx-auto max-w-5xl lg:my-20">
           <div class="hero-copy max-w-3xl" data-aos="fade-up">
-            <span class="chip mb-4">Structured Radio Training</span>
+            <span class="chip mb-4">Your VATSIM radio trainer</span>
             <h1 class="text-4xl font-semibold leading-tight sm:text-6xl md:text-7xl">
-              Train ATC before you fly VATSIM.
+              Practice aviation radio before going live on VATSIM.
             </h1>
             <p class="mt-4 text-base text-white/80 sm:mt-6 sm:text-lg">
-              Practice realistic radio communication in a safe environment. No pressure. No embarrassment. Just structured learning.
+              Train ATC communication, get feedback, lose the fear. Practice clearances, readbacks and
+              phraseology until they feel automatic — before a real controller ever hears you.
             </p>
             <ul class="mt-7 grid gap-2.5 text-sm text-white/70 sm:text-base">
               <li class="flex items-start gap-2">
                 <v-icon icon="mdi-format-list-checks" size="18" class="mt-[3px] text-cyan-300" />
-                <span>Structured scenarios</span>
+                <span>Structured scenarios &amp; readback drills</span>
               </li>
               <li class="flex items-start gap-2">
                 <v-icon icon="mdi-check-decagram-outline" size="18" class="mt-[3px] text-cyan-300" />
-                <span>Instant feedback</span>
+                <span>Feedback &amp; your VATSIM-ready score</span>
               </li>
               <li class="flex items-start gap-2">
-                <v-icon icon="mdi-airplane-takeoff" size="18" class="mt-[3px] text-cyan-300" />
-                <span>Built for VATSIM preparation</span>
+                <v-icon icon="mdi-cloud-check-outline" size="18" class="mt-[3px] text-cyan-300" />
+                <span>Open-source core &mdash; hosted training platform</span>
               </li>
             </ul>
             <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3.5">
               <NuxtLink to="#cta" class="btn btn-primary text-base">
-                <v-icon icon="mdi-school" size="20" />
-                Start Training
+                <v-icon icon="mdi-rocket-launch-outline" size="20" />
+                Start free training
               </NuxtLink>
-              <NuxtLink to="#how-it-works" class="btn btn-ghost text-base">
-                <v-icon icon="mdi-play-circle-outline" size="20" />
-                See How It Works
+              <NuxtLink to="/pricing" class="btn btn-ghost text-base">
+                <v-icon icon="mdi-tag-outline" size="20" />
+                View pricing
+              </NuxtLink>
+              <NuxtLink to="/open-source" class="btn btn-ghost text-base">
+                <v-icon icon="mdi-github" size="20" />
+                Self-host Open Source Core
               </NuxtLink>
             </div>
           </div>
@@ -148,14 +170,14 @@
               <p class="mt-2 text-sm text-white/75">A calm place to train phraseology before your first busy frequency.</p>
             </article>
             <article class="hero-highlight glass rounded-2xl p-5">
-              <v-icon icon="mdi-school-outline" size="22" class="text-cyan-300" />
-              <h3 class="mt-3 text-lg font-semibold">Classroom in alpha, 0€ today</h3>
-              <p class="mt-2 text-sm text-white/75">Structured VFR + IFR scenario training with waitlist-based access.</p>
+              <v-icon icon="mdi-cloud-check-outline" size="22" class="text-cyan-300" />
+              <h3 class="mt-3 text-lg font-semibold">Hosted cloud for pilots who just want to train</h3>
+              <p class="mt-2 text-sm text-white/75">Premium voices, AI debriefing and progress tracking, ready in minutes.</p>
             </article>
             <article class="hero-highlight glass rounded-2xl p-5">
               <v-icon icon="mdi-github" size="22" class="text-cyan-300" />
-              <h3 class="mt-3 text-lg font-semibold">Open source core</h3>
-              <p class="mt-2 text-sm text-white/75">Inspect, self-host and contribute to the stack any time.</p>
+              <h3 class="mt-3 text-lg font-semibold">Open-source core for builders</h3>
+              <p class="mt-2 text-sm text-white/75">Self-host the training engine under AGPLv3 and build your own scenarios.</p>
             </article>
           </div>
         </div>
@@ -879,16 +901,22 @@ interface ExtendedNavLink extends NavLink {
   hideOnSmall?: boolean
 }
 
-const navLinks: NavLink[] = [
-  { label: 'How it works', to: '#how-it-works' },
-  { label: 'Classroom', to: '#classroom' },
-  { label: 'Lineup', to: '#lineup' },
-  { label: 'FAQ', to: '#faq' },
-  { label: 'Start', to: '#cta' },
+const navLinks: ExtendedNavLink[] = [
+  { label: 'Product', to: '#solution' },
+  { label: 'Pricing', to: '/pricing' },
+  { label: 'Open Source', to: '/open-source' },
+  { label: 'For VATSIM', to: '/vatsim-radio-training' },
+  { label: 'For Clubs', to: '/pricing#club' },
+  { label: 'Docs', to: GITHUB_URL, external: true },
 ]
 
 const mobileNavLinks = computed<ExtendedNavLink[]>(() => [
-  ...navLinks,
+  { label: 'How it works', to: '#how-it-works', icon: 'mdi-play-circle-outline' },
+  { label: 'Pricing', to: '/pricing', icon: 'mdi-tag-outline' },
+  { label: 'Open Source', to: '/open-source', icon: 'mdi-github' },
+  { label: 'Founder deal', to: '/founder', icon: 'mdi-star-outline' },
+  { label: 'For VATSIM', to: '/vatsim-radio-training', icon: 'mdi-radio-tower' },
+  { label: 'Self-host vs Cloud', to: '/self-host-vs-cloud', icon: 'mdi-cloud-outline' },
   { label: 'Roadmap', to: '/roadmap', icon: 'mdi-map-marker-path', hideOnSmall: true },
   { label: 'News', to: '/news', icon: 'mdi-newspaper-variant-outline' },
   { label: 'GitHub', to: GITHUB_URL, external: true, icon: 'mdi-github', hideOnSmall: true },

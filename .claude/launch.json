@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "nuxt-dev-corepack",
+      "runtimeExecutable": "corepack",
+      "runtimeArgs": ["yarn", "dev"],
+      "port": 3000
+    },
+    {
       "name": "nuxt-dev",
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["dev"],
