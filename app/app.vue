@@ -6,9 +6,22 @@
 </template>
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, watch } from 'vue';
-import { useHotjar, useRoute, useState } from '#imports';
+import { useHead, useHotjar, useRoute, useState } from '#imports';
 import { useAuthStore } from '~/stores/auth';
 import { HOTJAR_LOCAL_STORAGE_KEY, useCookieConsent } from '~/composables/useCookieConsent';
+import {
+  absoluteSiteUrl,
+  DE_FAQ_SCHEMA,
+  DEFAULT_OG_IMAGE,
+  FAQ_SCHEMA,
+  getLanguageAlternates,
+  getPublicSeoRoute,
+  isNewsArticlePath,
+  jsonLd,
+  normalizeSeoPath,
+  SITE_NAME,
+  SOFTWARE_APPLICATION_SCHEMA,
+} from '~~/shared/utils/seo';
 
 const HOTJAR_ID = 6522897;
 const HOTJAR_SCRIPT_VERSION = 6;
@@ -27,6 +40,55 @@ const { hasConsent, analyticsEnabled } = useCookieConsent();
 const { initialize } = useHotjar();
 const hotjarInitialized = useState('hotjar-initialized', () => false);
 const productSession = useState<{ product: 'classroom' | 'liveatc'; path: string; startedAt: number } | null>('product-usage-session', () => null);
+
+useHead(() => {
+  const path = normalizeSeoPath(route.path);
+  const seo = getPublicSeoRoute(path);
+  const isArticle = isNewsArticlePath(path);
+  const indexable = Boolean(seo || isArticle);
+  const canonical = absoluteSiteUrl(path);
+  const title = seo?.title || (isArticle ? `News | ${SITE_NAME}` : SITE_NAME);
+  const description = seo?.description || (isArticle ? `Product news and updates from ${SITE_NAME}.` : 'OpenSquawk application area.');
+  const image = absoluteSiteUrl(seo?.image || DEFAULT_OG_IMAGE);
+  const language = seo?.language || 'en';
+  const alternates = getLanguageAlternates(path);
+
+  return {
+    htmlAttrs: { lang: language },
+    title,
+    link: indexable
+      ? [
+          { rel: 'canonical', href: canonical },
+          ...alternates.map(({ hreflang, href }) => ({ rel: 'alternate', hreflang, href })),
+        ]
+      : [],
+    meta: [
+      { name: 'robots', content: indexable ? 'index, follow, max-image-preview:large' : 'noindex, nofollow' },
+      { name: 'googlebot', content: indexable ? 'index, follow, max-image-preview:large' : 'noindex, nofollow' },
+      { name: 'description', content: description },
+      { property: 'og:site_name', content: SITE_NAME },
+      { property: 'og:type', content: isArticle ? 'article' : 'website' },
+      { property: 'og:title', content: title },
+      { property: 'og:description', content: description },
+      { property: 'og:url', content: canonical },
+      { property: 'og:image', content: image },
+      { property: 'og:image:width', content: '1536' },
+      { property: 'og:image:height', content: '1024' },
+      { property: 'og:image:alt', content: `${SITE_NAME} flight simulator training` },
+      { property: 'og:locale', content: language === 'de' ? 'de_DE' : 'en_US' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: title },
+      { name: 'twitter:description', content: description },
+      { name: 'twitter:image', content: image },
+    ],
+    script: path === '/' || path === '/de'
+      ? [
+          { key: 'software-application-schema', type: 'application/ld+json', innerHTML: jsonLd(SOFTWARE_APPLICATION_SCHEMA) },
+          { key: 'faq-schema', type: 'application/ld+json', innerHTML: jsonLd(path === '/de' ? DE_FAQ_SCHEMA : FAQ_SCHEMA) },
+        ]
+      : [],
+  };
+});
 
 const showCookieBanner = computed(() => {
   if (!authStore.isAuthenticated) {
