@@ -1,6 +1,7 @@
 import { computed, onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { normalizeSimFreq, normalizeBridgeTelemetry, telemetrySignature } from '../../shared/utils/bridgeTelemetry'
+import { createIntervalWorker } from '../../shared/utils/intervalWorker'
 import { pmLog } from '../../shared/utils/pmLog'
 import type { SimControlCommandResult } from '../../shared/utils/simControl'
 import type { useFrequencyPresets } from '~/composables/useFrequencyPresets'
@@ -60,7 +61,11 @@ export function useSimBridgeSync(
   // Telemetry older than this means the bridge stopped posting.
   const BRIDGE_TELEMETRY_STALE_MS = 12_000
   const BRIDGE_POLL_INTERVAL_MS = 3_000
-  let bridgePoller: ReturnType<typeof setInterval> | null = null
+  // Worker-based ticker: the intended setup is the sim (or WebSim tab) in the
+  // foreground and /live-atc in the background, where a plain setInterval gets
+  // throttled to ~1/min — telemetry-driven ATC (airborne handoff, level checks)
+  // would lag by up to a minute. A Worker tick isn't throttled.
+  let bridgePoller: { stop: () => void } | null = null
   // Last sim active frequency we pushed into the radio — only re-tune active when
   // the sim value actually changes, so manual/flow tuning isn't constantly
   // overridden. Standby has no such anchor: while connected it strictly mirrors
@@ -184,12 +189,12 @@ export function useSimBridgeSync(
     stopBridgeSync()
     if (!bridgeToken.value) return
     void pollBridgeTelemetry()
-    bridgePoller = setInterval(pollBridgeTelemetry, BRIDGE_POLL_INTERVAL_MS)
+    bridgePoller = createIntervalWorker(BRIDGE_POLL_INTERVAL_MS, () => void pollBridgeTelemetry())
   }
 
   function stopBridgeSync() {
     if (bridgePoller) {
-      clearInterval(bridgePoller)
+      bridgePoller.stop()
       bridgePoller = null
     }
   }

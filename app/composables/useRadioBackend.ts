@@ -41,8 +41,10 @@ export interface NormalizedTelemetry {
     vs_fpm?: number               // vertical speed, feet/min (+climb, -descent)
     heading_deg?: number          // magnetic heading, 0..360
     on_ground?: boolean           // wheels on the ground
-    distance_to_dest_nm?: number  // great-circle nm to destination airport
-    distance_to_dep_nm?: number   // great-circle nm from departure airport
+    // Raw position in degrees. The backend derives distance_to_dep_nm /
+    // distance_to_dest_nm from these via the session's airport ICAO codes.
+    lat?: number
+    lon?: number
 }
 
 export interface ReadbackFieldDetail {
