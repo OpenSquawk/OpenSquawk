@@ -27,6 +27,7 @@
 import { computed } from 'vue'
 import { useHead, useRoute } from '#imports'
 import { getNewsBySlug } from '~~/shared/utils/news'
+import { absoluteSiteUrl, DEFAULT_OG_IMAGE, SITE_NAME } from '~~/shared/utils/seo'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug ?? ''))
@@ -39,13 +40,50 @@ useHead(() => {
     }
   }
   const description = post.value.excerpt || 'Update from the OpenSquawk project.'
+  const canonical = absoluteSiteUrl(`/news/${post.value.slug}`)
+  const image = absoluteSiteUrl(DEFAULT_OG_IMAGE)
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.value.title,
+    description,
+    datePublished: post.value.publishedAt,
+    dateModified: post.value.publishedAt,
+    inLanguage: 'en',
+    mainEntityOfPage: canonical,
+    image: [image],
+    author: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: absoluteSiteUrl('/'),
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: absoluteSiteUrl('/'),
+      logo: {
+        '@type': 'ImageObject',
+        url: absoluteSiteUrl('/img/icon-lg.jpeg'),
+      },
+    },
+  }
+
   return {
     title: `${post.value.title} – OpenSquawk News`,
     meta: [
       { name: 'description', content: description },
       { property: 'og:title', content: `${post.value.title} – OpenSquawk News` },
       { property: 'og:description', content: description },
+      { property: 'og:url', content: canonical },
+      { property: 'og:image', content: image },
+      { property: 'article:published_time', content: post.value.publishedAt },
+      { property: 'article:modified_time', content: post.value.publishedAt },
     ],
+    script: [{
+      key: 'article-schema',
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify(articleSchema).replaceAll('<', '\\u003c'),
+    }],
   }
 })
 

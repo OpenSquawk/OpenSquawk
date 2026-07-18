@@ -860,7 +860,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useHead, useRoute, useRouter } from '#imports'
+import { useRoute, useRouter } from '#imports'
 import { useApi } from '~/composables/useApi'
 
 const api = useApi()
@@ -1623,33 +1623,6 @@ onMounted(() => {
   void initAosIfNeeded()
 })
 
-useHead(() => ({
-  htmlAttrs: { lang: 'en' },
-  title: 'Train ATC before you fly VATSIM | OpenSquawk',
-  meta: [
-    {
-      name: 'description',
-      content:
-        'OpenSquawk helps aspiring VATSIM pilots train realistic radio communication with structured scenarios, instant feedback and clear progression.',
-    },
-    { name: 'theme-color', content: '#0ea5e9' },
-    { property: 'og:title', content: 'Train ATC before you fly VATSIM | OpenSquawk' },
-    {
-      property: 'og:description',
-      content:
-        'Practice realistic ATC phraseology in a safe, structured environment. Build confidence before your first VATSIM flight.',
-    },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:image', content: 'https://opensquawk.example.com/cover.png' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: 'Train ATC before you fly VATSIM | OpenSquawk' },
-    {
-      name: 'twitter:description',
-      content: 'Structured ATC radio training for aspiring VATSIM pilots.',
-    },
-    { name: 'twitter:image', content: 'https://opensquawk.example.com/cover.png' },
-  ],
-}))
 </script>
 
 <style scoped>

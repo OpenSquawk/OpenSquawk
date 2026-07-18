@@ -34,6 +34,27 @@ export default defineNuxtConfig({
     },
     aos: {once: true, duration: 600, easing: 'ease-out'},
     app: {head: {link: [{rel: 'icon', type: 'image/jpeg', href: '/img/icon-sm.jpeg'}]}},
+    routeRules: {
+        '/app/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/admin/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/bridge/connect': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/classroom/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/classroom-introduction': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/copilot': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/dev-login': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/editor/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/flightlab/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/forgot-password': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/invite': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/live-atc': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/login': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/logout': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/pilot-profile-setup': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/pm': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/present': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/start': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/unsubscribe': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    },
     runtimeConfig: {
         openaiKey: process.env.OPENAI_API_KEY,
         openaiProject: process.env.OPENAI_PROJECT,
@@ -111,6 +132,9 @@ export default defineNuxtConfig({
         '~/assets/css/learn-theme.css'
     ],
     nitro: {
+        serverAssets: [
+            { baseName: 'news', dir: '../content/news' },
+        ],
         experimental: {
             websocket: true,
         },
