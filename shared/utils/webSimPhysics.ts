@@ -91,6 +91,8 @@ const GROUND_MAX_ACCEL_FPS2 = 6.5 // full throttle takeoff-roll acceleration
 const GROUND_IDLE_DRAG_FPS2 = 3 // rolling resistance at idle thrust, brakes off
 const GROUND_BRAKE_DECEL_FPS2 = 8 // parking-brake-set deceleration
 const GROUND_MAX_TURN_RATE_DEG_S = 15 // nosewheel steering, at any taxi speed > 0
+const ROTATE_SPEED_KTS = 140 // Vr — below this the aircraft stays glued to the runway
+const INITIAL_CLIMB_PITCH_DEG = 8 // pitch attitude handed to stepAirborne at liftoff
 
 // --- Engine start --------------------------------------------------------
 const ENGINE_START_SECONDS = 15
@@ -306,6 +308,26 @@ function stepGround(state: WebSimState, input: WebSimControlInput, dt: number): 
   const turnRateDegS = newSpeedKts > 0.5 ? input.stickRoll * GROUND_MAX_TURN_RATE_DEG_S : 0
   const heading_deg = normalizeHeading(state.heading_deg + turnRateDegS * dt)
   const { lat, lon } = destinationPoint(state.lat, state.lon, heading_deg, (newSpeedKts / 3600) * dt)
+
+  // Rotation: past Vr with the stick pulled — or the AP commanding a climb —
+  // the wheels leave the ground and stepAirborne takes over next tick. Without
+  // this the takeoff spawn preset could accelerate forever but never fly.
+  const wantsLiftoff =
+    input.stickPitch > 0.1
+    || (state.apMode !== 'OFF' && state.target_alt > state.altitude_ft + 100)
+  if (newSpeedKts >= ROTATE_SPEED_KTS && wantsLiftoff) {
+    return {
+      lat,
+      lon,
+      heading_deg,
+      pitch_deg: INITIAL_CLIMB_PITCH_DEG,
+      bank_deg: 0,
+      ias_kts: newSpeedKts,
+      gs_kts: newSpeedKts,
+      vs_fpm: 0,
+      on_ground: false,
+    }
+  }
 
   return {
     lat,

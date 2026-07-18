@@ -166,6 +166,48 @@ test('ground: throttle accelerates groundspeed, parking brake prevents movement'
   assert.equal(parked.gs_kts, 0)
 })
 
+test('ground: rotates past Vr when the stick is pulled, then climbs', () => {
+  let state = stateFromPreset('eddf-runway-ready')
+  let smoothed = 0
+  for (let i = 0; i < 120 && state.on_ground; i++) {
+    const tick = stepWebSimPhysics(state, { stickPitch: 0.5, stickRoll: 0, throttle: 1 }, 1, EDDF, smoothed)
+    state = tick.state
+    smoothed = tick.smoothedPitchRate
+  }
+  assert.equal(state.on_ground, false, 'expected the aircraft to lift off past Vr with the stick pulled')
+  assert.ok(state.ias_kts >= 140, `liftoff below Vr: ${state.ias_kts}`)
+  const altAtLiftoff = state.altitude_ft
+  for (let i = 0; i < 20; i++) {
+    const tick = stepWebSimPhysics(state, { stickPitch: 0.3, stickRoll: 0, throttle: 1 }, 1, EDDF, smoothed)
+    state = tick.state
+    smoothed = tick.smoothedPitchRate
+  }
+  assert.ok(state.altitude_ft > altAtLiftoff + 200, `expected a climb after liftoff, got ${state.altitude_ft}`)
+})
+
+test('ground: AP commanding a climb rotates without manual stick input', () => {
+  let state = stateFromPreset('eddf-runway-ready')
+  state = { ...state, apMode: 'SELECTED' as const, target_alt: 5000 }
+  let smoothed = 0
+  for (let i = 0; i < 120 && state.on_ground; i++) {
+    const tick = stepWebSimPhysics(state, { stickPitch: 0, stickRoll: 0, throttle: 1 }, 1, EDDF, smoothed)
+    state = tick.state
+    smoothed = tick.smoothedPitchRate
+  }
+  assert.equal(state.on_ground, false, 'expected the AP to rotate the aircraft past Vr')
+})
+
+test('ground: stays on the runway below Vr or with a neutral stick and no AP', () => {
+  let state = stateFromPreset('eddf-runway-ready')
+  let smoothed = 0
+  for (let i = 0; i < 120; i++) {
+    const tick = stepWebSimPhysics(state, { stickPitch: 0, stickRoll: 0, throttle: 1 }, 1, EDDF, smoothed)
+    state = tick.state
+    smoothed = tick.smoothedPitchRate
+  }
+  assert.equal(state.on_ground, true, 'neutral stick without AP must never lift off')
+})
+
 test('startEngines ramps N1 up over time and transitions OFF -> STARTING -> RUNNING', () => {
   let state = stateFromPreset('eddf-gate-cold-dark')
   state = startEngines(state)

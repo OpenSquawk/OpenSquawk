@@ -24,6 +24,24 @@ const canStartEngines = computed(() => props.onGround && props.engineState === '
 function stepStandby(delta: number) {
   emit('setStandby', Math.round((props.comStandby + delta) * 1000) / 1000)
 }
+
+// Click-to-edit standby: real controllers sit on 8.33 kHz channels (118.780,
+// 119.905, …) which coarse stepping can never reach — and /live-atc rejects
+// calls from the wrong frequency, so exact tuning matters.
+const editingStandby = ref(false)
+const standbyDraft = ref('')
+
+function beginStandbyEdit() {
+  standbyDraft.value = props.comStandby.toFixed(3)
+  editingStandby.value = true
+}
+
+function commitStandbyEdit() {
+  editingStandby.value = false
+  const parsed = Number.parseFloat(standbyDraft.value.replace(',', '.'))
+  if (!Number.isFinite(parsed) || parsed < 118 || parsed >= 137) return
+  emit('setStandby', Math.round(parsed * 1000) / 1000)
+}
 </script>
 
 <template>
@@ -37,11 +55,21 @@ function stepStandby(delta: number) {
       </div>
       <div class="flex items-center justify-between font-mono text-sm">
         <span class="text-cyan-200">{{ comActive.toFixed(3) }}</span>
-        <span class="text-white/40">{{ comStandby.toFixed(3) }}</span>
+        <input
+          v-if="editingStandby"
+          v-model="standbyDraft"
+          class="w-20 rounded border border-cyan-400/40 bg-black/60 text-right text-white/80 outline-none px-1"
+          autofocus
+          @keydown.enter="commitStandbyEdit"
+          @blur="commitStandbyEdit"
+        >
+        <button v-else class="text-white/40 hover:text-white/80" title="Klicken zum Eintippen" @click="beginStandbyEdit">
+          {{ comStandby.toFixed(3) }}
+        </button>
       </div>
       <div class="flex justify-end gap-1 mt-1">
-        <button class="fcu-btn" @click="stepStandby(-0.025)">−</button>
-        <button class="fcu-btn" @click="stepStandby(0.025)">+</button>
+        <button class="fcu-btn" @click="stepStandby(-0.005)">−</button>
+        <button class="fcu-btn" @click="stepStandby(0.005)">+</button>
       </div>
     </div>
 
