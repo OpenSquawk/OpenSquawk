@@ -21,6 +21,7 @@
             :error="error"
             @load-flight-plans="loadFlightPlans"
             @start-demo="startDemoFlight"
+            @start-manual="startManualFlight"
         />
 
         <FlightSelectStep
@@ -603,6 +604,7 @@ const {
   loadFlightPlans,
   startMonitoring,
   startDemoFlight,
+  startManualFlight,
   launchScenario,
   flyAgain,
   backToSetup,
