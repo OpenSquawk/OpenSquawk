@@ -10,6 +10,7 @@ import { TransmissionLog } from "../../models/TransmissionLog";
 import { requireUserSession } from "../../utils/auth";
 import { enforceRateLimit } from "../../utils/rateLimit";
 import { recordUsage } from "../../utils/usage";
+import { resolveSpeachesVoice } from "../../utils/voiceRegistry";
 
 
 function outDir() {
@@ -204,8 +205,18 @@ export default defineEventHandler(async (event) => {
     const useSpeaches = runtimeConfig.useSpeaches;
     const usePiper = !useSpeaches && runtimeConfig.usePiper;
     const provider = resolveTtsProvider(useSpeaches, usePiper);
-    const providerModel = provider === "speaches"
-        ? (runtimeConfig.speechModelId || "speaches-ai/piper-en_US-ryan-low")
+    // Speaches: logical pool voices (alloy, verse, …) resolve to Piper
+    // model+voice pairs; anything unknown keeps the env-configured pair.
+    const speachesFallback = {
+        model: runtimeConfig.speechModelId || "speaches-ai/piper-en_US-ryan-low",
+        voice,
+    };
+    const speachesVoice = provider === "speaches"
+        ? resolveSpeachesVoice(voice, speachesFallback)
+        : null;
+    const ttsVoice = speachesVoice?.voice ?? voice;
+    const providerModel = speachesVoice
+        ? speachesVoice.model
         : provider === "piper"
             ? "piper-local"
             : TTS_MODEL;
@@ -221,7 +232,7 @@ export default defineEventHandler(async (event) => {
         ? buildFlightLabCacheKey({
             normalized,
             level,
-            voice,
+            voice: ttsVoice,
             speed,
             format: fmt,
             provider,
@@ -263,11 +274,11 @@ export default defineEventHandler(async (event) => {
         if (!audioBuffer && useSpeaches) {
             // Speaches (prefer compact: MP3, otherwise FLAC/WAV/PCM)
             const baseUrl = runtimeConfig.speachesBaseUrl || "";
-            const model = runtimeConfig.speechModelId || "speaches-ai/piper-en_US-ryan-low";
+            const model = providerModel;
             if (!baseUrl) {
                 throw new Error("SPEACHES_BASE_URL not set");
             }
-            audioBuffer = await speachesTTS(normalized, voice, model, fmt, baseUrl, speed);
+            audioBuffer = await speachesTTS(normalized, ttsVoice, model, fmt, baseUrl, speed);
             modelUsed = model;
             // Server returns the correct format according to response_format
             actualMime = fmtToMime(fmt);
