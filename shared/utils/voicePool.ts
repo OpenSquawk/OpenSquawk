@@ -34,6 +34,23 @@ export function fnv1a(input: string): number {
 }
 
 /**
+ * Murmur3 finalizer (fmix32). FNV-1a's low bits barely avalanche: for the
+ * live-atc persona keys (shared session prefix, `:TYPE:freq` suffix) the raw
+ * hash mod 4 was identical for every position of a session — one voice for
+ * Delivery, Ground and Tower, 100% of the time. Mixing before the modulo
+ * makes every input bit reach the low bits.
+ */
+export function mix32(hash: number): number {
+  let h = hash >>> 0
+  h ^= h >>> 16
+  h = Math.imul(h, 0x85ebca6b) >>> 0
+  h ^= h >>> 13
+  h = Math.imul(h, 0xc2b6ae35) >>> 0
+  h ^= h >>> 16
+  return h >>> 0
+}
+
+/**
  * Pick a voice from `pool` for `key`, skipping anything in `reserved`.
  * Walks forward from the hashed index so a collision with a reserved voice
  * degrades to the next pool entry instead of failing.
@@ -46,7 +63,7 @@ export function voiceFromPool(
   const usable = pool.filter(v => !reserved.includes(v))
   const candidates = usable.length ? usable : pool
   if (!candidates.length) throw new Error('voiceFromPool: empty voice pool')
-  return candidates[fnv1a(key) % candidates.length]!
+  return candidates[mix32(fnv1a(key)) % candidates.length]!
 }
 
 /**
@@ -83,7 +100,7 @@ export function controllerPersonaFor(positionKey: string): ControllerPersona {
   const key = positionKey.toUpperCase()
   const voice = voiceFromPool(key, CONTROLLER_VOICES, [])
   // Independent hash stream for speed so voice and pace don't correlate.
-  const baseSpeed = 1.1 + (fnv1a(`speed:${key}`) % 21) / 100
+  const baseSpeed = 1.1 + (mix32(fnv1a(`speed:${key}`)) % 21) / 100
   return { voice, baseSpeed: Math.round(baseSpeed * 100) / 100 }
 }
 

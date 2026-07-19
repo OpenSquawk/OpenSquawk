@@ -91,6 +91,26 @@ describe('voicePool — controller personas', () => {
     }
   })
 
+  it('does not hand every position of a session the same voice (FNV low-bit bias)', () => {
+    // Real /live-atc key shapes: shared session prefix, position+frequency
+    // suffix. Raw fnv1a % poolSize collapses here — every position got the
+    // same voice in 100% of sessions.
+    let allSame = 0
+    const sessions = 200
+    for (let i = 0; i < sessions; i++) {
+      const s = `sess${i}-${(i * 2654435761 % 1e9).toString(36)}`
+      const voices = [
+        `${s}:FRANKFURT MAIN:DEL:122.035`,
+        `${s}:FRANKFURT MAIN:GND:121.805`,
+        `${s}:FRANKFURT MAIN:TWR:118.780`,
+      ].map(k => controllerPersonaFor(k).voice)
+      if (voices[0] === voices[1] && voices[1] === voices[2]) allSame++
+    }
+    // Uniform hashing would give ~6.3% — allow slack, but the 100% failure
+    // mode must never come back.
+    assert.ok(allSame / sessions < 0.2, `${allSame}/${sessions} sessions had one voice for all positions`)
+  })
+
   it('gives different sessions a different shift of controllers', () => {
     const keys = ['EDDF:DEL', 'EDDF:GND', 'EDDF:TWR', 'EDDF:APP']
     const shiftA = keys.map(k => controllerPersonaFor(`sessionA:${k}`))
