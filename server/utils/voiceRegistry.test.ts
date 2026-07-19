@@ -2,7 +2,6 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   ATIS_SPEACHES_VOICE,
-  KOKORO_MODEL,
   resolveSpeachesVoice,
   SPEACHES_VOICE_MAP,
 } from '~~/server/utils/voiceRegistry'
@@ -10,18 +9,18 @@ import {
 const fallback = { model: 'speaches-ai/piper-de_DE-thorsten-medium', voice: 'de_DE-thorsten-medium' }
 
 describe('resolveSpeachesVoice', () => {
-  it('maps every pool voice to a consistent model/voice pair', () => {
+  it('maps every pool voice to a fast English Piper speaker', () => {
     for (const [logical, mapped] of Object.entries(SPEACHES_VOICE_MAP)) {
       const result = resolveSpeachesVoice(logical, fallback)
       assert.deepEqual(result, mapped)
-      if (result.model === KOKORO_MODEL) {
-        // Kokoro voice ids look like af_heart / bm_george.
-        assert.match(result.voice, /^[abehijpz][fm]_[a-z_]+$/)
-      } else {
-        assert.equal(result.model, `speaches-ai/piper-${result.voice}`)
-        assert.match(result.voice, /^en_/)
-      }
+      // Piper only — Kokoro generation was slow enough to delay ATC replies.
+      assert.equal(result.model, `speaches-ai/piper-${result.voice}`)
+      assert.match(result.voice, /^en_/)
     }
+  })
+
+  it('keeps the default controller voice on the standard US speaker', () => {
+    assert.equal(resolveSpeachesVoice('alloy', fallback).voice, 'en_US-ryan-medium')
   })
 
   it('is case-insensitive and trims', () => {

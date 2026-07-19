@@ -112,3 +112,45 @@ export function transmissionSpeed(baseSpeed: number, rng: () => number = Math.ra
   const jitter = (rng() * 2 - 1) * 0.05
   return Math.round((baseSpeed + jitter) * 100) / 100
 }
+
+/**
+ * Selectable classroom instructor voices. The instructor is a single voice
+ * (not a live position), so it may draw from any pool voice. Labels/accents
+ * mirror the Speaches mapping in server/utils/voiceRegistry.ts.
+ */
+export type ClassroomVoiceOption = {
+  id: string
+  label: string
+  accent: 'US' | 'GB'
+  gender: 'male' | 'female'
+}
+
+export const CLASSROOM_VOICE_OPTIONS: readonly ClassroomVoiceOption[] = [
+  { id: 'alloy', label: 'Ryan', accent: 'US', gender: 'male' },
+  { id: 'onyx', label: 'John', accent: 'US', gender: 'male' },
+  { id: 'coral', label: 'Joe', accent: 'US', gender: 'male' },
+  { id: 'nova', label: 'Bryce', accent: 'US', gender: 'male' },
+  { id: 'fable', label: 'Amy', accent: 'US', gender: 'female' },
+  { id: 'shimmer', label: 'Kristin', accent: 'US', gender: 'female' },
+  { id: 'sage', label: 'Hannah', accent: 'US', gender: 'female' },
+  { id: 'echo', label: 'Jenny', accent: 'GB', gender: 'female' },
+  { id: 'ash', label: 'Alan', accent: 'GB', gender: 'male' },
+  { id: 'ballad', label: 'Alba', accent: 'GB', gender: 'female' },
+]
+
+/** Default classroom instructor voice — the standard US speaker (Ryan). */
+export const CLASSROOM_DEFAULT_VOICE = 'alloy'
+
+/** Settings sentinel: pick a stable random voice per module instead of one fixed voice. */
+export const CLASSROOM_RANDOM_VOICE = 'random'
+
+const CLASSROOM_VOICE_POOL: readonly string[] = CLASSROOM_VOICE_OPTIONS.map(o => o.id)
+
+/**
+ * A stable random classroom instructor voice for `key` (e.g. a module id),
+ * drawn from every selectable classroom voice — one instructor per lesson,
+ * consistent while it lasts.
+ */
+export function classroomVoiceFor(key: string): string {
+  return voiceFromPool(key, CLASSROOM_VOICE_POOL, [])
+}

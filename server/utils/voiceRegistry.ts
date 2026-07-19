@@ -4,16 +4,20 @@
  * names; only the Speaches branch of /api/atc/say resolves them here, so the
  * same ids work unchanged on the OpenAI provider.
  *
- * Speaches auto-downloads missing `speaches-ai/piper-*` models on first use;
- * the Kokoro voices all live in one multi-voice model. Controllers get the
- * Kokoro speakers (heard most, best quality), pilots the distinct Piper
- * speakers — the pools stay disjoint so traffic never sounds like the
- * controller talking to itself. Selection follows the curated radio set
- * (see docs/plans/2026-07-19-phraseology-taxi-finetune-design.md).
+ * Speaches auto-downloads missing `speaches-ai/piper-*` models on first use.
+ * Every pool voice is a distinct Piper speaker — Piper synthesizes fast
+ * enough for radio latency, and the pools stay disjoint so traffic never
+ * sounds like the controller talking to itself. Selection follows the
+ * curated radio set (docs/plans/2026-07-19-phraseology-taxi-finetune-design.md).
  */
 
 export type SpeachesVoice = { model: string; voice: string }
 
+/**
+ * Kokoro's shared multi-voice model. Not used for any pool voice: it
+ * generates several times slower than Piper, which showed up directly as
+ * multi-second ATC reply latency. Kept for explicit opt-in mappings only.
+ */
 export const KOKORO_MODEL = 'speaches-ai/Kokoro-82M-v1.0-ONNX'
 
 const piper = (voice: string): SpeachesVoice => ({
@@ -21,14 +25,15 @@ const piper = (voice: string): SpeachesVoice => ({
   voice,
 })
 
-const kokoro = (voice: string): SpeachesVoice => ({ model: KOKORO_MODEL, voice })
-
 export const SPEACHES_VOICE_MAP: Record<string, SpeachesVoice> = {
-  // Controller pool (CONTROLLER_VOICES)
-  alloy: kokoro('bm_george'),
-  echo: kokoro('bf_emma'),
-  onyx: kokoro('am_michael'),
-  sage: kokoro('af_heart'),
+  // Controller pool (CONTROLLER_VOICES). Piper only: Kokoro-82M generates
+  // several times slower and made every ATC reply audibly late — controllers
+  // are the latency-critical voices. `alloy` is the product-wide default and
+  // stays the standard US speaker.
+  alloy: piper('en_US-ryan-medium'),
+  echo: piper('en_GB-jenny_dioco-medium'),
+  onyx: piper('en_US-john-medium'),
+  sage: piper('en_US-hfc_female-medium'),
   // The user's own readback voice (speakPilotReadback)
   verse: piper('en_US-lessac-medium'),
   // Simulated pilot pool (PILOT_VOICES)

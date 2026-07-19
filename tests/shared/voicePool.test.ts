@@ -2,9 +2,13 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  CLASSROOM_DEFAULT_VOICE,
+  CLASSROOM_RANDOM_VOICE,
+  CLASSROOM_VOICE_OPTIONS,
   CONTROLLER_VOICES,
   PILOT_VOICES,
   RESERVED_VOICES,
+  classroomVoiceFor,
   controllerPersonaFor,
   controllerVoiceFor,
   fnv1a,
@@ -128,6 +132,33 @@ describe('voicePool — controller personas', () => {
   it('transmission speeds actually vary', () => {
     const speeds = new Set(Array.from({ length: 30 }, () => transmissionSpeed(1.2)))
     assert.ok(speeds.size > 1, 'expected jitter, got a constant')
+  })
+})
+
+describe('voicePool — classroom voices', () => {
+  it('defaults to the standard US speaker', () => {
+    assert.equal(CLASSROOM_DEFAULT_VOICE, 'alloy')
+    const option = CLASSROOM_VOICE_OPTIONS.find(o => o.id === CLASSROOM_DEFAULT_VOICE)
+    assert.ok(option, 'default voice must be selectable')
+    assert.equal(option!.accent, 'US')
+  })
+
+  it('offers unique selectable ids and the random sentinel is not one of them', () => {
+    const ids = CLASSROOM_VOICE_OPTIONS.map(o => o.id)
+    assert.equal(new Set(ids).size, ids.length)
+    assert.equal(ids.includes(CLASSROOM_RANDOM_VOICE), false)
+  })
+
+  it('assigns a stable random voice per module from the selectable set', () => {
+    const ids = CLASSROOM_VOICE_OPTIONS.map(o => o.id)
+    const seen = new Set<string>()
+    for (const module of ['fundamentals', 'readbacks', 'atc-advanced', 'full-flight', 'metar']) {
+      const voice = classroomVoiceFor(`classroom:${module}`)
+      assert.equal(classroomVoiceFor(`classroom:${module}`), voice, 'must be deterministic')
+      assert.ok(ids.includes(voice), `${voice} must be selectable`)
+      seen.add(voice)
+    }
+    assert.ok(seen.size > 1, 'different modules should not all share one voice')
   })
 })
 
