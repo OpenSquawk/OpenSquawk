@@ -3,7 +3,7 @@ import { useApi } from '~/composables/useApi'
 import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
 import { loadPizzicatoLite } from '../../shared/utils/pizzicatoLite'
 import type { PizzicatoLite } from '../../shared/utils/pizzicatoLite'
-import { createNoiseGenerators, getReadabilityProfile } from '../../shared/utils/radioEffects'
+import { createNoiseGenerators, createSquelchTransients, getReadabilityProfile, SQUELCH_TAIL_MS } from '../../shared/utils/radioEffects'
 import { controllerPersonaFor, transmissionSpeed } from '../../shared/utils/voicePool'
 import { pmLog } from '../../shared/utils/pmLog'
 import { useSpeechInterrupt } from '~/composables/useSpeechInterrupt'
@@ -220,13 +220,18 @@ export function useRadioSpeech(
       sound.setVolume(profile.gain)
 
       const stopNoiseGenerators = createNoiseGenerators(ctx, sound.duration, profile, readability)
+      const stopSquelch = createSquelchTransients(ctx, sound.duration, profile, readability)
 
       setCurrentPizzicatoSound(sound)
       try {
         await sound.play()
+        // Let the squelch tail ring out — killing it here would cut the
+        // carrier-close click that sells the end of the transmission.
+        await wait(SQUELCH_TAIL_MS + 80)
       } finally {
         setCurrentPizzicatoSound(null)
         stopNoiseGenerators.forEach((stop) => stop())
+        stopSquelch.forEach((stop) => stop())
         sound.clearEffects()
       }
     } catch (err) {

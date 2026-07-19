@@ -76,6 +76,74 @@ export const getReadabilityProfile = (level: number): ReadabilityProfile => {
   return readabilityProfiles[clamped] || readabilityProfiles[3]
 }
 
+/** How long the carrier keeps hissing after the voice stops (squelch tail). */
+export const SQUELCH_TAIL_MS = 230
+
+/**
+ * Squelch transients around a transmission: a short click when the carrier
+ * opens at t=0 and a noise tail that cuts off with a click once the voice ends.
+ * Callers must keep the returned stops alive for SQUELCH_TAIL_MS past the end
+ * of speech or the tail gets killed silently.
+ */
+export const createSquelchTransients = (
+  ctx: AudioContext,
+  duration: number,
+  profile: ReadabilityProfile,
+  level: number
+): Array<() => void> => {
+  const stops: Array<() => void> = []
+  // Audible even on a clean channel — squelch is loud relative to hiss.
+  const clickAmplitude = Math.max(0.05, profile.noise.amplitude * 1.6)
+  const tailAmplitude = Math.max(0.035, profile.noise.amplitude * 1.1)
+  const tailSeconds = (level <= 2 ? SQUELCH_TAIL_MS + 60 : SQUELCH_TAIL_MS) / 1000
+
+  const noiseBurst = (lengthSec: number, amplitude: number, decay: boolean) => {
+    const length = Math.max(1, Math.floor(lengthSec * ctx.sampleRate))
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < length; i++) {
+      const envelope = decay ? 1 - i / length : 1
+      data[i] = (Math.random() * 2 - 1) * amplitude * envelope
+    }
+    return buffer
+  }
+
+  const schedule = (buffer: AudioBuffer, startAt: number) => {
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    const band = ctx.createBiquadFilter()
+    band.type = 'bandpass'
+    band.frequency.value = 2000
+    band.Q.value = 0.8
+    source.connect(band)
+    band.connect(ctx.destination)
+    try {
+      source.start(startAt)
+    } catch (err) {
+      console.warn('Squelch source start failed', err)
+    }
+    stops.push(() => {
+      try {
+        source.stop()
+      } catch {
+        // ignore — one-shots may already have ended
+      }
+      source.disconnect()
+      band.disconnect()
+    })
+  }
+
+  const now = ctx.currentTime
+  // Carrier opens: short decaying burst.
+  schedule(noiseBurst(0.045, clickAmplitude, true), now)
+  // Voice ends: constant tail…
+  schedule(noiseBurst(tailSeconds, tailAmplitude, false), now + duration)
+  // …cut off by the closing click.
+  schedule(noiseBurst(0.03, clickAmplitude * 1.2, true), now + duration + tailSeconds)
+
+  return stops
+}
+
 export const createNoiseGenerators = (
   ctx: AudioContext,
   duration: number,
