@@ -5025,10 +5025,24 @@ async function say(text: string) {
     const synth = window.speechSynthesis
     const utterance = new SpeechSynthesisUtterance(speakText)
     utterance.rate = normalizedRate
+    const voices = synth.getVoices()
     if (cfg.value.voice) {
       const voiceName = cfg.value.voice.toLowerCase()
-      const voice = synth.getVoices().find(item => item.name.toLowerCase().includes(voiceName))
+      const voice = voices.find(item => item.name.toLowerCase().includes(voiceName))
       if (voice) utterance.voice = voice
+    } else {
+      // No fixed voice picked ("Standard · Ryan US"). The default OS voice is
+      // locale-dependent (German on a German machine), so force an English —
+      // ideally US — voice to match the online instructor default.
+      const enVoice =
+        voices.find(item => /^en[-_]us/i.test(item.lang)) ||
+        voices.find(item => /^en/i.test(item.lang))
+      if (enVoice) {
+        utterance.voice = enVoice
+        utterance.lang = enVoice.lang
+      } else {
+        utterance.lang = 'en-US'
+      }
     }
     utterance.onend = () => {
       isSpeaking.value = false
