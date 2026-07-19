@@ -713,6 +713,24 @@ export function useLiveAtcSession(
     currentScreen.value = 'scenario'
   }
 
+  /** Start from a manually entered flight instead of VATSIM / demo. */
+  const startManualFlight = (plan: {
+    callsign: string
+    dep: string
+    arr: string
+    aircraft?: string
+    altitude?: string
+  }) => {
+    selectedPlan.value = {
+      callsign: plan.callsign.trim().toUpperCase(),
+      aircraft: plan.aircraft?.trim().toUpperCase() || 'A320/L',
+      dep: plan.dep.trim().toUpperCase(),
+      arr: plan.arr.trim().toUpperCase(),
+      altitude: plan.altitude?.trim() || '36000',
+    }
+    currentScreen.value = 'scenario'
+  }
+
   /** Launch a specific scenario with the current flight plan. */
   const launchScenario = async (scenario: Scenario) => {
     if (!selectedPlan.value) return
@@ -833,6 +851,7 @@ export function useLiveAtcSession(
     loadFlightPlans,
     startMonitoring,
     startDemoFlight,
+    startManualFlight,
     launchScenario,
     flyAgain,
     backToSetup,
