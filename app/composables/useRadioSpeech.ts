@@ -4,6 +4,7 @@ import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
 import { loadPizzicatoLite } from '../../shared/utils/pizzicatoLite'
 import type { PizzicatoLite } from '../../shared/utils/pizzicatoLite'
 import { createNoiseGenerators, getReadabilityProfile } from '../../shared/utils/radioEffects'
+import { controllerPersonaFor, transmissionSpeed } from '../../shared/utils/voicePool'
 import { pmLog } from '../../shared/utils/pmLog'
 import { useSpeechInterrupt } from '~/composables/useSpeechInterrupt'
 import {
@@ -95,6 +96,26 @@ export function useRadioSpeech(
   })
 
   const speechSpeedLabel = computed(() => `${speechSpeed.value.toFixed(2)}x`)
+
+  /**
+   * The persona of whoever staffs the currently tuned frequency. Keyed by
+   * session + airport + position + frequency: within a session a position keeps
+   * one consistent controller, a new session sounds like a different shift.
+   */
+  const activeControllerPersona = () => {
+    const entry = tunedStationEntry()
+    const key = [
+      engineSessionId.value || flags.value.session_id || 'default',
+      airportName.value || 'APT',
+      entry?.type || 'TWR',
+      entry?.frequency || frequencies.value.active || '',
+    ].join(':')
+    return controllerPersonaFor(key)
+  }
+
+  /** Controller pace: user speed setting × persona base pace × per-call jitter. */
+  const controllerSpeed = (baseSpeed: number) =>
+    Math.max(0.5, Math.min(2.0, speechSpeed.value * transmissionSpeed(baseSpeed)))
 
   const prepareSpeech = (tpl: string): PreparedSpeech => {
     const plain = renderATCMessage(tpl)
@@ -226,7 +247,9 @@ export function useRadioSpeech(
     const watchdog = setTimeout(() => abort.abort(), TTS_FETCH_TIMEOUT_MS)
     return (async () => {
       try {
-        const speed = options.speed ?? speechSpeed.value
+        // No explicit voice means the controller speaks — persona voice + pace.
+        const persona = options.voice ? null : activeControllerPersona()
+        const speed = options.speed ?? (persona ? controllerSpeed(persona.baseSpeed) : speechSpeed.value)
         const usesNormalized = options.useNormalizedForTTS !== false
         const response = await api.post('/api/atc/say', {
           text: usesNormalized ? prepared.normalized : prepared.plain,
@@ -234,7 +257,7 @@ export function useRadioSpeech(
           // radiotelephony normalizer — the server must not normalize again.
           preNormalized: usesNormalized,
           level: signalStrength.value,
-          voice: options.voice || 'alloy',
+          voice: options.voice || persona!.voice,
           speed,
           moduleId: 'pilot-monitoring',
           lessonId: currentState.value?.id || 'general',
@@ -306,15 +329,16 @@ export function useRadioSpeech(
       return Promise.resolve()
     }
 
-    const speed = options.speed ?? speechSpeed.value
     const lessonId = options.lessonId || currentState.value?.id || 'general'
 
     return enqueueSpeech(async () => {
       try {
+        const persona = options.voice ? null : activeControllerPersona()
+        const speed = options.speed ?? (persona ? controllerSpeed(persona.baseSpeed) : speechSpeed.value)
         const response = await api.post('/api/atc/say', {
           text: trimmed,
           level: signalStrength.value,
-          voice: options.voice || 'alloy',
+          voice: options.voice || persona!.voice,
           speed,
           moduleId: 'pilot-monitoring',
           lessonId,

@@ -5,9 +5,11 @@ import {
   CONTROLLER_VOICES,
   PILOT_VOICES,
   RESERVED_VOICES,
+  controllerPersonaFor,
   controllerVoiceFor,
   fnv1a,
   pilotVoiceFor,
+  transmissionSpeed,
   voiceFromPool,
 } from '~~/shared/utils/voicePool'
 
@@ -70,6 +72,42 @@ describe('voicePool — assignment', () => {
     for (const position of ['EDDF_TWR', 'EDDF_GND', 'EDDF_APP', 'EDDF_DEL']) {
       assert.ok(CONTROLLER_VOICES.includes(controllerVoiceFor(position)))
     }
+  })
+})
+
+describe('voicePool — controller personas', () => {
+  it('is deterministic for the same position key', () => {
+    const first = controllerPersonaFor('sess1:EDDF:TWR:118.775')
+    for (let i = 0; i < 10; i++) {
+      assert.deepEqual(controllerPersonaFor('sess1:EDDF:TWR:118.775'), first)
+    }
+  })
+
+  it('uses a controller-partition voice and a base speed in [1.1, 1.3]', () => {
+    for (const key of ['s:EDDF:TWR', 's:EDDF:GND', 's:EDDM:APP', 's:EDDB:DEL', 'x:EDDF:TWR']) {
+      const persona = controllerPersonaFor(key)
+      assert.ok(CONTROLLER_VOICES.includes(persona.voice), `${key} → ${persona.voice}`)
+      assert.ok(persona.baseSpeed >= 1.1 && persona.baseSpeed <= 1.3, `${key} → ${persona.baseSpeed}`)
+    }
+  })
+
+  it('gives different sessions a different shift of controllers', () => {
+    const keys = ['EDDF:DEL', 'EDDF:GND', 'EDDF:TWR', 'EDDF:APP']
+    const shiftA = keys.map(k => controllerPersonaFor(`sessionA:${k}`))
+    const shiftB = keys.map(k => controllerPersonaFor(`sessionB:${k}`))
+    assert.notDeepEqual(shiftA, shiftB)
+  })
+
+  it('jitters the transmission speed within ±0.05 of base', () => {
+    for (let i = 0; i < 50; i++) {
+      const speed = transmissionSpeed(1.2)
+      assert.ok(speed >= 1.15 - 1e-9 && speed <= 1.25 + 1e-9, `jittered to ${speed}`)
+    }
+  })
+
+  it('transmission speeds actually vary', () => {
+    const speeds = new Set(Array.from({ length: 30 }, () => transmissionSpeed(1.2)))
+    assert.ok(speeds.size > 1, 'expected jitter, got a constant')
   })
 })
 
