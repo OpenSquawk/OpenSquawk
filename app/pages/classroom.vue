@@ -1415,6 +1415,23 @@
           </div>
 
           <div class="set-row">
+            <div class="set-info">
+              <span>Instructor voice</span>
+              <small class="muted">Standard US voice, one instructor per module, or a fixed voice.</small>
+            </div>
+            <v-select
+                v-model="cfg.voice"
+                :items="instructorVoiceOptions"
+                item-title="title"
+                item-value="value"
+                density="compact"
+                hide-details
+                color="cyan"
+                style="max-width: 220px"
+            />
+          </div>
+
+          <div class="set-row">
             <span>Test TTS</span>
             <div class="row">
               <button class="btn soft" @click="say('Frankfurt Ground, Lufthansa one two three, request taxi.')">
@@ -1537,7 +1554,12 @@ import {looksLikeCallsignKey, matchTranscriptionToFields, type SttFieldDef} from
 import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
-import {controllerVoiceFor} from '~~/shared/utils/voicePool'
+import {
+  CLASSROOM_DEFAULT_VOICE,
+  CLASSROOM_RANDOM_VOICE,
+  CLASSROOM_VOICE_OPTIONS,
+  classroomVoiceFor,
+} from '~~/shared/utils/voicePool'
 import {DEFAULT_AIRLINE_TELEPHONY, normalizeRadioPhrase, normalizeMetarPhrase} from '~~/shared/utils/radioSpeech'
 
 definePageMeta({middleware: ['require-auth', 'require-classroom-intro']})
@@ -3156,6 +3178,15 @@ const globalAccuracy = computed(() => {
 
 const audioContentHidden = computed(() => cfg.value.audioChallenge && !audioReveal.value)
 const audioSpeedDisplay = computed(() => (cfg.value.audioSpeed ?? 1).toFixed(2))
+
+const instructorVoiceOptions = [
+  { title: 'Standard (Ryan · US)', value: '' },
+  { title: 'Random per module', value: CLASSROOM_RANDOM_VOICE },
+  ...CLASSROOM_VOICE_OPTIONS.map(option => ({
+    title: `${option.label} · ${option.accent} ${option.gender === 'female' ? '♀' : '♂'}`,
+    value: option.id,
+  })),
+]
 const requiresFlightPlan = computed(() => Boolean(current.value?.meta?.flightPlan))
 const currentPlan = computed(() => (current.value ? missionPlans[current.value.id] ?? null : null))
 const currentPlanRoute = computed(() => scenarioRoute(currentPlan.value?.scenario || null))
@@ -4651,14 +4682,17 @@ async function ensurePizzicato(ctx: AudioContext | null): Promise<PizzicatoLite 
 }
 
 /**
- * The instructor's voice: the user's explicit choice, or a stable
- * controller-pool voice per module — each module sounds like its own
- * instructor, consistent across the whole lesson.
+ * The instructor's voice. Default is the standard US speaker; the settings
+ * offer "random" (a stable random voice per module — each module sounds like
+ * its own instructor) or one fixed named voice.
  */
 function instructorVoice(): string {
   const configured = cfg.value.voice?.trim()
-  if (configured) return configured
-  return controllerVoiceFor(`classroom:${current.value?.id || 'learn'}`)
+  if (!configured) return CLASSROOM_DEFAULT_VOICE
+  if (configured === CLASSROOM_RANDOM_VOICE) {
+    return classroomVoiceFor(`classroom:${current.value?.id || 'learn'}`)
+  }
+  return configured
 }
 
 function buildSayCacheKey(text: string, rate: number): string {
