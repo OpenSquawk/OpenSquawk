@@ -152,6 +152,16 @@
                 <v-icon icon="mdi-flask-outline" class="h-5 w-5"/>
                 Developer preview
               </a>
+              <a
+                  v-else-if="item.state === 'alpha'"
+                  :href="item.href"
+                  target="_blank"
+                  rel="noopener"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#EC4899] px-4 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#db2777] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f9a8d4]/70"
+              >
+                <v-icon icon="mdi-test-tube" class="h-5 w-5"/>
+                Alpha test
+              </a>
               <button
                   v-else-if="item.state === 'in-development'"
                   type="button"
@@ -250,41 +260,41 @@ const downloads = [
   {
     id: 'msfs2020',
     title: 'Microsoft Flight Simulator 2020',
-    description: 'One-click installer for the current simulator with live status built in.',
-    status: 'Developer preview',
-    badgeClass: 'bg-[#F59E0B]/15 text-[#F59E0B]',
-    state: 'preview',
+    description: 'One-click installer for the current simulator with live status built in. Early alpha — expect rough edges.',
+    status: 'Alpha test',
+    badgeClass: 'bg-[#EC4899]/15 text-[#EC4899]',
+    state: 'alpha',
     href: 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge',
     icon: 'mdi-microsoft',
   },
   {
     id: 'msfs2024',
     title: 'Microsoft Flight Simulator 2024',
-    description: 'Developer preview for the new simulator with live status built in.',
-    status: 'Developer preview',
-    badgeClass: 'bg-[#F59E0B]/15 text-[#F59E0B]',
-    state: 'preview',
+    description: 'Alpha build for the new simulator with live status built in. Early alpha — expect rough edges.',
+    status: 'Alpha test',
+    badgeClass: 'bg-[#EC4899]/15 text-[#EC4899]',
+    state: 'alpha',
     href: 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge',
     icon: 'mdi-microsoft',
   },
   {
     id: 'flightgear',
     title: 'FlightGear',
-    description: 'Our open-source bridge launches on Linux first, followed by macOS and Windows.',
-    status: 'Planned',
-    badgeClass: 'bg-white/10 text-white/55',
-    state: 'planned',
-    href: '#',
+    description: 'Our open-source bridge is in developer preview, starting on Linux ahead of macOS and Windows.',
+    status: 'Developer preview',
+    badgeClass: 'bg-[#F59E0B]/15 text-[#F59E0B]',
+    state: 'preview',
+    href: 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge',
     icon: 'mdi-git',
   },
   {
     id: 'xplane',
     title: 'X-Plane 12',
-    description: 'The same guided setup is coming to X-Plane later this year.',
-    status: 'Planned',
-    badgeClass: 'bg-white/10 text-white/55',
-    state: 'planned',
-    href: '#',
+    description: 'The same guided setup is now in developer preview for X-Plane.',
+    status: 'Developer preview',
+    badgeClass: 'bg-[#F59E0B]/15 text-[#F59E0B]',
+    state: 'preview',
+    href: 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge',
     icon: 'mdi-airplane',
   },
 ]
