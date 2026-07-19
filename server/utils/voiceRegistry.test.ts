@@ -1,26 +1,32 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveSpeachesVoice, SPEACHES_VOICE_MAP } from '~~/server/utils/voiceRegistry'
+import {
+  ATIS_SPEACHES_VOICE,
+  KOKORO_MODEL,
+  resolveSpeachesVoice,
+  SPEACHES_VOICE_MAP,
+} from '~~/server/utils/voiceRegistry'
 
 const fallback = { model: 'speaches-ai/piper-de_DE-thorsten-medium', voice: 'de_DE-thorsten-medium' }
 
 describe('resolveSpeachesVoice', () => {
-  it('maps every pool voice to a matching piper model/voice pair', () => {
+  it('maps every pool voice to a consistent model/voice pair', () => {
     for (const [logical, mapped] of Object.entries(SPEACHES_VOICE_MAP)) {
       const result = resolveSpeachesVoice(logical, fallback)
-      assert.equal(result.voice, mapped.voice)
-      assert.equal(result.model, `speaches-ai/piper-${mapped.voice}`)
+      assert.deepEqual(result, mapped)
+      if (result.model === KOKORO_MODEL) {
+        // Kokoro voice ids look like af_heart / bm_george.
+        assert.match(result.voice, /^[abehijpz][fm]_[a-z_]+$/)
+      } else {
+        assert.equal(result.model, `speaches-ai/piper-${result.voice}`)
+        assert.match(result.voice, /^en_/)
+      }
     }
-  })
-
-  it('maps the default controller voice to an English speaker', () => {
-    const result = resolveSpeachesVoice('alloy', fallback)
-    assert.match(result.voice, /^en_/)
   })
 
   it('is case-insensitive and trims', () => {
     const result = resolveSpeachesVoice('  Alloy ', fallback)
-    assert.equal(result.voice, SPEACHES_VOICE_MAP.alloy!.voice)
+    assert.deepEqual(result, SPEACHES_VOICE_MAP.alloy)
   })
 
   it('falls back to the configured pair for unknown ids', () => {
@@ -30,8 +36,7 @@ describe('resolveSpeachesVoice', () => {
 
   it('gives the ATIS broadcast its own dedicated speaker', () => {
     const atis = resolveSpeachesVoice('verse', fallback, 'atis')
-    assert.match(atis.voice, /^en_/)
-    assert.notEqual(atis.voice, resolveSpeachesVoice('verse', fallback).voice)
+    assert.deepEqual(atis, ATIS_SPEACHES_VOICE)
     const allPoolVoices = Object.values(SPEACHES_VOICE_MAP).map(v => v.voice)
     assert.equal(allPoolVoices.includes(atis.voice), false, 'ATIS voice must not be in any pool')
   })
@@ -43,5 +48,10 @@ describe('resolveSpeachesVoice', () => {
     for (const voice of controller) {
       assert.equal(pilots.includes(voice), false, `${voice} used for both controller and pilot`)
     }
+  })
+
+  it('assigns no speaker twice across the whole registry', () => {
+    const voices = [...Object.values(SPEACHES_VOICE_MAP).map(v => v.voice), ATIS_SPEACHES_VOICE.voice]
+    assert.equal(new Set(voices).size, voices.length, `duplicate speaker in ${voices.join(', ')}`)
   })
 })
