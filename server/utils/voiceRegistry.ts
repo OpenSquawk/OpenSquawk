@@ -1,36 +1,42 @@
 /**
  * Maps the product-wide logical voice ids (shared/utils/voicePool.ts — OpenAI
- * voice names) to Speaches/Piper model+voice pairs. The client keeps sending
- * pool names; only the Speaches branch of /api/atc/say resolves them here, so
- * the same ids work unchanged on the OpenAI provider.
+ * voice names) to Speaches model+voice pairs. The client keeps sending pool
+ * names; only the Speaches branch of /api/atc/say resolves them here, so the
+ * same ids work unchanged on the OpenAI provider.
  *
- * Speaches auto-downloads missing `speaches-ai/piper-*` models on first use.
- * Controller voices (alloy/echo/onyx/sage) and pilot voices (verse + the
- * PILOT_VOICES pool) map to disjoint speakers so traffic never sounds like
- * the controller talking to itself.
+ * Speaches auto-downloads missing `speaches-ai/piper-*` models on first use;
+ * the Kokoro voices all live in one multi-voice model. Controllers get the
+ * Kokoro speakers (heard most, best quality), pilots the distinct Piper
+ * speakers — the pools stay disjoint so traffic never sounds like the
+ * controller talking to itself. Selection follows the curated radio set
+ * (see docs/plans/2026-07-19-phraseology-taxi-finetune-design.md).
  */
 
 export type SpeachesVoice = { model: string; voice: string }
+
+export const KOKORO_MODEL = 'speaches-ai/Kokoro-82M-v1.0-ONNX'
 
 const piper = (voice: string): SpeachesVoice => ({
   model: `speaches-ai/piper-${voice}`,
   voice,
 })
 
+const kokoro = (voice: string): SpeachesVoice => ({ model: KOKORO_MODEL, voice })
+
 export const SPEACHES_VOICE_MAP: Record<string, SpeachesVoice> = {
   // Controller pool (CONTROLLER_VOICES)
-  alloy: piper('en_US-ryan-medium'),
-  echo: piper('en_GB-alan-medium'),
-  onyx: piper('en_US-john-medium'),
-  sage: piper('en_GB-jenny_dioco-medium'),
+  alloy: kokoro('bm_george'),
+  echo: kokoro('bf_emma'),
+  onyx: kokoro('am_michael'),
+  sage: kokoro('af_heart'),
   // The user's own readback voice (speakPilotReadback)
   verse: piper('en_US-lessac-medium'),
   // Simulated pilot pool (PILOT_VOICES)
-  ash: piper('en_US-joe-medium'),
-  ballad: piper('en_GB-northern_english_male-medium'),
-  coral: piper('en_US-amy-medium'),
-  fable: piper('en_US-danny-low'),
-  nova: piper('en_US-hfc_female-medium'),
+  ash: piper('en_GB-alan-medium'),
+  ballad: piper('en_GB-alba-medium'),
+  coral: piper('en_US-joe-medium'),
+  fable: piper('en_US-amy-medium'),
+  nova: piper('en_US-bryce-medium'),
   shimmer: piper('en_US-kristin-medium'),
 }
 
@@ -38,7 +44,7 @@ export const SPEACHES_VOICE_MAP: Record<string, SpeachesVoice> = {
  * ATIS is a robotic broadcast in the real world — it gets a dedicated speaker
  * outside every pool so it never sounds like a controller or a pilot.
  */
-export const ATIS_SPEACHES_VOICE: SpeachesVoice = piper('en_GB-alba-medium')
+export const ATIS_SPEACHES_VOICE: SpeachesVoice = piper('en_US-ljspeech-high')
 
 export function resolveSpeachesVoice(
   logical: string,

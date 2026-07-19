@@ -1537,6 +1537,7 @@ import {looksLikeCallsignKey, matchTranscriptionToFields, type SttFieldDef} from
 import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
+import {controllerVoiceFor} from '~~/shared/utils/voicePool'
 import {DEFAULT_AIRLINE_TELEPHONY, normalizeRadioPhrase, normalizeMetarPhrase} from '~~/shared/utils/radioSpeech'
 
 definePageMeta({middleware: ['require-auth', 'require-classroom-intro']})
@@ -4649,8 +4650,19 @@ async function ensurePizzicato(ctx: AudioContext | null): Promise<PizzicatoLite 
   return pizzicatoLiteInstance
 }
 
+/**
+ * The instructor's voice: the user's explicit choice, or a stable
+ * controller-pool voice per module — each module sounds like its own
+ * instructor, consistent across the whole lesson.
+ */
+function instructorVoice(): string {
+  const configured = cfg.value.voice?.trim()
+  if (configured) return configured
+  return controllerVoiceFor(`classroom:${current.value?.id || 'learn'}`)
+}
+
 function buildSayCacheKey(text: string, rate: number): string {
-  const voice = cfg.value.voice?.trim().toLowerCase() || 'default'
+  const voice = instructorVoice().toLowerCase()
   const radioLevel = cfg.value.radioLevel
   return `${voice}|${radioLevel}|${rate.toFixed(2)}|${text}`
 }
@@ -5007,9 +5019,7 @@ async function say(text: string) {
     tag: 'learn-target'
   }
 
-  if (cfg.value.voice) {
-    payload.voice = cfg.value.voice
-  }
+  payload.voice = instructorVoice()
 
   const cacheKey = buildSayCacheKey(speakText, normalizedRate)
 
