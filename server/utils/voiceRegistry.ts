@@ -34,7 +34,18 @@ export const SPEACHES_VOICE_MAP: Record<string, SpeachesVoice> = {
   shimmer: piper('en_US-kristin-medium'),
 }
 
-export function resolveSpeachesVoice(logical: string, fallback: SpeachesVoice): SpeachesVoice {
+/**
+ * ATIS is a robotic broadcast in the real world — it gets a dedicated speaker
+ * outside every pool so it never sounds like a controller or a pilot.
+ */
+export const ATIS_SPEACHES_VOICE: SpeachesVoice = piper('en_GB-alba-medium')
+
+export function resolveSpeachesVoice(
+  logical: string,
+  fallback: SpeachesVoice,
+  tag?: string,
+): SpeachesVoice {
+  if ((tag || '').trim().toLowerCase() === 'atis') return ATIS_SPEACHES_VOICE
   const key = (logical || '').trim().toLowerCase()
   return SPEACHES_VOICE_MAP[key] ?? fallback
 }

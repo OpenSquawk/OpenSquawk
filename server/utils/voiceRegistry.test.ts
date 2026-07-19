@@ -28,6 +28,14 @@ describe('resolveSpeachesVoice', () => {
     assert.deepEqual(resolveSpeachesVoice('', fallback), fallback)
   })
 
+  it('gives the ATIS broadcast its own dedicated speaker', () => {
+    const atis = resolveSpeachesVoice('verse', fallback, 'atis')
+    assert.match(atis.voice, /^en_/)
+    assert.notEqual(atis.voice, resolveSpeachesVoice('verse', fallback).voice)
+    const allPoolVoices = Object.values(SPEACHES_VOICE_MAP).map(v => v.voice)
+    assert.equal(allPoolVoices.includes(atis.voice), false, 'ATIS voice must not be in any pool')
+  })
+
   it('keeps controller and pilot voices audibly disjoint', () => {
     const controller = ['alloy', 'echo', 'onyx', 'sage'].map(v => resolveSpeachesVoice(v, fallback).voice)
     const pilots = ['verse', 'ash', 'ballad', 'coral', 'fable', 'nova', 'shimmer']

@@ -212,7 +212,7 @@ export default defineEventHandler(async (event) => {
         voice,
     };
     const speachesVoice = provider === "speaches"
-        ? resolveSpeachesVoice(voice, speachesFallback)
+        ? resolveSpeachesVoice(voice, speachesFallback, body?.tag)
         : null;
     const ttsVoice = speachesVoice?.voice ?? voice;
     const providerModel = speachesVoice
