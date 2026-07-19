@@ -66,3 +66,32 @@ export function pilotVoiceFor(callsign: string, reserved: readonly string[] = RE
 export function controllerVoiceFor(position: string): string {
   return voiceFromPool(position.toUpperCase(), CONTROLLER_VOICES, [])
 }
+
+export type ControllerPersona = {
+  voice: string
+  /** Controllers talk fast — base pace per position, 1.1–1.3. */
+  baseSpeed: number
+}
+
+/**
+ * The persona of an ATC position for one session. Key convention:
+ * `<sessionSeed>:<airport>:<positionType>[:<frequency>]` — the session seed
+ * makes each session sound like a different shift while the position keeps
+ * one consistent controller within the session.
+ */
+export function controllerPersonaFor(positionKey: string): ControllerPersona {
+  const key = positionKey.toUpperCase()
+  const voice = voiceFromPool(key, CONTROLLER_VOICES, [])
+  // Independent hash stream for speed so voice and pace don't correlate.
+  const baseSpeed = 1.1 + (fnv1a(`speed:${key}`) % 21) / 100
+  return { voice, baseSpeed: Math.round(baseSpeed * 100) / 100 }
+}
+
+/**
+ * Per-transmission pace: the persona's base speed ±0.05 — real controllers
+ * don't hit the exact same tempo twice.
+ */
+export function transmissionSpeed(baseSpeed: number, rng: () => number = Math.random): number {
+  const jitter = (rng() * 2 - 1) * 0.05
+  return Math.round((baseSpeed + jitter) * 100) / 100
+}
