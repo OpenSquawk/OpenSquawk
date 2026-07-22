@@ -172,17 +172,33 @@
 
       <section id="choose-simulator" class="mt-14 space-y-4">
         <div class="space-y-2 text-center sm:text-left">
-          <h2 class="text-2xl font-semibold">Choose your simulator</h2>
+          <h2 class="text-2xl font-semibold">Choose your operating system</h2>
+          <p class="text-sm text-white/65">
+            One download, self-updating from then on. We&rsquo;ve pre-selected the platform you&rsquo;re on.
+          </p>
         </div>
-        <div class="grid gap-4 sm:grid-cols-2 items-center justify-center">
+        <div class="grid gap-4 sm:grid-cols-3 items-stretch">
           <article
-              v-for="item in downloads"
+              v-for="item in platforms"
               :key="item.id"
-              class="flex h-full flex-col justify-between rounded-3xl border border-white/10 bg-[#111832]/80 p-6 shadow-[0_20px_60px_rgba(4,8,24,0.45)] transition hover:border-white/20 hover:shadow-[0_28px_75px_rgba(4,8,24,0.55)]"
+              class="relative flex h-full flex-col justify-between rounded-3xl border p-6 shadow-[0_20px_60px_rgba(4,8,24,0.45)] transition"
+              :class="item.os === detectedOs
+                ? 'border-[#16BBD7]/60 bg-[#16BBD7]/[0.09] ring-1 ring-[#16BBD7]/40'
+                : 'border-white/10 bg-[#111832]/80 hover:border-white/20 hover:shadow-[0_28px_75px_rgba(4,8,24,0.55)]'"
           >
+            <span
+                v-if="item.os === detectedOs"
+                class="absolute right-5 top-5 inline-flex items-center gap-1.5 rounded-full bg-[#16BBD7]/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#84E8F6]"
+            >
+              <v-icon icon="mdi-check-circle" class="h-3.5 w-3.5"/>
+              Your system
+            </span>
             <div class="space-y-4">
               <div class="flex items-center gap-3">
-                <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/5 text-[#16BBD7]">
+                <span
+                    class="flex h-11 w-11 items-center justify-center rounded-2xl"
+                    :class="item.os === detectedOs ? 'bg-[#16BBD7]/15 text-[#16BBD7]' : 'bg-white/5 text-[#16BBD7]'"
+                >
                   <v-icon :icon="item.icon" class="h-6 w-6"/>
                 </span>
                 <div>
@@ -196,56 +212,24 @@
                 </div>
               </div>
               <p class="text-sm text-white/70">{{ item.description }}</p>
+              <p v-if="item.note" class="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/60">
+                <v-icon icon="mdi-information-outline" class="mr-1 h-4 w-4 align-text-bottom"/>
+                {{ item.note }}
+              </p>
             </div>
             <div class="mt-6">
               <a
-                  v-if="item.state === 'ready'"
                   :href="item.href"
                   target="_blank"
                   rel="noopener"
-                  class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-4 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea]"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea]"
+                  :class="item.os === detectedOs
+                    ? 'bg-[#16BBD7] text-[#0B1020] hover:bg-[#13a7c4]'
+                    : 'border border-white/15 bg-white/5 text-white hover:border-white/25 hover:bg-white/10'"
               >
-                <v-icon icon="mdi-download" class="h-5 w-5"/>
-                Download
+                <v-icon :icon="item.ctaIcon" class="h-5 w-5"/>
+                {{ item.ctaLabel }}
               </a>
-              <a
-                  v-else-if="item.state === 'preview'"
-                  :href="item.href"
-                  target="_blank"
-                  rel="noopener"
-                  class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#F59E0B] px-4 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#d98606] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FDE68A]/70"
-              >
-                <v-icon icon="mdi-flask-outline" class="h-5 w-5"/>
-                Developer preview
-              </a>
-              <a
-                  v-else-if="item.state === 'alpha'"
-                  :href="item.href"
-                  target="_blank"
-                  rel="noopener"
-                  class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#EC4899] px-4 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#db2777] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f9a8d4]/70"
-              >
-                <v-icon icon="mdi-test-tube" class="h-5 w-5"/>
-                Alpha test
-              </a>
-              <button
-                  v-else-if="item.state === 'in-development'"
-                  type="button"
-                  disabled
-                  class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white/70 opacity-80"
-              >
-                <v-icon icon="mdi-progress-clock" class="h-5 w-5"/>
-                In development
-              </button>
-              <button
-                  v-else
-                  type="button"
-                  disabled
-                  class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white/65 opacity-80 cursor-default"
-              >
-                <v-icon icon="mdi-clock-outline" class="h-5 w-5"/>
-                Coming soon
-              </button>
             </div>
           </article>
         </div>
@@ -277,11 +261,11 @@
           <ul class="mt-4 space-y-3 text-sm text-white/70">
             <li class="flex items-center gap-3">
               <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
-              Windows 10/11 (64-bit)
+              macOS 12+ (Windows &amp; Linux launchers coming soon)
             </li>
             <li class="flex items-center gap-3">
               <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
-              .NET 8 Desktop Runtime
+              No manual runtime — the launcher sets up its own Python on first start
             </li>
             <li class="flex items-center gap-3">
               <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
@@ -289,7 +273,7 @@
             </li>
             <li class="flex items-center gap-3">
               <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
-              Reliable internet connection
+              Reliable internet connection (used for auto-updates)
             </li>
           </ul>
         </div>
@@ -313,7 +297,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue'
+import {onMounted, ref} from 'vue'
 import {useHead} from '#imports'
 
 useHead({title: 'Bridge Downloads · OpenSquawk'})
@@ -322,48 +306,68 @@ useHead({title: 'Bridge Downloads · OpenSquawk'})
 // around (rather than deleted) in case we want to bring it back for a future notice.
 const showNotice = ref(false)
 
-const downloads = [
+// For now every platform links to the source repo; per-OS download links follow
+// as the Windows/Linux launchers ship.
+const REPO_URL = 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge'
+
+type OsId = 'mac' | 'windows' | 'linux'
+
+const platforms = [
   {
-    id: 'msfs2020',
-    title: 'Microsoft Flight Simulator 2020',
-    description: 'One-click installer for the current simulator with live status built in. Early alpha — expect rough edges.',
-    status: 'Alpha test',
-    badgeClass: 'bg-[#EC4899]/15 text-[#EC4899]',
-    state: 'alpha',
-    href: 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge',
-    icon: 'mdi-microsoft',
+    id: 'mac',
+    os: 'mac' as OsId,
+    title: 'macOS',
+    description: 'Self-updating thin launcher: download one file, drag it to Applications, open it. It sets itself up once (~1 min) and auto-updates from GitHub on every launch.',
+    note: 'First launch is unsigned — right-click the app and choose “Open” once.',
+    status: 'Alpha',
+    badgeClass: 'bg-[#16BBD7]/15 text-[#84E8F6]',
+    ctaLabel: 'Download for macOS',
+    ctaIcon: 'mdi-download',
+    href: REPO_URL,
+    icon: 'mdi-apple',
   },
   {
-    id: 'msfs2024',
-    title: 'Microsoft Flight Simulator 2024',
-    description: 'Alpha build for the new simulator with live status built in. Early alpha — expect rough edges.',
-    status: 'Alpha test',
-    badgeClass: 'bg-[#EC4899]/15 text-[#EC4899]',
-    state: 'alpha',
-    href: 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge',
-    icon: 'mdi-microsoft',
+    id: 'windows',
+    os: 'windows' as OsId,
+    title: 'Windows',
+    description: 'Same self-updating thin launcher — download once, it keeps itself current from GitHub. Windows build is on the way.',
+    status: 'Coming soon',
+    badgeClass: 'bg-white/10 text-white/70',
+    ctaLabel: 'View on GitHub',
+    ctaIcon: 'mdi-github',
+    href: REPO_URL,
+    icon: 'mdi-microsoft-windows',
   },
   {
-    id: 'flightgear',
-    title: 'FlightGear',
-    description: 'Our open-source bridge is in developer preview, starting on Linux ahead of macOS and Windows.',
-    status: 'Developer preview',
-    badgeClass: 'bg-[#F59E0B]/15 text-[#F59E0B]',
-    state: 'preview',
-    href: 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge',
-    icon: 'mdi-git',
-  },
-  {
-    id: 'xplane',
-    title: 'X-Plane 12',
-    description: 'The same guided setup is now in developer preview for X-Plane.',
-    status: 'Developer preview',
-    badgeClass: 'bg-[#F59E0B]/15 text-[#F59E0B]',
-    state: 'preview',
-    href: 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge',
-    icon: 'mdi-airplane',
+    id: 'linux',
+    os: 'linux' as OsId,
+    title: 'Linux',
+    description: 'Same self-updating thin launcher — download once, it keeps itself current from GitHub. Linux build is on the way.',
+    status: 'Coming soon',
+    badgeClass: 'bg-white/10 text-white/70',
+    ctaLabel: 'View on GitHub',
+    ctaIcon: 'mdi-github',
+    href: REPO_URL,
+    icon: 'mdi-linux',
   },
 ]
+
+// Try to pre-select the visitor's OS so the right card is highlighted.
+const detectedOs = ref<OsId | null>(null)
+
+function detectOs(): OsId | null {
+  if (typeof navigator === 'undefined') return null
+  const uaData = (navigator as any).userAgentData
+  const hint = `${uaData?.platform ?? ''} ${navigator.platform ?? ''} ${navigator.userAgent ?? ''}`.toLowerCase()
+  if (/mac|iphone|ipad|ipod/.test(hint)) return 'mac'
+  if (/win/.test(hint)) return 'windows'
+  if (/linux|x11|android|cros/.test(hint)) return 'linux'
+  return null
+}
+
+onMounted(() => {
+  detectedOs.value = detectOs()
+})
 
 const steps = [
   {
