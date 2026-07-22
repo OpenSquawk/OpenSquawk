@@ -3,6 +3,32 @@ import { ref } from 'vue'
 const PORTS = [8765, 8766, 8767, 8768, 8769, 8770]
 const HEALTH_TIMEOUT_MS = 1200
 const RECHECK_MS = 15_000
+const LOCAL_TIMEOUT_MS = 8000
+
+export async function postWithLocalFallback(
+  localUrl: string | null,
+  body: any,
+  cloudPost: () => Promise<any>,
+): Promise<any> {
+  if (localUrl) {
+    const ctrl = new AbortController()
+    const timeout = setTimeout(() => ctrl.abort(), LOCAL_TIMEOUT_MS)
+    try {
+      const response = await fetch(localUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      })
+      if (response.ok) return await response.json()
+    } catch {
+      // Local Bridge is unavailable: continue with the existing cloud path.
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+  return cloudPost()
+}
 
 export async function probeLocalSpeech(ports: number[] = PORTS): Promise<string | null> {
   for (const port of ports) {
