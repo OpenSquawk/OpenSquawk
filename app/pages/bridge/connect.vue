@@ -24,37 +24,6 @@
               Linked to <span class="font-semibold text-white">{{ authDisplayName }}</span>.
             </p>
 
-            <!-- PTT pad -->
-            <div
-              class="bridge-ptt-pad mt-6 w-full select-none"
-              :class="{ 'bridge-ptt-pad--active': pttActive }"
-              @mousedown.prevent="startPtt"
-              @mouseup.prevent="stopPtt"
-              @mouseleave="stopPtt"
-              @touchstart.prevent="startPtt"
-              @touchend.prevent="stopPtt"
-              @touchcancel.prevent="stopPtt"
-            >
-              <v-icon :icon="pttActive ? 'mdi-access-point' : 'mdi-radio-handheld'" size="32" />
-              <p class="mt-1 text-xs uppercase tracking-[0.35em]">
-                {{ pttActive ? 'Transmitting …' : 'Hold to transmit' }}
-              </p>
-              <p class="mt-1 text-[10px] text-white/40">or hold <kbd class="bridge-kbd">Space</kbd></p>
-            </div>
-            <p v-if="pttError" class="mt-2 text-xs text-red-300">{{ pttError }}</p>
-
-            <button
-              type="button"
-              class="bridge-btn-primary mt-5"
-              @click="closeWindow"
-            >
-              Close this page
-            </button>
-
-            <p v-if="autoCloseFailed" class="mt-3 text-xs text-white/[0.45]">
-              Your browser blocked auto-close — just close the tab manually.
-            </p>
-
             <button
               type="button"
               class="mt-5 text-xs text-white/45 transition hover:text-white/75 disabled:opacity-50"
