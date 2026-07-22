@@ -16,52 +16,47 @@
       <div class="grid gap-4 sm:grid-cols-2">
         <button
           type="button"
-          class="relative flex h-full flex-col gap-3 overflow-hidden rounded-2xl border border-cyan-300/40 bg-cyan-400/10 p-5 text-left transition hover:border-cyan-300/60 hover:bg-cyan-400/15"
+          class="mode-card mode-card--cyan"
           @click="goToClassroom"
         >
           <svg
-            class="pointer-events-none absolute -right-6 -bottom-8 h-36 w-36 text-cyan-200/[0.12]"
+            class="mode-card__art text-cyan-200/[0.1]"
             viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
           >
             <path d="M50 8 L86 30 V70 L50 92 L14 70 V30 Z" stroke="currentColor" stroke-width="2.5" />
             <path d="M50 20 L50 92 M14 45 L86 45" stroke="currentColor" stroke-width="1.5" />
             <circle cx="50" cy="32" r="9" fill="currentColor" />
           </svg>
-          <span
-            class="absolute right-4 top-4 rounded-full border border-cyan-300/40 bg-cyan-400/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200"
-          >Default</span>
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/40 bg-cyan-400/15">
-            <v-icon icon="mdi-school-outline" size="20" class="text-cyan-200" />
-          </div>
-          <div class="flex-1">
-            <p class="text-base font-semibold text-white">1. Classroom</p>
-            <p class="mt-1 text-sm text-white/70">
-              Structured, self-paced radio practice. No simulator required — this is where most pilots start.
-            </p>
-            <div class="mt-3 flex flex-wrap items-center gap-2">
-              <span class="equip-chip equip-on">
-                <v-icon icon="mdi-headphones" size="14" />
-                Headphones
-              </span>
-              <span class="equip-chip equip-off">
-                <v-icon icon="mdi-microphone-off" size="14" />
-                No mic needed
-              </span>
+
+          <div class="mode-card__head">
+            <div class="mode-card__icon border-cyan-300/40 bg-cyan-400/15">
+              <v-icon icon="mdi-school-outline" size="20" class="text-cyan-200" />
             </div>
+            <span class="mode-card__tag text-cyan-200/70">Recommended</span>
           </div>
-          <span class="btn primary mt-1 self-start">
-            Start Classroom
-            <v-icon icon="mdi-arrow-right" size="16" class="text-[#061318]" />
-          </span>
+
+          <div class="flex-1">
+            <p class="mode-card__title">Classroom</p>
+            <p class="mode-card__desc">
+              Structured, self-paced radio practice. No simulator needed — this is where most pilots start.
+            </p>
+          </div>
+
+          <div class="mode-card__foot">
+            <span class="mode-card__gear">
+              <v-icon icon="mdi-headphones" size="15" /> Headphones only
+            </span>
+            <v-icon icon="mdi-arrow-right" size="20" class="mode-card__go text-cyan-200" />
+          </div>
         </button>
 
         <NuxtLink
           v-if="liveAtcUnlocked"
           to="/live-atc"
-          class="relative flex h-full flex-col gap-3 overflow-hidden rounded-2xl border border-amber-400/30 bg-amber-400/[0.06] p-5 transition hover:border-amber-400/50 hover:bg-amber-400/10"
+          class="mode-card mode-card--amber"
         >
           <svg
-            class="pointer-events-none absolute -right-6 -bottom-8 h-36 w-36 text-amber-200/[0.12]"
+            class="mode-card__art text-amber-200/[0.1]"
             viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
           >
             <circle cx="50" cy="50" r="14" stroke="currentColor" stroke-width="2.5" />
@@ -70,41 +65,37 @@
             <path d="M50 50 L82 26" stroke="currentColor" stroke-width="2" />
             <circle cx="82" cy="26" r="4" fill="currentColor" />
           </svg>
-          <span
-            class="absolute right-4 top-4 rounded-full border border-amber-300/40 bg-amber-400/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200"
-          >Alpha</span>
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-300/40 bg-amber-400/15">
-            <v-icon icon="mdi-radar" size="20" class="text-amber-200" />
-          </div>
-          <div class="flex-1">
-            <p class="text-base font-semibold text-white">2. Live ATC</p>
-            <p class="mt-1 text-sm text-white/70">
-              Connect your simulator and fly against our live AI controller. Early alpha — not everything works
-              reliably yet. We'd love your bug reports; this is also how we figure out where to take it next.
-            </p>
-            <div class="mt-3 flex flex-wrap items-center gap-2">
-              <span class="equip-chip equip-on equip-amber">
-                <v-icon icon="mdi-headphones" size="14" />
-                Headphones
-              </span>
-              <span class="equip-chip equip-on equip-amber">
-                <v-icon icon="mdi-microphone" size="14" />
-                Microphone
-              </span>
+
+          <div class="mode-card__head">
+            <div class="mode-card__icon border-amber-300/40 bg-amber-400/15">
+              <v-icon icon="mdi-radar" size="20" class="text-amber-200" />
             </div>
+            <span class="mode-card__tag text-amber-200/70">Alpha</span>
           </div>
-          <span class="btn soft mt-1 self-start">
-            Try Live ATC (Alpha)
-            <v-icon icon="mdi-arrow-right" size="16" class="text-amber-100" />
-          </span>
+
+          <div class="flex-1">
+            <p class="mode-card__title">Live ATC</p>
+            <p class="mode-card__desc">
+              Fly your simulator against our live AI controller. Rough around the edges — your bug reports shape
+              where it goes next.
+            </p>
+          </div>
+
+          <div class="mode-card__foot">
+            <span class="mode-card__gear">
+              <v-icon icon="mdi-headphones" size="15" /> Headphones + mic
+            </span>
+            <v-icon icon="mdi-arrow-right" size="20" class="mode-card__go text-amber-200" />
+          </div>
         </NuxtLink>
+
         <div
           v-else
-          class="relative flex h-full flex-col gap-3 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 opacity-60"
+          class="mode-card mode-card--locked"
           aria-disabled="true"
         >
           <svg
-            class="pointer-events-none absolute -right-6 -bottom-8 h-36 w-36 text-white/[0.08]"
+            class="mode-card__art text-white/[0.06]"
             viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
           >
             <circle cx="50" cy="50" r="14" stroke="currentColor" stroke-width="2.5" />
@@ -113,30 +104,27 @@
             <path d="M50 50 L82 26" stroke="currentColor" stroke-width="2" />
             <circle cx="82" cy="26" r="4" fill="currentColor" />
           </svg>
-          <span
-            class="absolute right-4 top-4 rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60"
-          >Alpha</span>
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10">
-            <v-icon icon="mdi-radar" size="20" class="text-white/50" />
-          </div>
-          <div class="flex-1">
-            <p class="text-base font-semibold text-white">2. Live ATC</p>
-            <p class="mt-1 text-sm text-white/70">
-              Connect your simulator and fly against our live AI controller. Early alpha — not everything works
-              reliably yet. We'd love your bug reports; this is also how we figure out where to take it next.
-            </p>
-            <div class="mt-3 flex flex-wrap items-center gap-2">
-              <span class="equip-chip equip-on">
-                <v-icon icon="mdi-headphones" size="14" />
-                Headphones
-              </span>
-              <span class="equip-chip equip-on">
-                <v-icon icon="mdi-microphone" size="14" />
-                Microphone
-              </span>
+
+          <div class="mode-card__head">
+            <div class="mode-card__icon border-white/15 bg-white/10">
+              <v-icon icon="mdi-radar" size="20" class="text-white/50" />
             </div>
+            <span class="mode-card__tag text-white/40">Alpha</span>
           </div>
-          <p class="mt-1 text-xs uppercase tracking-[0.2em] text-white/40">Unlocks {{ unlockEstimate }} after signup</p>
+
+          <div class="flex-1">
+            <p class="mode-card__title">Live ATC</p>
+            <p class="mode-card__desc">
+              Fly your simulator against our live AI controller. Rough around the edges — your bug reports shape
+              where it goes next.
+            </p>
+          </div>
+
+          <div class="mode-card__foot">
+            <span class="mode-card__gear">
+              <v-icon icon="mdi-lock-outline" size="15" /> Unlocks {{ unlockEstimate }} after signup
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -168,37 +156,119 @@ function goToClassroom() {
 </script>
 
 <style scoped>
-.equip-chip {
-  display: inline-flex;
+.mode-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 1.5rem;
+  text-align: left;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.mode-card:not(.mode-card--locked) {
+  cursor: pointer;
+}
+
+.mode-card:not(.mode-card--locked):hover {
+  transform: translateY(-2px);
+}
+
+.mode-card--cyan {
+  border-color: rgba(103, 232, 249, 0.35);
+  background: rgba(34, 211, 238, 0.07);
+}
+
+.mode-card--cyan:hover {
+  border-color: rgba(103, 232, 249, 0.6);
+  background: rgba(34, 211, 238, 0.11);
+}
+
+.mode-card--amber {
+  border-color: rgba(251, 191, 36, 0.28);
+  background: rgba(251, 191, 36, 0.05);
+}
+
+.mode-card--amber:hover {
+  border-color: rgba(251, 191, 36, 0.5);
+  background: rgba(251, 191, 36, 0.09);
+}
+
+.mode-card--locked {
+  opacity: 0.55;
+}
+
+.mode-card__art {
+  pointer-events: none;
+  position: absolute;
+  right: -1.5rem;
+  bottom: -2rem;
+  height: 9rem;
+  width: 9rem;
+}
+
+.mode-card__head {
+  display: flex;
   align-items: center;
-  gap: 0.3rem;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.06);
-  padding: 0.2rem 0.6rem;
+  justify-content: space-between;
+}
+
+.mode-card__icon {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  border-width: 1px;
+}
+
+.mode-card__tag {
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.75);
-  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
 }
 
-.equip-chip.equip-on {
-  border-color: rgba(103, 232, 249, 0.4);
-  background: rgba(34, 211, 238, 0.12);
-  color: rgb(165, 243, 252);
+.mode-card__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
 }
 
-.equip-chip.equip-amber {
-  border-color: rgba(251, 191, 36, 0.4);
-  background: rgba(251, 191, 36, 0.12);
-  color: rgb(253, 230, 138);
+.mode-card__desc {
+  margin-top: 0.4rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.65);
 }
 
-.equip-chip.equip-off {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.55);
+.mode-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.mode-card__gear {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-card__go {
+  transition: transform 0.2s ease;
+}
+
+.mode-card:hover .mode-card__go {
+  transform: translateX(3px);
 }
 </style>
 

@@ -131,11 +131,6 @@ onMounted(() => {
     <header class="hud" role="banner">
       <nav class="hud-inner" aria-label="Global">
         <div class="hud-left">
-          <NuxtLink class="hud-logo" to="/bridge" title="Back to bridge">
-            <v-icon size="22" class="hud-logo-icon">mdi-radar</v-icon>
-          </NuxtLink>
-          <div class="hud-divider" aria-hidden="true"></div>
-          <span class="brand">OpenSquawk</span>
           <v-menu v-model="experienceMenu" :offset="[0, 8]" location="bottom start" transition="scale-transition">
             <template #activator="{ props: menu }">
               <button
@@ -267,7 +262,6 @@ onMounted(() => {
             <button
                 type="button"
                 class="btn hud-report-btn"
-                :class="{ 'is-coaching': showReportCoach }"
                 title="Fehler melden"
                 :disabled="bugReportCapturing"
                 @click="onReportClick"
@@ -275,10 +269,8 @@ onMounted(() => {
               <v-icon size="18">{{ bugReportCapturing ? 'mdi-loading mdi-spin' : 'mdi-bug-outline' }}</v-icon>
               <span class="btn-label">{{ bugReportCapturing ? '…' : 'Report issue' }}</span>
             </button>
-            <span v-if="showReportCoach" class="report-coach-ring" aria-hidden="true"></span>
             <transition name="coach-fade">
               <div v-if="showReportCoach" class="report-coach" role="dialog" aria-label="Report issues">
-                <span class="report-coach-arrow" aria-hidden="true"></span>
                 <div class="report-coach-body">
                   <div class="report-coach-title">
                     <v-icon size="16">mdi-bug-outline</v-icon>
@@ -565,26 +557,6 @@ onMounted(() => {
   position: relative;
   display: inline-flex;
 }
-.hud-report-btn.is-coaching {
-  animation: report-coach-bob 1.6s ease-in-out infinite;
-}
-.report-coach-ring {
-  position: absolute;
-  inset: -6px;
-  border-radius: 12px;
-  border: 2px solid rgba(245, 158, 11, 0.8);
-  pointer-events: none;
-  animation: report-coach-pulse 1.6s ease-out infinite;
-}
-@keyframes report-coach-pulse {
-  0%   { transform: scale(0.92); opacity: 0.9; }
-  70%  { transform: scale(1.18); opacity: 0; }
-  100% { transform: scale(1.18); opacity: 0; }
-}
-@keyframes report-coach-bob {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-2px); }
-}
 .report-coach {
   position: absolute;
   top: calc(100% + 14px);
@@ -592,17 +564,6 @@ onMounted(() => {
   z-index: 60;
   width: 260px;
   max-width: 78vw;
-}
-.report-coach-arrow {
-  position: absolute;
-  top: -7px;
-  right: 22px;
-  width: 14px;
-  height: 14px;
-  background: var(--panel, #10161f);
-  border-left: 1px solid rgba(245, 158, 11, 0.55);
-  border-top: 1px solid rgba(245, 158, 11, 0.55);
-  transform: rotate(45deg);
 }
 .report-coach-body {
   position: relative;
@@ -647,7 +608,6 @@ onMounted(() => {
   background: rgba(245, 158, 11, 0.28);
   border-color: rgba(245, 158, 11, 0.7);
 }
-.pm-page[data-theme="light"] .report-coach-arrow,
 .pm-page[data-theme="light"] .report-coach-body {
   background: #ffffff;
 }
@@ -659,12 +619,6 @@ onMounted(() => {
 .coach-fade-leave-to {
   opacity: 0;
   transform: translateY(-6px);
-}
-@media (prefers-reduced-motion: reduce) {
-  .hud-report-btn.is-coaching,
-  .report-coach-ring {
-    animation: none;
-  }
 }
 .bridge-badge {
   display: inline-flex;

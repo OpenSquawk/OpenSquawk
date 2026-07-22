@@ -86,97 +86,22 @@
         </NuxtLink>
       </nav>
 
-      <div
-          class="mt-10 overflow-hidden rounded-3xl border border-white/10"
-          style="aspect-ratio: 2.5 / 1;"
-      >
-        <div
-            class="h-full w-full bg-cover bg-center"
-            style="background-image: url('/img/bridge/goldengate_angle.jpeg');"
-        />
-      </div>
-
-      <header class="mt-10 space-y-5 text-center sm:text-left">
-        <p class="text-xs font-semibold uppercase tracking-[0.45em] text-[#16BBD7]">OpenSquawk Bridge</p>
-        <h1 class="text-3xl font-semibold sm:text-4xl">Your simulator, connected in under a minute.</h1>
-        <p class="mx-auto max-w-2xl text-sm text-white/70 sm:mx-0">
-          Download the Bridge for your sim, sign in once, and let the desktop app keep your flights in sync.
+      <header class="mt-12 space-y-3 text-center">
+        <span
+            class="inline-flex items-center gap-2 rounded-full border border-[#16BBD7]/40 bg-[#16BBD7]/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-[#84E8F6]">
+          <span class="h-1.5 w-1.5 rounded-full bg-[#16BBD7] shadow-[0_0_10px_rgba(22,187,215,0.9)]"/>
+          OpenSquawk Bridge
+        </span>
+        <h1 class="text-3xl font-semibold leading-tight sm:text-4xl">Connect your simulator</h1>
+        <p class="mx-auto max-w-xl text-base text-white/70">
+          Download the Bridge, sign in once, and your flights sync into Live ATC automatically as you fly.
         </p>
       </header>
 
-      <!-- Two ways in: connect a real sim, or just train in the browser. -->
       <section class="mt-12 space-y-4">
-        <div class="space-y-2 text-center sm:text-left">
-          <h2 class="text-2xl font-semibold">How do you want to train?</h2>
-          <p class="text-sm text-white/65">Fly with your simulator connected, or practise straight in the browser.</p>
-        </div>
-        <div class="grid gap-4 sm:grid-cols-2">
-          <!-- Path A: flight simulator via the Bridge app -->
-          <article class="flex h-full flex-col justify-between rounded-3xl border border-[#16BBD7]/30 bg-[#16BBD7]/[0.07] p-6 shadow-[0_20px_60px_rgba(4,8,24,0.45)]">
-            <div class="space-y-4">
-              <div class="flex items-center gap-3">
-                <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#16BBD7]/15 text-[#16BBD7]">
-                  <v-icon icon="mdi-microsoft-flight-simulator" class="h-6 w-6"/>
-                </span>
-                <div>
-                  <span class="inline-flex items-center gap-2 rounded-full bg-[#16BBD7]/15 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-[#84E8F6]">
-                    Full experience
-                  </span>
-                  <h3 class="mt-2 text-lg font-semibold">With your flight simulator</h3>
-                </div>
-              </div>
-              <p class="text-sm text-white/75">
-                Install the Bridge for MSFS 2020 / 2024 (X-Plane &amp; FlightGear in preview). Your live
-                position, speed and altitude sync automatically into Live ATC as you fly.
-              </p>
-            </div>
-            <a
-                href="#choose-simulator"
-                class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-4 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea]"
-            >
-              <v-icon icon="mdi-download" class="h-5 w-5"/>
-              Pick your simulator
-            </a>
-          </article>
-
-          <!-- Path B: browser-only dry run, no sim connection -->
-          <article class="flex h-full flex-col justify-between rounded-3xl border border-white/10 bg-[#111832]/80 p-6 shadow-[0_20px_60px_rgba(4,8,24,0.45)]">
-            <div class="space-y-4">
-              <div class="flex items-center gap-3">
-                <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/5 text-white/80">
-                  <v-icon icon="mdi-web" class="h-6 w-6"/>
-                </span>
-                <div>
-                  <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-white/70">
-                    No install
-                  </span>
-                  <h3 class="mt-2 text-lg font-semibold">Web version (dry run)</h3>
-                </div>
-              </div>
-              <p class="text-sm text-white/75">
-                Train Live ATC right here in the browser — everything is simulated theoretically, purely as a
-                dry run. There is <strong class="text-white">no connection to live position, speed or altitude</strong>
-                from your flight sim. For that you need to install the Bridge program.
-              </p>
-            </div>
-            <NuxtLink
-                to="/live-atc"
-                class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/25 hover:bg-white/10"
-            >
-              <v-icon icon="mdi-play-circle-outline" class="h-5 w-5"/>
-              Open the web version
-            </NuxtLink>
-          </article>
-        </div>
-      </section>
-
-      <section id="choose-simulator" class="mt-14 space-y-4">
-        <div class="space-y-2 text-center sm:text-left">
-          <h2 class="text-2xl font-semibold">Choose your operating system</h2>
-          <p class="text-sm text-white/65">
-            One download, self-updating from then on. We&rsquo;ve pre-selected the platform you&rsquo;re on.
-          </p>
-        </div>
+        <p class="text-center text-sm text-white/60">
+          One download, self-updating from then on — we&rsquo;ve pre-selected the platform you&rsquo;re on.
+        </p>
         <div class="grid gap-4 sm:grid-cols-3 items-stretch">
           <article
               v-for="item in platforms"
@@ -186,13 +111,6 @@
                 ? 'border-[#16BBD7]/60 bg-[#16BBD7]/[0.09] ring-1 ring-[#16BBD7]/40'
                 : 'border-white/10 bg-[#111832]/80 hover:border-white/20 hover:shadow-[0_28px_75px_rgba(4,8,24,0.55)]'"
           >
-            <span
-                v-if="item.os === detectedOs"
-                class="absolute right-5 top-5 inline-flex items-center gap-1.5 rounded-full bg-[#16BBD7]/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#84E8F6]"
-            >
-              <v-icon icon="mdi-check-circle" class="h-3.5 w-3.5"/>
-              Your system
-            </span>
             <div class="space-y-4">
               <div class="flex items-center gap-3">
                 <span
@@ -202,13 +120,14 @@
                   <v-icon :icon="item.icon" class="h-6 w-6"/>
                 </span>
                 <div>
+                  <h3 class="text-lg font-semibold">{{ item.title }}</h3>
                   <span
-                      class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.32em]"
-                      :class="item.badgeClass"
+                      v-if="item.os === detectedOs"
+                      class="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#84E8F6]"
                   >
-                    {{ item.status }}
+                    <v-icon icon="mdi-check-circle" class="h-3 w-3"/>
+                    Your system
                   </span>
-                  <h3 class="mt-2 text-lg font-semibold">{{ item.title }}</h3>
                 </div>
               </div>
               <p class="text-sm text-white/70">{{ item.description }}</p>
@@ -243,16 +162,13 @@
         </p>
       </section>
 
-      <section class="mt-16 space-y-6">
-        <div class="space-y-2 text-center sm:text-left">
-          <h2 class="text-2xl font-semibold">How linking works</h2>
-          <p class="text-sm text-white/65">The Bridge walks you through these steps automatically.</p>
-        </div>
+      <section class="mt-16 space-y-4">
+        <h2 class="text-2xl font-semibold text-center sm:text-left">How linking works</h2>
         <div class="grid gap-4 sm:grid-cols-3">
           <article
               v-for="step in steps"
               :key="step.id"
-              class="rounded-3xl border border-white/10 bg-[#111832]/80 p-6 text-left shadow-[0_20px_60px_rgba(4,8,24,0.45)]"
+              class="rounded-3xl border border-white/10 bg-[#111832]/80 p-6 text-left"
           >
             <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/5 text-[#16BBD7]">
               <v-icon :icon="step.icon" class="h-6 w-6"/>
@@ -263,41 +179,18 @@
         </div>
       </section>
 
-      <section class="mt-16 grid gap-4 sm:grid-cols-2">
-        <div class="rounded-3xl border border-white/10 bg-[#111832]/80 p-6 shadow-[0_18px_55px_rgba(4,8,24,0.45)]">
-          <h2 class="text-xl font-semibold">Requirements</h2>
-          <ul class="mt-4 space-y-3 text-sm text-white/70">
-            <li class="flex items-center gap-3">
-              <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
-              macOS 10.15+ · Windows 10/11 · desktop Linux (X11/Wayland)
-            </li>
-            <li class="flex items-center gap-3">
-              <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
-              Internet on first start — runs offline afterwards
-            </li>
-            <li class="flex items-center gap-3">
-              <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
-              ~300–500 MB disk space (Linux with Qt ~700 MB–1 GB)
-            </li>
-            <li class="flex items-center gap-3">
-              <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
-              Active OpenSquawk membership
-            </li>
+      <section class="mt-12 rounded-3xl border border-white/10 bg-[#111832]/80 p-6">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <ul class="space-y-1.5 text-sm text-white/65">
+            <li>macOS 10.15+ · Windows 10/11 · desktop Linux</li>
+            <li>Internet on first start, offline afterwards · ~300–500&nbsp;MB</li>
+            <li>Active OpenSquawk membership</li>
           </ul>
-        </div>
-        <div class="rounded-3xl border border-white/10 bg-[#111832]/80 p-6 shadow-[0_18px_55px_rgba(4,8,24,0.45)]">
-          <h2 class="text-xl font-semibold">Need help?</h2>
-          <p class="mt-3 text-sm text-white/70">
-            Email
+          <p class="text-sm text-white/60 sm:text-right">
+            Need help?<br class="hidden sm:block">
             <a href="mailto:info@opensquawk.de"
                class="font-medium text-[#16BBD7] underline decoration-dotted underline-offset-4">info@opensquawk.de</a>
-            and we&rsquo;ll get you connected.
           </p>
-          <div class="mt-6 rounded-2xl border border-[#16BBD7]/30 bg-[#16BBD7]/10 px-5 py-4 text-sm text-white/75">
-            <p class="font-semibold text-[#16BBD7]">Tip</p>
-            <p class="mt-1">Leave the Bridge running. It wakes up with your sim and keeps sending status updates
-              automatically.</p>
-          </div>
         </div>
       </section>
     </main>
@@ -328,8 +221,6 @@ const platforms = [
     description: 'Self-updating thin launcher: download one file, drag it to Applications, open it. It sets itself up once and auto-updates from GitHub on every launch.',
     note: 'Open the .dmg and drag the app to Applications. On the first launch, right-click the app → Open (it’s unsigned).',
     code: '',
-    status: 'Alpha',
-    badgeClass: 'bg-[#16BBD7]/15 text-[#84E8F6]',
     ctaLabel: 'Download for macOS',
     ctaIcon: 'mdi-download',
     file: 'OpenSquawk-Bridge-macOS.dmg',
@@ -343,8 +234,6 @@ const platforms = [
     description: 'Same self-updating thin launcher — download once, it keeps itself current from GitHub.',
     note: 'Double-click the file. If SmartScreen warns: More info → Run anyway.',
     code: '',
-    status: 'Alpha',
-    badgeClass: 'bg-[#16BBD7]/15 text-[#84E8F6]',
     ctaLabel: 'Download for Windows',
     ctaIcon: 'mdi-download',
     file: 'OpenSquawk-Bridge-windows.cmd',
@@ -358,8 +247,6 @@ const platforms = [
     description: 'Same self-updating thin launcher — download once, it keeps itself current from GitHub.',
     note: 'Make it executable and run it — it then appears in your app menu:',
     code: 'chmod +x OpenSquawk-Bridge-linux.sh && ./OpenSquawk-Bridge-linux.sh',
-    status: 'Alpha',
-    badgeClass: 'bg-[#16BBD7]/15 text-[#84E8F6]',
     ctaLabel: 'Download for Linux',
     ctaIcon: 'mdi-download',
     file: 'OpenSquawk-Bridge-linux.sh',
@@ -389,19 +276,19 @@ const steps = [
   {
     id: 1,
     title: 'Start the Bridge app',
-    description: 'Launch the desktop Bridge. It drops a secure code and opens this page for you.',
+    description: 'Launch the desktop Bridge — it drops a secure code and opens this page.',
     icon: 'mdi-desktop-mac',
   },
   {
     id: 2,
     title: 'Sign in & confirm',
-    description: 'Log in with your OpenSquawk account and link the code in a single tap.',
+    description: 'Log in with your OpenSquawk account and confirm the code.',
     icon: 'mdi-account-check',
   },
   {
     id: 3,
     title: 'Fly like normal',
-    description: 'Head back to the sim. The Bridge keeps your flights and status in sync automatically.',
+    description: 'Back to the sim — flights and status stay in sync automatically.',
     icon: 'mdi-airplane-takeoff',
   },
 ]
