@@ -127,14 +127,6 @@
                   </span>
                 </div>
               </div>
-              <p class="text-sm text-white/70">{{ item.description }}</p>
-              <div v-if="item.note" class="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/60">
-                <p>
-                  <v-icon icon="mdi-information-outline" class="mr-1 h-4 w-4 align-text-bottom"/>
-                  {{ item.note }}
-                </p>
-                <code v-if="item.code" class="mt-2 block overflow-x-auto whitespace-nowrap rounded-lg bg-black/40 px-2.5 py-1.5 text-[11px] text-[#84E8F6]">{{ item.code }}</code>
-              </div>
             </div>
             <div class="mt-6 space-y-2">
               <a
@@ -146,14 +138,13 @@
                     ? 'bg-[#16BBD7] text-[#0B1020] hover:bg-[#13a7c4]'
                     : 'border border-white/15 bg-white/5 text-white hover:border-white/25 hover:bg-white/10'"
               >
-                <v-icon :icon="item.ctaIcon" class="h-5 w-5"/>
+                <v-icon :icon="item.ctaIcon" class="h-6 w-6"/>
                 {{ item.ctaLabel }}
               </a>
-              <p class="text-center text-[11px] text-white/40">{{ item.file }}</p>
             </div>
           </article>
         </div>
-        <p class="flex items-start gap-2 text-xs text-white/50 sm:justify-center sm:text-center">
+        <p class="flex items-center items-start gap-2 text-xs text-white/50 sm:justify-center sm:text-center">
           <v-icon icon="mdi-clock-fast" class="mt-0.5 h-4 w-4 flex-none"/>
           <span>The first start takes about a minute (it downloads the runtime &amp; dependencies). After that the app updates itself automatically on every launch.</span>
         </p>
