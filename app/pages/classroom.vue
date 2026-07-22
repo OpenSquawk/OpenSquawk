@@ -1196,16 +1196,22 @@
               <v-icon size="18">mdi-dice-5</v-icon>
               New scenario
             </button>
-            <button
-                class="btn primary mission-footer-primary"
-                type="button"
-                :class="missionFooterPrimary.mode"
-                :disabled="missionFooterPrimary.disabled"
-                @click="missionFooterPrimary.action()"
-            >
-              <v-icon size="18">{{ missionFooterPrimary.icon }}</v-icon>
-              {{ missionFooterPrimary.label }}
-            </button>
+            <div class="mission-footer-primary-wrap">
+              <div v-if="showNextHint" class="next-coach" role="note">
+                <v-icon size="16">mdi-arrow-down</v-icon>
+                Readback checked — continue here
+              </div>
+              <button
+                  class="btn primary mission-footer-primary"
+                  type="button"
+                  :class="[missionFooterPrimary.mode, { 'is-coaching': showNextHint }]"
+                  :disabled="missionFooterPrimary.disabled"
+                  @click="missionFooterPrimary.action()"
+              >
+                <v-icon size="18">{{ missionFooterPrimary.icon }}</v-icon>
+                {{ missionFooterPrimary.label }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2012,6 +2018,11 @@ if (typeof window !== 'undefined') {
 
 onMounted(() => {
   applyRouteStateFromQuery(route.query as RouteQueryLike)
+  try {
+    nextHintSeen.value = window.localStorage.getItem(NEXT_HINT_STORAGE_KEY) === '1'
+  } catch {
+    nextHintSeen.value = true
+  }
 })
 
 const manualCallsignPreview = computed(() => {
@@ -2714,6 +2725,23 @@ const userAnswers = reactive<Record<string, string>>({})
 const readbackFieldRefs = new Map<string, HTMLInputElement>()
 const result = ref<ScoreResult | null>(null)
 const evaluating = ref(false)
+
+// First-run nudge: after the very first readback is checked, highlight the
+// footer's primary button so learners realise they continue from there. Shown
+// once, then dismissed permanently.
+const NEXT_HINT_STORAGE_KEY = 'os_classroom_next_hint_seen'
+const nextHintSeen = ref(true)
+const nextHintArmed = ref(false)
+
+function dismissNextHint() {
+  nextHintArmed.value = false
+  if (nextHintSeen.value) return
+  nextHintSeen.value = true
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(NEXT_HINT_STORAGE_KEY, '1')
+  } catch { /* ignore */ }
+}
 const ttsLoading = ref(false)
 const isSpeaking = ref(false)
 const audioElement = ref<HTMLAudioElement | null>(null)
@@ -3793,6 +3821,15 @@ const missionFooterPrimary = computed(() => {
   }
 })
 
+// Only nudge when the primary button actually advances (post-readback) and the
+// learner hasn't seen the hint before.
+const showNextHint = computed(() =>
+  nextHintArmed.value
+  && !nextHintSeen.value
+  && missionFooterPrimary.value.mode === 'is-next'
+  && !missionFooterPrimary.value.disabled
+)
+
 const lessonAnswerSignature = computed(() => {
   if (!activeLesson.value) return ''
   return activeLesson.value.fields
@@ -3972,6 +4009,7 @@ function goToPreviousLesson() {
 }
 
 function goToNextLesson() {
+  dismissNextHint()
   const meta = nextLessonMeta.value
   if (meta) {
     activeLesson.value = meta.lesson
@@ -4045,6 +4083,9 @@ function evaluate() {
     const summary = computeScore()
     if (!summary) return
     result.value = summary
+
+    // Arm the first-run "continue from here" nudge on the footer button.
+    if (!nextHintSeen.value) nextHintArmed.value = true
 
     const modId = current.value.id
     const lesId = activeLesson.value.id
@@ -6868,6 +6909,56 @@ onBeforeUnmount(() => {
 .mission-footer-primary {
   min-width: 170px;
   justify-content: center;
+}
+
+/* First-run nudge toward the "continue" button after a readback. */
+.mission-footer-primary-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.mission-footer-primary.is-coaching {
+  animation: next-coach-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes next-coach-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+
+.next-coach {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg));
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 12px 30px rgba(2, 6, 23, .35);
+  animation: next-coach-in .25s ease both;
+}
+
+@keyframes next-coach-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mission-footer-primary.is-coaching {
+    animation: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
 }
 
 .mission-footer-primary.is-skip {
