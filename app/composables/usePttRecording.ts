@@ -3,6 +3,7 @@ import { useApi } from '~/composables/useApi'
 import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
 import { encodeWav } from '../../shared/utils/wavEncoder'
 import { pmLog } from '../../shared/utils/pmLog'
+import { postWithLocalFallback, useLocalSpeechBridge } from './useLocalSpeechBridge'
 
 export interface PttRecordingDeps {
   stopCurrentSpeech: () => void
@@ -24,6 +25,7 @@ export function usePttRecording(
 ) {
   const { currentState, variables: vars } = engine
   const api = useApi()
+  const { localUrl } = useLocalSpeechBridge()
   const {
     stopCurrentSpeech, speakWithRadioEffects, radioEffectsEnabled, inputMode,
     backendSessionId, backendExpectedPhrase, setLastTransmission, handlePilotTransmission,
@@ -278,13 +280,18 @@ export function usePttRecording(
       const base64Audio = arrayBufferToBase64(arrayBuffer)
 
       if (isIntercom) {
-        const result = await api.post('/api/atc/ptt', {
+        const payload = {
           audio: base64Audio,
           moduleId: 'pilot-monitoring-intercom',
           lessonId: 'intercom',
           format,
           sessionId: backendSessionId.value || undefined,
-        })
+        }
+        const result = await postWithLocalFallback(
+          localUrl('/api/atc/ptt'),
+          payload,
+          () => api.post('/api/atc/ptt', payload),
+        )
 
         if (result.success) {
           pmLog.info('PTT ✓ INTERCOM  transcription:', result.transcription)
@@ -300,14 +307,19 @@ export function usePttRecording(
           }
         }
       } else {
-        const result = await api.post('/api/atc/ptt', {
+        const payload = {
           audio: base64Audio,
           moduleId: 'pilot-monitoring',
           lessonId: currentState.value?.id || 'general',
           format,
           sessionId: backendSessionId.value || undefined,
           expected: buildSttExpected(),
-        })
+        }
+        const result = await postWithLocalFallback(
+          localUrl('/api/atc/ptt'),
+          payload,
+          () => api.post('/api/atc/ptt', payload),
+        )
 
         if (result.success) {
           pmLog.info('PTT ✓ RADIO  transcription:', result.transcription)
