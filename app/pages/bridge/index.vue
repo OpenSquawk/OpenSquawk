@@ -212,12 +212,15 @@
                 </div>
               </div>
               <p class="text-sm text-white/70">{{ item.description }}</p>
-              <p v-if="item.note" class="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/60">
-                <v-icon icon="mdi-information-outline" class="mr-1 h-4 w-4 align-text-bottom"/>
-                {{ item.note }}
-              </p>
+              <div v-if="item.note" class="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/60">
+                <p>
+                  <v-icon icon="mdi-information-outline" class="mr-1 h-4 w-4 align-text-bottom"/>
+                  {{ item.note }}
+                </p>
+                <code v-if="item.code" class="mt-2 block overflow-x-auto whitespace-nowrap rounded-lg bg-black/40 px-2.5 py-1.5 text-[11px] text-[#84E8F6]">{{ item.code }}</code>
+              </div>
             </div>
-            <div class="mt-6">
+            <div class="mt-6 space-y-2">
               <a
                   :href="item.href"
                   target="_blank"
@@ -230,9 +233,14 @@
                 <v-icon :icon="item.ctaIcon" class="h-5 w-5"/>
                 {{ item.ctaLabel }}
               </a>
+              <p class="text-center text-[11px] text-white/40">{{ item.file }}</p>
             </div>
           </article>
         </div>
+        <p class="flex items-start gap-2 text-xs text-white/50 sm:justify-center sm:text-center">
+          <v-icon icon="mdi-clock-fast" class="mt-0.5 h-4 w-4 flex-none"/>
+          <span>The first start takes about a minute (it downloads the runtime &amp; dependencies). After that the app updates itself automatically on every launch.</span>
+        </p>
       </section>
 
       <section class="mt-16 space-y-6">
@@ -261,19 +269,19 @@
           <ul class="mt-4 space-y-3 text-sm text-white/70">
             <li class="flex items-center gap-3">
               <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
-              macOS 12+ (Windows &amp; Linux launchers coming soon)
+              macOS 10.15+ · Windows 10/11 · desktop Linux (X11/Wayland)
             </li>
             <li class="flex items-center gap-3">
               <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
-              No manual runtime — the launcher sets up its own Python on first start
+              Internet on first start — runs offline afterwards
+            </li>
+            <li class="flex items-center gap-3">
+              <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
+              ~300–500 MB disk space (Linux with Qt ~700 MB–1 GB)
             </li>
             <li class="flex items-center gap-3">
               <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
               Active OpenSquawk membership
-            </li>
-            <li class="flex items-center gap-3">
-              <span class="h-2 w-2 rounded-full bg-[#16BBD7] shadow-[0_0_12px_rgba(22,187,215,0.85)]"/>
-              Reliable internet connection (used for auto-updates)
             </li>
           </ul>
         </div>
@@ -306,9 +314,9 @@ useHead({title: 'Bridge Downloads · OpenSquawk'})
 // around (rather than deleted) in case we want to bring it back for a future notice.
 const showNotice = ref(false)
 
-// For now every platform links to the source repo; per-OS download links follow
-// as the Windows/Linux launchers ship.
-const REPO_URL = 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge'
+// Launchers are published as "latest release" assets on the source repo, so the
+// download URLs stay stable across versions (the app auto-updates itself anyway).
+const RELEASE_BASE = 'https://github.com/OpenSquawk/OpenSquawk-Python-Bridge/releases/latest/download'
 
 type OsId = 'mac' | 'windows' | 'linux'
 
@@ -317,37 +325,45 @@ const platforms = [
     id: 'mac',
     os: 'mac' as OsId,
     title: 'macOS',
-    description: 'Self-updating thin launcher: download one file, drag it to Applications, open it. It sets itself up once (~1 min) and auto-updates from GitHub on every launch.',
-    note: 'First launch is unsigned — right-click the app and choose “Open” once.',
+    description: 'Self-updating thin launcher: download one file, drag it to Applications, open it. It sets itself up once and auto-updates from GitHub on every launch.',
+    note: 'Open the .dmg and drag the app to Applications. On the first launch, right-click the app → Open (it’s unsigned).',
+    code: '',
     status: 'Alpha',
     badgeClass: 'bg-[#16BBD7]/15 text-[#84E8F6]',
     ctaLabel: 'Download for macOS',
     ctaIcon: 'mdi-download',
-    href: REPO_URL,
+    file: 'OpenSquawk-Bridge-macOS.dmg',
+    href: `${RELEASE_BASE}/OpenSquawk-Bridge-macOS.dmg`,
     icon: 'mdi-apple',
   },
   {
     id: 'windows',
     os: 'windows' as OsId,
     title: 'Windows',
-    description: 'Same self-updating thin launcher — download once, it keeps itself current from GitHub. Windows build is on the way.',
-    status: 'Coming soon',
-    badgeClass: 'bg-white/10 text-white/70',
-    ctaLabel: 'View on GitHub',
-    ctaIcon: 'mdi-github',
-    href: REPO_URL,
+    description: 'Same self-updating thin launcher — download once, it keeps itself current from GitHub.',
+    note: 'Double-click the file. If SmartScreen warns: More info → Run anyway.',
+    code: '',
+    status: 'Alpha',
+    badgeClass: 'bg-[#16BBD7]/15 text-[#84E8F6]',
+    ctaLabel: 'Download for Windows',
+    ctaIcon: 'mdi-download',
+    file: 'OpenSquawk-Bridge-windows.cmd',
+    href: `${RELEASE_BASE}/OpenSquawk-Bridge-windows.cmd`,
     icon: 'mdi-microsoft-windows',
   },
   {
     id: 'linux',
     os: 'linux' as OsId,
     title: 'Linux',
-    description: 'Same self-updating thin launcher — download once, it keeps itself current from GitHub. Linux build is on the way.',
-    status: 'Coming soon',
-    badgeClass: 'bg-white/10 text-white/70',
-    ctaLabel: 'View on GitHub',
-    ctaIcon: 'mdi-github',
-    href: REPO_URL,
+    description: 'Same self-updating thin launcher — download once, it keeps itself current from GitHub.',
+    note: 'Make it executable and run it — it then appears in your app menu:',
+    code: 'chmod +x OpenSquawk-Bridge-linux.sh && ./OpenSquawk-Bridge-linux.sh',
+    status: 'Alpha',
+    badgeClass: 'bg-[#16BBD7]/15 text-[#84E8F6]',
+    ctaLabel: 'Download for Linux',
+    ctaIcon: 'mdi-download',
+    file: 'OpenSquawk-Bridge-linux.sh',
+    href: `${RELEASE_BASE}/OpenSquawk-Bridge-linux.sh`,
     icon: 'mdi-linux',
   },
 ]
