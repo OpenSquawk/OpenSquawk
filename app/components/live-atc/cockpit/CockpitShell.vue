@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import type { HoldSelectOption } from '~/components/HoldSelect.vue'
 import type { DisplayAirportFrequencyEntry } from '~/composables/useFrequencyPresets'
 import type { ReadbackFieldDetail } from '~/composables/useRadioBackend'
@@ -97,6 +97,32 @@ const visibleTabs = computed(() => TABS)
 const showExpectedComm = computed(
   () => props.learningMode && Boolean(props.controllerSay || props.expectedPhrase),
 )
+
+// First-run coach mark that points pilots at the "Report issue" button. Live ATC
+// is an early alpha and bug reports are how we improve it, so make it obvious on
+// the very first visit. Dismissed permanently once seen.
+const REPORT_HINT_STORAGE_KEY = 'os_live_atc_report_hint_seen'
+const showReportCoach = ref(false)
+
+function dismissReportCoach() {
+  showReportCoach.value = false
+  try {
+    window.localStorage.setItem(REPORT_HINT_STORAGE_KEY, '1')
+  } catch { /* ignore */ }
+}
+
+function onReportClick() {
+  dismissReportCoach()
+  emit('open-bug-report')
+}
+
+onMounted(() => {
+  try {
+    if (!window.localStorage.getItem(REPORT_HINT_STORAGE_KEY)) {
+      showReportCoach.value = true
+    }
+  } catch { /* ignore */ }
+})
 </script>
 
 <template>
@@ -237,16 +263,38 @@ const showExpectedComm = computed(
           </v-tooltip>
           <!-- Report issue carries a filled treatment: it is the most-reached-for
                secondary tool, so it outranks the neighbouring ghost icons. -->
-          <button
-              type="button"
-              class="btn hud-report-btn"
-              title="Fehler melden"
-              :disabled="bugReportCapturing"
-              @click="emit('open-bug-report')"
-          >
-            <v-icon size="18">{{ bugReportCapturing ? 'mdi-loading mdi-spin' : 'mdi-bug-outline' }}</v-icon>
-            <span class="btn-label">{{ bugReportCapturing ? '…' : 'Report issue' }}</span>
-          </button>
+          <div class="hud-report-wrap">
+            <button
+                type="button"
+                class="btn hud-report-btn"
+                :class="{ 'is-coaching': showReportCoach }"
+                title="Fehler melden"
+                :disabled="bugReportCapturing"
+                @click="onReportClick"
+            >
+              <v-icon size="18">{{ bugReportCapturing ? 'mdi-loading mdi-spin' : 'mdi-bug-outline' }}</v-icon>
+              <span class="btn-label">{{ bugReportCapturing ? '…' : 'Report issue' }}</span>
+            </button>
+            <span v-if="showReportCoach" class="report-coach-ring" aria-hidden="true"></span>
+            <transition name="coach-fade">
+              <div v-if="showReportCoach" class="report-coach" role="dialog" aria-label="Report issues">
+                <span class="report-coach-arrow" aria-hidden="true"></span>
+                <div class="report-coach-body">
+                  <div class="report-coach-title">
+                    <v-icon size="16">mdi-bug-outline</v-icon>
+                    Found a bug?
+                  </div>
+                  <p class="report-coach-text">
+                    Live ATC is an early alpha. Hit <strong>Report issue</strong> anytime something
+                    feels off — it captures the session and helps us fix it.
+                  </p>
+                  <button type="button" class="report-coach-dismiss" @click="dismissReportCoach">
+                    Got it
+                  </button>
+                </div>
+              </div>
+            </transition>
+          </div>
           <button
               type="button"
               class="btn ghost hud-icon-btn"
@@ -510,6 +558,113 @@ const showExpectedComm = computed(
   background: rgba(180, 83, 9, 0.12);
   border-color: rgba(180, 83, 9, 0.4);
   color: #92400e;
+}
+
+/* ── First-run "report issue" coach mark ─────────────────────────────── */
+.hud-report-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.hud-report-btn.is-coaching {
+  animation: report-coach-bob 1.6s ease-in-out infinite;
+}
+.report-coach-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 12px;
+  border: 2px solid rgba(245, 158, 11, 0.8);
+  pointer-events: none;
+  animation: report-coach-pulse 1.6s ease-out infinite;
+}
+@keyframes report-coach-pulse {
+  0%   { transform: scale(0.92); opacity: 0.9; }
+  70%  { transform: scale(1.18); opacity: 0; }
+  100% { transform: scale(1.18); opacity: 0; }
+}
+@keyframes report-coach-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+.report-coach {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: 0;
+  z-index: 60;
+  width: 260px;
+  max-width: 78vw;
+}
+.report-coach-arrow {
+  position: absolute;
+  top: -7px;
+  right: 22px;
+  width: 14px;
+  height: 14px;
+  background: var(--panel, #10161f);
+  border-left: 1px solid rgba(245, 158, 11, 0.55);
+  border-top: 1px solid rgba(245, 158, 11, 0.55);
+  transform: rotate(45deg);
+}
+.report-coach-body {
+  position: relative;
+  border-radius: 14px;
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  background: var(--panel, #10161f);
+  box-shadow: 0 18px 44px rgba(2, 6, 23, 0.5);
+  padding: 14px 16px;
+}
+.report-coach-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #fcd34d;
+}
+.report-coach-text {
+  margin: 6px 0 12px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text, #e5e7eb);
+  opacity: 0.9;
+}
+.report-coach-text strong {
+  color: #fcd34d;
+}
+.report-coach-dismiss {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9px;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
+  font-weight: 600;
+  font-size: 0.78rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
+}
+.report-coach-dismiss:hover {
+  background: rgba(245, 158, 11, 0.28);
+  border-color: rgba(245, 158, 11, 0.7);
+}
+.pm-page[data-theme="light"] .report-coach-arrow,
+.pm-page[data-theme="light"] .report-coach-body {
+  background: #ffffff;
+}
+.coach-fade-enter-active,
+.coach-fade-leave-active {
+  transition: opacity .25s ease, transform .25s ease;
+}
+.coach-fade-enter-from,
+.coach-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-report-btn.is-coaching,
+  .report-coach-ring {
+    animation: none;
+  }
 }
 .bridge-badge {
   display: inline-flex;

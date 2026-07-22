@@ -4,50 +4,18 @@
     <header class="hud" role="banner">
       <nav class="hud-inner" aria-label="Global">
         <div class="hud-left">
-          <button class="hud-logo" type="button" title="Mission hub" @click="panel='hub'">
-            <v-icon size="22" class="hud-logo-icon">mdi-radar</v-icon>
-          </button>
+          <NuxtLink class="hud-back" to="/start" title="Back to mode selection">
+            <v-icon size="20" class="hud-back-icon">mdi-arrow-left</v-icon>
+            <span class="hud-back-body">
+              <span class="hud-back-label">Back</span>
+              <span class="hud-back-sub">Switch mode</span>
+            </span>
+          </NuxtLink>
           <div class="hud-divider" aria-hidden="true"></div>
-          <span class="brand">OpenSquawk</span>
-          <span class="sep">|</span>
-          <v-menu v-model="experienceMenu" :offset="[0, 8]" location="bottom start" transition="scale-transition">
-            <template #activator="{ props }">
-              <button
-                  class="mode-switch"
-                  type="button"
-                  v-bind="props"
-                  aria-haspopup="menu"
-                  :aria-expanded="experienceMenu ? 'true' : 'false'"
-              >
-                <span class="mode-switch-label">{{ activeExperience.label }}</span>
-                <v-icon size="16" class="mode-switch-icon">mdi-chevron-down</v-icon>
-              </button>
-            </template>
-            <div class="experience-menu" role="menu" aria-label="Select experience">
-              <button
-                  v-for="option in experiences"
-                  :key="option.id"
-                  type="button"
-                  role="menuitemradio"
-                  class="experience-option"
-                  :class="{ 'is-active': option.id === activeExperience.id }"
-                  :aria-checked="option.id === activeExperience.id"
-                  @click="handleExperienceSelect(option)"
-              >
-                <v-icon size="18" class="experience-option-icon">{{ option.icon }}</v-icon>
-                <div class="experience-option-body">
-                  <div class="experience-option-title">{{ option.label }}</div>
-                  <div v-if="option.description" class="experience-option-sub">{{ option.description }}</div>
-                </div>
-                <v-icon
-                    v-if="option.id === activeExperience.id"
-                    size="16"
-                    class="experience-option-check"
-                >mdi-check
-                </v-icon>
-              </button>
-            </div>
-          </v-menu>
+          <button class="hud-logo" type="button" title="Mission hub" @click="panel='hub'">
+            <v-icon size="18" class="hud-logo-icon">mdi-radar</v-icon>
+            <span class="brand">Classroom</span>
+          </button>
         </div>
 
         <div class="hud-center">
@@ -1086,14 +1054,6 @@
                           <v-icon v-if="fieldPass(segment.key)" size="16" class="blank-status ok">mdi-check</v-icon>
                           <v-icon v-else-if="fieldHasAnswer(segment.key)" size="16" class="blank-status warn">mdi-alert
                           </v-icon>
-                          <v-icon
-                              v-if="sttFilledFields[segment.key]"
-                              size="14"
-                              class="blank-status stt-marker"
-                              title="Filled by mic"
-                          >
-                            mdi-microphone
-                          </v-icon>
                           <small v-if="result" class="blank-feedback">
                             Expected: {{ fieldExpectedValue(segment.key) }}
                           </small>
@@ -1126,105 +1086,6 @@
                     <v-icon size="18">mdi-volume-high</v-icon>
                     Speak answer
                   </button>
-                  <button
-                      v-if="sttFeatureVisible"
-                      class="btn"
-                      :class="sttRecording ? 'danger' : 'ghost'"
-                      type="button"
-                      :disabled="sttTranscribing"
-                      @click="toggleSTTRecording"
-                      :title="sttRecording ? 'Stop recording' : 'Speak your readback into the mic'"
-                  >
-                    <v-icon size="18" :class="{ spin: sttTranscribing }">
-                      {{ sttTranscribing ? 'mdi-loading' : (sttRecording ? 'mdi-stop-circle' : 'mdi-microphone') }}
-                    </v-icon>
-                    <template v-if="sttTranscribing">Transcribing…</template>
-                    <template v-else-if="sttRecording">Stop ({{ formatSttDuration(sttRecordingSeconds) }})</template>
-                    <template v-else>Speak readback</template>
-                  </button>
-                  <span
-                      v-else-if="sttSupported && !sttServerAvailable"
-                      class="muted small stt-hint"
-                      title="The speech-to-text backend is currently unreachable"
-                  >
-                    <v-icon size="14">mdi-microphone-off</v-icon>
-                    Speech server unavailable
-                  </span>
-                </div>
-
-                <!-- STT panel: shown once we have a transcription, an error, or
-                     are actively recording. Lets the pilot review what Whisper
-                     heard, edit any mistakes, and re-apply the mapping. -->
-                <div
-                    v-if="sttFeatureVisible && (sttRecording || sttTranscribing || sttLastTranscription || sttError)"
-                    class="stt-panel"
-                    :class="{ 'is-recording': sttRecording, 'is-error': !!sttError }"
-                >
-                  <div class="stt-panel-head">
-                    <div class="stt-panel-title">
-                      <v-icon size="16" :class="{ spin: sttTranscribing }">
-                        {{ sttRecording ? 'mdi-microphone' : (sttTranscribing ? 'mdi-loading' : (sttError ? 'mdi-alert-circle' : 'mdi-microphone-message')) }}
-                      </v-icon>
-                      <template v-if="sttRecording">Recording — {{ formatSttDuration(sttRecordingSeconds) }}</template>
-                      <template v-else-if="sttTranscribing">Transcribing your readback…</template>
-                      <template v-else-if="sttError">Couldn't transcribe</template>
-                      <template v-else>Whisper heard</template>
-                    </div>
-                    <div v-if="sttLastFillSummary" class="stt-summary">
-                      Filled {{ sttLastFillSummary.filled }} / {{ sttLastFillSummary.total }} field{{ sttLastFillSummary.total === 1 ? '' : 's' }}
-                    </div>
-                  </div>
-
-                  <!-- Per-field readback debug: what was recognised vs missing. -->
-                  <div v-if="!sttRecording && !sttTranscribing && sttLastReport && sttLastReport.fields.length" class="stt-report">
-                    <div
-                        v-for="f in sttLastReport.fields"
-                        :key="f.key"
-                        class="stt-report-row"
-                        :class="f.matched ? 'is-ok' : 'is-missing'"
-                    >
-                      <v-icon size="13">{{ f.matched ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon>
-                      <span class="stt-report-field">{{ f.key }}</span>
-                      <span class="stt-report-expected">{{ f.expected || '—' }}</span>
-                      <span v-if="f.matched" class="stt-report-via">recognised ({{ f.view }})</span>
-                      <span v-else class="stt-report-via">not recognised</span>
-                    </div>
-                    <div class="stt-report-folded">folded: {{ sttLastReport.denormalized }}</div>
-                  </div>
-
-                  <div v-if="sttError" class="stt-error-body">{{ sttError }}</div>
-
-                  <div v-else-if="sttRecording || sttTranscribing" class="stt-waiting">
-                    <span v-if="sttRecording" class="stt-rec-dot" aria-hidden="true"></span>
-                    <span v-if="sttRecording">Speak clearly into your microphone. Click <strong>Stop</strong> when done.</span>
-                    <span v-else>Sending audio to the speech server…</span>
-                  </div>
-
-                  <template v-else-if="sttLastTranscription">
-                    <textarea
-                        v-model="sttEditableTranscription"
-                        class="stt-textarea"
-                        rows="2"
-                        aria-label="Transcribed readback (editable)"
-                        spellcheck="false"
-                        autocorrect="off"
-                        autocapitalize="none"
-                    />
-                    <div class="stt-panel-actions">
-                      <button class="btn primary" type="button" @click="applySttTranscription">
-                        <v-icon size="16">mdi-arrow-down-bold-circle</v-icon>
-                        Apply to fields
-                      </button>
-                      <button class="btn ghost" type="button" @click="toggleSTTRecording" :disabled="sttTranscribing">
-                        <v-icon size="16">mdi-microphone</v-icon>
-                        Record again
-                      </button>
-                      <button class="btn ghost" type="button" @click="clearSttResult">
-                        <v-icon size="16">mdi-close</v-icon>
-                        Dismiss
-                      </button>
-                    </div>
-                  </template>
                 </div>
                 <div v-if="result" class="score">
                   <div class="score-num">{{ result.score }}%</div>
@@ -1926,53 +1787,6 @@ const manualSectionsOpen = reactive<Record<ManualSection, boolean>>({
 const router = useRouter()
 const route = useRoute()
 
-type ExperienceId = 'classroom' | 'live'
-type ExperienceOption = {
-  id: ExperienceId
-  label: string
-  description: string
-  icon: string
-  to: string
-  target?: '_self' | '_blank'
-  matches: (path: string) => boolean
-}
-
-const experiences: ExperienceOption[] = [
-  {
-    id: 'classroom',
-    label: 'Classroom',
-    description: 'Mission hub & drills',
-    icon: 'mdi-school',
-    to: '/classroom',
-    target: '_self',
-    matches: path => path.startsWith('/classroom') || path.startsWith('/classroom-introduction')
-  },
-  {
-    id: 'live',
-    label: 'Live ATC',
-    description: 'Live radio with AI controllers',
-    icon: 'mdi-radio-handheld',
-    to: '/bridge',
-    target: '_blank',
-    matches: path => path.startsWith('/live-atc') || path.startsWith('/pm')
-  }
-]
-
-const experienceMenu = ref(false)
-const activeExperience = computed<ExperienceOption>(() => {
-  const path = route.path
-  return experiences.find(option => option.matches(path)) ?? experiences[0]
-})
-
-async function handleExperienceSelect(option: ExperienceOption) {
-  experienceMenu.value = false
-  if (option.matches(route.path)) return
-  if (option.target === '_blank') {
-    window.open(option.to, '_blank')
-    return
-  }
-  await router.push(option.to)
-}
 
 const ROUTE_STATE_KEYS = ['panel', 'module', 'stage', 'lesson', 'plan'] as const
 type RouteStateKey = typeof ROUTE_STATE_KEYS[number]
@@ -5244,16 +5058,64 @@ onBeforeUnmount(() => {
   padding: 0 16px;
 }
 
-.hud-logo {
+.hud-back {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 44px;
+  gap: 8px;
   height: 44px;
+  padding: 0 14px 0 10px;
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   color: var(--accent);
+  text-decoration: none;
+  transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+
+.hud-back:hover,
+.hud-back:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 54%, transparent);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  outline: none;
+}
+
+.hud-back:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.hud-back-icon {
+  color: currentColor;
+}
+
+.hud-back-body {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.hud-back-label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.hud-back-sub {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  opacity: .7;
+}
+
+.hud-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--t2);
   transition: border-color .2s ease, background .2s ease, color .2s ease;
 }
 

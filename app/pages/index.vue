@@ -35,19 +35,9 @@
             <v-icon icon="mdi-map-marker-path" size="18" />
             Roadmap
           </NuxtLink>
-          <NuxtLink
-            :to="GITHUB_URL"
-            external
-            target="_blank"
-            rel="noopener"
-            class="btn btn-ghost whitespace-nowrap btn-compact topnav-secondary-action topnav-github-action"
-          >
-            <v-icon icon="mdi-github" size="18" />
-            GitHub
-          </NuxtLink>
-          <NuxtLink to="/login" class="btn btn-primary whitespace-nowrap btn-compact" aria-label="Login">
+          <NuxtLink to="/login" class="btn btn-primary whitespace-nowrap btn-compact" aria-label="Sign up or log in">
             <v-icon icon="mdi-login" size="18" />
-            <span class="hidden sm:inline">Login</span>
+            <span class="hidden sm:inline">Sign up / Log in</span>
           </NuxtLink>
           <button
             type="button"
@@ -891,7 +881,6 @@ const mobileNavLinks = computed<ExtendedNavLink[]>(() => [
   ...navLinks,
   { label: 'Roadmap', to: '/roadmap', icon: 'mdi-map-marker-path', hideOnSmall: true },
   { label: 'News', to: '/news', icon: 'mdi-newspaper-variant-outline' },
-  { label: 'GitHub', to: GITHUB_URL, external: true, icon: 'mdi-github', hideOnSmall: true },
 ])
 
 const router = useRouter()

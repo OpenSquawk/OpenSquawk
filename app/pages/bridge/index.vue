@@ -104,7 +104,73 @@
         </p>
       </header>
 
-      <section class="mt-14 space-y-4">
+      <!-- Two ways in: connect a real sim, or just train in the browser. -->
+      <section class="mt-12 space-y-4">
+        <div class="space-y-2 text-center sm:text-left">
+          <h2 class="text-2xl font-semibold">How do you want to train?</h2>
+          <p class="text-sm text-white/65">Fly with your simulator connected, or practise straight in the browser.</p>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <!-- Path A: flight simulator via the Bridge app -->
+          <article class="flex h-full flex-col justify-between rounded-3xl border border-[#16BBD7]/30 bg-[#16BBD7]/[0.07] p-6 shadow-[0_20px_60px_rgba(4,8,24,0.45)]">
+            <div class="space-y-4">
+              <div class="flex items-center gap-3">
+                <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#16BBD7]/15 text-[#16BBD7]">
+                  <v-icon icon="mdi-microsoft-flight-simulator" class="h-6 w-6"/>
+                </span>
+                <div>
+                  <span class="inline-flex items-center gap-2 rounded-full bg-[#16BBD7]/15 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-[#84E8F6]">
+                    Full experience
+                  </span>
+                  <h3 class="mt-2 text-lg font-semibold">With your flight simulator</h3>
+                </div>
+              </div>
+              <p class="text-sm text-white/75">
+                Install the Bridge for MSFS 2020 / 2024 (X-Plane &amp; FlightGear in preview). Your live
+                position, speed and altitude sync automatically into Live ATC as you fly.
+              </p>
+            </div>
+            <a
+                href="#choose-simulator"
+                class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#16BBD7] px-4 py-3 text-sm font-semibold text-[#0B1020] transition hover:bg-[#13a7c4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72d9ea]"
+            >
+              <v-icon icon="mdi-download" class="h-5 w-5"/>
+              Pick your simulator
+            </a>
+          </article>
+
+          <!-- Path B: browser-only dry run, no sim connection -->
+          <article class="flex h-full flex-col justify-between rounded-3xl border border-white/10 bg-[#111832]/80 p-6 shadow-[0_20px_60px_rgba(4,8,24,0.45)]">
+            <div class="space-y-4">
+              <div class="flex items-center gap-3">
+                <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/5 text-white/80">
+                  <v-icon icon="mdi-web" class="h-6 w-6"/>
+                </span>
+                <div>
+                  <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-white/70">
+                    No install
+                  </span>
+                  <h3 class="mt-2 text-lg font-semibold">Web version (dry run)</h3>
+                </div>
+              </div>
+              <p class="text-sm text-white/75">
+                Train Live ATC right here in the browser — everything is simulated theoretically, purely as a
+                dry run. There is <strong class="text-white">no connection to live position, speed or altitude</strong>
+                from your flight sim. For that you need to install the Bridge program.
+              </p>
+            </div>
+            <NuxtLink
+                to="/live-atc"
+                class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/25 hover:bg-white/10"
+            >
+              <v-icon icon="mdi-play-circle-outline" class="h-5 w-5"/>
+              Open the web version
+            </NuxtLink>
+          </article>
+        </div>
+      </section>
+
+      <section id="choose-simulator" class="mt-14 space-y-4">
         <div class="space-y-2 text-center sm:text-left">
           <h2 class="text-2xl font-semibold">Choose your simulator</h2>
         </div>

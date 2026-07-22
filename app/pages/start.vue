@@ -34,10 +34,20 @@
             <v-icon icon="mdi-school-outline" size="20" class="text-cyan-200" />
           </div>
           <div class="flex-1">
-            <p class="text-base font-semibold text-white">Classroom</p>
+            <p class="text-base font-semibold text-white">1. Classroom</p>
             <p class="mt-1 text-sm text-white/70">
               Structured, self-paced radio practice. No simulator required — this is where most pilots start.
             </p>
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <span class="equip-chip equip-on">
+                <v-icon icon="mdi-headphones" size="14" />
+                Headphones
+              </span>
+              <span class="equip-chip equip-off">
+                <v-icon icon="mdi-microphone-off" size="14" />
+                No mic needed
+              </span>
+            </div>
           </div>
           <span class="btn primary mt-1 self-start">
             Start Classroom
@@ -67,11 +77,21 @@
             <v-icon icon="mdi-radar" size="20" class="text-amber-200" />
           </div>
           <div class="flex-1">
-            <p class="text-base font-semibold text-white">Live ATC</p>
+            <p class="text-base font-semibold text-white">2. Live ATC</p>
             <p class="mt-1 text-sm text-white/70">
               Connect your simulator and fly against our live AI controller. Early alpha — not everything works
               reliably yet. We'd love your bug reports; this is also how we figure out where to take it next.
             </p>
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <span class="equip-chip equip-on equip-amber">
+                <v-icon icon="mdi-headphones" size="14" />
+                Headphones
+              </span>
+              <span class="equip-chip equip-on equip-amber">
+                <v-icon icon="mdi-microphone" size="14" />
+                Microphone
+              </span>
+            </div>
           </div>
           <span class="btn soft mt-1 self-start">
             Try Live ATC (Alpha)
@@ -100,11 +120,21 @@
             <v-icon icon="mdi-radar" size="20" class="text-white/50" />
           </div>
           <div class="flex-1">
-            <p class="text-base font-semibold text-white">Live ATC</p>
+            <p class="text-base font-semibold text-white">2. Live ATC</p>
             <p class="mt-1 text-sm text-white/70">
               Connect your simulator and fly against our live AI controller. Early alpha — not everything works
               reliably yet. We'd love your bug reports; this is also how we figure out where to take it next.
             </p>
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <span class="equip-chip equip-on">
+                <v-icon icon="mdi-headphones" size="14" />
+                Headphones
+              </span>
+              <span class="equip-chip equip-on">
+                <v-icon icon="mdi-microphone" size="14" />
+                Microphone
+              </span>
+            </div>
           </div>
           <p class="mt-1 text-xs uppercase tracking-[0.2em] text-white/40">Unlocks {{ unlockEstimate }} after signup</p>
         </div>
@@ -116,7 +146,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useHead, useRoute, useRouter } from '#imports'
-import { useAuthStore } from '~/stores/auth'
 import { CLASSROOM_INTRO_STORAGE_KEY } from '~~/shared/constants/storage'
 
 definePageMeta({ middleware: 'require-auth' })
@@ -125,33 +154,51 @@ useHead({ title: 'Choose your mode • OpenSquawk' })
 
 const route = useRoute()
 const router = useRouter()
-const auth = useAuthStore()
-
-const LIVE_ATC_UNLOCK_AFTER_MS = 24 * 60 * 60 * 1000
 
 const isFirstTime = computed(() => route.query.firstTime === '1')
 
-const liveAtcUnlocked = computed(() => {
-  const createdAt = auth.user?.createdAt
-  if (!createdAt) return true
-  const createdAtMs = new Date(createdAt).getTime()
-  if (Number.isNaN(createdAtMs)) return true
-  return Date.now() - createdAtMs >= LIVE_ATC_UNLOCK_AFTER_MS
-})
-
-const unlockEstimate = computed(() => {
-  const createdAt = auth.user?.createdAt
-  if (!createdAt) return ''
-  const createdAtMs = new Date(createdAt).getTime()
-  if (Number.isNaN(createdAtMs)) return ''
-  const remainingMs = LIVE_ATC_UNLOCK_AFTER_MS - (Date.now() - createdAtMs)
-  const remainingHours = Math.max(1, Math.ceil(remainingMs / (60 * 60 * 1000)))
-  return `in ~${remainingHours}h`
-})
+// Both modes are unlocked immediately on signup.
+const liveAtcUnlocked = computed(() => true)
+const unlockEstimate = computed(() => '')
 
 function goToClassroom() {
   const introCompleted = typeof window !== 'undefined' && localStorage.getItem(CLASSROOM_INTRO_STORAGE_KEY) === 'true'
   router.push(introCompleted ? '/classroom' : '/classroom-introduction')
 }
 </script>
+
+<style scoped>
+.equip-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.2rem 0.6rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+}
+
+.equip-chip.equip-on {
+  border-color: rgba(103, 232, 249, 0.4);
+  background: rgba(34, 211, 238, 0.12);
+  color: rgb(165, 243, 252);
+}
+
+.equip-chip.equip-amber {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.12);
+  color: rgb(253, 230, 138);
+}
+
+.equip-chip.equip-off {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.55);
+}
+</style>
 
