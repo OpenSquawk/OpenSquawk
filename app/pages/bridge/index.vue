@@ -99,9 +99,6 @@
       </header>
 
       <section class="mt-12 space-y-4">
-        <p class="text-center text-sm text-white/60">
-          One download, self-updating from then on — we&rsquo;ve pre-selected the platform you&rsquo;re on.
-        </p>
         <div class="grid gap-4 sm:grid-cols-3 items-stretch">
           <article
               v-for="item in platforms"
@@ -232,20 +229,11 @@
         </div>
       </section>
 
-      <section class="mt-12 rounded-3xl border border-white/10 bg-[#111832]/80 p-6">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <ul class="space-y-1.5 text-sm text-white/65">
-            <li>macOS 10.15+ · Windows 10/11 · desktop Linux</li>
-            <li>Internet on first start, offline afterwards · ~300–500&nbsp;MB</li>
-            <li>Active OpenSquawk membership</li>
-          </ul>
-          <p class="text-sm text-white/60 sm:text-right">
-            Need help?<br class="hidden sm:block">
-            <a href="mailto:info@opensquawk.de"
-               class="font-medium text-[#16BBD7] underline decoration-dotted underline-offset-4">info@opensquawk.de</a>
-          </p>
-        </div>
-      </section>
+      <footer class="mt-12 text-center text-sm text-white/50">
+        Need help?
+        <a href="mailto:info@opensquawk.de"
+           class="font-medium text-[#16BBD7] underline decoration-dotted underline-offset-4">info@opensquawk.de</a>
+      </footer>
     </main>
   </div>
 </template>
