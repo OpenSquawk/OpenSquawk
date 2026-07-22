@@ -7,6 +7,7 @@ import { createNoiseGenerators, createSquelchTransients, getReadabilityProfile, 
 import { controllerPersonaFor, transmissionSpeed } from '../../shared/utils/voicePool'
 import { pmLog } from '../../shared/utils/pmLog'
 import { useSpeechInterrupt } from '~/composables/useSpeechInterrupt'
+import { postWithLocalFallback, useLocalSpeechBridge } from '~/composables/useLocalSpeechBridge'
 import {
   FREQUENCY_PLACEHOLDER,
   FREQ_ROLE_LABEL,
@@ -82,6 +83,7 @@ export function useRadioSpeech(
     signalStrength, speechSpeed, radioCheckLoading, radioEffectsEnabled, readbackEnabled,
   } = deps
   const api = useApi()
+  const { localUrl } = useLocalSpeechBridge()
 
   let audioContext: AudioContext | null = null
   let pizzicatoLite: PizzicatoLite | null = null
@@ -256,7 +258,7 @@ export function useRadioSpeech(
         const persona = options.voice ? null : activeControllerPersona()
         const speed = options.speed ?? (persona ? controllerSpeed(persona.baseSpeed) : speechSpeed.value)
         const usesNormalized = options.useNormalizedForTTS !== false
-        const response = await api.post('/api/atc/say', {
+        const body = {
           text: usesNormalized ? prepared.normalized : prepared.plain,
           // The normalized variant already went through the client-side
           // radiotelephony normalizer — the server must not normalize again.
@@ -268,7 +270,12 @@ export function useRadioSpeech(
           lessonId: currentState.value?.id || 'general',
           tag: options.tag || 'controller-reply',
           sessionId: engineSessionId.value || flags.value.session_id || undefined,
-        }, { signal: abort.signal })
+        }
+        const response = await postWithLocalFallback(
+          localUrl('/api/atc/say'),
+          body,
+          () => api.post('/api/atc/say', body, { signal: abort.signal }),
+        )
         if (abort.signal.aborted) return null // frequency changed while in flight
         return response
       } catch (err: any) {
@@ -340,7 +347,7 @@ export function useRadioSpeech(
       try {
         const persona = options.voice ? null : activeControllerPersona()
         const speed = options.speed ?? (persona ? controllerSpeed(persona.baseSpeed) : speechSpeed.value)
-        const response = await api.post('/api/atc/say', {
+        const cloudBody = {
           text: trimmed,
           level: signalStrength.value,
           voice: options.voice || persona!.voice,
@@ -349,7 +356,17 @@ export function useRadioSpeech(
           lessonId,
           tag: options.tag || 'announcement',
           sessionId: engineSessionId.value || flags.value.session_id || undefined,
-        })
+        }
+        const localBody = {
+          ...cloudBody,
+          text: normalizeATCText(trimmed, { ...vars.value, ...flags.value }),
+          preNormalized: true,
+        }
+        const response = await postWithLocalFallback(
+          localUrl('/api/atc/say'),
+          localBody,
+          () => api.post('/api/atc/say', cloudBody),
+        )
 
         if (response.success && response.audio) {
           if (options.updateLastTransmission !== false) {
