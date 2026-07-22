@@ -163,10 +163,17 @@
                 </p>
                 <NuxtLink
                   to="/classroom"
-                  class="mt-4 block text-center text-xs text-white/30 transition hover:text-white/60"
+                  class="skip-classroom mt-5"
                   @click="handleClassroomEntry"
                 >
-                  Skip to Classroom
+                  <span class="skip-classroom__icon" aria-hidden="true">
+                    <v-icon icon="mdi-skip-forward-circle-outline" size="22" />
+                  </span>
+                  <span class="text-left">
+                    <span class="block text-sm font-semibold">Skip orientation</span>
+                    <span class="mt-0.5 block text-xs">Go straight to the Classroom hub</span>
+                  </span>
+                  <v-icon icon="mdi-arrow-right" size="20" class="skip-classroom__arrow" aria-hidden="true" />
                 </NuxtLink>
               </div>
             </div>
@@ -962,6 +969,50 @@ onBeforeUnmount(() => {
 .play-again {
   letter-spacing: 0.2em;
   text-transform: uppercase;
+}
+
+.skip-classroom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, #67e8f9 42%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, #22d3ee 10%, transparent);
+  color: rgb(207 250 254 / 0.9);
+  text-decoration: none;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.skip-classroom:hover,
+.skip-classroom:focus-visible {
+  border-color: rgb(103 232 249 / 0.85);
+  background: color-mix(in srgb, #22d3ee 18%, transparent);
+  color: #ecfeff;
+  transform: translateY(-1px);
+}
+
+.skip-classroom:focus-visible {
+  outline: 2px solid #67e8f9;
+  outline-offset: 3px;
+}
+
+.skip-classroom__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgb(103 232 249 / 0.14);
+  color: #a5f3fc;
+}
+
+.skip-classroom__arrow {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .progress-fill {
