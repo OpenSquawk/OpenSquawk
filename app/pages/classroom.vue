@@ -4,18 +4,47 @@
     <header class="hud" role="banner">
       <nav class="hud-inner" aria-label="Global">
         <div class="hud-left">
-          <NuxtLink class="hud-back" to="/start" title="Back to mode selection">
-            <v-icon size="20" class="hud-back-icon">mdi-arrow-left</v-icon>
-            <span class="hud-back-body">
-              <span class="hud-back-label">Back</span>
-              <span class="hud-back-sub">Switch mode</span>
-            </span>
-          </NuxtLink>
-          <div class="hud-divider" aria-hidden="true"></div>
-          <button class="hud-logo" type="button" title="Mission hub" @click="panel='hub'">
-            <v-icon size="18" class="hud-logo-icon">mdi-radar</v-icon>
-            <span class="brand">Classroom</span>
-          </button>
+          <v-menu v-model="experienceMenu" :offset="[0, 8]" location="bottom start" transition="scale-transition">
+            <template #activator="{ props: menu }">
+              <button
+                  class="mode-switch"
+                  type="button"
+                  v-bind="menu"
+                  aria-haspopup="menu"
+                  :aria-expanded="experienceMenu ? 'true' : 'false'"
+              >
+                <v-icon size="18" class="mode-switch-brand-icon">mdi-radar</v-icon>
+                <span class="mode-switch-label">Classroom</span>
+                <v-icon size="16" class="mode-switch-icon">mdi-chevron-down</v-icon>
+              </button>
+            </template>
+            <div class="experience-menu" role="menu" aria-label="Select experience">
+              <div
+                  role="menuitemradio"
+                  class="experience-option is-active"
+                  aria-checked="true"
+              >
+                <v-icon size="18" class="experience-option-icon">mdi-school</v-icon>
+                <div class="experience-option-body">
+                  <div class="experience-option-title">Classroom</div>
+                  <div class="experience-option-sub">Mission hub & drills</div>
+                </div>
+                <v-icon size="16" class="experience-option-check">mdi-check</v-icon>
+              </div>
+              <NuxtLink
+                  to="/live-atc"
+                  role="menuitemradio"
+                  class="experience-option"
+                  aria-checked="false"
+              >
+                <v-icon size="18" class="experience-option-icon">mdi-radio-handheld</v-icon>
+                <div class="experience-option-body">
+                  <div class="experience-option-title">Live ATC</div>
+                  <div class="experience-option-sub">Live radio with AI controllers</div>
+                </div>
+              </NuxtLink>
+            </div>
+          </v-menu>
         </div>
 
         <div class="hud-center">
@@ -1792,6 +1821,8 @@ const manualSectionsOpen = reactive<Record<ManualSection, boolean>>({
 
 const router = useRouter()
 const route = useRoute()
+
+const experienceMenu = ref(false)
 
 
 const ROUTE_STATE_KEYS = ['panel', 'module', 'stage', 'lesson', 'plan'] as const
@@ -5214,6 +5245,10 @@ onBeforeUnmount(() => {
 
 .mode-switch-icon {
   color: currentColor;
+}
+
+.mode-switch-brand-icon {
+  color: var(--accent);
 }
 
 .experience-menu {
