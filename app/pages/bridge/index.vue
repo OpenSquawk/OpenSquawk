@@ -214,6 +214,9 @@
 
 
       <footer class="mt-12 text-center text-sm text-white/50">
+        <p class="mb-3">
+          No simulator connection? <NuxtLink to="/live-atc" class="font-medium text-[#16BBD7] underline decoration-dotted underline-offset-4">Use the reduced online version.</NuxtLink>
+        </p>
         Need help?
         <a href="mailto:info@opensquawk.de"
            class="font-medium text-[#16BBD7] underline decoration-dotted underline-offset-4">info@opensquawk.de</a>
