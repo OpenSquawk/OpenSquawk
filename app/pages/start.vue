@@ -52,7 +52,7 @@
 
         <NuxtLink
           v-if="liveAtcUnlocked"
-          to="/live-atc"
+          to="/bridge"
           class="mode-card mode-card--amber"
         >
           <svg
@@ -271,4 +271,3 @@ function goToClassroom() {
   transform: translateX(3px);
 }
 </style>
-
