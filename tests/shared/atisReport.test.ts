@@ -307,6 +307,34 @@ test('resolveAtisReport still yields a letter and runway with no METAR at all', 
   assert.ok(report.runwayDep)
 })
 
+test('resolveAtisReport carries the observed QNH and wind for the flow to quote', () => {
+  const report = resolveAtisReport({
+    icao: 'EDDF',
+    airportName: 'Frankfurt Main',
+    vatsimStations: [],
+    metar: EDDF_METAR, // 24016KT ... Q1006
+    runways: EDDF_RUNWAYS,
+  })
+  assert.equal(report.qnhHpa, 1006)
+  assert.equal(report.surfaceWind, '240/16')
+})
+
+test('resolveAtisReport reports variable wind rather than a false direction', () => {
+  const report = resolveAtisReport({
+    icao: 'EDDC',
+    vatsimStations: [],
+    metar: 'EDDC 261650Z VRB04KT CAVOK 24/12 Q1013',
+    runways: EDDC_RUNWAYS,
+  })
+  assert.equal(report.surfaceWind, 'VRB/04')
+})
+
+test('resolveAtisReport leaves QNH and wind unset without an observation', () => {
+  const report = resolveAtisReport({ icao: 'EDDF', vatsimStations: [], metar: null, runways: EDDF_RUNWAYS })
+  assert.equal(report.qnhHpa, null)
+  assert.equal(report.surfaceWind, null)
+})
+
 test('resolveAtisReport never returns an empty letter', () => {
   const report = resolveAtisReport({ icao: 'ZZZZ', vatsimStations: [], metar: null, runways: [] })
   assert.match(report.letter, /^[A-Z]$/)

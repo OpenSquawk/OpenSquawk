@@ -55,6 +55,10 @@ export interface AtisReport {
     runwayDep: string | null
     runwayArr: string | null
     runwaySource: 'atis' | 'wind' | 'main' | null
+    /** Observed QNH, so the flow quotes the same pressure the ATIS just read. */
+    qnhHpa: number | null
+    /** Observed surface wind as "260/14", or null without an observation. */
+    surfaceWind: string | null
     observedAt: string | null
     stations: AtisStation[]
 }
@@ -382,6 +386,8 @@ export function resolveAtisReport(input: ResolveAtisInput): AtisReport {
             runwaySource: fromText.dep || fromText.arr
                 ? 'atis'
                 : byWind.dep?.source ?? byWind.arr?.source ?? null,
+            qnhHpa: observation?.qnhHpa ?? null,
+            surfaceWind: formatSurfaceWind(observation),
             observedAt,
             stations: liveStations,
         }
@@ -413,6 +419,8 @@ export function resolveAtisReport(input: ResolveAtisInput): AtisReport {
         runwayDep: dep?.designator ?? null,
         runwayArr: arr?.designator ?? null,
         runwaySource: dep?.source ?? arr?.source ?? null,
+        qnhHpa: observation?.qnhHpa ?? null,
+        surfaceWind: formatSurfaceWind(observation),
         observedAt,
         stations: [{
             frequency: silentStation?.frequency || input.atisFrequency || FREQUENCY_UNKNOWN,
@@ -422,6 +430,20 @@ export function resolveAtisReport(input: ResolveAtisInput): AtisReport {
             text,
         }],
     }
+}
+
+/** Surface wind in the "260/14" form the flows use, or null when unobserved. */
+function formatSurfaceWind(observation: MetarObservation | null): string | null {
+    if (!observation || observation.windKt === null) return null
+    const direction = observation.windVariable
+        ? 'VRB'
+        : observation.windDeg === null ? null : pad3(observation.windDeg)
+    if (direction === null) return null
+    return `${direction}/${pad2(observation.windKt)}`
+}
+
+function pad3(value: number): string {
+    return String(value).padStart(3, '0')
 }
 
 /**

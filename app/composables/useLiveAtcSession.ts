@@ -74,7 +74,8 @@ export function useLiveAtcSession(
 
   const {
     frequencies, airportFrequencies, frequencySources, activeAirportIcao,
-    expectedFrequencyForState, acceptedFrequenciesForState, extractAtisRunway,
+    expectedFrequencyForState, acceptedFrequenciesForState,
+    runwayInUse, informationLetter, atisReport,
     fetchAirportFrequencies,
   } = freq
 
@@ -556,12 +557,23 @@ export function useLiveAtcSession(
     // all freq vars are resolved from live VATSIM/OpenAIP data.
     await fetchAirportFrequencies(scenarioIcao)
 
-    // Runway in use from live ATIS (the flight plan carries no runway). Falls
-    // back to the engine-generated one when no ATIS text mentions a runway.
-    const atisRunway = extractAtisRunway(scenario.airport === 'arr' ? 'arr' : 'dep')
-    if (atisRunway) {
-      patchVariables({ runway: atisRunway })
-      pmLog.info('Runway from ATIS:', atisRunway)
+    // Runway and information letter from the resolved ATIS (the flight plan
+    // carries neither). The report always has a letter, and has a runway
+    // whenever the airport publishes runway data — so the pilot's initial call
+    // matches the broadcast they just listened to.
+    const atisKind = scenario.airport === 'arr' ? 'arr' : 'dep'
+    const atisRunway = runwayInUse(atisKind)
+    const atisLetter = informationLetter(atisKind)
+    const atisPatch: Record<string, string | number> = {}
+    if (atisRunway) atisPatch.runway = atisRunway
+    if (atisLetter) atisPatch.atis_code = atisLetter
+    // Quote the observed pressure and wind rather than the engine's placeholders,
+    // so the controller does not contradict the ATIS the pilot just heard.
+    if (atisReport.value?.qnhHpa) atisPatch.qnh_hpa = atisReport.value.qnhHpa
+    if (atisReport.value?.surfaceWind) atisPatch.surface_wind = atisReport.value.surfaceWind
+    if (Object.keys(atisPatch).length) {
+      patchVariables(atisPatch)
+      pmLog.info('From ATIS report:', { ...atisPatch, source: atisReport.value?.source })
     }
 
     // Pre-generate the ATIS TTS audio now so the first tune-in plays instantly

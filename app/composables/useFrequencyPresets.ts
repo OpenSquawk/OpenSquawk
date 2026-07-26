@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { useApi } from '~/composables/useApi'
 import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
 import { normalizeManualFreq } from '../../shared/utils/frequency'
+import type { AtisReport, AtisStation } from '../../shared/utils/atisReport'
 
 export type AirportFrequencyEntry = {
   type: string
@@ -154,49 +155,66 @@ export function useFrequencyPresets(
     return Array.from(new Set(all.map(normalizedFrequencyValue).filter(Boolean)))
   }
 
+  // The resolved ATIS for this airport (see server/api/airports/[icao]/atis.get.ts).
+  // Always carries an information letter, whether or not VATSIM has a station.
+  const atisReport = ref<AtisReport | null>(null)
+
+  /** The resolved broadcast belonging to a published ATIS frequency, if any. */
+  const stationForEntry = (entry: AirportFrequencyEntry): AtisStation | undefined => {
+    const stations = atisReport.value?.stations ?? []
+    if (!stations.length) return undefined
+    const byCallsign = entry.callsign
+      && stations.find(station => station.callsign?.toUpperCase() === entry.callsign!.toUpperCase())
+    if (byCallsign) return byCallsign
+    const wanted = normalizedFrequencyValue(entry.frequency)
+    const byFrequency = stations.find(station => normalizedFrequencyValue(station.frequency) === wanted)
+    if (byFrequency) return byFrequency
+    // A single broadcast belongs to the airport's single ATIS frequency.
+    return stations.length === 1 ? stations[0] : undefined
+  }
+
   // All ATIS stations at the airport. Large airports broadcast separate
   // Arrival and Departure ATIS on different frequencies (EDDF_A_ATIS /
   // EDDF_D_ATIS on VATSIM), each with its own info letter and text.
-  const atisEntries = computed(() => airportFrequencies.value.filter(entry => entry.type === 'ATIS'))
+  //
+  // The published frequency list only carries live text when a VATSIM
+  // controller is online, so the resolved report backfills the letter and the
+  // broadcast — that is what stops an ATIS from playing with no information
+  // letter and no runway.
+  const atisEntries = computed<AirportFrequencyEntry[]>(() =>
+    airportFrequencies.value
+      .filter(entry => entry.type === 'ATIS')
+      .map((entry) => {
+        const station = stationForEntry(entry)
+        if (!station) return entry
+        return {
+          ...entry,
+          atisCode: entry.atisCode || station.letter || atisReport.value?.letter || undefined,
+          atisText: entry.atisText || station.text || undefined,
+          lastUpdated: entry.lastUpdated || station.lastUpdated,
+        }
+      }))
 
   // Primary ATIS entry for the quick-play button — prefer one with live text.
   const atisFrequencyEntry = computed(() =>
     atisEntries.value.find(entry => (entry.atisText || '').trim()) || atisEntries.value[0])
 
+  /** True when the ATIS is synthesised rather than a live VATSIM broadcast. */
+  const atisIsSynthetic = computed(() =>
+    Boolean(atisReport.value) && atisReport.value!.source !== 'vatsim')
+
   /**
-   * Extract the runway in use from live ATIS text ("DEP RWY 25C", "EXPECT ILS
-   * APPROACH RUNWAY 25L", "RUNWAY IN USE 07"). Prefers a phrase matching the
-   * requested kind (departure/arrival); falls back to any runway mention.
-   * Returns null when no ATIS text carries a runway — callers keep their default.
+   * Runway in use for the given kind, from the resolved report. Null only when
+   * the airport has no usable runway data at all — callers keep their default.
    */
-  const extractAtisRunway = (kind: 'dep' | 'arr'): string | null => {
-    const RWY = String.raw`(?:RWY|RUNWAY)S?\s*([0-3]?\d\s*[LRC]?)\b`
-    const kindPatterns = kind === 'dep'
-      ? [new RegExp(String.raw`DEP(?:ARTURE)?S?[^.]{0,40}?${RWY}`, 'i')]
-      : [
-          new RegExp(String.raw`(?:ARR(?:IVAL)?S?|LANDING)[^.]{0,40}?${RWY}`, 'i'),
-          new RegExp(String.raw`EXPECT[^.]{0,60}?APPROACH[^.]{0,20}?${RWY}`, 'i'),
-        ]
-    const genericPattern = new RegExp(RWY, 'i')
+  const runwayInUse = (kind: 'dep' | 'arr'): string | null =>
+    (kind === 'dep' ? atisReport.value?.runwayDep : atisReport.value?.runwayArr) ?? null
 
-    const texts = atisEntries.value
-      .map(entry => (entry.atisText || '').trim())
-      .filter(Boolean)
-
-    for (const patterns of [kindPatterns, [genericPattern]]) {
-      for (const text of texts) {
-        for (const pattern of patterns) {
-          const match = pattern.exec(text)
-          if (match?.[1]) {
-            const designator = match[1].replace(/\s+/g, '').toUpperCase()
-            // Normalise "7L" -> "07L" so it matches OSM runway refs.
-            return /^\d[LRC]?$/.test(designator) ? `0${designator}` : designator
-          }
-        }
-      }
-    }
-    return null
-  }
+  /** Information letter for the given kind, or null before the report loads. */
+  const informationLetter = (kind: 'dep' | 'arr'): string | null =>
+    (kind === 'dep' ? atisReport.value?.letterDep : atisReport.value?.letterArr)
+    ?? atisReport.value?.letter
+    ?? null
 
   const frequencySourceLabels = computed(() => {
     const labels: string[] = []
@@ -356,9 +374,19 @@ export function useFrequencyPresets(
     }
 
     try {
-      const response = await api.get(`/api/airports/${encodeURIComponent(icao)}/frequencies`)
+      // Both in flight together: the ATIS report backfills the letter and the
+      // broadcast text onto the frequency entries, so a partial load would show
+      // an ATIS station with no information letter.
+      const [response, report] = await Promise.all([
+        api.get(`/api/airports/${encodeURIComponent(icao)}/frequencies`),
+        api.get(`/api/airports/${encodeURIComponent(icao)}/atis`).catch((err: unknown) => {
+          console.error('Failed to load ATIS report:', err)
+          return null
+        }),
+      ])
       const entries = Array.isArray(response?.frequencies) ? response.frequencies as AirportFrequencyEntry[] : []
       airportFrequencies.value = entries
+      atisReport.value = (report as AtisReport | null) ?? null
       airportName.value = typeof response?.airportName === 'string' ? response.airportName : undefined
       frequencySources.value = {
         vatsim: Boolean(response?.sources?.vatsim),
@@ -371,6 +399,7 @@ export function useFrequencyPresets(
       if (!options.silent) {
         airportFrequencies.value = []
         airportName.value = undefined
+        atisReport.value = null
         frequencySources.value = { vatsim: false, openaip: false }
       }
     } finally {
@@ -450,7 +479,11 @@ export function useFrequencyPresets(
         ? `${entry.frequency} · Info ${entry.atisCode}`
         : entry.frequency,
       color: entry.type === 'ATIS' ? '#f59e0b' : '#22d3ee',
-      sourceLabel: entry.sourceLabel,
+      // A synthesised ATIS is not a VATSIM broadcast — say so rather than
+      // crediting the source the frequency happens to come from.
+      sourceLabel: entry.type === 'ATIS' && atisIsSynthetic.value
+        ? 'Simulated ATIS'
+        : entry.sourceLabel,
       callsign: entry.callsign,
     })),
   )
@@ -505,7 +538,10 @@ export function useFrequencyPresets(
     acceptedFrequenciesForState,
     atisEntries,
     atisFrequencyEntry,
-    extractAtisRunway,
+    atisReport,
+    atisIsSynthetic,
+    runwayInUse,
+    informationLetter,
     frequencySourceLabels,
     tunedAtisEntry,
     frequencyDisplayKey,
