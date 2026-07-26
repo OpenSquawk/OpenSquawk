@@ -9,6 +9,7 @@ import type { useRadioSpeech } from '~/composables/useRadioSpeech'
 import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
 import { generateGermanRegistration } from '../../shared/utils/registration'
 import { gateTransmission } from '../../shared/utils/transmissionGate'
+import { silenceWindowFor } from '../../shared/utils/silenceTimer'
 import {
   isSimControlMatch,
   isSimControlRejection,
@@ -100,14 +101,16 @@ export function useLiveAtcSession(
   const transmitInFlightCount = ref(0)
   const transmitInFlight = computed(() => transmitInFlightCount.value > 0)
 
-  // --- Silence auto-advance ----------------------------------------------------
-  // Some pilot states let ATC continue on its own when the pilot stays quiet
-  // (e.g. the takeoff roll in tower-v1: no report needed, Tower hands off after a
-  // while anyway). Such states carry auto_advance_on_silence +
-  // auto_advance_timeout_ms in the runtime tree; whenever the session lands on
-  // one, arm a timer that fires the backend /timeout endpoint. Any pilot
-  // transmission or telemetry-fired advance re-arms or clears it via
-  // applyBackendDecision.
+  // --- Silence timers ----------------------------------------------------------
+  // Two kinds of wait fire the backend /timeout endpoint, both armed here (see
+  // silenceWindowFor for which applies where):
+  //   auto-advance — the pilot owes nothing and ATC carries on by itself (the
+  //     takeoff roll in tower-v1), on the flow-authored window.
+  //   readback     — the pilot owes a mandatory readback and has not given it,
+  //     so ATC asks again on the much shorter server-published window.
+  // Any pilot transmission or telemetry-fired advance re-arms or clears the
+  // timer via applyBackendDecision, and a fire is dropped if the session or the
+  // state moved on while it was pending.
   let silenceTimer: ReturnType<typeof setTimeout> | null = null
 
   // Consecutive silence-timeouts fired for the SAME state. If the backend keeps
@@ -132,7 +135,9 @@ export function useLiveAtcSession(
   function armSilenceTimer() {
     clearSilenceTimer()
     const state = currentState.value as any
-    if (!state?.auto_advance_on_silence || !backendSessionId.value) return
+    if (!backendSessionId.value) return
+    const window = silenceWindowFor(state)
+    if (!window) return
 
     if (silenceFireCount.stateId !== state.id) {
       silenceFireCount = { stateId: state.id, count: 0 }
@@ -142,10 +147,10 @@ export function useLiveAtcSession(
       return
     }
 
-    const ms = Math.max(1000, Number(state.auto_advance_timeout_ms ?? 30000))
+    const ms = window.ms
     const sessionAtArm = backendSessionId.value
     const stateAtArm = state.id
-    pmLog.debug('SILENCE TIMER armed', { state: stateAtArm, ms })
+    pmLog.debug('SILENCE TIMER armed', { state: stateAtArm, ms, kind: window.kind })
     const fire = async () => {
       silenceTimer = null
       // Never fire stale: the session ended or the state moved on while waiting.
