@@ -35,6 +35,21 @@ describe('normalizeRadioPhrase — PM radio pronunciation', () => {
   it('leaves sub-1000 numbers (speeds/headings) untouched', () => {
     assert.equal(normalizeRadioPhrase('maintain 250 knots', opts), 'maintain 250 knots')
   })
+
+  // ICAO five-letter name-codes are built to be pronounceable and are spoken as
+  // words on the radio. Spelling them out would both be wrong phraseology and
+  // train the pilot to read back a spelling the matcher then has to undo.
+  it('speaks a bare waypoint as a word, not letter by letter', () => {
+    for (const [written, spoken] of [
+      ['BIBAX', 'Bibax'],
+      ['SULUS', 'Sulus'],
+      ['ANEKI', 'Aneki'],
+    ]) {
+      const out = normalizeRadioPhrase(`direct ${written}`, opts)
+      assert.equal(out, `direct ${spoken}`)
+      assert.doesNotMatch(out, /Bravo|Sierra|Alfa/)
+    }
+  })
 })
 
 describe('speakToken', () => {
