@@ -2,6 +2,10 @@ import mongoose from 'mongoose'
 
 export type BugReportStatus = 'open' | 'resolved'
 
+/** Where the report was filed. Shown in the notification mail so we know which
+ *  part of the app to reproduce it in. */
+export type BugReportSource = 'live-atc' | 'classroom'
+
 export interface PmStateSnapshot {
   flowSlug?: string
   scenarioId?: string
@@ -13,6 +17,9 @@ export interface PmStateSnapshot {
 }
 
 export interface BugReportDocument extends mongoose.Document {
+  /** Stable UUID quoted in commit messages so a fix can be traced back here. */
+  code: string
+  source: BugReportSource
   comment: string
   contact: string
   userId?: mongoose.Types.ObjectId
@@ -23,6 +30,10 @@ export interface BugReportDocument extends mongoose.Document {
 }
 
 const bugReportSchema = new mongoose.Schema<BugReportDocument>({
+  // Sparse: reports created before the code existed simply have none, and a
+  // plain unique index would reject more than one of them.
+  code: { type: String, required: true, unique: true, sparse: true },
+  source: { type: String, enum: ['live-atc', 'classroom'], default: 'live-atc', index: true },
   comment: { type: String, required: true, trim: true, maxlength: 4000 },
   contact: { type: String, required: true, trim: true, maxlength: 200 },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },

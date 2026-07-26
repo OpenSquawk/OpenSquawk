@@ -129,10 +129,15 @@
         </div>
 
         <div class="hud-right">
-          <NuxtLink class="btn ghost" to="/feedback" title="Share feedback or ideas">
-            <v-icon size="18">mdi-message-draw</v-icon>
-            <span class="btn-label">Feedback</span>
-          </NuxtLink>
+          <button
+              class="btn ghost"
+              title="Report an issue or request a feature"
+              :disabled="bugReportCapturing"
+              @click="openBugReport"
+          >
+            <v-icon size="18">{{ bugReportCapturing ? 'mdi-loading mdi-spin' : 'mdi-bug-outline' }}</v-icon>
+            <span class="btn-label">{{ bugReportCapturing ? '…' : 'Report issue' }}</span>
+          </button>
 
           <!-- ATC Einstellungen -->
           <button class="btn ghost" @click="showSettings=true" title="Settings">
@@ -1251,7 +1256,9 @@
            ‹ Visit home</a>
           </span>
           &middot;
-          <NuxtLink to="/feedback" target="_blank" class="link">Give feedback ›</NuxtLink>
+          <button type="button" class="link link-button" :disabled="bugReportCapturing" @click="openBugReport">
+            Report an issue ›
+          </button>
         </div>
       </div>
     </footer>
@@ -1420,6 +1427,9 @@
       </div>
     </v-dialog>
 
+    <!-- BUG REPORT -->
+    <BugReportDialog :bug="bugReport" theme="dark" />
+
     <!-- TOAST -->
     <v-snackbar v-model="toast.show" timeout="2200" location="top" color="#22d3ee">
       <v-icon class="mr-2">mdi-trophy</v-icon>
@@ -1457,6 +1467,8 @@ import {
   classroomVoiceFor,
 } from '~~/shared/utils/voicePool'
 import {DEFAULT_AIRLINE_TELEPHONY, normalizeRadioPhrase, normalizeMetarPhrase} from '~~/shared/utils/radioSpeech'
+import {useBugReport} from '~/composables/useBugReport'
+import BugReportDialog from '~/components/BugReportDialog.vue'
 
 definePageMeta({middleware: ['require-auth', 'require-classroom-intro']})
 
@@ -2798,6 +2810,11 @@ const showOnlineTtsSuggestion = ref(false)
 const api = useApi()
 const isClient = typeof window !== 'undefined'
 const auth = useAuthStore()
+
+// Bug reports work exactly as in Live ATC (screenshot + arrow annotation), just
+// without a communications engine to snapshot — the source tells the mail apart.
+const bugReport = useBugReport({source: 'classroom'})
+const {bugReportCapturing, openBugReport} = bugReport
 const browserTtsAvailable = computed(() => isClient && 'speechSynthesis' in window)
 
 // STT (Speech-to-Text) for the readback — pilot speaks the readback into a mic,
@@ -6190,6 +6207,17 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px
+}
+
+.link-button {
+  font: inherit;
+  cursor: pointer;
+  padding: 0
+}
+
+.link-button:disabled {
+  opacity: .6;
+  cursor: default
 }
 
 .stats {

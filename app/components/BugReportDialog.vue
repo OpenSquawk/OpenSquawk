@@ -20,6 +20,7 @@ const {
   bugReportLoading,
   bugReportError,
   bugReportSuccess,
+  bugReportCode,
   bugReportCanvasRef,
   bugReportImgRef,
   setupAnnotationCanvas,
@@ -43,6 +44,9 @@ const {
         <div v-if="bugReportSuccess" class="rounded-xl bg-emerald-500/10 border border-emerald-400/30 p-4 text-center">
           <v-icon icon="mdi-check-circle-outline" color="emerald" size="32" class="mb-2" />
           <p class="text-emerald-300 font-semibold">Danke! Bug Report wurde gesendet.</p>
+          <p v-if="bugReportCode" class="mt-2 text-xs text-emerald-200/70">
+            Fehlercode <span class="font-mono">{{ bugReportCode }}</span>
+          </p>
         </div>
         <template v-else>
           <div v-if="bugReportScreenshot" class="space-y-2">
@@ -103,7 +107,9 @@ const {
 
           <v-textarea
             v-model="bugReportComment"
-            label="Was ist kaputt? Was sollte stattdessen passieren?"
+            label="Fehlerbeschreibung / Featurewunsch"
+            placeholder="Was ist kaputt? Was sollte stattdessen passieren?"
+            persistent-placeholder
             variant="outlined"
             color="red"
             rows="3"

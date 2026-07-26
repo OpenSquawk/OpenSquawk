@@ -185,7 +185,7 @@ import { useBugReport } from '~/composables/useBugReport'
 import { useSimBridgeSync } from '~/composables/useSimBridgeSync'
 import FlightInfoSheet from '~/components/live-atc/cockpit/FlightInfoSheet.vue'
 import SettingsSheet from '~/components/live-atc/cockpit/SettingsSheet.vue'
-import BugReportDialog from '~/components/live-atc/cockpit/BugReportDialog.vue'
+import BugReportDialog from '~/components/BugReportDialog.vue'
 import TransmissionIssueDialog from '~/components/live-atc/cockpit/TransmissionIssueDialog.vue'
 import HelpDialog from '~/components/live-atc/cockpit/HelpDialog.vue'
 import DebugPanel from '~/components/live-atc/cockpit/DebugPanel.vue'
@@ -320,7 +320,7 @@ const aiTrafficEnabled = ref(false)
 // ── Bug Report ───────────────────────────────────────────────────────────────
 // Owned here rather than by the dialog: the HUD button starts the screenshot
 // capture before the dialog ever renders. The dialog gets the whole handle.
-const bugReport = useBugReport(engine, { activeScenario })
+const bugReport = useBugReport({ source: 'live-atc', engine, activeScenario })
 const { bugReportCapturing, openBugReport } = bugReport
 
 // Layout / view state. The tab, HUD menu and mode-switch state live inside

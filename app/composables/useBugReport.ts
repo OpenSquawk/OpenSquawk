@@ -5,19 +5,24 @@ import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
 
 export type BugReportArrow = { fx: number; fy: number; tx: number; ty: number }
 
-export interface BugReportDeps {
+/** Which part of the app the report is filed from — reported in the mail. */
+export type BugReportSource = 'live-atc' | 'classroom'
+
+export interface BugReportOptions {
+  source: BugReportSource
+  /**
+   * Live ATC hands over its communications engine so the report carries the
+   * flow state. Classroom has no such engine — the snapshot is simply omitted.
+   */
+  engine?: ReturnType<typeof useCommunicationsEngine>
   /** Scenario the report is captured in — stored alongside the state snapshot. */
-  activeScenario: Ref<{ id?: string; startFlow?: string } | null | undefined>
+  activeScenario?: Ref<{ id?: string; startFlow?: string } | null | undefined>
 }
 
-export function useBugReport(
-  engine: ReturnType<typeof useCommunicationsEngine>,
-  deps: BugReportDeps,
-) {
+export function useBugReport(options: BugReportOptions) {
   const api = useApi()
   const auth = useAuthStore()
-  const { currentState, variables: vars, flags, flightContext, communicationLog: log } = engine
-  const { activeScenario } = deps
+  const { source, engine, activeScenario } = options
 
   const showBugReportDialog = ref(false)
   const bugReportComment = ref('')
@@ -28,6 +33,7 @@ export function useBugReport(
   const bugReportCapturing = ref(false)
   const bugReportError = ref('')
   const bugReportSuccess = ref(false)
+  const bugReportCode = ref('')
   const bugReportCanvasRef = ref<HTMLCanvasElement | null>(null)
   const bugReportImgRef = ref<HTMLImageElement | null>(null)
   let _arrowDrawing = false
@@ -115,6 +121,7 @@ export function useBugReport(
   async function openBugReport() {
     bugReportError.value = ''
     bugReportSuccess.value = false
+    bugReportCode.value = ''
     bugReportComment.value = ''
     bugReportArrows.value = []
     bugReportScreenshot.value = null
@@ -147,7 +154,7 @@ export function useBugReport(
   }
 
   async function submitBugReport() {
-    if (!bugReportComment.value.trim()) { bugReportError.value = 'Bitte einen Kommentar eingeben.'; return }
+    if (!bugReportComment.value.trim()) { bugReportError.value = 'Bitte eine Fehlerbeschreibung eingeben.'; return }
     bugReportLoading.value = true
     bugReportError.value = ''
 
@@ -169,25 +176,29 @@ export function useBugReport(
         finalScreenshot = out.toDataURL('image/jpeg', 0.8)
       }
 
-      const pmState = {
-        flowSlug: activeScenario.value?.startFlow || '',
-        scenarioId: activeScenario.value?.id || '',
-        currentStateId: (currentState.value as any)?.id || '',
-        variables: (vars as any)?.value || {},
-        flags: (flags as any)?.value || {},
-        flightContext: (flightContext as any)?.value || {},
-        communicationLog: ((log as any)?.value || [] as any[]).slice(-20),
-      }
+      const pmState = engine
+        ? {
+            flowSlug: activeScenario?.value?.startFlow || '',
+            scenarioId: activeScenario?.value?.id || '',
+            currentStateId: (engine.currentState.value as any)?.id || '',
+            variables: (engine.variables as any)?.value || {},
+            flags: (engine.flags as any)?.value || {},
+            flightContext: (engine.flightContext as any)?.value || {},
+            communicationLog: ((engine.communicationLog as any)?.value || [] as any[]).slice(-20),
+          }
+        : undefined
 
-      await api.post('/api/bug-reports', {
+      const res = await api.post<{ code?: string }>('/api/bug-reports', {
+        source,
         comment: bugReportComment.value.trim(),
         contact: bugReportContact.value.trim(),
         screenshot: finalScreenshot,
         pmState,
       })
 
+      bugReportCode.value = res?.code || ''
       bugReportSuccess.value = true
-      setTimeout(() => { showBugReportDialog.value = false; bugReportSuccess.value = false }, 2500)
+      setTimeout(() => { showBugReportDialog.value = false; bugReportSuccess.value = false }, 5000)
     } catch (err: any) {
       bugReportError.value = err?.data?.statusMessage || err?.message || 'Fehler beim Senden.'
     } finally {
@@ -205,6 +216,7 @@ export function useBugReport(
     bugReportCapturing,
     bugReportError,
     bugReportSuccess,
+    bugReportCode,
     bugReportCanvasRef,
     bugReportImgRef,
     setupAnnotationCanvas,
