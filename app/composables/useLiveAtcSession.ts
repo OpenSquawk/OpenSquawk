@@ -8,6 +8,7 @@ import { useApi } from '~/composables/useApi'
 import type { useRadioSpeech } from '~/composables/useRadioSpeech'
 import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
 import { generateGermanRegistration } from '../../shared/utils/registration'
+import { gateTransmission } from '../../shared/utils/transmissionGate'
 import {
   isSimControlMatch,
   isSimControlRejection,
@@ -304,22 +305,26 @@ export function useLiveAtcSession(
 
   const handlePilotTransmission = async (message: string, source: 'text' | 'ptt' = 'text') => {
     const transcript = message.trim()
-    // Ignore empty or content-free transmissions: silence, a stray PTT tap, or
-    // Whisper hallucinating punctuation on near-silent audio. A genuine short call
-    // ("roger", "wilco") still contains letters/digits and passes.
-    if (!transcript || !/[a-z0-9]/i.test(transcript)) return
 
-    // STT MINIMUM-WORD GATE — search here if a spoken transmission was ignored.
-    // Voice (PTT) only: drop transcripts shorter than the configured minimum.
-    // Whisper hallucinates short real words ("Test", "Thank you", "Okay") on
-    // near-silent or noisy audio; left unfiltered those reach the backend as a
-    // (wrong) readback attempt — counting toward the 3x-skip — and now also
-    // trigger a paid LLM-router call. Text input is exempt so deliberate short
-    // commands still work. Threshold is the NUXT_PUBLIC_PTT_MIN_WORDS env var
-    // (default 2); set it to 1 to effectively disable the gate.
-    const minPttWords = Number(config.public.pttMinWords ?? 2)
-    if (source === 'ptt' && transcript.split(/\s+/).filter(Boolean).length < minPttWords) {
-      pmLog.info(`IGNORED short PTT transcript (<${minPttWords} words):`, transcript)
+    // STT CONTENT GATE — search here if a spoken transmission was ignored.
+    // Drops what push-to-talk produces when nothing was actually said: a stray
+    // tap, punctuation from near-silent audio, a clipped syllable, or one of the
+    // phrases Whisper hallucinates on silence. Each of those would otherwise be
+    // graded as a wrong readback, count toward the 3x-skip, and cost an LLM
+    // router call. Standard short calls ("roger", "wilco") are recognised as
+    // phraseology and pass regardless of length; typed input is never gated.
+    // Threshold is the NUXT_PUBLIC_PTT_MIN_WORDS env var (default 2); set it to
+    // 1 to disable the length rule.
+    const gate = gateTransmission(transcript, {
+      source,
+      minPttWords: Number(config.public.pttMinWords ?? 2),
+      readbackRequired: currentState.value?.readback_required,
+    })
+    if (!gate.accept) {
+      pmLog.info(
+        `IGNORED ${source} transcript (${gate.reason}) at state ${currentState.value?.id ?? '—'}:`,
+        JSON.stringify(transcript),
+      )
       return
     }
 
