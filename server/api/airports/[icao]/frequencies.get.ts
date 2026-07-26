@@ -1,5 +1,6 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { getServerRuntimeConfig } from '../../../utils/runtimeConfig'
+import { fetchOpenAipAirport, fetchVatsimData } from '../../../utils/airportSources'
 
 interface FrequencyEntry {
   type: string
@@ -129,8 +130,10 @@ export default defineEventHandler(async (event): Promise<FrequencyResponse> => {
   let vatsimSuccess = false
   let openaipSuccess = false
 
-  try {
-    const vatsimData: any = await $fetch('https://data.vatsim.net/v3/vatsim-data.json')
+  // Shared with the ATIS endpoint so one request never pulls the multi-megabyte
+  // VATSIM datafeed twice.
+  const vatsimData: any = await fetchVatsimData()
+  if (vatsimData) {
     const prefix = `${icao}_`
 
     const atisEntries = Array.isArray(vatsimData?.atis) ? vatsimData.atis : []
@@ -172,8 +175,6 @@ export default defineEventHandler(async (event): Promise<FrequencyResponse> => {
     }
 
     vatsimSuccess = true
-  } catch (err) {
-    console.warn('[OpenSquawk] Failed to fetch VATSIM frequencies:', err)
   }
 
   // OpenAIP v2 numeric frequency type → our internal type code.
@@ -190,56 +191,37 @@ export default defineEventHandler(async (event): Promise<FrequencyResponse> => {
   }
 
   const { openaipApiKey } = getServerRuntimeConfig()
-  if (openaipApiKey) {
-    try {
-      // Must use `search` (not `icao`) — the `icao` param does a full-text search
-      // across all fields and returns the entire 46k-airport dataset unpaged.
-      // `search=<ICAO>` returns exactly the matching airport.
-      const openaipData: any = await $fetch('https://api.core.openaip.net/api/airports', {
-        query: { search: icao },
-        headers: {
-          Accept: 'application/json',
-          'x-openaip-api-key': openaipApiKey
-        }
-      })
-
-      const items = Array.isArray(openaipData?.items) ? openaipData.items : []
-      for (const airport of items) {
-        // Real field is `icaoCode`, not `icao`
-        if ((airport?.icaoCode || '').toUpperCase() !== icao) continue
-        // Airport-level metadata: `name` (e.g. "Frankfurt am Main"), `municipality` (city only)
-        if (!airportName) {
-          const name = typeof airport?.name === 'string' ? airport.name.trim() : ''
-          const muni = typeof airport?.municipality === 'string' ? airport.municipality.trim() : ''
-          airportName = name || muni || undefined
-        }
-        // Frequencies live under `airport.frequencies[]`; each item has:
-        //   value  (MHz string, e.g. "122.035")
-        //   type   (numeric code, e.g. 5 for Delivery)
-        //   name   (human label, e.g. "FRANKFURT DELIVERY")
-        const freqItems: any[] = Array.isArray(airport?.frequencies) ? airport.frequencies : []
-
-        for (const freqItem of freqItems) {
-          // Real field is `value`, not `frequency` / `frequencyMHz`
-          const frequency = normalizeFrequency(freqItem?.value ?? freqItem?.frequency)
-          if (!frequency) continue
-
-          const numericType: number | undefined = typeof freqItem?.type === 'number' ? freqItem.type : undefined
-          const typeCode = numericType !== undefined ? (OPENAIP_TYPE_MAP[numericType] ?? 'UNK') : 'UNK'
-          const { type, label } = toTypeLabel(typeCode, freqItem?.name || freqItem?.description)
-          addFrequencyEntry(frequencyMap, {
-            type,
-            label,
-            frequency,
-            source: 'openaip'
-          })
-        }
-      }
-
-      openaipSuccess = true
-    } catch (err) {
-      console.warn('[OpenSquawk] Failed to fetch OpenAIP airport data:', err)
+  const airport = await fetchOpenAipAirport(icao, openaipApiKey)
+  if (airport) {
+    // Airport-level metadata: `name` (e.g. "Frankfurt am Main"), `municipality` (city only)
+    if (!airportName) {
+      const name = typeof airport?.name === 'string' ? airport.name.trim() : ''
+      const muni = typeof airport?.municipality === 'string' ? airport.municipality.trim() : ''
+      airportName = name || muni || undefined
     }
+    // Frequencies live under `airport.frequencies[]`; each item has:
+    //   value  (MHz string, e.g. "122.035")
+    //   type   (numeric code, e.g. 5 for Delivery)
+    //   name   (human label, e.g. "FRANKFURT DELIVERY")
+    const freqItems: any[] = Array.isArray(airport?.frequencies) ? airport.frequencies : []
+
+    for (const freqItem of freqItems) {
+      // Real field is `value`, not `frequency` / `frequencyMHz`
+      const frequency = normalizeFrequency(freqItem?.value ?? freqItem?.frequency)
+      if (!frequency) continue
+
+      const numericType: number | undefined = typeof freqItem?.type === 'number' ? freqItem.type : undefined
+      const typeCode = numericType !== undefined ? (OPENAIP_TYPE_MAP[numericType] ?? 'UNK') : 'UNK'
+      const { type, label } = toTypeLabel(typeCode, freqItem?.name || freqItem?.description)
+      addFrequencyEntry(frequencyMap, {
+        type,
+        label,
+        frequency,
+        source: 'openaip'
+      })
+    }
+
+    openaipSuccess = true
   }
 
   const frequencies = Array.from(frequencyMap.values()).sort((a, b) => {
