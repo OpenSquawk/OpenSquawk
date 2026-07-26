@@ -910,8 +910,20 @@ onMounted(() => {
   }
 }
 @media (max-width: 720px) {
+  /* The callsign stays put at every width — the pilot needs it on every
+     transmission, and the HUD is the one element that is always on screen.
+     Shrink it here rather than hiding the group. */
   .hud-context-group {
-    display: none;
+    margin-left: 0;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .hud-context-btn {
+    min-width: 0;
+    padding: 4px 8px;
+  }
+  .hud-context-callsign {
+    max-width: 104px;
   }
 }
 @media (max-width: 860px) {

@@ -44,6 +44,28 @@ export default defineNuxtPlugin(() => {
 
   const METAR = 'EDDF 101950Z 25008KT 9999 FEW040 18/12 Q1013 NOSIG'
 
+  // Matches FREQS above: one ATIS station on 118.025 broadcasting information K.
+  const ATIS = {
+    icao: 'EDDF',
+    source: 'vatsim',
+    letter: 'K',
+    letterDep: 'K',
+    letterArr: 'K',
+    runwayDep: '25C',
+    runwayArr: '25L',
+    runwaySource: 'atis',
+    qnhHpa: 1013,
+    surfaceWind: '250/08',
+    observedAt: null,
+    stations: [{
+      frequency: '118.025',
+      callsign: 'EDDF_ATIS',
+      variant: null,
+      letter: 'K',
+      text: 'FRANKFURT INFORMATION K, DEP RWY 25C, EXPECT ILS APPROACH RUNWAY 25L, QNH 1013',
+    }],
+  }
+
   const json = (data: unknown) => data
 
   // Return a canned response for a mocked Nuxt path, or the sentinel MISS.
@@ -56,6 +78,7 @@ export default defineNuxtPlugin(() => {
     if (path === '/api/auth/login') return json({ accessToken: 'mock-token', user: MOCK_USER })
 
     if (/^\/api\/airports\/[^/]+\/frequencies$/.test(path)) return json(FREQS)
+    if (/^\/api\/airports\/[^/]+\/atis$/.test(path)) return json(ATIS)
     if (path === '/api/vatsim/metar') return METAR
     if (path === '/api/vatsim/flightplans') return json({ flightplans: [] })
 
@@ -67,7 +90,9 @@ export default defineNuxtPlugin(() => {
     // a PTT press behaves as a correct readback against the real backend.
     if (path === '/api/atc/ptt') {
       const expected = opts?.body?.expected
-      const transcription = (Array.isArray(expected) ? expected[0] : expected) || 'say again'
+      // The fallback must not be standard phraseology: "say again" is
+      // intercepted by the backend and repeats the transmission instead.
+      const transcription = (Array.isArray(expected) ? expected[0] : expected) || 'unreadable'
       return json({ success: true, transcription })
     }
 
