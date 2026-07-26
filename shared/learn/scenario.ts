@@ -1,4 +1,5 @@
 import type { AirlineData, AirportData, Frequency, FrequencyType, Scenario } from './types'
+import { generateSquawk } from '../utils/transponder'
 
 const natoMap: Record<string, string> = {
   A: 'Alpha',
@@ -212,14 +213,6 @@ function codeToPhonetic(value: string): string {
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim()
-}
-
-function generateSquawk(): string {
-  let code = ''
-  for (let i = 0; i < 4; i++) {
-    code += String(randInt(0, 7))
-  }
-  return code
 }
 
 export function digitsToWords(value: string): string {

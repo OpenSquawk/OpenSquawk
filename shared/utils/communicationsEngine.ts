@@ -9,6 +9,7 @@ import type {
 } from '../types/decision'
 import type { FlowActivationInstruction, FlowActivationMode, LLMDecisionTrace } from '../types/llm'
 import { normalizeRadioPhrase, DEFAULT_AIRLINE_TELEPHONY } from './radioSpeech'
+import { generateSquawk } from './transponder'
 
 // --- DecisionTree runtime types ---
 type Role = 'pilot' | 'atc' | 'system'
@@ -783,7 +784,7 @@ export default function useCommunicationsEngine() {
             dest: fpl.arr || fpl.arrival || 'EDDM',
             stand: genStand(),
             runway: genRunway(),
-            squawk: fpl.assignedsquawk || genSquawk(),
+            squawk: fpl.assignedsquawk || generateSquawk(),
             atis_code: genATIS(),
             sid: genSID(fpl.route || ''),
             transition: 'DCT',
@@ -1507,10 +1508,6 @@ export default function useCommunicationsEngine() {
     function genRunway() {
         const arr = ['25L','25R','07L','07R','18','36','09','27']
         return arr[Math.floor(Math.random() * arr.length)]
-    }
-
-    function genSquawk() {
-        return String(Math.floor(Math.random() * 8000 + 1000)).padStart(4, '0')
     }
 
     function genATIS() {
