@@ -36,6 +36,54 @@ describe('normalizeRadioPhrase — PM radio pronunciation', () => {
     assert.equal(normalizeRadioPhrase('maintain 250 knots', opts), 'maintain 250 knots')
   })
 
+  // A departure clearance also says "via". The taxi-route rule comma-joined
+  // everything after it, so the SID's own name, number and suffix came out as
+  // three separate items — "Marun, seven, Foxtrot, departure, climb, …".
+  it('keeps a SID in a departure clearance in one piece', () => {
+    assert.equal(
+      normalizeRadioPhrase('cleared to Munich via BIBAX1N departure', opts),
+      'cleared to Munich via Bibax wun November departure',
+    )
+    assert.equal(
+      normalizeRadioPhrase('cleared via MARUN7F departure, climb 5000 feet', opts),
+      'cleared via Marun seven Foxtrot departure, climb fife thousand feet',
+    )
+  })
+
+  it('still breaks a real taxi route into separate designators', () => {
+    assert.match(
+      normalizeRadioPhrase('taxi to holding point runway 25L via N3, U4, A', opts),
+      /via November tree, Uniform four, Alfa$/,
+    )
+    assert.match(
+      normalizeRadioPhrase('taxi via A, V, hold short runway 07', opts),
+      /via Alfa, Victor, hold short/,
+    )
+  })
+
+  // Where two approaches serve the same runway the variant letter is the only
+  // thing telling them apart, so reading it as a bare "Z" loses the distinction.
+  it('speaks an approach variant letter phonetically', () => {
+    assert.match(
+      normalizeRadioPhrase('cleared ILS Z approach runway 25C', opts),
+      /ILS Zulu approach runway too fife center/,
+    )
+    assert.match(
+      normalizeRadioPhrase('cleared RNAV Y approach runway 08L', opts),
+      /RNAV Yankee approach runway zero eight left/,
+    )
+  })
+
+  it('speaks the parallel-runway side in full', () => {
+    for (const [written, spoken] of [
+      ['25L', 'too fife left'],
+      ['25C', 'too fife center'],
+      ['07R', 'zero seven right'],
+    ]) {
+      assert.match(normalizeRadioPhrase(`runway ${written}`, opts), new RegExp(spoken))
+    }
+  })
+
   // ICAO five-letter name-codes are built to be pronounceable and are spoken as
   // words on the radio. Spelling them out would both be wrong phraseology and
   // train the pilot to read back a spelling the matcher then has to undo.

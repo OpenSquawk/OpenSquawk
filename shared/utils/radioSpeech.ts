@@ -264,6 +264,19 @@ function speakTaxiSegment(segment: string): string {
     return spoken.join(' ');
 }
 
+/** True when every token is a taxiway designator (A, V, N3, U4, A-V). */
+function looksLikeTaxiRoute(route: string): boolean {
+    const tokens = route.trim().split(/\s+/).filter(Boolean);
+    if (!tokens.length) return false;
+    return tokens.every(token =>
+        token
+            .replace(/[^A-Za-z0-9\-/]/g, '')
+            .split(TAXI_ROUTE_SEPARATOR)
+            .filter(Boolean)
+            .every(part => shouldConvertTaxiSegment(part.toUpperCase())),
+    );
+}
+
 function speakTaxiRoute(route: string): string {
     const tokens = route.trim().split(/\s+/).filter(Boolean);
     if (!tokens.length) return route.trim();
@@ -275,6 +288,12 @@ function applyTaxiRoutePhonetics(text: string): string {
     const replacer = (_match: string, prefix: string, rawRoute: string) => {
         const route = rawRoute.trim();
         if (!route) return `${prefix}${rawRoute}`;
+        // "via" also introduces the SID of a departure clearance. Comma-joining
+        // every token after it turned "via Marun seven Foxtrot departure, climb
+        // five thousand feet" into a list, splitting the SID's own name, number
+        // and suffix into three separate items. Only convert a run that is
+        // actually made of taxiway designators.
+        if (!looksLikeTaxiRoute(route)) return `${prefix}${rawRoute}`;
         const spoken = speakTaxiRoute(route);
         if (!spoken) return `${prefix}${rawRoute}`;
         const needsSpace = /\s$/.test(prefix) ? '' : ' ';
@@ -706,6 +725,19 @@ export function normalizeRadioPhrase(text: string, options: NormalizeRadioOption
     const opts = { ...DEFAULT_OPTIONS, ...options };
     let out = text;
 
+    // Approach variant letter: "ILS Z" → "ILS Zulu". Where two approaches serve
+    // the same runway they are told apart by this letter alone, so reading it
+    // as a bare "Z" loses the distinction. Runs first, and independently of
+    // what follows: the runway rule below rewrites "runway 25C" to words, and
+    // an earlier attempt that required the runway in the same match therefore
+    // never fired on the phrasing the flows actually use ("ILS Z approach
+    // runway 25C").
+    out = out.replace(
+        /\b(ILS|VOR|RNAV|LOC|RNP)\s+([A-Z])(?![A-Za-z0-9])/g,
+        (_match, type: string, variant: string) =>
+            `${type} ${ICAO_LETTERS[variant] ?? variant}`,
+    );
+
     out = out.replace(/\b(\d{3})\.(\d{1,3})\b/g, (_, a: string, b: string) => freqSpeak(`${a}.${b}`));
     out = out.replace(/\b(?:HDG|heading)\s*(\d{2,3})\b/gi, (_, hdg: string) => headingSpeak(hdg));
     out = out.replace(/\b(?:RWY|runway)\s*(\d{2}[LCR]?)\b/gi, (_, rw: string) => runwaySpeak(rw));
@@ -754,12 +786,6 @@ export function normalizeRadioPhrase(text: string, options: NormalizeRadioOption
         });
     }
 
-    // ILS/VOR variant letter before runway: "ILS Z 25C" → "ILS Zulu runway two five center"
-    out = out.replace(
-        /\b(ILS|VOR|RNAV|LOC|RNP)\s+([A-Z])\s+(\d{2}[LCR]?)\b/gi,
-        (_match, type: string, variant: string, runway: string) =>
-            `${type.toUpperCase()} ${ICAO_LETTERS[variant.toUpperCase()] ?? variant} ${runwaySpeak(runway)}`
-    );
     // ILS/VOR suffix after runway: "ILS 25C Z" → legacy format
     out = out.replace(
         /\b(ILS|VOR|RNAV|LOC|RNP)\s+(\d{2}[LCR]?)\s+([A-Z])\b/gi,
