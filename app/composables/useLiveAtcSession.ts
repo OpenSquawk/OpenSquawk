@@ -7,6 +7,7 @@ import type { useSessionState } from '~/composables/useSessionState'
 import { useApi } from '~/composables/useApi'
 import type { useRadioSpeech } from '~/composables/useRadioSpeech'
 import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
+import { generateGermanRegistration } from '../../shared/utils/registration'
 import {
   isSimControlMatch,
   isSimControlRejection,
@@ -620,13 +621,13 @@ export function useLiveAtcSession(
     // Assign a German D-registration and its abbreviated form (D-EMIL -> D-IL,
     // first letter + last two), which ATC uses after the first call. Mirror it
     // into the local engine vars and HUD so the display matches the radio.
+    // The class letter has to match the aircraft — D-E is single-engine
+    // pistons, so an A320 gets a D-A registration, not "D-ETMO".
     if (scenario.startFlow.startsWith('vfr') || scenario.startFlow.startsWith('info')) {
-      const pool = ['D-EMIL', 'D-EKLM', 'D-ENNY', 'D-ELLA', 'D-EOMT', 'D-ELPC', 'D-EMTO', 'D-EBRA']
-      const reg = pool[Math.floor(Math.random() * pool.length)]
-      const short = `D-${reg.replace(/^D-/, '').slice(-2)}`
-      backendVariables.callsign = reg
+      const { registration, short } = generateGermanRegistration(backendVariables.aircraft_type)
+      backendVariables.callsign = registration
       backendVariables.callsign_short = short
-      patchVariables({ callsign: reg, callsign_short: short })
+      patchVariables({ callsign: registration, callsign_short: short })
     } else {
       backendVariables.callsign_short = backendVariables.callsign
     }
