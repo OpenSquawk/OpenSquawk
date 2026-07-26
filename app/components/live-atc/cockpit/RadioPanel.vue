@@ -5,9 +5,9 @@ import { normalizeManualFreq } from '../../../../shared/utils/frequency'
 import {
   FREQUENCY_PLACEHOLDER,
   FREQ_ROLE_LABEL,
-  normalizedFrequencyValue,
   type DisplayAirportFrequencyEntry,
 } from '~/composables/useFrequencyPresets'
+import { normalizedFrequencyValue } from '~~/shared/utils/frequency'
 
 const props = defineProps<{
   active: string

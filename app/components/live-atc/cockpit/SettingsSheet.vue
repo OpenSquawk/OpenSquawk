@@ -20,6 +20,7 @@ const debugMode = defineModel<boolean>('debugMode', { required: true })
 const prerecEnabled = defineModel<boolean>('prerecEnabled', { required: true })
 const prerecSeconds = defineModel<number>('prerecSeconds', { required: true })
 const aiTrafficEnabled = defineModel<boolean>('aiTrafficEnabled', { required: true })
+const autoTuneEnabled = defineModel<boolean>('autoTuneEnabled', { required: true })
 
 /**
  * Shown while AI traffic is on. These are deliberate v1 boundaries from the
@@ -138,6 +139,17 @@ const AI_TRAFFIC_LIMITS = [
               band sounds alive while you fly.
             </p>
           </div>
+          <v-switch
+              v-model="autoTuneEnabled"
+              color="cyan"
+              inset
+              label="Auto-tune after handoff"
+              hide-details
+          />
+          <p class="text-[11px] text-white/50 -mt-1">
+            Dials in the new frequency a few seconds after a handoff, announcing it
+            first. Tune the radio yourself at any point and that takes precedence.
+          </p>
           <v-switch
               v-model="aiTrafficEnabled"
               color="cyan"

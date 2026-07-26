@@ -11,9 +11,9 @@ import { postWithLocalFallback, useLocalSpeechBridge } from '~/composables/useLo
 import {
   FREQUENCY_PLACEHOLDER,
   FREQ_ROLE_LABEL,
-  normalizedFrequencyValue,
   type useFrequencyPresets,
 } from '~/composables/useFrequencyPresets'
+import { normalizedFrequencyValue } from '~~/shared/utils/frequency'
 
 export type PreparedSpeech = {
   template: string

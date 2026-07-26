@@ -6,11 +6,11 @@ import { createAtisAudioLoop, type AtisAudioLoop } from '../../shared/utils/atis
 import { pmLog } from '../../shared/utils/pmLog'
 import {
   FREQUENCY_PLACEHOLDER,
-  normalizedFrequencyValue,
   atisVariantLabel,
   type AirportFrequencyEntry,
   type useFrequencyPresets,
 } from '~/composables/useFrequencyPresets'
+import { normalizedFrequencyValue } from '~~/shared/utils/frequency'
 
 export function useAtisPlayback(
   engine: ReturnType<typeof useCommunicationsEngine>,

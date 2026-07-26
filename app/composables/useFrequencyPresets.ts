@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { useApi } from '~/composables/useApi'
 import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
-import { normalizeManualFreq } from '../../shared/utils/frequency'
+import { normalizeManualFreq, normalizedFrequencyValue } from '../../shared/utils/frequency'
 import type { AtisReport, AtisStation } from '../../shared/utils/atisReport'
 
 export type AirportFrequencyEntry = {
@@ -66,8 +66,6 @@ const FREQ_NAME_TO_VAR: Record<string, string> = {
   'radar':              'handoff_freq',
 }
 
-export const normalizedFrequencyValue = (value: string | undefined) =>
-  (value || '').trim().replace(/\s+/g, '').replace(',', '.')
 
 /** "Arrival" / "Departure" variant from the station callsign (EDDF_A_ATIS / EDDF_D_ATIS). */
 export const atisVariantLabel = (entry: AirportFrequencyEntry): string => {

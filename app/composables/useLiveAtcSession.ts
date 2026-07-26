@@ -2,7 +2,8 @@ import { computed, nextTick, onUnmounted, ref } from 'vue'
 import type { Ref } from 'vue'
 import { pmLog } from '../../shared/utils/pmLog'
 import { SCENARIOS, type Scenario } from '../../shared/constants/scenarios'
-import { normalizedFrequencyValue, type useFrequencyPresets } from '~/composables/useFrequencyPresets'
+import { type useFrequencyPresets } from '~/composables/useFrequencyPresets'
+import { normalizedFrequencyValue } from '../../shared/utils/frequency'
 import type { useSessionState } from '~/composables/useSessionState'
 import { useApi } from '~/composables/useApi'
 import type { useRadioSpeech } from '~/composables/useRadioSpeech'
@@ -10,6 +11,7 @@ import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
 import { generateGermanRegistration } from '../../shared/utils/registration'
 import { gateTransmission } from '../../shared/utils/transmissionGate'
 import { silenceWindowFor } from '../../shared/utils/silenceTimer'
+import { planAutoTune } from '../../shared/utils/autoTune'
 import {
   isSimControlMatch,
   isSimControlRejection,
@@ -32,6 +34,8 @@ export interface LiveAtcSessionDeps {
   prefetchAtisAudio: () => void
   /** True while the pilot holds PTT — the silence timer must not talk over them. */
   isRecording: Ref<boolean>
+  /** Settings toggle: dial in the new frequency automatically after a handoff. */
+  autoTuneEnabled: Ref<boolean>
   bridgeConnected: Ref<boolean>
   bridgePosition: Ref<{ lat: number; lon: number } | null>
   /** ?token=… from the route — auths the frequency-sim-control channel (design §4). */
@@ -61,7 +65,7 @@ export function useLiveAtcSession(
 
   const {
     state, freq, speech, radioBackend, api, config, prefetchAtisAudio,
-    isRecording, bridgeConnected, bridgePosition, bridgeToken,
+    isRecording, autoTuneEnabled, bridgeConnected, bridgePosition, bridgeToken,
     persistSelectedPlan, maybeShowFirstRunHelp,
   } = deps
 
@@ -79,7 +83,7 @@ export function useLiveAtcSession(
     frequencies, airportFrequencies, frequencySources, activeAirportIcao,
     expectedFrequencyForState, acceptedFrequenciesForState,
     runwayInUse, informationLetter, atisReport,
-    fetchAirportFrequencies,
+    fetchAirportFrequencies, setActiveFrequencyFromList,
   } = freq
 
   const {
@@ -176,6 +180,69 @@ export function useLiveAtcSession(
       }
     }
     silenceTimer = setTimeout(fire, ms)
+  }
+
+  // --- Auto-tune ---------------------------------------------------------------
+  // Tuning is manual, so after a handoff nothing the pilot says goes through
+  // until they dial the new frequency in. With the setting on, the radio does it
+  // for them a few seconds after the handoff was accepted, announcing it first.
+  //
+  // Whether a change is due is decided from state, not from an event (see
+  // planAutoTune): the two cases that must NOT tune — a frequency readback that
+  // was wrong, and one not yet given — both leave the session on a state that
+  // still expects the frequency already dialled in, so nothing is due.
+  let autoTuneTimer: ReturnType<typeof setTimeout> | null = null
+
+  function clearAutoTune() {
+    if (autoTuneTimer) {
+      clearTimeout(autoTuneTimer)
+      autoTuneTimer = null
+    }
+  }
+
+  function scheduleAutoTune() {
+    clearAutoTune()
+    const plan = planAutoTune({
+      enabled: autoTuneEnabled.value,
+      active: frequencies.value.active,
+      expected: expectedFrequencyForState(),
+      accepted: acceptedFrequenciesForState(),
+    })
+    if (!plan) return
+
+    // Announce before changing, never after: the pilot has to be able to follow
+    // what their own radio just did.
+    scheduleControllerSpeech(plan.announcement)
+    appendLogEntry('system', plan.announcement, currentState.value?.id ?? '', {
+      frequency: frequencies.value.active,
+    })
+
+    const sessionAtArm = backendSessionId.value
+    const activeAtArm = frequencies.value.active
+    pmLog.info('AUTO-TUNE armed →', plan.frequency, `in ${plan.delayMs}ms`)
+
+    autoTuneTimer = setTimeout(() => {
+      autoTuneTimer = null
+      // The session ended or a new one started while we waited.
+      if (backendSessionId.value !== sessionAtArm) {
+        pmLog.info('AUTO-TUNE dropped — session changed')
+        return
+      }
+      // The pilot reached for the radio themselves; theirs wins.
+      if (frequencies.value.active !== activeAtArm) {
+        pmLog.info('AUTO-TUNE dropped — pilot tuned manually')
+        return
+      }
+      // Prefer the airport's own entry so the label and the engine's notion of
+      // the position come along; fall back to a bare entry for an invented one.
+      const known = airportFrequencies.value.find(
+        (entry: any) => normalizedFrequencyValue(entry.frequency) === normalizedFrequencyValue(plan.frequency),
+      )
+      pmLog.info('AUTO-TUNE tuning →', plan.frequency)
+      setActiveFrequencyFromList(known ?? {
+        type: '', label: '', frequency: plan.frequency, source: 'openaip',
+      } as any)
+    }, plan.delayMs)
   }
 
   // Guards the ATC reply (log entry + TTS) against being applied twice for the
@@ -279,6 +346,8 @@ export function useLiveAtcSession(
 
     // Re-arm (or clear) the silence auto-advance for whatever state we're now on.
     armSilenceTimer()
+    // And dial in the new frequency if this decision handed us to one.
+    scheduleAutoTune()
   }
 
   // --- Frequency-sim-control (design doc §4) ------------------------------------

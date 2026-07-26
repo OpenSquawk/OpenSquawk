@@ -141,6 +141,7 @@
             v-model:prerec-enabled="prerecEnabled"
             v-model:prerec-seconds="prerecSeconds"
             v-model:ai-traffic-enabled="aiTrafficEnabled"
+            v-model:auto-tune-enabled="autoTuneEnabled"
             @set-theme="setPmTheme"
         />
 
@@ -316,6 +317,10 @@ const readbackEnabled = ref(false)
 // Simulated background traffic. Off by default: it costs TTS per lively minute,
 // so it stays an opt-in the user turns on once they want the busier frequency.
 const aiTrafficEnabled = ref(false)
+// Dial the new frequency in automatically after a handoff. Off by default:
+// working the radio is part of what is being practised, so turning it over to
+// the aircraft has to be a deliberate choice.
+const autoTuneEnabled = ref(false)
 
 // ── Bug Report ───────────────────────────────────────────────────────────────
 // Owned here rather than by the dialog: the HUD button starts the screenshot
@@ -593,6 +598,7 @@ const session = useLiveAtcSession(engine, {
   config,
   prefetchAtisAudio,
   isRecording,
+  autoTuneEnabled,
   bridgeConnected,
   bridgePosition,
   bridgeToken,
