@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { AUTO_TUNE_DELAY_MS, planAutoTune } from '~~/shared/utils/autoTune'
+import { AUTO_TUNE_DELAY_MS, createAutoTuneScheduler, planAutoTune } from '~~/shared/utils/autoTune'
 
 const plan = (over: Partial<Parameters<typeof planAutoTune>[0]> = {}) =>
   planAutoTune({ enabled: true, active: '118.700', expected: '121.800', ...over })
@@ -63,5 +63,92 @@ describe('planAutoTune', () => {
   it('does not tune after a wrong frequency readback', () => {
     // A wrong readback loops back to the same state — same frequency, no change.
     assert.equal(plan({ active: '118.700', expected: '118.700' }), null)
+  })
+})
+
+describe('createAutoTuneScheduler — the wait between announcing and tuning', () => {
+  function harness(over: Partial<Parameters<typeof planAutoTune>[0]> = {}) {
+    const calls = { announced: [] as string[], tuned: [] as string[], cancelled: [] as string[] }
+    let sessionId: string | null = 'session-1'
+    let active = '118.700'
+    let fire: (() => void) | null = null
+    let delay = 0
+
+    const scheduler = createAutoTuneScheduler({
+      announce: t => calls.announced.push(t),
+      tune: f => { calls.tuned.push(f); active = f },
+      currentSessionId: () => sessionId,
+      currentActive: () => active,
+      onCancelled: r => calls.cancelled.push(r),
+      setTimeoutFn: (fn, ms) => { fire = fn; delay = ms; return 1 },
+      clearTimeoutFn: () => { fire = null },
+    })
+
+    return {
+      calls,
+      scheduler,
+      get delay() { return delay },
+      run: () => { const f = fire; fire = null; f?.() },
+      endSession: () => { sessionId = null },
+      tuneManually: (f: string) => { active = f },
+      schedule: (extra: Record<string, unknown> = {}) => scheduler.schedule({
+        enabled: true, active, expected: '121.800', ...over, ...extra,
+      } as any),
+    }
+  }
+
+  it('announces immediately and tunes only after the delay', () => {
+    const h = harness()
+    h.schedule()
+    assert.deepEqual(h.calls.announced, ['OpenSquawk changing frequency to 121.800'])
+    assert.deepEqual(h.calls.tuned, [], 'tuned before the announcement was heard')
+    assert.equal(h.delay, AUTO_TUNE_DELAY_MS)
+
+    h.run()
+    assert.deepEqual(h.calls.tuned, ['121.800'])
+  })
+
+  it('says nothing at all when no change is due', () => {
+    const h = harness()
+    assert.equal(h.schedule({ active: '121.800' }), null)
+    assert.deepEqual(h.calls.announced, [])
+    assert.equal(h.scheduler.pending, false)
+  })
+
+  it('drops the change when the pilot tunes the radio first', () => {
+    const h = harness()
+    h.schedule()
+    h.tuneManually('119.500')
+    h.run()
+    assert.deepEqual(h.calls.tuned, [], 'overrode the pilot')
+    assert.deepEqual(h.calls.cancelled, ['tuned_manually'])
+  })
+
+  it('drops the change when the session ended while waiting', () => {
+    const h = harness()
+    h.schedule()
+    h.endSession()
+    h.run()
+    assert.deepEqual(h.calls.tuned, [])
+    assert.deepEqual(h.calls.cancelled, ['session_changed'])
+  })
+
+  it('a second handoff supersedes the first rather than tuning twice', () => {
+    const h = harness()
+    h.schedule()
+    h.schedule({ expected: '131.150' })
+    assert.deepEqual(h.calls.cancelled, ['superseded'])
+    h.run()
+    assert.deepEqual(h.calls.tuned, ['131.150'], 'tuned to the stale frequency')
+  })
+
+  it('cancel() stops a pending change', () => {
+    const h = harness()
+    h.schedule()
+    assert.equal(h.scheduler.pending, true)
+    h.scheduler.cancel()
+    assert.equal(h.scheduler.pending, false)
+    h.run()
+    assert.deepEqual(h.calls.tuned, [])
   })
 })

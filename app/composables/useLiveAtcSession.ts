@@ -11,7 +11,7 @@ import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
 import { generateGermanRegistration } from '../../shared/utils/registration'
 import { gateTransmission } from '../../shared/utils/transmissionGate'
 import { silenceWindowFor } from '../../shared/utils/silenceTimer'
-import { planAutoTune } from '../../shared/utils/autoTune'
+import { createAutoTuneScheduler } from '../../shared/utils/autoTune'
 import {
   isSimControlMatch,
   isSimControlRejection,
@@ -199,58 +199,43 @@ export function useLiveAtcSession(
   // planAutoTune): the two cases that must NOT tune — a frequency readback that
   // was wrong, and one not yet given — both leave the session on a state that
   // still expects the frequency already dialled in, so nothing is due.
-  let autoTuneTimer: ReturnType<typeof setTimeout> | null = null
+  const autoTune = createAutoTuneScheduler({
+    announce: (text) => {
+      // Announce before changing, never after: the pilot has to be able to
+      // follow what their own radio just did.
+      scheduleControllerSpeech(text)
+      appendLogEntry('system', text, currentState.value?.id ?? '', {
+        frequency: frequencies.value.active,
+      })
+    },
+    tune: (frequency) => {
+      // Prefer the airport's own entry so the label and the engine's notion of
+      // the position come along; fall back to a bare entry for an invented one.
+      const known = airportFrequencies.value.find(
+        (entry: any) => normalizedFrequencyValue(entry.frequency) === normalizedFrequencyValue(frequency),
+      )
+      pmLog.info('AUTO-TUNE tuning →', frequency)
+      setActiveFrequencyFromList(known ?? {
+        type: '', label: '', frequency, source: 'openaip',
+      } as any)
+    },
+    currentSessionId: () => backendSessionId.value || null,
+    currentActive: () => frequencies.value.active,
+    onCancelled: (reason) => pmLog.info('AUTO-TUNE dropped —', reason),
+  })
 
   function clearAutoTune() {
-    if (autoTuneTimer) {
-      clearTimeout(autoTuneTimer)
-      autoTuneTimer = null
-    }
+    autoTune.cancel()
   }
 
   function scheduleAutoTune() {
-    clearAutoTune()
-    const plan = planAutoTune({
+    const plan = autoTune.schedule({
       enabled: autoTuneEnabled.value,
       active: frequencies.value.active,
       expected: expectedFrequencyForState(),
       accepted: acceptedFrequenciesForState(),
     })
-    if (!plan) return
-
-    // Announce before changing, never after: the pilot has to be able to follow
-    // what their own radio just did.
-    scheduleControllerSpeech(plan.announcement)
-    appendLogEntry('system', plan.announcement, currentState.value?.id ?? '', {
-      frequency: frequencies.value.active,
-    })
-
-    const sessionAtArm = backendSessionId.value
-    const activeAtArm = frequencies.value.active
-    pmLog.info('AUTO-TUNE armed →', plan.frequency, `in ${plan.delayMs}ms`)
-
-    autoTuneTimer = setTimeout(() => {
-      autoTuneTimer = null
-      // The session ended or a new one started while we waited.
-      if (backendSessionId.value !== sessionAtArm) {
-        pmLog.info('AUTO-TUNE dropped — session changed')
-        return
-      }
-      // The pilot reached for the radio themselves; theirs wins.
-      if (frequencies.value.active !== activeAtArm) {
-        pmLog.info('AUTO-TUNE dropped — pilot tuned manually')
-        return
-      }
-      // Prefer the airport's own entry so the label and the engine's notion of
-      // the position come along; fall back to a bare entry for an invented one.
-      const known = airportFrequencies.value.find(
-        (entry: any) => normalizedFrequencyValue(entry.frequency) === normalizedFrequencyValue(plan.frequency),
-      )
-      pmLog.info('AUTO-TUNE tuning →', plan.frequency)
-      setActiveFrequencyFromList(known ?? {
-        type: '', label: '', frequency: plan.frequency, source: 'openaip',
-      } as any)
-    }, plan.delayMs)
+    if (plan) pmLog.info('AUTO-TUNE armed →', plan.frequency, `in ${plan.delayMs}ms`)
   }
 
   // Guards the ATC reply (log entry + TTS) against being applied twice for the
@@ -853,6 +838,10 @@ export function useLiveAtcSession(
   }
 
   const backToSetup = () => {
+    // Leaving the flight: a pending frequency change belongs to a session that
+    // no longer exists.
+    clearSilenceTimer()
+    clearAutoTune()
     currentScreen.value = 'login'
     selectedPlan.value = null
     persistSelectedPlan(null)
@@ -946,7 +935,10 @@ export function useLiveAtcSession(
     }
   }
 
-  onUnmounted(clearSilenceTimer)
+  onUnmounted(() => {
+    clearSilenceTimer()
+    clearAutoTune()
+  })
 
   return {
     clearSilenceTimer,
