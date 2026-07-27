@@ -75,6 +75,10 @@ export function normalizeForMatch(value: string): string {
     .trim()
 }
 
+function compactForMatch(value: string): string {
+  return normalizeForMatch(value).replace(/\s+/g, '')
+}
+
 /** Convert spoken ATC English back to written tokens (digits, runway letters,
  *  collapsed callsign codes).  Returned text is also `normalizeForMatch`-safe. */
 export function denormalizeSpokenAtc(input: string): string {
@@ -295,6 +299,8 @@ export function matchTranscriptionToFields(
 ): SttMatchResult {
   const normalized = normalizeForMatch(transcription)
   const denormalized = normalizeForMatch(denormalizeSpokenAtc(transcription))
+  const normalizedCompact = compactForMatch(normalized)
+  const denormalizedCompact = compactForMatch(denormalized)
   const matches: Record<string, string> = {}
   // Per-field diagnostic keyed by field.key (output in original order below).
   const reportByKey: Record<string, SttFieldReport> = {}
@@ -321,10 +327,17 @@ export function matchTranscriptionToFields(
 
     for (const cand of candidates) {
       if (!cand) continue
+      const compactCandidate = compactForMatch(cand)
       if (candidateMatches(normalized, cand)) {
         report.matched = true; report.matchedVia = cand; report.view = 'raw'; break
       }
       if (candidateMatches(denormalized, cand)) {
+        report.matched = true; report.matchedVia = cand; report.view = 'spoken'; break
+      }
+      if (compactCandidate.length >= 2 && normalizedCompact.includes(compactCandidate)) {
+        report.matched = true; report.matchedVia = cand; report.view = 'raw'; break
+      }
+      if (compactCandidate.length >= 2 && denormalizedCompact.includes(compactCandidate)) {
         report.matched = true; report.matchedVia = cand; report.view = 'spoken'; break
       }
       if (field.isCallsign && cand.length >= 4

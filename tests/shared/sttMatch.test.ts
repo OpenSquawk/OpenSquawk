@@ -33,6 +33,11 @@ describe('denormalizeSpokenAtc', () => {
   it('handles runway suffix letters', () => {
     assert.equal(denormalizeSpokenAtc('runway zero eight right'), 'runway 08r')
   })
+
+  it('folds ICAO pronunciation variants and compact route tokens back into written form', () => {
+    assert.equal(denormalizeSpokenAtc('KLM fower wun wun wun'), 'klm 4111')
+    assert.equal(denormalizeSpokenAtc('TOBAK fife Quebec'), 'tobak 5q')
+  })
 })
 
 describe('matchTranscriptionToFields', () => {
@@ -71,6 +76,24 @@ describe('matchTranscriptionToFields', () => {
       ],
     )
     assert.equal(result.filled, 1)
+  })
+
+  it('matches SID fields with spoken suffixes and missing whitespace', () => {
+    const spoken = matchTranscriptionToFields(
+      'cleared via tobak fife quebec',
+      [
+        { key: 'sid', expected: 'TOBAK 5Q' },
+      ],
+    )
+    assert.equal(spoken.filled, 1)
+
+    const compact = matchTranscriptionToFields(
+      'cleared via TOBAK5Q',
+      [
+        { key: 'sid', expected: 'TOBAK 5Q' },
+      ],
+    )
+    assert.equal(compact.filled, 1)
   })
 
   it('matches a 4-digit squawk after digit collapse', () => {
