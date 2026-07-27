@@ -27,7 +27,7 @@
                 <v-icon size="18" class="experience-option-icon">mdi-school</v-icon>
                 <div class="experience-option-body">
                   <div class="experience-option-title">Classroom</div>
-                  <div class="experience-option-sub">Mission hub & drills</div>
+                  <div class="experience-option-sub">Guided ICAO/SERA radio drills</div>
                 </div>
                 <v-icon size="16" class="experience-option-check">mdi-check</v-icon>
               </div>
@@ -157,8 +157,12 @@
     <!-- HUB -->
     <main v-if="panel==='hub'" class="container" role="main">
       <div class="hub-head">
-        <h2 class="h2">Training Mission Hub</h2>
-        <div class="muted">Start with the ICAO alphabet & numbers, then basics, ground, and more.</div>
+        <h2 class="h2">Build the radio patterns before Live ATC</h2>
+        <div class="muted">Start with Foundations, master the mandatory elements, then practise a complete guided flight.</div>
+        <div class="training-data-notice" role="note">
+          <v-icon size="18">mdi-flask-outline</v-icon>
+          Synthetic training data — not for operational use
+        </div>
       </div>
 
       <div class="tiles">
@@ -171,9 +175,9 @@
         >
           <div class="tile-media"
                :style="{ backgroundImage: `url(${m.art})` }">
-            <span v-if="isFreshModule(m.id)" class="tile-badge">
-              <v-icon size="16">mdi-star</v-icon>
-              New briefing
+            <span class="tile-badge">
+              <v-icon size="16">mdi-format-list-numbered</v-icon>
+              Step {{ moduleNumber(m.id) }} · Recommended order
             </span>
           </div>
           <div class="tile-body">
@@ -189,37 +193,18 @@
               <div class="line-fill" :style="{ width: pct(m.id)+'%' }"></div>
             </div>
             <div class="tile-progress-meta">
-              <span>{{ doneCount(m.id) }}/{{ m.lessons.length }} lessons</span>
-              <span>{{ moduleHasProgress(m.id) ? avgScore(m.id) + '%' : '—' }} avg</span>
+              <span>{{ doneCount(m.id) }}/{{ m.lessons.length }} mastered</span>
+              <span>{{ practisingCount(m.id) }} practising</span>
             </div>
             <div class="tile-actions">
               <button
                   class="btn primary"
-                  :disabled="!isModuleUnlocked(m.id)"
                   @click="handleModulePrimary(m.id)"
               >
                 <v-icon size="18">{{ modulePrimaryIcon(m.id) }}</v-icon>
                 {{ modulePrimaryLabel(m.id) }}
               </button>
 
-            </div>
-          </div>
-          <div v-if="!isModuleUnlocked(m.id)" class="tile-overlay">
-            <div class="tile-overlay-inner">
-              <v-icon size="26">mdi-lock-alert</v-icon>
-              <div class="tile-overlay-text">
-                <div class="tile-overlay-title">Clearance pending</div>
-                <div class="tile-overlay-sub">
-                  Complete earlier missions to
-                  <button
-                      type="button"
-                      class="tile-overlay-link"
-                      @click.stop.prevent="attemptUnlockModule(m.id)"
-                  >unlock
-                  </button>
-                  this briefing.
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -241,8 +226,8 @@
             Hub
           </button>
           <span class="muted" v-if="moduleStage==='lessons'">/ {{ current.title }}</span>
-          <span class="muted" v-else-if="moduleStage==='setup'">/ Mission setup</span>
-          <span class="muted" v-else>/ Mission briefing</span>
+          <span class="muted" v-else-if="moduleStage==='setup'">/ Sequence setup</span>
+          <span class="muted" v-else>/ Training briefing</span>
         </div>
         <div class="play-tools">
           <div v-if="requiresFlightPlan" class="plan-status" :class="{ 'is-ready': !!currentPlan }">
@@ -273,7 +258,7 @@
             <span class="stat"><v-icon size="18">mdi-check-circle-outline</v-icon> {{
                 doneCount(current.id)
               }}/{{ current.lessons.length }}</span>
-            <span class="stat"><v-icon size="18">mdi-star</v-icon> Ø {{ avgScore(current.id) }}%</span>
+            <span class="stat"><v-icon size="18">mdi-progress-pencil</v-icon> {{ practisingCount(current.id) }} practising</span>
           </div>
         </div>
       </div>
@@ -281,7 +266,11 @@
       <div v-if="moduleStage==='setup'" class="module-stage-panel mission-setup">
         <div class="setup-header">
           <h2 class="h3">Choose your flight</h2>
-          <p class="muted small">Lock in a gate-to-gate scenario before the radio work begins.</p>
+          <p class="muted small">Choose the data for one consistent guided sequence. Values are for training only.</p>
+          <div class="training-data-notice" role="note">
+            <v-icon size="18">mdi-alert-outline</v-icon>
+            Imported or manual values are not checked against charts, AIRAC data, or current frequencies.
+          </div>
         </div>
         <div class="plan-modes">
           <button
@@ -335,7 +324,7 @@
                     <v-icon size="20">mdi-pencil</v-icon>
                   </div>
                   <div>
-                    <div class="manual-card-title">Design your own mission</div>
+                    <div class="manual-card-title">Set up a training sequence</div>
                     <p class="muted small">Fill in the essentials below. Expand the optional sections when you want to
                       brief gates, taxi routes or procedures.</p>
                   </div>
@@ -544,7 +533,7 @@
                 </button>
                 <button class="btn primary" type="submit">
                   <v-icon size="18">mdi-clipboard-text-outline</v-icon>
-                  Build mission briefing
+                  Build training briefing
                 </button>
               </div>
             </div>
@@ -556,7 +545,7 @@
                     <v-icon size="20">mdi-radar</v-icon>
                   </div>
                   <div>
-                    <div class="preview-title">Live mission preview</div>
+                    <div class="preview-title">Training sequence preview</div>
                     <p class="muted small">See how your ATC readback will sound as you fill in the form.</p>
                   </div>
                 </div>
@@ -597,11 +586,11 @@
               <span class="simbrief-tag">SimBrief import</span>
               <h3 class="simbrief-hero-title">Load your airline dispatch</h3>
               <p class="simbrief-hero-text">
-                Sync the exact OFP you're flying with one click. We'll transform it into a mission-ready briefing and
-                readback drill.
+                Import an OFP as input for a guided training sequence. Classroom does not validate it against current
+                charts, AIRAC data, procedures, or frequencies.
               </p>
               <div class="simbrief-hero-highlights">
-                <span><v-icon size="16">mdi-airplane-cog</v-icon> Real routes</span>
+                <span><v-icon size="16">mdi-airplane-cog</v-icon> Imported route context</span>
                 <span><v-icon size="16">mdi-clock-fast</v-icon> Instant setup</span>
                 <a
                     href="https://www.simbrief.com/home/flight_planning.html"
@@ -637,7 +626,7 @@
                   <span class="step-number">3</span>
                   <span class="simbrief-step-title">Paste &amp; import</span>
                 </div>
-                <p>Drop the ID below. We'll remember it on this device so future missions load instantly.</p>
+                <p>Drop the ID below. We remember it on this device so future training sequences load quickly.</p>
               </div>
             </div>
 
@@ -663,7 +652,7 @@
             </form>
 
             <p class="muted small simbrief-note">
-              New to SimBrief? It's a free airline-style dispatch planner that pairs perfectly with OpenSquawk missions.
+              New to SimBrief? It is an external dispatch planner; imported values remain unvalidated training inputs.
             </p>
 
             <div v-if="simbriefForm.loading" class="simbrief-status">
@@ -693,7 +682,8 @@
           <NuxtImg :src="currentBriefingArt" alt="Mission hero" class="briefing-hero-bg"/>
           <div class="briefing-hero-content">
             <div class="briefing-tag-row">
-              <span class="plan-tag">Mission briefing</span>
+              <span class="plan-tag">Guided sequence briefing</span>
+              <span class="synthetic-data-chip">Synthetic training data — not for operational use</span>
               <span class="briefing-chip">{{ briefingSnapshot.callsign }}</span>
             </div>
             <h2 class="briefing-hero-title">{{ displayCallsign(briefingSnapshot.radioCall, briefingSnapshot) }}</h2>
@@ -848,7 +838,7 @@
           </button>
           <button class="btn primary" type="button" @click="handleBriefingConfirm()">
             <v-icon size="18">{{ briefingReturnStage === 'setup' ? 'mdi-airplane' : 'mdi-play-circle' }}</v-icon>
-            {{ briefingReturnStage === 'setup' ? 'Start mission' : 'Return to mission' }}
+            {{ briefingReturnStage === 'setup' ? 'Start sequence' : 'Return to sequence' }}
           </button>
         </div>
       </div>
@@ -868,7 +858,7 @@
           <div v-if="current" class="module-overview-header">
             <div class="module-overview-meta">
               <div>
-                <span class="module-overview-chip">Mission overview</span>
+                <span class="module-overview-chip">Module overview</span>
               </div>
               <h3 class="module-overview-title">{{ current.title }}</h3>
               <p class="module-overview-sub">{{ current.subtitle }}</p>
@@ -881,18 +871,18 @@
                   :aria-expanded="moduleOverviewIsOpen ? 'true' : 'false'"
                   :aria-controls="moduleOverviewTrackId"
               >
-                <span class="module-overview-toggle-label">Mission lessons</span>
+                <span class="module-overview-toggle-label">Module lessons</span>
                 <v-icon size="16" class="module-overview-toggle-icon">mdi-chevron-down</v-icon>
               </button>
               <div
                   class="module-overview-progress"
                   role="progressbar"
-                  aria-label="Mission progress"
+                  aria-label="Module mastery"
                   :aria-valuenow="pct(current.id)"
                   aria-valuemin="0"
                   aria-valuemax="100"
               >
-                <span class="module-overview-progress-label">Progress</span>
+                <span class="module-overview-progress-label">Mastery</span>
                 <div class="module-overview-progress-bar">
                   <div class="module-overview-progress-fill" :style="{ width: pct(current.id) + '%' }"></div>
                 </div>
@@ -907,7 +897,7 @@
                   :key="l.id"
                   class="lesson"
                   :data-lesson="l.id"
-                  :class="{ active: activeLesson && activeLesson.id===l.id, ok: bestScore(current.id,l.id)>=80 }"
+                  :class="{ active: activeLesson && activeLesson.id===l.id, ok: isLessonMastered(current.id,l.id) }"
                   @click="selectLesson(l)"
               >
                 <div class="lesson-top">
@@ -934,6 +924,10 @@
         </div>
 
         <div v-if="activeLesson" class="module-detail">
+          <div class="lesson-scope-note" role="note">
+            <v-icon size="17">mdi-flask-outline</v-icon>
+            Synthetic ICAO/SERA training data — not for navigation or operational use
+          </div>
           <div class="console">
             <div v-if="scenario && requiresFlightPlan" class="scenario-bar">
               <div class="scenario-item">
@@ -968,7 +962,7 @@
             </div>
             <div class="console-grid">
               <div class="col">
-                <div class="label">Briefing</div>
+                <div class="label">{{ promptLabel }}</div>
                 <div class="panel">
                   <div class="target-row">
                     <div class="target-main">
@@ -986,6 +980,7 @@
                     </div>
                     <div class="target-actions">
                       <button
+                          v-if="canPlayPrompt"
                           class="btn soft mini"
                           type="button"
                           :disabled="!targetPhrase || ttsLoading"
@@ -995,10 +990,10 @@
                         <v-icon size="16" :class="{ spin: ttsLoading }">
                           {{ ttsLoading ? 'mdi-loading' : 'mdi-volume-high' }}
                         </v-icon>
-                        {{ sayButtonLabel }}
+                        {{ hasSpokenTarget ? 'Play again' : 'Play ATC' }}
                       </button>
                       <button
-                          v-if="isSpeaking"
+                          v-if="canPlayPrompt && isSpeaking"
                           class="btn ghost mini"
                           type="button"
                           @click="stopAudio"
@@ -1007,7 +1002,7 @@
                         Stop
                       </button>
                       <button
-                          v-if="audioContentHidden"
+                          v-if="canPlayPrompt && audioContentHidden"
                           class="btn ghost mini"
                           type="button"
                           @click="revealAudioContent"
@@ -1023,6 +1018,14 @@
                   </div>
                 </div>
                 <div class="hints">
+                  <div class="hint standard">
+                    <v-icon size="16">mdi-shield-check-outline</v-icon>
+                    {{ activeLesson.standard }}
+                  </div>
+                  <div class="hint secondary">
+                    <v-icon size="16">mdi-information-outline</v-icon>
+                    {{ activeLesson.whyItMatters }}
+                  </div>
                   <div v-for="hint in activeLesson.hints" :key="hint" class="hint">
                     <v-icon size="16">mdi-lightbulb-on-outline</v-icon>
                     {{ hint }}
@@ -1057,7 +1060,7 @@
               </div>
 
               <div class="col">
-                <div class="label">Your readback</div>
+                <div class="label">{{ activeLesson.responseLabel }}</div>
                 <div class="panel readback-panel">
                   <div class="cloze">
                     <div v-for="group in clozeGroups" :key="group.id" class="cloze-group">
@@ -1105,9 +1108,9 @@
                     <v-icon size="18">mdi-eraser</v-icon>
                     Reset
                   </button>
-                  <button class="btn ghost" type="button" @click="fillSolution">
-                    <v-icon size="18">mdi-auto-fix</v-icon>
-                    Auto-fill
+                  <button class="btn ghost" type="button" @click="showModelAnswer">
+                    <v-icon size="18">mdi-eye-outline</v-icon>
+                    Show model answer
                   </button>
                   <button
                       v-if="correctReadbackText"
@@ -1122,10 +1125,19 @@
                   </button>
                 </div>
                 <div v-if="result" class="score">
-                  <div class="score-num">{{ result.score }}%</div>
+                  <div class="score-num" :class="{ 'is-mastered': result.passed }">
+                    {{ result.hits }} of {{ result.required }} required elements correct
+                  </div>
                   <div class="muted small">
-                    Fields correct: {{ result.hits }}/{{ activeLesson.fields.length }} · Similarity:
-                    {{ Math.round(result.sim * 100) }}%
+                    <template v-if="modelAnswerRevealed">
+                      Model answer revealed — this variation does not count towards mastery.
+                    </template>
+                    <template v-else-if="result.passed">
+                      Clean variation · {{ currentVariantProgressLabel }}
+                    </template>
+                    <template v-else>
+                      Correct every required element before moving on.
+                    </template>
                   </div>
                 </div>
               </div>
@@ -1149,46 +1161,6 @@
       </div>
     </section>
 
-
-    <!-- NEXT OBJECTIVE -->
-    <div class="container" v-if="panel==='hub'">
-      <h2 class="h2">Your progress</h2>
-      <p class="muted">
-        Level up by completing lessons and missions. Earn badges as you improve your pilot readbacks.
-      </p>
-      <div class="hero-highlight mb-24" role="region" aria-label="Next objective">
-        <div class="hero-orb" :style="{ '--progress': levelProgress + '%' }">
-          <div class="hero-orb-core">
-            <span class="hero-orb-level">Lvl {{ level }}</span>
-            <span class="hero-orb-progress">{{ levelProgress }}%</span>
-          </div>
-        </div>
-        <div class="hero-highlight-meta">
-          <span class="hero-tag">Next objective</span>
-          <div class="hero-highlight-title">
-            {{ primaryObjective ? primaryObjective.title : 'Choose a mission to begin' }}
-          </div>
-          <p class="muted small">
-            {{
-              primaryObjective
-                  ? primaryObjective.description
-                  : 'Open any mission below to start your first readback drills.'
-            }}
-          </p>
-          <div
-              v-if="primaryObjective"
-              class="hero-highlight-bar"
-              role="progressbar"
-              :aria-valuenow="primaryObjectiveProgress"
-              aria-valuemin="0"
-              aria-valuemax="100"
-          >
-            <div class="hero-highlight-fill" :style="{ width: primaryObjectiveProgress + '%' }"></div>
-          </div>
-          <p v-if="primaryObjective" class="muted small">{{ primaryObjective.status }}</p>
-        </div>
-      </div>
-    </div>
 
     <!-- FOOTER -->
     <footer
@@ -1215,14 +1187,14 @@
               {{ nextLessonMeta.total }}
             </div>
             <div v-else-if="nextMissionMeta" class="mission-footer-hint">
-              Next mission: {{ nextMissionMeta.module.title }} · Mission {{ nextMissionMeta.position }} of
+              Next module: {{ nextMissionMeta.module.title }} · Module {{ nextMissionMeta.position }} of
               {{ nextMissionMeta.total }}
             </div>
             <div v-else-if="isAtEndOfCurriculum" class="mission-footer-hint">
               You've completed all available lessons! More content is coming soon.
             </div>
             <div v-else class="mission-footer-hint">
-              Last lesson in this mission.
+              Last lesson in this module.
             </div>
           </div>
           <div class="mission-footer-section mission-footer-right">
@@ -1351,7 +1323,7 @@
           <div class="set-row reset-row">
             <div class="set-info">
               <span>Reset training data</span>
-              <small class="muted">Clears XP, progress, and local settings on this device.</small>
+              <small class="muted">Clears Classroom mastery and local audio settings on this device.</small>
             </div>
             <button class="btn ghost" type="button" @click="resetAll">
               <v-icon size="18">mdi-refresh</v-icon>
@@ -1444,8 +1416,17 @@ import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRe
 import {useRoute, useRouter} from '#imports'
 import {useApi} from '~/composables/useApi'
 import {useAuthStore} from '~/stores/auth'
-import {createDefaultLearnConfig} from '~~/shared/learn/config'
+import {
+  CLASSROOM_ASSESSMENT_VERSION,
+  CLASSROOM_VARIANTS_FOR_MASTERY,
+  createDefaultLearnConfig,
+} from '~~/shared/learn/config'
 import type {LearnConfig, LearnProgress, LearnState} from '~~/shared/learn/config'
+import {
+  assessRequiredFields,
+  isCurrentMastery,
+  updateMasteryProgress,
+} from '~~/shared/learn/assessment'
 import {learnModules, seedFullFlightScenario} from '~~/shared/data/learnModules'
 import {
   createBaseScenario,
@@ -1456,7 +1437,6 @@ import {
   minutesToWords
 } from '~~/shared/learn/scenario'
 import type {BlankWidth, Frequency, Lesson, LessonField, ModuleDef, ReadbackSegment, Scenario} from '~~/shared/learn/types'
-import {looksLikeCallsignKey, matchTranscriptionToFields, type SttFieldDef} from '~~/shared/utils/sttMatch'
 import {loadPizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import type {PizzicatoLite} from '~~/shared/utils/pizzicatoLite'
 import {createNoiseGenerators, getReadabilityProfile} from '~~/shared/utils/radioEffects'
@@ -1472,18 +1452,6 @@ import BugReportDialog from '~/components/BugReportDialog.vue'
 
 definePageMeta({middleware: ['require-auth', 'require-classroom-intro']})
 
-type Objective = {
-  id: string
-  title: string
-  description: string
-  progress: number
-  goal: number
-  status: string
-  icon: string
-  complete: boolean
-  moduleId?: string
-}
-
 type FieldState = {
   key: string
   label: string
@@ -1496,6 +1464,7 @@ type FieldState = {
 type ScoreResult = {
   score: number
   hits: number
+  required: number
   sim: number
   passed: boolean
   fields: FieldState[]
@@ -1765,12 +1734,6 @@ const pendingLessonId = ref<string | null>(null)
 
 function displayCallsign(value?: string | null, source?: CallsignContext | null): string {
   if (!value) return ''
-  const context = source ?? scenario.value
-  if (!context) return value
-  const {radioCall, callsign} = context
-  if (radioCall && callsign && value.includes(radioCall)) {
-    return value.split(radioCall).join(callsign)
-  }
   return value
 }
 
@@ -2768,6 +2731,8 @@ const userAnswers = reactive<Record<string, string>>({})
 const readbackFieldRefs = new Map<string, HTMLInputElement>()
 const result = ref<ScoreResult | null>(null)
 const evaluating = ref(false)
+const modelAnswerRevealed = ref(false)
+const variantCounted = ref(false)
 
 // First-run nudge: after the very first readback is checked, highlight the
 // footer's primary button so learners realise they continue from there. Shown
@@ -2816,36 +2781,6 @@ const auth = useAuthStore()
 const bugReport = useBugReport({source: 'classroom'})
 const {bugReportCapturing, openBugReport} = bugReport
 const browserTtsAvailable = computed(() => isClient && 'speechSynthesis' in window)
-
-// STT (Speech-to-Text) for the readback — pilot speaks the readback into a mic,
-// transcription is mapped onto the input fields. Driven by /api/atc/ptt.
-// `sttSupported` is a ref (not const) so it can be set after onMounted; this
-// avoids SSR/hydration mismatches around the mic button visibility.
-const sttSupported = ref(false)
-const sttServerAvailable = ref(true)
-const sttRecording = ref(false)
-const sttTranscribing = ref(false)
-const sttError = ref('')
-const sttLastTranscription = ref('')
-const sttEditableTranscription = ref('')
-const sttFilledFields = reactive<Record<string, boolean>>({})
-const sttLastFillSummary = ref<{ filled: number; total: number } | null>(null)
-const sttLastReport = ref<import('~~/shared/utils/sttMatch').SttMatchResult | null>(null)
-const sttRecordingSeconds = ref(0)
-const sttMediaRecorder = ref<MediaRecorder | null>(null)
-const sttChunks = ref<Blob[]>([])
-const sttStream = ref<MediaStream | null>(null)
-let sttRecordingTimer: ReturnType<typeof setInterval> | null = null
-let sttRecordingAutoStop: ReturnType<typeof setTimeout> | null = null
-const STT_MAX_RECORDING_SECONDS = 45
-const sttFeatureVisible = computed(() => sttSupported.value && sttServerAvailable.value)
-
-function formatSttDuration(seconds: number): string {
-  const s = Math.max(0, Math.floor(seconds))
-  const mm = Math.floor(s / 60).toString().padStart(2, '0')
-  const ss = (s % 60).toString().padStart(2, '0')
-  return `${mm}:${ss}`
-}
 
 type SpeechServerHealth = {
   configured: boolean
@@ -2913,12 +2848,8 @@ async function checkSpeechServerAvailability() {
     const hasOnlineTts = Boolean(health.configured && health.reachable)
     showSpeechServerWarning.value = Boolean(health.configured && !health.reachable)
     showOnlineTtsSuggestion.value = Boolean(hasOnlineTts && cfg.value.tts)
-    // STT: if a Speaches server is configured but down, hide the feature.
-    // If no Speaches is configured we assume OpenAI Whisper cloud is reachable.
-    sttServerAvailable.value = !health.configured || health.reachable
   } catch (error) {
     console.error('Failed to check speech server availability', error)
-    sttServerAvailable.value = false
   }
 }
 
@@ -3004,70 +2935,32 @@ const defaultCfg = createDefaultLearnConfig()
 const cfg = ref<LearnConfig>({...defaultCfg})
 audioReveal.value = !cfg.value.audioChallenge
 
-const XP_PER_LEVEL = 300
 const xp = ref(0)
 const progress = ref<LearnProgress>({})
 const unlockedModules = ref<string[]>([])
-const level = computed(() => 1 + Math.floor(xp.value / XP_PER_LEVEL))
-const nextLevel = computed(() => level.value + 1)
-const levelProgress = computed(() => Math.min(100, Math.round(((xp.value % XP_PER_LEVEL) / XP_PER_LEVEL) * 100)))
-const xpToNextLevel = computed(() => Math.max(0, level.value * XP_PER_LEVEL - xp.value))
-type BadgeTier = { id: string; name: string; xp: number; description: string }
 
-const badgeTrack: BadgeTier[] = [
-  {id: 'rookie', name: 'Runway Rookie', xp: 0, description: 'Complete your first guided mission.'},
-  {id: 'cadet', name: 'Clearance Cadet', xp: 120, description: 'Score three missions with ≥80%.'},
-  {id: 'navigator', name: 'Taxi Navigator', xp: 360, description: 'Keep the flow going with solid readbacks.'},
-  {id: 'tower', name: 'Tower Pro', xp: 720, description: 'Master departures with confident phraseology.'}
-]
-
-const currentBadge = computed(() => {
-  let unlocked = badgeTrack[0]
-  for (const badge of badgeTrack) {
-    if (xp.value >= badge.xp) {
-      unlocked = badge
-    }
-  }
-  return unlocked
+const canPlayPrompt = computed(() => {
+  const kind = activeLesson.value?.prompt?.kind
+  return kind === 'atc' || kind === 'copy'
 })
-
-const nextBadge = computed(() => badgeTrack.find(badge => badge.xp > xp.value) || null)
-
-const nextBadgeProgress = computed(() => {
-  const upcoming = nextBadge.value
-  if (!upcoming) return 100
-  const previous = badgeTrack.slice().reverse().find(badge => badge.xp <= xp.value) || badgeTrack[0]
-  const span = Math.max(1, upcoming.xp - previous.xp)
-  const gained = xp.value - previous.xp
-  return Math.min(100, Math.round((gained / span) * 100))
+const promptLabel = computed(() => {
+  const kind = activeLesson.value?.prompt?.kind
+  if (kind === 'situation') return 'Situation'
+  if (kind === 'copy') return 'Copy / decode'
+  return 'ATC prompt'
 })
-
-const nextBadgeXpRemaining = computed(() => {
-  const upcoming = nextBadge.value
-  if (!upcoming) return 0
-  return Math.max(0, upcoming.xp - xp.value)
-})
-
-const totalLessons = computed(() => modules.value.reduce((sum, module) => sum + module.lessons.length, 0))
-const finishedLessons = computed(() => modules.value.reduce((sum, module) => sum + doneCount(module.id), 0))
-const missionCompletionPct = computed(() => (totalLessons.value ? Math.round((finishedLessons.value / totalLessons.value) * 100) : 0))
-
-const globalAccuracy = computed(() => {
-  const scores: number[] = []
-  Object.values(progress.value || {}).forEach(module => {
-    Object.values(module || {}).forEach(entry => {
-      if (entry && typeof entry.best === 'number' && entry.best > 0) {
-        scores.push(entry.best)
-      }
-    })
-  })
-  if (!scores.length) return 0
-  const avg = scores.reduce((acc, value) => acc + value, 0) / scores.length
-  return Math.round(avg)
-})
-
-const audioContentHidden = computed(() => cfg.value.audioChallenge && !audioReveal.value)
+const audioContentHidden = computed(() => canPlayPrompt.value && cfg.value.audioChallenge && !audioReveal.value)
 const audioSpeedDisplay = computed(() => (cfg.value.audioSpeed ?? 1).toFixed(2))
+const currentVariantProgressLabel = computed(() => {
+  if (!current.value || !activeLesson.value) return 'Practising'
+  const entry = progress.value[current.value.id]?.[activeLesson.value.id]
+  const variants = entry?.assessmentVersion === CLASSROOM_ASSESSMENT_VERSION
+    ? Math.min(CLASSROOM_VARIANTS_FOR_MASTERY, entry.successfulVariants || 0)
+    : 0
+  return variants >= CLASSROOM_VARIANTS_FOR_MASTERY
+    ? 'Mastered'
+    : `${variants} of ${CLASSROOM_VARIANTS_FOR_MASTERY} clean variations`
+})
 
 const instructorVoiceOptions = [
   { title: 'Standard (Ryan · US)', value: '' },
@@ -3228,14 +3121,6 @@ if (isClient) {
     dirtyState.progress = true
     schedulePersist()
   }, {deep: true})
-  watch(xp, () => {
-    dirtyState.xp = true
-    schedulePersist()
-  })
-  watch(unlockedModules, () => {
-    dirtyState.unlocked = true
-    schedulePersist()
-  }, {deep: true})
   watch(() => cfg.value.tts, markConfigDirty)
   watch(() => cfg.value.audioChallenge, () => {
     markConfigDirty()
@@ -3348,6 +3233,8 @@ const fieldStates = computed<Record<string, FieldState>>(() => {
           break
         }
 
+        if (field.matching !== 'fuzzy') continue
+
         const distance = lev(normalizedAnswer, option)
         const span = Math.max(option.length, normalizedAnswer.length, 1)
         const score = 1 - distance / span
@@ -3431,7 +3318,8 @@ function fieldExpectedValue(key: string): string {
 
 const targetPhrase = computed(() => {
   if (!activeLesson.value || !scenario.value) return ''
-  return displayCallsign(activeLesson.value.phrase(scenario.value), scenario.value)
+  const prompt = activeLesson.value.prompt?.text ?? activeLesson.value.phrase
+  return displayCallsign(prompt(scenario.value), scenario.value)
 })
 
 const correctReadbackText = computed(() => {
@@ -3476,212 +3364,6 @@ async function speakCorrectReadback() {
   await say(text)
 }
 
-// ---------------------------------------------------------------------------
-// STT — pilot speaks the readback into the mic, transcription is mapped onto
-// the input fields.  Whisper returns natural spoken ATC ("two five right",
-// "lufthansa three five niner"), while fields store the canonical written
-// form ("25R", "DLH359").  The actual matching lives in shared/utils/sttMatch
-// where it can be unit-tested; here we just feed it the per-lesson candidates.
-// ---------------------------------------------------------------------------
-
-function buildSttFieldDefs(): SttFieldDef[] {
-  if (!activeLesson.value || !scenario.value) return []
-  return activeLesson.value.fields.map((field): SttFieldDef => {
-    const expected = (field.expected(scenario.value!) || '').trim()
-    const alternatives = field.alternatives
-      ? field.alternatives(scenario.value!).map(a => (a || '').trim()).filter(Boolean)
-      : []
-    return {
-      key: field.key,
-      expected,
-      alternatives,
-      isCallsign: looksLikeCallsignKey(field.key, field.label),
-    }
-  })
-}
-
-function mapTranscriptionToFields(transcription: string): { filled: number; total: number } {
-  if (!activeLesson.value || !scenario.value) {
-    sttLastReport.value = null
-    return { filled: 0, total: 0 }
-  }
-  const defs = buildSttFieldDefs()
-  const result = matchTranscriptionToFields(transcription, defs)
-  sttLastReport.value = result
-  // Clear stale mic markers for fields not in this match round
-  Object.keys(sttFilledFields).forEach(k => { delete sttFilledFields[k] })
-  for (const [key, value] of Object.entries(result.matches)) {
-    userAnswers[key] = value
-    sttFilledFields[key] = true
-  }
-  return { filled: result.filled, total: result.total }
-}
-
-function applySttTranscription() {
-  const text = sttEditableTranscription.value.trim()
-  if (!text) return
-  sttLastTranscription.value = text
-  const summary = mapTranscriptionToFields(text)
-  sttLastFillSummary.value = summary
-}
-
-function clearSttResult() {
-  sttLastTranscription.value = ''
-  sttEditableTranscription.value = ''
-  sttLastFillSummary.value = null
-  sttLastReport.value = null
-  sttError.value = ''
-  Object.keys(sttFilledFields).forEach(k => { delete sttFilledFields[k] })
-}
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  const buf = await blob.arrayBuffer()
-  const bytes = new Uint8Array(buf)
-  let bin = ''
-  const chunkSize = 0x8000
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)))
-  }
-  return btoa(bin)
-}
-
-async function processSTTAudio(blob: Blob) {
-  if (!activeLesson.value) return
-  sttTranscribing.value = true
-  sttError.value = ''
-  try {
-    if (!blob.size) {
-      sttError.value = 'No audio was captured — check that your microphone is connected and unmuted.'
-      return
-    }
-    const base64 = await blobToBase64(blob)
-    // Seed Whisper with this lesson's expected field values (raw + alternatives);
-    // the server expands them to spoken ICAO form and biases recognition.
-    const sttDefs = buildSttFieldDefs()
-    const expectedTokens = Array.from(new Set(
-      sttDefs.flatMap(d => [d.expected, ...(d.alternatives ?? [])]).map(t => (t || '').trim()).filter(Boolean)
-    ))
-    const expectedPhrase = sttDefs.map(d => d.expected).filter(Boolean).join(', ')
-    const result = await api.post<{ success: boolean; transcription: string }>('/api/atc/ptt', {
-      audio: base64,
-      moduleId: current.value?.id || 'classroom',
-      lessonId: activeLesson.value.id,
-      format: 'webm',
-      expected: { phrase: expectedPhrase || undefined, tokens: expectedTokens },
-    })
-    if (result?.success && result.transcription) {
-      const text = result.transcription.trim()
-      sttLastTranscription.value = text
-      sttEditableTranscription.value = text
-      // Auto-apply on first transcription so common cases "just work".
-      // The user can still edit the text and re-apply, or dismiss entirely.
-      const summary = mapTranscriptionToFields(text)
-      sttLastFillSummary.value = summary
-    } else {
-      sttError.value = 'No speech detected. Try recording again, a bit closer to the mic.'
-    }
-  } catch (err: any) {
-    console.error('STT failed', err)
-    const msg = err?.data?.statusMessage || err?.statusMessage || err?.message || 'Transcription failed'
-    sttError.value = String(msg)
-    // If the server explicitly rejected the request, flip availability so the
-    // mic button shows the "unavailable" hint next time around.
-    if (err?.statusCode === 503 || /unreachable|unavailable/i.test(String(msg))) {
-      sttServerAvailable.value = false
-    }
-  } finally {
-    sttTranscribing.value = false
-  }
-}
-
-function stopSttRecordingTimers() {
-  if (sttRecordingTimer) {
-    clearInterval(sttRecordingTimer)
-    sttRecordingTimer = null
-  }
-  if (sttRecordingAutoStop) {
-    clearTimeout(sttRecordingAutoStop)
-    sttRecordingAutoStop = null
-  }
-}
-
-async function startSTTRecording() {
-  if (sttRecording.value || sttTranscribing.value) return
-  if (!sttSupported.value) {
-    sttError.value = 'Your browser does not support microphone recording'
-    return
-  }
-  if (!sttServerAvailable.value) {
-    sttError.value = 'The speech server is currently unavailable.'
-    return
-  }
-  sttError.value = ''
-  // Drop any previous transcription so the panel doesn't show stale text
-  // alongside the new recording state.
-  sttLastTranscription.value = ''
-  sttEditableTranscription.value = ''
-  sttLastFillSummary.value = null
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
-    })
-    sttStream.value = stream
-    const recorder = new MediaRecorder(stream)
-    sttMediaRecorder.value = recorder
-    sttChunks.value = []
-    recorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) sttChunks.value.push(e.data)
-    }
-    recorder.onstop = async () => {
-      stopSttRecordingTimers()
-      const blob = new Blob(sttChunks.value, { type: recorder.mimeType || 'audio/webm' })
-      sttStream.value?.getTracks().forEach(t => t.stop())
-      sttStream.value = null
-      sttMediaRecorder.value = null
-      sttChunks.value = []
-      await processSTTAudio(blob)
-    }
-    recorder.start()
-    sttRecording.value = true
-    sttRecordingSeconds.value = 0
-    sttRecordingTimer = setInterval(() => {
-      sttRecordingSeconds.value += 1
-    }, 1000)
-    // Hard limit so a forgotten recording doesn't run forever and exceed
-    // the server's 2 MB upload cap (~60s at 16kHz mono).
-    sttRecordingAutoStop = setTimeout(() => {
-      if (sttRecording.value) stopSTTRecording()
-    }, STT_MAX_RECORDING_SECONDS * 1000)
-  } catch (err: any) {
-    console.error('STT start failed', err)
-    sttError.value = err?.name === 'NotAllowedError'
-      ? 'Microphone access denied. Please allow microphone access in your browser settings.'
-      : 'Could not start recording. Check that no other application is using the mic.'
-    sttRecording.value = false
-    stopSttRecordingTimers()
-    sttStream.value?.getTracks().forEach(t => t.stop())
-    sttStream.value = null
-  }
-}
-
-function stopSTTRecording() {
-  if (!sttRecording.value || !sttMediaRecorder.value) return
-  try {
-    sttMediaRecorder.value.stop()
-  } catch (err) {
-    console.warn('STT stop failed', err)
-  }
-  sttRecording.value = false
-}
-
-function toggleSTTRecording() {
-  if (sttRecording.value) {
-    stopSTTRecording()
-  } else {
-    startSTTRecording()
-  }
-}
-
 const lessonInfo = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.info(scenario.value) : []))
 
 const lessonReference = computed(() => {
@@ -3691,7 +3373,7 @@ const lessonReference = computed(() => {
   if (lesson.reference) return lesson.reference(s)
   const entries: { label: string; value: string }[] = []
   const fieldKeys = new Set(lesson.fields.map(f => f.key))
-  const phraseText = lesson.phrase(s)
+  const phraseText = (lesson.prompt?.text ?? lesson.phrase)(s)
   const hasCallsign = fieldKeys.has('callsign') || fieldKeys.has('rc-callsign')
       || fieldKeys.has('tko-callsign') || fieldKeys.has('landing-callsign')
       || phraseText.includes(s.radioCall)
@@ -3954,6 +3636,11 @@ function queueAutoSay() {
 
 function attemptAutoSay() {
   if (!pendingAutoSay.value) return
+  if (!canPlayPrompt.value) {
+    pendingAutoSay.value = false
+    focusFirstReadbackField()
+    return
+  }
   const phrase = targetPhrase.value?.trim()
   if (!phrase) {
     pendingAutoSay.value = false
@@ -3994,6 +3681,8 @@ function rollScenario(clear = false) {
   activeFrequency.value = generated.frequencies.find(freq => freq.type === (defaultType || 'DEL')) || generated.frequencies[0] || null
   resetAnswers(true)
   resetAudioReveal()
+  modelAnswerRevealed.value = false
+  variantCounted.value = false
   if (clear) {
     result.value = null
   }
@@ -4087,23 +3776,19 @@ function resetAnswers(clearResult = false) {
   if (clearResult) {
     result.value = null
   }
-  // Clear stale STT feedback so it doesn't bleed into the next attempt.
-  sttLastTranscription.value = ''
-  sttEditableTranscription.value = ''
-  sttLastFillSummary.value = null
-  sttError.value = ''
-  Object.keys(sttFilledFields).forEach(k => { delete sttFilledFields[k] })
 }
 
 function clearAnswers() {
   resetAnswers(true)
 }
 
-function fillSolution() {
+function showModelAnswer() {
   if (!activeLesson.value || !scenario.value) return
+  modelAnswerRevealed.value = true
   for (const field of activeLesson.value.fields) {
     userAnswers[field.key] = field.expected(scenario.value)
   }
+  result.value = null
 }
 
 function computeScore(): ScoreResult | null {
@@ -4112,14 +3797,20 @@ function computeScore(): ScoreResult | null {
       .map(field => fieldStates.value[field.key])
       .filter(Boolean) as FieldState[]
   if (!details.length) return null
-  const total = details.reduce((sum, item) => sum + item.similarity, 0)
-  const hits = details.filter(item => item.pass).length
-  const avg = total / details.length
+  const fieldDefinitions = new Map(activeLesson.value.fields.map(field => [field.key, field]))
+  const assessment = assessRequiredFields(details.map(item => ({
+    key: item.key,
+    required: fieldDefinitions.get(item.key)?.required !== false,
+    pass: item.pass,
+    similarity: item.similarity,
+  })))
+  if (!assessment) return null
   return {
-    score: Math.round(avg * 100),
-    hits,
-    sim: avg,
-    passed: hits === details.length && hits > 0,
+    score: assessment.score,
+    hits: assessment.hits,
+    required: assessment.required,
+    sim: assessment.similarity,
+    passed: assessment.passed,
     fields: details
   }
 }
@@ -4138,45 +3829,27 @@ function evaluate() {
     const modId = current.value.id
     const lesId = activeLesson.value.id
     if (!progress.value[modId]) progress.value[modId] = {}
-    const previous = progress.value[modId][lesId] || {best: 0, done: false}
-    const best = Math.max(previous.best || 0, summary.score)
-    const passed = summary.passed || summary.score >= 80
-    const wasDone = previous.done
+    const previous = progress.value[modId][lesId]
+    const update = updateMasteryProgress(previous, {
+      score: summary.score,
+      hits: summary.hits,
+      required: summary.required,
+      similarity: summary.sim,
+      passed: summary.passed,
+    }, {
+      modelAnswerRevealed: modelAnswerRevealed.value,
+      variantAlreadyCounted: variantCounted.value,
+    })
 
-    progress.value[modId][lesId] = {best, done: passed}
-
-    let gained = 0
-    if (passed && !wasDone) gained += 40
-    if (summary.score >= 95 && summary.score > (previous.best || 0)) gained += 15
-    if (summary.score >= 80 && summary.score > (previous.best || 0)) gained += 10
-
-    if (gained) {
-      xp.value += gained
-      toastNow(`+${gained} XP · ${activeLesson.value.title}`)
-    }
+    if (update.counted) variantCounted.value = true
+    progress.value[modId][lesId] = update.progress
   } finally {
     evaluating.value = false
   }
 }
 
 function isModuleUnlocked(id: string) {
-  if (unlockedModules.value.includes(id)) return true
-  if (id === 'normalize') return true
-  const order = modules.value.findIndex(module => module.id === id)
-  const previous = modules.value[order - 1]
-  return previous ? pct(previous.id) >= 80 : true
-}
-
-function attemptUnlockModule(modId: string) {
-  if (!isClient) return
-  if (!modId) return
-  if (isModuleUnlocked(modId)) return
-  const confirmed = window.confirm('Unlock this mission briefing early?')
-  if (!confirmed) return
-  const next = new Set(unlockedModules.value)
-  next.add(modId)
-  unlockedModules.value = Array.from(next)
-  toastNow('Mission unlocked')
+  return modules.value.some(module => module.id === id)
 }
 
 function openModule(id: string, options: { autoStart?: boolean } = {}) {
@@ -4224,27 +3897,6 @@ function quickContinue(id: string) {
   openModule(id, {autoStart: true})
 }
 
-function resumeMissionObjective() {
-  const objective = missionObjective.value
-  if (objective?.moduleId) {
-    quickContinue(objective.moduleId)
-    return
-  }
-  panel.value = 'hub'
-}
-
-function goToPrimaryObjective() {
-  const objective = primaryObjective.value
-  if (!objective) return
-
-  if (objective.moduleId) {
-    quickContinue(objective.moduleId)
-    return
-  }
-
-  panel.value = 'hub'
-}
-
 function selectLesson(lesson: Lesson) {
   activeLesson.value = lesson
 }
@@ -4286,7 +3938,24 @@ function doneCount(modId: string) {
   const module = modules.value.find(item => item.id === modId)
   if (!module) return 0
   const moduleProgress = progress.value[modId] || {}
-  return module.lessons.filter(lesson => moduleProgress[lesson.id]?.done).length
+  return module.lessons.filter(lesson => isLessonMastered(modId, lesson.id)).length
+}
+
+function isLessonMastered(modId: string, lesId: string): boolean {
+  return isCurrentMastery(progress.value[modId]?.[lesId])
+}
+
+function isLessonPractising(modId: string, lesId: string): boolean {
+  const entry = progress.value[modId]?.[lesId]
+  if (!entry) return false
+  if (entry.assessmentVersion !== CLASSROOM_ASSESSMENT_VERSION) return entry.best > 0 || entry.done
+  return !isLessonMastered(modId, lesId) && (entry.successfulVariants || 0) > 0
+}
+
+function practisingCount(modId: string): number {
+  const module = modules.value.find(item => item.id === modId)
+  if (!module) return 0
+  return module.lessons.filter(lesson => isLessonPractising(modId, lesson.id)).length
 }
 
 function pct(modId: string) {
@@ -4328,9 +3997,9 @@ function handleModulePrimary(modId: string) {
 }
 
 function modulePrimaryLabel(modId: string) {
-  if (moduleCompleted(modId)) return 'Replay mission'
-  if (!moduleHasProgress(modId)) return 'Launch mission'
-  return 'Resume mission'
+  if (moduleCompleted(modId)) return 'Practise again'
+  if (!moduleHasProgress(modId)) return 'Start module'
+  return 'Continue'
 }
 
 function modulePrimaryIcon(modId: string) {
@@ -4379,151 +4048,28 @@ function tileStatusClass(modId: string) {
 }
 
 function lessonScoreLabel(modId: string, lesId: string) {
-  const score = bestScore(modId, lesId)
-  return score ? `${score}%` : 'New'
+  const entry = progress.value[modId]?.[lesId]
+  if (!entry) return 'Not started'
+  if (entry.assessmentVersion !== CLASSROOM_ASSESSMENT_VERSION) return 'Review needed'
+  if (isLessonMastered(modId, lesId)) return 'Mastered'
+  if ((entry.successfulVariants || 0) > 0) return 'Practising'
+  return entry.best > 0 ? 'Needs review' : 'Not started'
 }
 
 function lessonScoreIcon(modId: string, lesId: string) {
-  const score = bestScore(modId, lesId)
-  if (!score) return 'mdi-star-outline'
-  if (score >= 80) return 'mdi-star-circle-outline'
-  return 'mdi-check-circle-outline'
+  const entry = progress.value[modId]?.[lesId]
+  if (!entry) return 'mdi-circle-outline'
+  if (entry.assessmentVersion !== CLASSROOM_ASSESSMENT_VERSION) return 'mdi-history'
+  if (isLessonMastered(modId, lesId)) return 'mdi-check-decagram'
+  if ((entry.successfulVariants || 0) > 0) return 'mdi-progress-pencil'
+  return 'mdi-alert-circle-outline'
 }
 
 function lessonScoreClass(modId: string, lesId: string) {
-  const score = bestScore(modId, lesId)
-  if (!score) return 'is-new'
-  if (score >= 80) return 'is-great'
+  const entry = progress.value[modId]?.[lesId]
+  if (!entry) return 'is-new'
+  if (isLessonMastered(modId, lesId)) return 'is-great'
   return 'is-progress'
-}
-
-const lessonsWithGreatScore = computed(() => {
-  let count = 0
-  Object.values(progress.value || {}).forEach(module => {
-    Object.values(module || {}).forEach(entry => {
-      if (entry && typeof entry.best === 'number' && entry.best >= 80) {
-        count += 1
-      }
-    })
-  })
-  return count
-})
-
-const modulesStartedCount = computed(() => {
-  let count = 0
-  modules.value.forEach(module => {
-    const moduleProgress = progress.value[module.id]
-    if (!moduleProgress) return
-    const active = Object.values(moduleProgress).some(entry => {
-      if (!entry) return false
-      return Boolean(entry.done) || (typeof entry.best === 'number' && entry.best > 0)
-    })
-    if (active) count += 1
-  })
-  return count
-})
-
-const dailyObjectives = computed<Objective[]>(() => {
-  const readbacks = lessonsWithGreatScore.value
-  const started = modulesStartedCount.value > 0
-  const audioPlayed = hasSpokenTarget.value
-
-  return [
-    {
-      id: 'daily-readbacks',
-      title: '3 readbacks ≥80%',
-      description: 'Score at least 80% in three different lessons.',
-      progress: readbacks,
-      goal: 3,
-      status: readbacks >= 3 ? 'Goal reached' : `${Math.max(0, 3 - Math.min(readbacks, 3))} more ≥80%`,
-      icon: 'mdi-target',
-      complete: readbacks >= 3
-    },
-    {
-      id: 'daily-module',
-      title: 'Start 1 module',
-      description: 'Open a mission set and clear the first lesson.',
-      progress: started ? 1 : 0,
-      goal: 1,
-      status: started ? 'Module started' : 'Pick a module to open',
-      icon: 'mdi-flag-variant',
-      complete: started
-    },
-    {
-      id: 'daily-audio',
-      title: 'Play the target phrase',
-      description: 'Listen to the controller audio before responding.',
-      progress: audioPlayed ? 1 : 0,
-      goal: 1,
-      status: audioPlayed ? 'Played once today' : 'Play the controller audio',
-      icon: 'mdi-volume-high',
-      complete: audioPlayed
-    }
-  ]
-})
-
-const missionObjective = computed<Objective | null>(() => {
-  const nextModule = modules.value.find(module => !moduleCompleted(module.id))
-  if (!nextModule) return null
-  const total = nextModule.lessons.length || 1
-  const completed = Math.min(total, Math.max(0, doneCount(nextModule.id)))
-  const status = completed >= total ? 'Module complete' : `Lesson ${Math.min(completed + 1, total)} of ${total}`
-  return {
-    id: `module-${nextModule.id}`,
-    title: `Continue ${nextModule.title}`,
-    description: nextModule.subtitle,
-    progress: completed,
-    goal: total,
-    status,
-    icon: 'mdi-flag-checkered',
-    complete: completed >= total,
-    moduleId: nextModule.id
-  }
-})
-
-const badgeObjective = computed<Objective | null>(() => {
-  const upcoming = nextBadge.value
-  if (!upcoming) return null
-  const previous = badgeTrack.slice().reverse().find(badge => badge.xp <= xp.value) || badgeTrack[0]
-  const span = Math.max(1, upcoming.xp - previous.xp)
-  const gained = Math.max(0, xp.value - previous.xp)
-  return {
-    id: `badge-${upcoming.id}`,
-    title: `${upcoming.name} badge`,
-    description: upcoming.description,
-    progress: gained,
-    goal: span,
-    status: `${nextBadgeXpRemaining.value} XP to unlock`,
-    icon: 'mdi-shield-star',
-    complete: false
-  }
-})
-
-const objectiveList = computed(() => {
-  const list: Objective[] = []
-  if (missionObjective.value) list.push(missionObjective.value)
-  list.push(...dailyObjectives.value)
-  if (badgeObjective.value) list.push(badgeObjective.value)
-  return list
-})
-
-const primaryObjective = computed(() => objectiveList.value.find(objective => !objective.complete) || objectiveList.value[0] || null)
-
-const primaryObjectiveProgress = computed(() => (primaryObjective.value ? objectiveProgressPct(primaryObjective.value) : 0))
-
-function objectiveProgressPct(objective: Objective): number {
-  if (!objective.goal || objective.goal <= 0) {
-    return objective.complete ? 100 : 0
-  }
-  const clamped = Math.min(objective.goal, Math.max(0, objective.progress))
-  return Math.min(100, Math.round((clamped / objective.goal) * 100))
-}
-
-function objectiveBadgeLabel(objective: Objective): string {
-  if (objective.complete) return 'Completed'
-  if (!objective.goal || objective.goal <= 0) return 'Progress'
-  const clamped = Math.min(objective.goal, Math.max(0, Math.round(objective.progress)))
-  return `${clamped}/${objective.goal}`
 }
 
 function toastNow(text: string) {
@@ -4534,14 +4080,10 @@ function toastNow(text: string) {
 function resetAll() {
   if (!isClient) return
   progress.value = {} as LearnProgress
-  xp.value = 0
   cfg.value = {...defaultCfg}
-  unlockedModules.value = []
   audioReveal.value = !cfg.value.audioChallenge
   dirtyState.progress = true
-  dirtyState.xp = true
   dirtyState.config = true
-  dirtyState.unlocked = true
   schedulePersist(true)
 }
 
@@ -5041,23 +4583,10 @@ onMounted(() => {
     if (storedId) {
       simbriefForm.userId = storedId
     }
-    // Detect mic + MediaRecorder support on the client only to keep SSR/CSR
-    // markup consistent until the page is hydrated.
-    sttSupported.value = Boolean(navigator.mediaDevices?.getUserMedia)
-        && typeof window.MediaRecorder !== 'undefined'
   }
   void checkSpeechServerAvailability()
 })
 
-onBeforeUnmount(() => {
-  stopSttRecordingTimers()
-  if (sttMediaRecorder.value && sttRecording.value) {
-    try { sttMediaRecorder.value.stop() } catch { /* ignore */ }
-  }
-  sttStream.value?.getTracks().forEach(t => t.stop())
-  sttStream.value = null
-  sttMediaRecorder.value = null
-})
 </script>
 
 <style scoped>
@@ -5952,6 +5481,36 @@ onBeforeUnmount(() => {
   margin: 6px 0 10px
 }
 
+.training-data-notice,
+.lesson-scope-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 11px;
+  border: 1px solid color-mix(in srgb, #fbbf24 28%, transparent);
+  border-radius: 10px;
+  color: color-mix(in srgb, #fcd34d 84%, var(--text));
+  background: color-mix(in srgb, #fbbf24 7%, transparent);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.lesson-scope-note {
+  margin: 0 0 10px;
+}
+
+.synthetic-data-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #fcd34d;
+  background: rgba(251, 191, 36, .12);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -6705,8 +6264,12 @@ onBeforeUnmount(() => {
 }
 
 .score-num {
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 700
+}
+
+.score-num.is-mastered {
+  color: #6ee7b7;
 }
 
 /* Responsive */
@@ -7061,174 +6624,6 @@ onBeforeUnmount(() => {
   margin-top: 12px;
 }
 
-.btn.danger {
-  background: color-mix(in srgb, #ef4444 18%, transparent);
-  border-color: color-mix(in srgb, #ef4444 55%, transparent);
-  color: #fecaca;
-  animation: sttPulse 1.2s ease-in-out infinite;
-}
-
-@keyframes sttPulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, #ef4444 35%, transparent); }
-  50%      { box-shadow: 0 0 0 8px color-mix(in srgb, #ef4444 0%, transparent); }
-}
-
-.stt-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.stt-panel {
-  margin-top: 14px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
-  background: linear-gradient(160deg,
-      color-mix(in srgb, var(--accent) 10%, transparent),
-      color-mix(in srgb, var(--bg2) 75%, transparent));
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.stt-panel.is-recording {
-  border-color: color-mix(in srgb, #ef4444 55%, transparent);
-  background: linear-gradient(160deg,
-      color-mix(in srgb, #ef4444 14%, transparent),
-      color-mix(in srgb, var(--bg2) 75%, transparent));
-}
-
-.stt-panel.is-error {
-  border-color: color-mix(in srgb, #ef4444 40%, transparent);
-}
-
-.stt-panel-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.stt-panel-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--accent) 78%, var(--text));
-}
-
-.stt-panel.is-recording .stt-panel-title {
-  color: #fca5a5;
-}
-
-.stt-panel.is-error .stt-panel-title {
-  color: #fca5a5;
-}
-
-.stt-summary {
-  font-size: 12px;
-  color: var(--t2);
-  background: color-mix(in srgb, var(--text) 8%, transparent);
-  padding: 3px 9px;
-  border-radius: 999px;
-  letter-spacing: .02em;
-}
-
-.stt-report {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin-top: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11.5px;
-}
-.stt-report-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.stt-report-row.is-ok { color: #6ee7a8; }
-.stt-report-row.is-missing { color: #fca5a5; }
-.stt-report-field { color: var(--t2); min-width: 90px; }
-.stt-report-expected { color: var(--text); font-weight: 600; }
-.stt-report-via { color: var(--t2); opacity: .8; }
-.stt-report-folded {
-  margin-top: 2px;
-  color: var(--t2);
-  opacity: .6;
-  font-size: 11px;
-}
-
-.stt-waiting {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: var(--t2);
-}
-
-.stt-rec-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #ef4444;
-  box-shadow: 0 0 0 0 rgba(239, 68, 68, .6);
-  animation: sttDot 1.1s ease-in-out infinite;
-  flex-shrink: 0;
-}
-
-@keyframes sttDot {
-  0%, 100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(239, 68, 68, .55); }
-  50%      { transform: scale(1.2); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
-}
-
-.stt-error-body {
-  color: #fca5a5;
-  font-size: 14px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: color-mix(in srgb, #ef4444 10%, transparent);
-  border: 1px solid color-mix(in srgb, #ef4444 30%, transparent);
-}
-
-.stt-textarea {
-  width: 100%;
-  resize: vertical;
-  min-height: 56px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
-  background: color-mix(in srgb, var(--text) 5%, transparent);
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1.45;
-  font-family: inherit;
-  outline: none;
-}
-
-.stt-textarea:focus {
-  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-}
-
-.stt-panel-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.blank-status.stt-marker {
-  top: 8px;
-  right: 28px;
-  color: color-mix(in srgb, var(--accent) 80%, var(--text));
-  opacity: .85;
-}
-
-
 .readback-panel {
   padding: 20px;
   border-radius: 20px;
@@ -7367,6 +6762,11 @@ onBeforeUnmount(() => {
 
 .hint.secondary {
   opacity: 0.8;
+}
+
+.hint.standard {
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: color-mix(in srgb, var(--accent) 78%, var(--text));
 }
 
 .reference-section {
