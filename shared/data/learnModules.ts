@@ -568,7 +568,7 @@ const readbackLessons: Lesson[] = [
     keywords: ['Delivery', 'Readback'],
     hints: [
       'Remember the order: destination – SID – runway – altitude – squawk.',
-      'Speak altitude and squawk digits clearly.'
+      'Use the prescribed ICAO pronunciations for altitude and squawk digits.'
     ],
     fields: [
       {

@@ -1112,17 +1112,6 @@
                     <v-icon size="18">mdi-eye-outline</v-icon>
                     Show model answer
                   </button>
-                  <button
-                      v-if="correctReadbackText"
-                      class="btn ghost"
-                      type="button"
-                      :disabled="ttsLoading"
-                      @click="speakCorrectReadback"
-                      title="Speak correct readback"
-                  >
-                    <v-icon size="18">mdi-volume-high</v-icon>
-                    Speak answer
-                  </button>
                 </div>
                 <div v-if="result" class="score">
                   <div class="score-num" :class="{ 'is-mastered': result.passed }">
@@ -3322,15 +3311,6 @@ const targetPhrase = computed(() => {
   return displayCallsign(prompt(scenario.value), scenario.value)
 })
 
-const correctReadbackText = computed(() => {
-  if (!activeLesson.value || !scenario.value) return ''
-  return activeLesson.value.readback.map(seg => {
-    if (seg.type === 'text') return typeof seg.text === 'function' ? seg.text(scenario.value!) : seg.text
-    const field = activeLesson.value!.fields.find(f => f.key === seg.key)
-    return field ? field.expected(scenario.value!) : ''
-  }).join('').trim()
-})
-
 // Pair each input field with its preceding text label so they wrap together
 // as a single visual unit — otherwise the label (e.g. "runway") can land on
 // one line while the input lands on the next, forcing the user to look up to
@@ -3357,12 +3337,6 @@ const clozeGroups = computed<ClozeGroup[]>(() => {
   }
   return groups
 })
-
-async function speakCorrectReadback() {
-  const text = correctReadbackText.value
-  if (!text || ttsLoading.value) return
-  await say(text)
-}
 
 const lessonInfo = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.info(scenario.value) : []))
 
