@@ -21,6 +21,8 @@ const prerecEnabled = defineModel<boolean>('prerecEnabled', { required: true })
 const prerecSeconds = defineModel<number>('prerecSeconds', { required: true })
 const aiTrafficEnabled = defineModel<boolean>('aiTrafficEnabled', { required: true })
 const autoTuneEnabled = defineModel<boolean>('autoTuneEnabled', { required: true })
+const forceRto = defineModel<boolean>('forceRto', { required: true })
+const forceGoAround = defineModel<boolean>('forceGoAround', { required: true })
 
 /**
  * Shown while AI traffic is on. These are deliberate v1 boundaries from the
@@ -167,6 +169,42 @@ const AI_TRAFFIC_LIMITS = [
                 <span>{{ limit }}</span>
               </li>
             </ul>
+          </v-expand-transition>
+        </div>
+
+        <!-- Both of these happen on their own roughly once in five hundred
+             flights, which is the point of them — you cannot practise reacting
+             to something you were told to expect. These switches are for
+             teaching them deliberately, so they apply to the NEXT flight rather
+             than the one in progress. -->
+        <div class="pt-2 border-t border-white/10 space-y-3">
+          <div>
+            <p class="text-xs uppercase tracking-[0.3em] text-white/40">Special scenarios</p>
+            <p class="text-[11px] text-white/50 mt-1">
+              Force a rare event on the next flight instead of waiting for it. Both
+              otherwise occur by chance, about once in five hundred flights.
+            </p>
+          </div>
+          <v-switch
+              v-model="forceRto"
+              color="amber"
+              inset
+              label="Rejected take-off (Tower cancels)"
+              hide-details
+          />
+          <v-switch
+              v-model="forceGoAround"
+              color="amber"
+              inset
+              label="Go-around (Tower breaks off the approach)"
+              hide-details
+          />
+          <v-expand-transition>
+            <p v-if="forceRto || forceGoAround" class="text-[11px] text-amber-300/80">
+              Applies when you start the next flight. A rejected take-off ends with
+              the aircraft stopped on the runway; a go-around sends you back to
+              Approach — neither continues to the stand.
+            </p>
           </v-expand-transition>
         </div>
 

@@ -36,6 +36,13 @@ export interface LiveAtcSessionDeps {
   isRecording: Ref<boolean>
   /** Settings toggle: dial in the new frequency automatically after a handoff. */
   autoTuneEnabled: Ref<boolean>
+  /**
+   * Special-scenario switches. Read once when the session is created, so
+   * toggling one mid-flight applies to the next flight — which is how an
+   * instructor sets one up without the pilot seeing it coming.
+   */
+  forceRto: Ref<boolean>
+  forceGoAround: Ref<boolean>
   bridgeConnected: Ref<boolean>
   bridgePosition: Ref<{ lat: number; lon: number } | null>
   /** ?token=… from the route — auths the frequency-sim-control channel (design §4). */
@@ -65,7 +72,8 @@ export function useLiveAtcSession(
 
   const {
     state, freq, speech, radioBackend, api, config, prefetchAtisAudio,
-    isRecording, autoTuneEnabled, bridgeConnected, bridgePosition, bridgeToken,
+    isRecording, autoTuneEnabled, forceRto, forceGoAround,
+    bridgeConnected, bridgePosition, bridgeToken,
     persistSelectedPlan, maybeShowFirstRunHelp,
   } = deps
 
@@ -695,6 +703,12 @@ export function useLiveAtcSession(
       approach_freq:    v.approach_freq    || '119.000',
       handoff_freq:     v.handoff_freq     || '131.150',
     }
+
+    // Special scenarios. Only sent when switched on: the backend treats the
+    // variable's absence as "leave it to chance", and sending false would pin
+    // the roll off rather than leaving it alone.
+    if (forceRto.value) backendVariables.force_rto = true
+    if (forceGoAround.value) backendVariables.force_go_around = true
 
     // VFR flights identify by aircraft registration, not an airline callsign.
     // Assign a German D-registration and its abbreviated form (D-EMIL -> D-IL,

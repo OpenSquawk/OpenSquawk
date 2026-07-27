@@ -142,6 +142,8 @@
             v-model:prerec-seconds="prerecSeconds"
             v-model:ai-traffic-enabled="aiTrafficEnabled"
             v-model:auto-tune-enabled="autoTuneEnabled"
+            v-model:force-rto="forceRto"
+            v-model:force-go-around="forceGoAround"
             @set-theme="setPmTheme"
         />
 
@@ -321,6 +323,11 @@ const aiTrafficEnabled = ref(false)
 // working the radio is part of what is being practised, so turning it over to
 // the aircraft has to be a deliberate choice.
 const autoTuneEnabled = ref(false)
+// Special scenarios: force a rare intervention on the next flight rather than
+// waiting for its ~0.2% chance. Read when the session is created, so toggling
+// mid-flight affects the next one — which is also how you teach them.
+const forceRto = ref(false)
+const forceGoAround = ref(false)
 
 // ── Bug Report ───────────────────────────────────────────────────────────────
 // Owned here rather than by the dialog: the HUD button starts the screenshot
@@ -599,6 +606,8 @@ const session = useLiveAtcSession(engine, {
   prefetchAtisAudio,
   isRecording,
   autoTuneEnabled,
+  forceRto,
+  forceGoAround,
   bridgeConnected,
   bridgePosition,
   bridgeToken,
