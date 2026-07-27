@@ -1,6 +1,8 @@
 export interface LessonProgress {
   best: number
   done: boolean
+  assessmentVersion?: number
+  successfulVariants?: number
 }
 
 export type LearnProgress = Record<string, Record<string, LessonProgress>>
@@ -14,11 +16,16 @@ export interface LearnConfig {
 }
 
 export interface LearnState {
+  /** Legacy compatibility only. Classroom no longer awards or displays XP. */
   xp: number
   progress: LearnProgress
   config: LearnConfig
+  /** Legacy compatibility only. All Classroom modules are now available. */
   unlockedModules: string[]
 }
+
+export const CLASSROOM_ASSESSMENT_VERSION = 2
+export const CLASSROOM_VARIANTS_FOR_MASTERY = 2
 
 export const LEARN_CONFIG_DEFAULTS: LearnConfig = {
   tts: false,

@@ -2,7 +2,7 @@ import type { AirlineData, AirportData, Frequency, FrequencyType, Scenario } fro
 import { generateSquawk } from '../utils/transponder'
 
 const natoMap: Record<string, string> = {
-  A: 'Alpha',
+  A: 'Alfa',
   B: 'Bravo',
   C: 'Charlie',
   D: 'Delta',
@@ -32,14 +32,14 @@ const natoMap: Record<string, string> = {
 
 const atcNumberWords: Record<string, string> = {
   '0': 'zero',
-  '1': 'one',
-  '2': 'two',
+  '1': 'wun',
+  '2': 'too',
   '3': 'tree',
-  '4': 'four',
+  '4': 'fower',
   '5': 'fife',
   '6': 'six',
   '7': 'seven',
-  '8': 'eight',
+  '8': 'ait',
   '9': 'niner'
 }
 
@@ -243,12 +243,17 @@ export function runwayToWords(runway: string): string {
   return suffixWord ? `${base} ${suffixWord}` : base
 }
 
-function frequencyToSpeech(freq: string): string {
+export function frequencyToSpeech(freq: string): string {
   const [intPart, decimalPart] = freq.split('.')
   const intWords = digitsToWords(intPart)
   if (!decimalPart) return intWords
-  const trimmed = decimalPart.replace(/0+$/, '')
-  const decWords = trimmed ? digitsToWords(trimmed) : 'zero'
+  const channelDigits = decimalPart.padEnd(3, '0').slice(0, 3)
+  const spokenDigits = channelDigits.endsWith('00')
+    ? channelDigits.slice(0, 1)
+    : channelDigits.endsWith('0')
+      ? channelDigits.slice(0, 2)
+      : channelDigits
+  const decWords = digitsToWords(spokenDigits)
   return `${intWords} decimal ${decWords}`
 }
 
@@ -258,12 +263,17 @@ export function formatTemp(temp: number): string {
 }
 
 function temperatureToWords(temp: number): string {
-  const prefix = temp < 0 ? 'minus' : 'plus'
-  return `${prefix} ${digitsToWords(Math.abs(temp).toString())}`
+  const prefix = temp < 0 ? 'minus ' : ''
+  return `${prefix}${digitsToWords(Math.abs(temp).toString())}`
 }
 
-function qnhToWords(qnh: number): string {
+export function qnhToWords(qnh: number): string {
+  if (qnh === 1000) return 'wun thousand'
   return digitsToWords(qnh.toString())
+}
+
+export function squawkToWords(squawk: string): string {
+  return squawk === '1000' ? 'wun thousand' : digitsToWords(squawk)
 }
 
 function windToWords(direction: number, speed: number): string {
@@ -306,7 +316,14 @@ export function altitudeToWords(value: number): string {
   const remainder = value % 1000
   let words = thousands ? `${digitsToWords(thousands.toString())} thousand` : ''
   if (remainder) {
-    words = `${words} ${digitsToWords(remainder.toString())}`.trim()
+    const hundreds = Math.floor(remainder / 100)
+    const tens = remainder % 100
+    if (hundreds) {
+      words = `${words} ${digitsToWords(hundreds.toString())} hundred`.trim()
+    }
+    if (tens) {
+      words = `${words} ${digitsToWords(tens.toString().padStart(2, '0'))}`.trim()
+    }
   }
   return words.trim()
 }
@@ -340,7 +357,7 @@ export function createBaseScenario(): Scenario {
   const windDirectionStr = windDirection.toString().padStart(3, '0')
   const windSpeedStr = windSpeed.toString().padStart(2, '0')
   const visibility = choice(['9999', '9000', '8000', '6000'])
-  const cloud = choice(['SKC', 'FEW020', 'SCT025', 'BKN030'])
+  const cloud = choice(['NSC', 'FEW020', 'SCT025', 'BKN030', 'OVC040'])
   const temperature = randInt(-3, 28)
   const dewpoint = Math.max(temperature - randInt(2, 6), -10)
   const atisCode = choice(atisLetters)
@@ -454,7 +471,7 @@ export function createBaseScenario(): Scenario {
       climbWords: altitudeToWords(climbAltitude)
     },
     squawk,
-    squawkWords: digitsToWords(squawk),
+    squawkWords: squawkToWords(squawk),
     qnh,
     qnhWords: qnhToWords(qnh),
     atisCode,

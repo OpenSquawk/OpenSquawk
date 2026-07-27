@@ -16,7 +16,7 @@ export const PUBLIC_SEO_ROUTES: SeoRoute[] = [
   {
     path: '/',
     title: 'Train ATC before you fly VATSIM | OpenSquawk',
-    description: 'Practice realistic ATC phraseology with guided scenarios, instant feedback and structured radio training for VATSIM and flight simulation.',
+    description: 'Learn ICAO/SERA radio patterns in audio-first Classroom drills with typed pilot responses, then practise them in the Live ATC alpha.',
     image: '/img/learn/missions/full-flight/briefing-hero.png',
     changefreq: 'weekly',
     priority: 1,
@@ -25,7 +25,7 @@ export const PUBLIC_SEO_ROUTES: SeoRoute[] = [
   {
     path: '/de',
     title: 'ATC-Funk für VATSIM trainieren | OpenSquawk',
-    description: 'Trainiere realistische ATC-Phraseologie mit geführten Szenarien, direktem Feedback und strukturierten Funkübungen für VATSIM und Flugsimulation.',
+    description: 'Lerne ICAO/SERA-Funkmuster in audio-geführten Classroom-Übungen mit getippten Pilotenmeldungen und übe sie anschließend in Live ATC.',
     image: '/img/learn/missions/full-flight/briefing-hero.png',
     changefreq: 'weekly',
     priority: 0.9,
@@ -142,11 +142,11 @@ export const FAQ_SCHEMA = {
   '@type': 'FAQPage',
   mainEntity: [
     ['Is Classroom free right now?', 'Yes. Classroom is currently free during the invitation alpha.'],
-    ['What is the difference between Classroom and Live ATC?', 'Classroom is structured listening, readback and feedback training. Live ATC is the real-time simulator radio loop and is still in closed alpha.'],
+    ['What is the difference between Classroom and Live ATC?', 'Classroom uses audio-first prompts, typed pilot responses and feedback on required elements, phraseology and structure. Live ATC is the real-time simulator radio loop with PTT or text input. Both are in invitation alpha.'],
     ['Do I need to be on VATSIM to use it?', 'No. OpenSquawk is built for VATSIM preparation, so you can train before flying live on network frequencies.'],
     ['Can I self-host and inspect the stack?', 'Yes. The core is open source and self-hosting remains free.'],
     ['How do I get access?', 'Join the waitlist for Classroom and Live ATC. Access is released in rolling batches.'],
-    ['Is this for real-world aviation?', 'No. OpenSquawk is simulator training software and is not intended for real-world ATC communication.'],
+    ['Is this for real-world aviation?', 'No. OpenSquawk uses synthetic training data and is not a source for real-world navigation, frequencies or ATC communication.'],
   ].map(([name, text]) => ({
     '@type': 'Question',
     name,
@@ -159,11 +159,11 @@ export const DE_FAQ_SCHEMA = {
   '@type': 'FAQPage',
   mainEntity: [
     ['Ist Classroom aktuell kostenlos?', 'Ja. Classroom ist während der Einladungs-Alpha aktuell kostenlos.'],
-    ['Was ist der Unterschied zwischen Classroom und Live ATC?', 'Classroom bietet strukturierte Hör-, Readback- und Feedbackübungen. Live ATC ist der Echtzeit-Funk für den Flugsimulator und befindet sich in der geschlossenen Alpha.'],
+    ['Was ist der Unterschied zwischen Classroom und Live ATC?', 'Classroom bietet audio-geführte Übungen mit getippten Pilotenmeldungen und Feedback zu Pflichtangaben, Phraseologie und Struktur. Live ATC ist der Echtzeit-Funk mit PTT oder Texteingabe. Beide befinden sich in der Einladungs-Alpha.'],
     ['Muss ich bei VATSIM angemeldet sein?', 'Nein. OpenSquawk bereitet dich auf VATSIM vor, damit du vor dem ersten Onlineflug sicher üben kannst.'],
     ['Kann ich OpenSquawk selbst hosten?', 'Ja. Der Kern ist Open Source und kann kostenlos selbst gehostet werden.'],
     ['Wie erhalte ich Zugang?', 'Trage dich in die Warteliste für Classroom und Live ATC ein. Einladungen werden schrittweise freigeschaltet.'],
-    ['Ist OpenSquawk für die reale Luftfahrt gedacht?', 'Nein. OpenSquawk ist Trainingssoftware für Flugsimulatoren und nicht für echten Flugfunk vorgesehen.'],
+    ['Ist OpenSquawk für die reale Luftfahrt gedacht?', 'Nein. OpenSquawk verwendet synthetische Trainingsdaten und ist keine Quelle für reale Navigation, Frequenzen oder echten Flugfunk.'],
   ].map(([name, text]) => ({
     '@type': 'Question',
     name,
@@ -179,7 +179,7 @@ export const SOFTWARE_APPLICATION_SCHEMA = {
   applicationCategory: 'EducationalApplication',
   applicationSubCategory: 'Flight simulator ATC training',
   operatingSystem: 'Web',
-  description: 'Structured ATC radio and phraseology training for flight simulator pilots preparing for VATSIM.',
+  description: 'Audio-first Classroom drills with typed pilot responses and an invitation-alpha Live ATC simulator radio loop.',
   image: absoluteSiteUrl(DEFAULT_OG_IMAGE),
   offers: {
     '@type': 'Offer',
@@ -188,9 +188,10 @@ export const SOFTWARE_APPLICATION_SCHEMA = {
     availability: 'https://schema.org/LimitedAvailability',
   },
   featureList: [
-    'Guided ATC communication scenarios',
-    'Readback practice and instant feedback',
-    'Flight simulator integration',
+    'Audio-first ICAO/SERA training prompts',
+    'Typed pilot calls and readbacks with field-level feedback',
+    'Rule-based Live ATC alpha sessions with PTT or text input',
+    'Optional alpha simulator Bridge',
     'Self-hosted open-source option',
   ],
 }

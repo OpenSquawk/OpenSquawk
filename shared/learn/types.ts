@@ -148,6 +148,9 @@ export type LessonField = {
   expected: (scenario: Scenario) => string
   alternatives?: (scenario: Scenario) => string[]
   threshold?: number
+  required?: boolean
+  safetyCritical?: boolean
+  matching?: 'exact' | 'controlled' | 'fuzzy'
   placeholder?: string
   width?: BlankWidth
   inputmode?: 'text' | 'numeric'
@@ -162,6 +165,13 @@ export type ReferenceEntry = {
   value: string
 }
 
+export type LessonPromptKind = 'atc' | 'situation' | 'copy'
+
+export type LessonPrompt = {
+  kind: LessonPromptKind
+  text: (scenario: Scenario) => string
+}
+
 export type Lesson = {
   id: string
   title: string
@@ -171,6 +181,11 @@ export type Lesson = {
   fields: LessonField[]
   readback: ReadbackSegment[]
   defaultFrequency?: string
+  prompt?: LessonPrompt
+  responseLabel?: 'Pilot readback' | 'Pilot call' | 'Your copy' | 'Decoded values'
+  standard?: string
+  whyItMatters?: string
+  /** @deprecated Use prompt.text. Kept while legacy curriculum entries are curated. */
   phrase: (scenario: Scenario) => string
   info: (scenario: Scenario) => string[]
   reference?: (scenario: Scenario) => ReferenceEntry[]

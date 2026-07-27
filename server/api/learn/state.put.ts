@@ -32,11 +32,24 @@ function sanitizeProgress(input: LearnProgress | undefined): LearnProgress | und
 
       const bestRaw = (value as any).best
       const doneRaw = (value as any).done
+      const assessmentVersionRaw = (value as any).assessmentVersion
+      const successfulVariantsRaw = (value as any).successfulVariants
 
       const best = typeof bestRaw === 'number' && Number.isFinite(bestRaw) ? Math.max(0, Math.min(100, Math.round(bestRaw))) : 0
       const done = Boolean(doneRaw)
+      const assessmentVersion = typeof assessmentVersionRaw === 'number' && Number.isFinite(assessmentVersionRaw)
+        ? Math.max(0, Math.round(assessmentVersionRaw))
+        : undefined
+      const successfulVariants = typeof successfulVariantsRaw === 'number' && Number.isFinite(successfulVariantsRaw)
+        ? Math.max(0, Math.min(100, Math.round(successfulVariantsRaw)))
+        : undefined
 
-      lessonProgress[lessonId] = { best, done }
+      lessonProgress[lessonId] = {
+        best,
+        done,
+        ...(assessmentVersion !== undefined ? { assessmentVersion } : {}),
+        ...(successfulVariants !== undefined ? { successfulVariants } : {}),
+      }
     }
 
     sanitized[moduleId] = lessonProgress
