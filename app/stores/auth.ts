@@ -2,18 +2,6 @@ import { defineStore } from 'pinia'
 
 export const AUTH_TOKEN_STORAGE_KEY = 'os_access_token'
 
-interface Credentials {
-  email: string
-  password: string
-}
-
-interface RegisterPayload extends Credentials {
-  name?: string
-  invitationCode: string
-  acceptTerms: boolean
-  acceptPrivacy: boolean
-}
-
 type UserRole = 'user' | 'admin' | 'dev'
 
 interface AuthUser {
@@ -64,26 +52,6 @@ export const useAuthStore = defineStore('auth', {
     setUser(user: AuthUser | null) {
       this.user = user
     },
-    async login(payload: Credentials) {
-      const response = await $fetch<{ accessToken: string; user: AuthUser }>('/api/service/auth/login', {
-        method: 'POST',
-        body: payload,
-      })
-      this.setAccessToken(response.accessToken)
-      this.setUser(response.user)
-      return response.user
-    },
-    async register(payload: RegisterPayload) {
-      const response = await $fetch<{ accessToken: string; user: AuthUser }>('/api/service/auth/register', {
-        method: 'POST',
-        body: payload,
-      })
-      this.setAccessToken(response.accessToken)
-      this.setUser(response.user)
-      return response.user
-    },
-    // PHASE 1 (app repo): login() and register() go away with the login page —
-    // the app never owns credentials. fetchUser/tryRefresh/logout stay.
     async ssoCallback(code: string) {
       const response = await $fetch<{ accessToken: string; user: AuthUser }>('/api/auth/sso/callback', {
         method: 'POST',
@@ -96,8 +64,7 @@ export const useAuthStore = defineStore('auth', {
     },
     async tryRefresh() {
       try {
-        // One endpoint for every mode — the server decides what a session is
-        // (local identity, app cookie, or the website's refresh cookie).
+        // One endpoint for every mode: local identity or app session cookie.
         const response = await $fetch<{ accessToken: string }>('/api/auth/refresh', {
           method: 'POST',
         })
@@ -147,4 +114,3 @@ export const useAuthStore = defineStore('auth', {
     },
   },
 })
-

@@ -4,8 +4,6 @@ export function useRuntimeConfig() {
         openaiProject: process.env.OPENAI_PROJECT || '',
         openaiBaseUrl: process.env.OPENAI_BASE_URL || '',
         jwtSecret: process.env.JWT_SECRET || '',
-        jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || '',
-        manualInvitePassword: process.env.MANUAL_INVITE_PASSWORD || '',
         llmModel: process.env.OPENAI_LLM_MODEL || 'gpt-5-nano',
         ttsModel: process.env.OPENAI_TTS_MODEL || 'tts-1',
         defaultVoiceId: process.env.OPENAI_VOICE_ID || 'alloy',

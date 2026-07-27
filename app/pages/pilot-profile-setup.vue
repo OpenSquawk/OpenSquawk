@@ -409,7 +409,7 @@ function finishAndLeave() {
   if (typeof window !== 'undefined') {
     localStorage.setItem(CLASSROOM_INTRO_STORAGE_KEY, 'false')
   }
-  router.replace('/start?firstTime=1')
+  router.replace('/?firstTime=1')
 }
 
 async function skip() {

@@ -241,8 +241,8 @@ export function useLiveAtcSession(
   }
 
   // Guards the ATC reply (log entry + TTS) against being applied twice for the
-  // same decision — applyBackendDecision can be reached from four sources
-  // (transmit reply, telemetry tick, silence timeout, bug-report restore) and
+  // same decision — applyBackendDecision can be reached from three sources
+  // (transmit reply, telemetry tick and silence timeout), and
   // two of them can legitimately fire back-to-back for the same outcome (e.g.
   // a silence timeout racing an in-flight transmit reply), which otherwise
   // spoke/logged the same confirmation 2-3x (design doc WP1 Fix 2).
@@ -842,83 +842,6 @@ export function useLiveAtcSession(
     await handlePilotTransmission(text, 'text')
   }
 
-  /**
-   * Restore a /live-atc session from a saved bug-report snapshot (admin link
-   * `/live-atc?restoreBugReport=<id>`). The Python backend has no "resume mid-session"
-   * endpoint, so we recreate a real, working session for the SAME flight and
-   * scenario via startMonitoring(), then overlay the saved variables/flags and
-   * the captured conversation so the admin can reproduce and try out the bug.
-   */
-  async function restoreBugReportState(restoreId: string) {
-    try {
-      const report = await api.get<any>(`/api/admin/bug-reports/${restoreId}`)
-      const state = report?.pmState
-      if (!state) {
-        error.value = 'Bug-Report enthält keinen gespeicherten State.'
-        return
-      }
-
-      // Locate the scenario the report was captured in.
-      const scenario =
-        SCENARIOS.find(s => s.id === state.scenarioId) ||
-        SCENARIOS.find(s => s.startFlow === state.flowSlug)
-      if (!scenario) {
-        error.value = `Bug-Report-Restore: Szenario "${state.scenarioId || state.flowSlug || '?'}" nicht gefunden.`
-        return
-      }
-
-      // Reconstruct a flight plan from the snapshot so startMonitoring resolves the
-      // correct airport/frequencies and creates a backend session for the same flight.
-      const v = state.variables || {}
-      const fc = state.flightContext || {}
-      const dep = v.dep || fc.dep
-      const dest = v.dest || fc.dest
-      const flightPlan: Record<string, any> = {
-        callsign: v.callsign || fc.callsign || 'UNKNOWN',
-        aircraft: v.acf_type || fc.acf_type || 'A320',
-        dep,
-        departure: dep,
-        arr: dest,
-        arrival: dest,
-        route: fc.route || v.route || '',
-        assignedsquawk: v.squawk,
-      }
-
-      // Spin up a real session (loads tree, fetches frequencies, creates backend session).
-      await startMonitoring(flightPlan, scenario)
-      // startMonitoring bails out on error without entering the monitor screen.
-      if (currentScreen.value !== 'monitor') return
-
-      // Overlay the exact saved values over the freshly generated ones (stand, SID, …).
-      if (state.variables && Object.keys(state.variables).length) patchVariables(state.variables)
-      if (state.flags && Object.keys(state.flags).length) patchFlags(state.flags)
-
-      // Restore the captured conversation for context.
-      clearCommunicationLog?.()
-      if (Array.isArray(state.communicationLog)) {
-        for (const e of state.communicationLog) {
-          if (!e?.message) continue
-          appendLogEntry(e.speaker || 'system', e.message, e.state || '', {
-            frequency: e.frequency,
-            flow: e.flow,
-            radioCheck: e.radioCheck,
-            offSchema: e.offSchema,
-          })
-        }
-      }
-
-      // A fresh backend session always starts at the flow's start state, so we
-      // can't fake the local cursor onto the captured mid-flow state without
-      // desyncing transmits. Tell the admin where the bug was captured instead.
-      error.value =
-        `Bug-Report wiederhergestellt: ${scenario.name} · ${flightPlan.callsign} (${dep || '?'}→${dest || '?'}). ` +
-        `Erfasster State: ${state.currentStateId || '?'} (Flow ${state.flowSlug || '?'}).`
-    } catch (err) {
-      console.warn('[PM] Bug report restore failed', err)
-      error.value = 'Bug-Report konnte nicht wiederhergestellt werden.'
-    }
-  }
-
   onUnmounted(() => {
     clearSilenceTimer()
     clearAutoTune()
@@ -938,6 +861,5 @@ export function useLiveAtcSession(
     flyAgain,
     backToSetup,
     sendPilotText,
-    restoreBugReportState,
   }
 }

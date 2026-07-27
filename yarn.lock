@@ -653,13 +653,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@dimforge/rapier3d-compat@npm:~0.12.0":
-  version: 0.12.0
-  resolution: "@dimforge/rapier3d-compat@npm:0.12.0"
-  checksum: 10c0/c66c24f90649c0fc870679c12e7fec1a111080d44450169b57561f957d7b6b284ad8a3ceeba95533e213176ea171351acebd3dd43885fafb33f18bfbd9d507db
-  languageName: node
-  linkType: hard
-
 "@dxup/nuxt@npm:^0.3.2":
   version: 0.3.2
   resolution: "@dxup/nuxt@npm:0.3.2"
@@ -1104,13 +1097,6 @@ __metadata:
   version: 2.0.1
   resolution: "@fastify/accept-negotiator@npm:2.0.1"
   checksum: 10c0/b68386f8b3b69c73f79a54983bd86afc752c4373897ec1ad798356a325a69224ebd003c1aa47e11fc40b46f23bf2384ebb3907fe44214af806cc8ff6af913f18
-  languageName: node
-  linkType: hard
-
-"@hotjar/browser@npm:^1.0.9":
-  version: 1.0.9
-  resolution: "@hotjar/browser@npm:1.0.9"
-  checksum: 10c0/9dee998245031729ef79f0087cbd5bad99bf04de981f88fe40f62e998db2907f36182c703e92e6af0073c62962774c98edc790cd7d5f62c1c0399357b7c70b51
   languageName: node
   linkType: hard
 
@@ -1885,36 +1871,6 @@ __metadata:
     unimport: "npm:^5.2.0"
     untyped: "npm:^2.0.0"
   checksum: 10c0/0a5223c3ea836f9f3720e4ad5616c57d566633c41e6b5363078d341f52b78a4c94d1c425c413cf65759d06ec2b77b72359e16e86cba6161b3b19dca7de521084
-  languageName: node
-  linkType: hard
-
-"@nuxt/kit@npm:^4.1.1":
-  version: 4.1.2
-  resolution: "@nuxt/kit@npm:4.1.2"
-  dependencies:
-    c12: "npm:^3.2.0"
-    consola: "npm:^3.4.2"
-    defu: "npm:^6.1.4"
-    destr: "npm:^2.0.5"
-    errx: "npm:^0.1.0"
-    exsolve: "npm:^1.0.7"
-    ignore: "npm:^7.0.5"
-    jiti: "npm:^2.5.1"
-    klona: "npm:^2.0.6"
-    mlly: "npm:^1.8.0"
-    ohash: "npm:^2.0.11"
-    pathe: "npm:^2.0.3"
-    pkg-types: "npm:^2.3.0"
-    rc9: "npm:^2.1.2"
-    scule: "npm:^1.3.0"
-    semver: "npm:^7.7.2"
-    std-env: "npm:^3.9.0"
-    tinyglobby: "npm:^0.2.15"
-    ufo: "npm:^1.6.1"
-    unctx: "npm:^2.4.1"
-    unimport: "npm:^5.2.0"
-    untyped: "npm:^2.0.0"
-  checksum: 10c0/96f3b109e198d2b04840e67e3dfa8cc88097a24eb220e85376412d33a29f0ea9d51ea428c75d49d755ccab9b942bd6cea2914ac0660a3c5df9ac4f755644877a
   languageName: node
   linkType: hard
 
@@ -3187,13 +3143,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tweenjs/tween.js@npm:~23.1.3":
-  version: 23.1.3
-  resolution: "@tweenjs/tween.js@npm:23.1.3"
-  checksum: 10c0/811b30f5f0e7409fb41833401c501c2d6f600eb5f43039dd9067a7f70aff6dad5f5ce1233848e13f0b33a269a160d9c133f344d986cbff4f1f6b72ddecd06c89
-  languageName: node
-  linkType: hard
-
 "@tybys/wasm-util@npm:^0.10.1":
   version: 0.10.1
   resolution: "@tybys/wasm-util@npm:0.10.1"
@@ -3236,66 +3185,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/fluent-ffmpeg@npm:^2.1.28":
-  version: 2.1.28
-  resolution: "@types/fluent-ffmpeg@npm:2.1.28"
-  dependencies:
-    "@types/node": "npm:*"
-  checksum: 10c0/5c02c2f7f8db001fe9c57ad521a47624258bd5fc427576a47c299044bb2ec8b73864d436548da39fd84fea4de28b6b0d8a644a4343993cea52328f6bf1b7e791
-  languageName: node
-  linkType: hard
-
-"@types/geojson@npm:*":
-  version: 7946.0.16
-  resolution: "@types/geojson@npm:7946.0.16"
-  checksum: 10c0/1ff24a288bd5860b766b073ead337d31d73bdc715e5b50a2cee5cb0af57a1ed02cc04ef295f5fa68dc40fe3e4f104dd31282b2b818a5ba3231bc1001ba084e3c
-  languageName: node
-  linkType: hard
-
-"@types/leaflet@npm:^1.9.21":
-  version: 1.9.21
-  resolution: "@types/leaflet@npm:1.9.21"
-  dependencies:
-    "@types/geojson": "npm:*"
-  checksum: 10c0/96a86bdeff7bf56104242e97536f39005a53dd857853aa0c5de127ce2c72f3f36638f2a5b8d23e2e825a2bfe32113be731ab26634a3143413b891299c29621ce
-  languageName: node
-  linkType: hard
-
-"@types/node@npm:*":
-  version: 24.4.0
-  resolution: "@types/node@npm:24.4.0"
-  dependencies:
-    undici-types: "npm:~7.11.0"
-  checksum: 10c0/3aefa4c6b006b3478f2d28a48d830ab7350ce24efdaf352011418e3ee17ed7683ca9c0a1840e770685ce78f413344badafa91e034be02488efe2eb6b612bd542
-  languageName: node
-  linkType: hard
-
 "@types/resolve@npm:1.20.2":
   version: 1.20.2
   resolution: "@types/resolve@npm:1.20.2"
   checksum: 10c0/c5b7e1770feb5ccfb6802f6ad82a7b0d50874c99331e0c9b259e415e55a38d7a86ad0901c57665d93f75938be2a6a0bc9aa06c9749192cadb2e4512800bbc6e6
-  languageName: node
-  linkType: hard
-
-"@types/stats.js@npm:*":
-  version: 0.17.4
-  resolution: "@types/stats.js@npm:0.17.4"
-  checksum: 10c0/4fe0429998519f0476f03a25b4900b4d4a1474606478657271e40a884f7936ba902ea564b1c95cfd33a8e84af46cef6e1e98bb23e86fd3b6676cd5b974987151
-  languageName: node
-  linkType: hard
-
-"@types/three@npm:^0.183.0":
-  version: 0.183.0
-  resolution: "@types/three@npm:0.183.0"
-  dependencies:
-    "@dimforge/rapier3d-compat": "npm:~0.12.0"
-    "@tweenjs/tween.js": "npm:~23.1.3"
-    "@types/stats.js": "npm:*"
-    "@types/webxr": "npm:>=0.5.17"
-    "@webgpu/types": "npm:*"
-    fflate: "npm:~0.8.2"
-    meshoptimizer: "npm:~1.0.1"
-  checksum: 10c0/e8930947d7b408f0d1932d810bebfd1b0210f809abb95b5c6d511fdef7d911913998e63ab728add0b144d900d03cdef1f21d1053361affe1468c2cfde05c5992
   languageName: node
   linkType: hard
 
@@ -3310,13 +3203,6 @@ __metadata:
   version: 7.0.3
   resolution: "@types/webidl-conversions@npm:7.0.3"
   checksum: 10c0/ac2ccff93b95ac7c8ca73dc6064403181691bba7ea144296f462dc9108a07be16cbad7b9c704b3df706dcc5a117e1f7bf7fb27aeb75b09c0f3148de8aee11aff
-  languageName: node
-  linkType: hard
-
-"@types/webxr@npm:>=0.5.17":
-  version: 0.5.24
-  resolution: "@types/webxr@npm:0.5.24"
-  checksum: 10c0/ff59ffd390d06ca3f89ab2531d583ac10bc5e2ab82e5a01ecc40fbc365224a3375e7caa5b14649cf6141db21fb024940da7ad2bd8faa3cd497a6665257cb53b5
   languageName: node
   linkType: hard
 
@@ -4212,13 +4098,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@webgpu/types@npm:*":
-  version: 0.1.69
-  resolution: "@webgpu/types@npm:0.1.69"
-  checksum: 10c0/52b95a176de5ee918fd1d7132103c35029006a0b4eb321767479a9e430560d272926c0994c3795a5bbaa22cebcc7dce71e66ba8b6496e01c90c0d179a02bd968
-  languageName: node
-  linkType: hard
-
 "abbrev@npm:^3.0.0":
   version: 3.0.1
   resolution: "abbrev@npm:3.0.1"
@@ -4431,13 +4310,6 @@ __metadata:
   version: 3.1.1
   resolution: "async-sema@npm:3.1.1"
   checksum: 10c0/a16da9f7f2dbdd00a969bf264b7ad331b59df3eac2b38f529b881c5cc8662594e68ed096d927ec2aabdc13454379cdc6d677bcdb0a3d2db338fb4be17957832b
-  languageName: node
-  linkType: hard
-
-"async@npm:^0.2.9":
-  version: 0.2.10
-  resolution: "async@npm:0.2.10"
-  checksum: 10c0/714d284dc6c3ae59f3e8b347083e32c7657ba4ffc4ff945eb152ad4fb08def27e768992fcd4d9fd3b411c6b42f1541862ac917446bf2a1acfa0f302d1001f7d2
   languageName: node
   linkType: hard
 
@@ -5511,7 +5383,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dotenv@npm:^17.2.3, dotenv@npm:^17.3.1":
+"dotenv@npm:^17.2.3":
   version: 17.3.1
   resolution: "dotenv@npm:17.3.1"
   checksum: 10c0/c78e0c2d5a549c751e544cc60e2b95e7cb67e0c551f42e094d161c6b297aa44b630a3c2dcacf5569e529a6c2a6b84e2ab9be8d37b299d425df5a18b81ce4a35f
@@ -6014,13 +5886,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fflate@npm:~0.8.2":
-  version: 0.8.2
-  resolution: "fflate@npm:0.8.2"
-  checksum: 10c0/03448d630c0a583abea594835a9fdb2aaf7d67787055a761515bf4ed862913cfd693b4c4ffd5c3f3b355a70cf1e19033e9ae5aedcca103188aaff91b8bd6e293
-  languageName: node
-  linkType: hard
-
 "file-uri-to-path@npm:1.0.0":
   version: 1.0.0
   resolution: "file-uri-to-path@npm:1.0.0"
@@ -6034,16 +5899,6 @@ __metadata:
   dependencies:
     to-regex-range: "npm:^5.0.1"
   checksum: 10c0/b75b691bbe065472f38824f694c2f7449d7f5004aa950426a2c28f0306c60db9b880c0b0e4ed819997ffb882d1da02cfcfc819bddc94d71627f5269682edf018
-  languageName: node
-  linkType: hard
-
-"fluent-ffmpeg@npm:^2.1.3":
-  version: 2.1.3
-  resolution: "fluent-ffmpeg@npm:2.1.3"
-  dependencies:
-    async: "npm:^0.2.9"
-    which: "npm:^1.1.1"
-  checksum: 10c0/0397379ec3237c10b2389edeef26fdaf93f36d1b20b0f28f8945fe6d9121dcee9b0c615bf7d44edb7abd37233e0d24f0db39389668d3c86a1a2a0d59e3f4457b
   languageName: node
   linkType: hard
 
@@ -7156,13 +7011,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"leaflet@npm:^1.9.4":
-  version: 1.9.4
-  resolution: "leaflet@npm:1.9.4"
-  checksum: 10c0/f639441dbb7eb9ae3fcd29ffd7d3508f6c6106892441634b0232fafb9ffb1588b05a8244ec7085de2c98b5ed703894df246898477836cfd0ce5b96d4717b5ca1
-  languageName: node
-  linkType: hard
-
 "lightningcss-android-arm64@npm:1.33.0":
   version: 1.33.0
   resolution: "lightningcss-android-arm64@npm:1.33.0"
@@ -7542,13 +7390,6 @@ __metadata:
   version: 1.4.1
   resolution: "merge2@npm:1.4.1"
   checksum: 10c0/254a8a4605b58f450308fc474c82ac9a094848081bf4c06778200207820e5193726dc563a0d2c16468810516a5c97d9d3ea0ca6585d23c58ccfff2403e8dbbeb
-  languageName: node
-  linkType: hard
-
-"meshoptimizer@npm:~1.0.1":
-  version: 1.0.1
-  resolution: "meshoptimizer@npm:1.0.1"
-  checksum: 10c0/55a1164370474e1acd9f1116843a6ca9de27b4138b5d8cc13160652d50962eff29c91e8b05c9dfed97ddc41544f37509ed2ca382bebc8b332ddbcecdaa692027
   languageName: node
   linkType: hard
 
@@ -8167,17 +8008,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nuxt-module-hotjar@npm:^1.3.4":
-  version: 1.3.4
-  resolution: "nuxt-module-hotjar@npm:1.3.4"
-  dependencies:
-    "@hotjar/browser": "npm:^1.0.9"
-    "@nuxt/kit": "npm:^4.1.1"
-    defu: "npm:^6.1.4"
-  checksum: 10c0/cd4bb0a8b321d96611315681a82eb0e9d896b837540b8cc508cbe4cebd4821641cbcb752ad791675cec5346225431907181165a717e5175d6fa55d4772ced128
-  languageName: node
-  linkType: hard
-
 "nuxt-mongoose@npm:^1.0.6":
   version: 1.0.6
   resolution: "nuxt-mongoose@npm:1.0.6"
@@ -8423,28 +8253,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"opensquawk@workspace:.":
+"opensquawk-app@workspace:.":
   version: 0.0.0-use.local
-  resolution: "opensquawk@workspace:."
+  resolution: "opensquawk-app@workspace:."
   dependencies:
     "@nuxt/image": "npm:^2.0.0"
     "@nuxtjs/tailwindcss": "npm:^6.14.0"
     "@pinia/nuxt": "npm:^0.11.3"
-    "@types/fluent-ffmpeg": "npm:^2.1.28"
-    "@types/leaflet": "npm:^1.9.21"
-    "@types/three": "npm:^0.183.0"
-    dotenv: "npm:^17.3.1"
-    fluent-ffmpeg: "npm:^2.1.3"
-    leaflet: "npm:^1.9.4"
     modern-screenshot: "npm:^4.7.0"
     nodemailer: "npm:^8.0.1"
     nuxt: "npm:^4.3.1"
     nuxt-aos: "npm:^1.2.6"
-    nuxt-module-hotjar: "npm:^1.3.4"
     nuxt-mongoose: "npm:^1.0.6"
     openai: "npm:^6.22.0"
     pinia: "npm:^3.0.4"
-    three: "npm:^0.183.1"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9.3"
     vitest: "npm:^4.1.10"
@@ -10584,13 +10406,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"three@npm:^0.183.1":
-  version: 0.183.1
-  resolution: "three@npm:0.183.1"
-  checksum: 10c0/65a0703afd2f6b8495e06a011262d5721d00705482912eb5d80dcb70331153a37ad26800c6ce6b21021bdba70050fdd2cb05c8c64d7238ef8a2ce1703d16b8b6
-  languageName: node
-  linkType: hard
-
 "tiny-invariant@npm:^1.3.3":
   version: 1.3.3
   resolution: "tiny-invariant@npm:1.3.3"
@@ -10820,13 +10635,6 @@ __metadata:
     magic-string: "npm:^0.30.21"
     unplugin: "npm:^2.3.11"
   checksum: 10c0/007bf517866a1f523aff1821ee6380f964e0eb327b3499616fe4d02bbb0b08d8295627e78cacc2218e9f352f0faf0f25ac1993d66fedbb6a53b9d8bf699fed20
-  languageName: node
-  linkType: hard
-
-"undici-types@npm:~7.11.0":
-  version: 7.11.0
-  resolution: "undici-types@npm:7.11.0"
-  checksum: 10c0/24ff69baeaebc7d09f4dae68564df850b4ff561810148ff6c37d3fc64dd1460c55e59e604420495e73b1fb48594a1c98e69f6732086a24e01b88f2d926378af1
   languageName: node
   linkType: hard
 
@@ -11737,17 +11545,6 @@ __metadata:
     tr46: "npm:~0.0.3"
     webidl-conversions: "npm:^3.0.0"
   checksum: 10c0/1588bed84d10b72d5eec1d0faa0722ba1962f1821e7539c535558fb5398d223b0c50d8acab950b8c488b4ba69043fd833cc2697056b167d8ad46fac3995a55d5
-  languageName: node
-  linkType: hard
-
-"which@npm:^1.1.1":
-  version: 1.3.1
-  resolution: "which@npm:1.3.1"
-  dependencies:
-    isexe: "npm:^2.0.0"
-  bin:
-    which: ./bin/which
-  checksum: 10c0/e945a8b6bbf6821aaaef7f6e0c309d4b615ef35699576d5489b4261da9539f70393c6b2ce700ee4321c18f914ebe5644bc4631b15466ffbaad37d83151f6af59
   languageName: node
   linkType: hard
 

@@ -1,8 +1,7 @@
-import { defineEventHandler } from 'h3'
+import { createError, defineEventHandler } from 'h3'
 import { AppUser } from '../../models/AppUser'
 import { getAuthMode, getLocalAppUser } from '../../utils/authMode'
 import { createAppAccessToken, issueAppSession, readAppSession } from '../../utils/session'
-import { rotateRefreshToken } from '../../utils/auth'
 
 /**
  * Hands the client a fresh bearer token for whatever session it already has.
@@ -11,8 +10,6 @@ import { rotateRefreshToken } from '../../utils/auth'
  * "session" means is the server's job:
  *   open → the single local identity, no credentials involved
  *   sso  → the app's own session cookie, minted at the SSO exchange
- *   (transitional) → the website's refresh cookie, for users logged in before
- *   the split. That last branch disappears with the website half of auth.ts.
  */
 export default defineEventHandler(async (event) => {
   if (getAuthMode() === 'open') {
@@ -31,6 +28,5 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // PHASE 1 (app repo): delete — there is no website refresh cookie there.
-  return await rotateRefreshToken(event)
+  throw createError({ statusCode: 401, statusMessage: 'No app session present' })
 })

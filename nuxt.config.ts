@@ -1,12 +1,3 @@
-// nuxt.config.ts
-
-// Analytics is opt-in and belongs to whoever runs the instance. The module
-// itself is inert — it only registers a composable — so it stays loaded for the
-// auto-import; what matters is that without HOTJAR_ID there is no ID to
-// initialize with, and app.vue never starts it. A self-hosted deployment can
-// therefore not silently ship its users' sessions to somebody else's account.
-const hotjarId = Number(process.env.HOTJAR_ID || 0)
-
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
     devtools: {enabled: false},
@@ -33,37 +24,11 @@ export default defineNuxtConfig({
       '@pinia/nuxt',
       'nuxt-mongoose',
       '@nuxt/image',
-      'nuxt-module-hotjar',
     ],
-    hotjar: {
-        // No default: an unset HOTJAR_ID leaves analytics off entirely.
-        hotjarId,
-        scriptVersion: 6,
-        debug: process.env.NODE_ENV !== 'production',
-    },
     aos: {once: true, duration: 600, easing: 'ease-out'},
     app: {head: {link: [{rel: 'icon', type: 'image/jpeg', href: '/img/icon-sm.jpeg'}]}},
     routeRules: {
-        '/app/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/admin/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/auth/callback': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/bridge/connect': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/classroom/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/classroom-introduction': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/copilot': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/dev-login': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/editor/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/flightlab/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/forgot-password': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/invite': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/live-atc': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/login': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/logout': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/pilot-profile-setup': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/pm': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/present': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/start': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-        '/unsubscribe': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     },
     runtimeConfig: {
         openaiKey: process.env.OPENAI_API_KEY,
@@ -83,8 +48,6 @@ export default defineNuxtConfig({
         // must get.
         domeLightWebhookUrl: process.env.DOME_LIGHT_WEBHOOK_URL || '',
         jwtSecret: process.env.JWT_SECRET,
-        jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-        manualInvitePassword: process.env.MANUAL_INVITE_PASSWORD,
         mongoose: {
             uri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/opensquawk',
             options: {},
@@ -94,9 +57,8 @@ export default defineNuxtConfig({
             // over by authIssuer. Server-side source of truth is
             // server/utils/authMode.ts; this mirror is what the client
             // middleware and auth store branch on.
-            authMode: process.env.AUTH_MODE || 'sso',
+            authMode: process.env.AUTH_MODE || 'open',
             authIssuer: process.env.NUXT_PUBLIC_AUTH_ISSUER || '',
-            apiDocumentationUrl: '/api-docs',
             radioBackendUrl: process.env.NUXT_PUBLIC_RADIO_BACKEND_URL || 'http://127.0.0.1:8000',
             // Minimum word count for a voice (PTT) transmission to be used. Below
             // this the transcript is treated as STT noise/hallucination and
@@ -151,9 +113,6 @@ export default defineNuxtConfig({
         '~/assets/css/learn-theme.css'
     ],
     nitro: {
-        serverAssets: [
-            { baseName: 'news', dir: '../content/news' },
-        ],
         experimental: {
             websocket: true,
         },

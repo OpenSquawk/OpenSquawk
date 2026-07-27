@@ -7,21 +7,16 @@ import type { AppUserDocument } from '../models/AppUser'
  *
  * Once an identity has arrived (via the SSO exchange, or trivially in
  * AUTH_MODE=open), the app mints a session signed with its own secret and
- * stored in a host-only cookie on its own origin. No cross-domain cookie, no
- * CORS, no shared secret with the website beyond the one-time exchange. After
- * this point the app can serve every request without the issuer being reachable
- * at all — which is the whole point: a self-hosted instance must not depend on
- * opensquawk.de.
+ * stored in a host-only cookie on its own origin. No cross-domain cookie or
+ * CORS is needed. After this point the app can serve every request without the
+ * optional issuer being reachable.
  */
 
 const APP_SESSION_COOKIE = 'os_app_session'
 const APP_SESSION_TTL_SECONDS = 60 * 60 * 24 * 30
 const APP_ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 24
 
-// Marks a bearer token as minted by the app rather than by the website's
-// login. Both are HS256 and — in the monorepo, where APP_JWT_SECRET is usually
-// unset — signed with the same secret, so the payload is what tells them apart:
-// an app token resolves against AppUser, a website token against User.
+// Marks a bearer token as minted by this app.
 const APP_TOKEN_TYPE = 'app'
 
 export interface AppSessionPayload {
@@ -32,8 +27,7 @@ export interface AppSessionPayload {
 }
 
 function getAppSessionSecret() {
-  // APP_JWT_SECRET lets the app run on a secret of its own; JWT_SECRET is the
-  // fallback so the monorepo keeps working with a single configured secret.
+  // JWT_SECRET remains a compatibility fallback for existing installations.
   const secret = (process.env.APP_JWT_SECRET || process.env.JWT_SECRET || '').trim()
   if (!secret) {
     throw new Error('App session secret missing – bitte APP_JWT_SECRET (oder JWT_SECRET) in .env setzen')
@@ -53,18 +47,14 @@ function sessionClaims(user: AppUserDocument) {
 
 /**
  * Short-lived bearer token for the browser. The durable session lives in the
- * httpOnly cookie; this is what the client puts in the Authorization header,
- * exactly as the website's access token does today, so no call site has to
- * change shape.
+ * httpOnly cookie; this is what the client puts in the Authorization header.
  */
 export function createAppAccessToken(user: AppUserDocument) {
   return createJwtToken(sessionClaims(user), getAppSessionSecret(), APP_ACCESS_TOKEN_TTL_SECONDS)
 }
 
 /**
- * Returns the payload if `token` is an app-minted bearer token, else null —
- * including for a well-formed website token, which must fall through to the
- * website resolution path.
+ * Returns the payload if `token` is an app-minted bearer token, else null.
  */
 export function verifyAppAccessToken(token: string): AppSessionPayload | null {
   try {

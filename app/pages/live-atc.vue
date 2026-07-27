@@ -416,11 +416,6 @@ onMounted(async () => {
       }
     }
 
-    // Restore state from bug report (admin link: /live-atc?restoreBugReport=<id>)
-    const restoreId = route.query.restoreBugReport as string | undefined
-    if (restoreId) {
-      await restoreBugReportState(restoreId)
-    }
   } finally {
     restoringFromStorage = false
   }
@@ -624,7 +619,6 @@ const {
   flyAgain,
   backToSetup,
   sendPilotText,
-  restoreBugReportState,
 } = session
 
 // Simulated background traffic. A pure observer alongside the engine and the

@@ -12,7 +12,7 @@ export type AuthMode = 'open' | 'sso'
  *
  * There is deliberately no third mode: the app never owns passwords, invites or
  * password resets. Entitlement/feature-gating must NOT be mixed in here —
- * AUTH_MODE is an *identity* concept (see Phase 5.2 of the split plan).
+ * AUTH_MODE is an identity concept.
  */
 
 // The single local identity used in AUTH_MODE=open. Fixed so that profiles,
@@ -24,14 +24,7 @@ const LOCAL_USER_EMAIL = 'local@opensquawk.invalid'
 const LOCAL_USER_NAME = 'Local User'
 
 export function getAuthMode(): AuthMode {
-  // PHASE 1 (app repo): flip this default to 'open' and delete the note below.
-  //
-  // The default is 'sso' for as long as the website surface (/api/admin/**,
-  // /api/editor/**, invitations, waitlist) still lives in this repo. Defaulting
-  // to 'open' here would mean that any deployment which simply forgets to set
-  // AUTH_MODE serves those endpoints to everyone as the local admin user.
-  // In the app repo that surface is gone and 'open' is the correct default.
-  const raw = (process.env.AUTH_MODE || 'sso').trim().toLowerCase()
+  const raw = (process.env.AUTH_MODE || 'open').trim().toLowerCase()
   return raw === 'open' ? 'open' : 'sso'
 }
 

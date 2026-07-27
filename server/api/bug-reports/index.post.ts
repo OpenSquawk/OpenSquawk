@@ -60,7 +60,6 @@ export default defineEventHandler(async (event) => {
     return { success: true, id: String(report._id), code }
   }
 
-  const adminUrl = `${process.env.APP_URL || 'https://app.opensquawk.de'}/admin`
   const sourceLabel = SOURCE_LABELS[source]
   const stateInfo = body?.pmState?.currentStateId
     ? `State: ${body.pmState.currentStateId} (Flow: ${body.pmState.flowSlug || '—'})`
@@ -75,7 +74,7 @@ export default defineEventHandler(async (event) => {
 <p><strong>Fehlerbeschreibung/Featurewunsch:</strong><br>${comment.replace(/\n/g, '<br>')}</p>
 <p><strong>Nenne den Fehlercode ${code} beim Commit.</strong></p>
 ${stateInfo ? `<p><strong>${stateInfo}</strong></p>` : ''}
-<p><a href="${adminUrl}">Im Admin-Panel ansehen →</a></p>`,
+`,
     text: `Bug Report von ${contact}
 Bereich: ${sourceLabel}
 
@@ -84,8 +83,7 @@ ${comment}
 
 Nenne den Fehlercode ${code} beim Commit.
 ${stateInfo}
-
-Admin: ${adminUrl}`,
+`,
   }).catch(() => {})
 
   return { success: true, id: String(report._id), code }

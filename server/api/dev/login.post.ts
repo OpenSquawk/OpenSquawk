@@ -1,11 +1,11 @@
 import { createError } from 'h3'
-import { getDevBypassUser, issueAuthTokens } from '../../utils/auth'
+import { getDevBypassUser } from '../../utils/auth'
+import { mirrorAppUser } from '../../utils/authMode'
+import { createAppAccessToken, issueAppSession } from '../../utils/session'
 
 /**
- * Local-dev-only auto-login: issues real session tokens for a fixed,
- * entirely in-memory test user — no database involved — so an agent (or a
- * developer) can reach any require-auth-gated page on localhost without an
- * invitation code, even when the dev database itself is unreachable.
+ * Local-dev-only auto-login: persists a fixed app identity and issues an app
+ * session so an agent or developer can exercise AUTH_MODE=sso locally.
  *
  * Hard-disabled outside development. This must never be reachable from a
  * deployed environment — the NODE_ENV check below is the entire security
@@ -19,12 +19,23 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Not found' })
   }
 
-  const user = getDevBypassUser()
-  const tokens = await issueAuthTokens(event, user)
+  const identity = getDevBypassUser()
+  const user = await mirrorAppUser({
+    subject: identity.ssoSubject,
+    email: identity.email,
+    name: identity.name,
+    role: identity.role,
+  }, { force: true })
+
+  if (!user) {
+    throw createError({ statusCode: 500, statusMessage: 'Could not persist dev identity' })
+  }
+
+  issueAppSession(event, user)
 
   return {
     success: true,
-    accessToken: tokens.accessToken,
+    accessToken: createAppAccessToken(user),
     user: {
       id: String(user._id),
       email: user.email,

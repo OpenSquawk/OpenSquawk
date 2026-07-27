@@ -10,7 +10,7 @@ interface ExchangeResponse {
 }
 
 /**
- * Consumer half of the SSO handoff (see Phase 0.2 of the split plan).
+ * Consumer half of the optional SSO handoff.
  *
  * The browser only ever carries a one-time code. It is redeemed here,
  * server-to-server against the issuer and authenticated with SERVICE_SECRET, so

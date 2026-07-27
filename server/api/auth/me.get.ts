@@ -8,8 +8,5 @@ export default defineEventHandler(async (event) => {
     name: user.name,
     role: user.role,
     createdAt: user.createdAt,
-    lastLoginAt: user.lastLoginAt,
-    invitationCodesIssued: user.invitationCodesIssued,
   }
 })
-

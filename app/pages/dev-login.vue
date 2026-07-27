@@ -1,7 +1,6 @@
 <script setup lang="ts">
-// Local-dev-only auto-login helper: navigate to /dev-login?redirect=/some/page
-// to skip the invite-only login form while testing on localhost. Backed by
-// POST /api/dev/login, which is hard-disabled outside development.
+// Local-dev-only auto-login helper for exercising AUTH_MODE=sso on localhost.
+// Backed by POST /api/dev/login, which is hard-disabled outside development.
 definePageMeta({ layout: false })
 
 const route = useRoute()
