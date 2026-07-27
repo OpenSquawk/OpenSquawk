@@ -12,6 +12,7 @@ import { generateGermanRegistration } from '../../shared/utils/registration'
 import { gateTransmission } from '../../shared/utils/transmissionGate'
 import { silenceWindowFor } from '../../shared/utils/silenceTimer'
 import { createAutoTuneScheduler } from '../../shared/utils/autoTune'
+import { buildBackendVariables } from '../../shared/utils/backendVariables'
 import {
   isSimControlMatch,
   isSimControlRejection,
@@ -670,36 +671,7 @@ export function useLiveAtcSession(
     //     departure_freq for tower-v1, etc.) are already populated with real airport
     //     values when the session advances to those flows.
     const v = (vars as any).value
-    const backendVariables: Record<string, any> = {
-      callsign:         v.callsign         || flightPlan.callsign || 'UNKNOWN',
-      information:      v.atis_code        || 'K',
-      destination:      v.dest             || flightPlan.arr || flightPlan.arrival || 'Unknown',
-      stand:            v.stand            || 'A1',
-      sid:              v.sid              || 'UNKNOWN1A',
-      initial_altitude: String(v.initial_altitude_ft ?? 5000),
-      squawk:           String(v.squawk ?? '2000'),
-      // Shared / arrival variables. The engine generates these, but they were not
-      // being forwarded — so arrival flows (and taxi/tower on departure) fell back
-      // to YAML defaults and ignored the selected flight. Names are mapped to the
-      // backend flow conventions (qnh_hpa→qnh, acf_type→aircraft_type, …).
-      runway:           atisRunway         || v.runway || '25R',
-      qnh:              String(v.qnh_hpa ?? '1013'),
-      surface_wind:     v.surface_wind     || '250/08',
-      // taxi_route is intentionally NOT sent: the backend computes the real OSM
-      // taxi route (and crossings) from airport_icao + stand/runway, and falls
-      // back to the flow's YAML default on its own. Sending a placeholder here
-      // would count as a caller override and suppress that computation.
-      aircraft_type:    v.acf_type         || 'A320',
-      cruise_level:     v.cruise_flight_level || 'FL360',
-      assigned_squawk:  String(v.squawk ?? '2000'),
-      // All airport frequencies — available to every flow in the chain.
-      delivery_freq:    v.delivery_freq    || '121.950',
-      ground_freq:      v.ground_freq      || '121.800',
-      tower_freq:       v.tower_freq       || '118.700',
-      departure_freq:   v.departure_freq   || '120.000',
-      approach_freq:    v.approach_freq    || '119.000',
-      handoff_freq:     v.handoff_freq     || '131.150',
-    }
+    const backendVariables = buildBackendVariables({ flightPlan, vars: v, atisRunway })
 
     // Special scenarios. Only sent when switched on: the backend treats the
     // variable's absence as "leave it to chance", and sending false would pin
