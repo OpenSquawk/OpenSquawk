@@ -1164,10 +1164,12 @@
                 class="btn ghost mission-footer-prev"
                 type="button"
                 :disabled="!hasPreviousAction"
+                :aria-label="previousActionLabel"
+                :title="previousActionLabel"
                 @click="goToPreviousLesson"
             >
               <v-icon size="18">mdi-arrow-left</v-icon>
-              {{ previousActionLabel }}
+              <span class="mission-footer-button-label">{{ previousActionLabel }}</span>
             </button>
           </div>
           <div class="mission-footer-center">
@@ -1187,9 +1189,15 @@
             </div>
           </div>
           <div class="mission-footer-section mission-footer-right">
-            <button class="btn soft" type="button" @click="repeatLesson">
+            <button
+                class="btn soft mission-footer-repeat"
+                type="button"
+                aria-label="New scenario"
+                title="New scenario"
+                @click="repeatLesson"
+            >
               <v-icon size="18">mdi-dice-5</v-icon>
-              New scenario
+              <span class="mission-footer-button-label">New scenario</span>
             </button>
             <div class="mission-footer-primary-wrap">
               <div v-if="showNextHint" class="next-coach" role="note">
@@ -6937,26 +6945,70 @@ onMounted(() => {
   }
 
   .mission-footer {
-    grid-template-columns: 1fr;
-    gap: 18px;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
   }
 
   .mission-footer-section {
-    justify-content: center;
-  }
-
-  .mission-footer-right {
-    justify-content: center;
-  }
-
-  .mission-footer-right .btn,
-  .mission-footer-prev {
-    flex: 1 1 100%;
     min-width: 0;
   }
 
+  .mission-footer-left {
+    grid-column: 1;
+  }
+
+  .mission-footer-center {
+    display: none;
+  }
+
+  .mission-footer-right {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .mission-footer-right .mission-footer-repeat,
+  .mission-footer-prev {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .mission-footer-button-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .mission-footer-primary-wrap,
+  .mission-footer-right .mission-footer-primary {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mission-footer-right .mission-footer-primary {
+    min-height: 44px;
+  }
+
   .play.has-mission-footer {
-    padding-bottom: 260px;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .next-coach {
+    right: 0;
+    max-width: min(280px, calc(100vw - 32px));
+    white-space: normal;
   }
 
   .plan-status {
