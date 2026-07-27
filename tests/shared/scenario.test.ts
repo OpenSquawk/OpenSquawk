@@ -5,16 +5,23 @@ import {
   altitudeToWords,
   createBaseScenario,
   createScenarioSeries,
+  frequencyToSpeech,
   minutesToWords,
+  qnhToWords,
   runwayToWords,
+  squawkToWords,
 } from '~~/shared/learn/scenario'
 
 describe('scenario helpers', () => {
   it('formats runway, minutes and altitude values', () => {
-    assert.equal(runwayToWords('25R'), 'two fife right')
-    assert.equal(minutesToWords(0), 'one minute')
-    assert.equal(minutesToWords(4.4), 'four minutes')
-    assert.equal(altitudeToWords(4500), 'four thousand fife zero zero')
+    assert.equal(runwayToWords('25R'), 'too fife right')
+    assert.equal(minutesToWords(0), 'wun minute')
+    assert.equal(minutesToWords(4.4), 'fower minutes')
+    assert.equal(altitudeToWords(4500), 'fower thousand fife hundred')
+    assert.equal(qnhToWords(1000), 'wun thousand')
+    assert.equal(squawkToWords('1000'), 'wun thousand')
+    assert.equal(frequencyToSpeech('118.700'), 'wun wun ait decimal seven')
+    assert.equal(frequencyToSpeech('121.805'), 'wun too wun decimal ait zero fife')
   })
 
   it('creates a base scenario with critical data fields', () => {
@@ -25,6 +32,7 @@ describe('scenario helpers', () => {
     assert.equal(scenario.frequencies.length > 0, true)
     assert.equal(typeof scenario.handoff.frequencyWords, 'string')
     assert.equal(scenario.handoff.frequencyWords.length > 0, true)
+    assert.equal(/\bSKC\b/.test(scenario.metar), false)
   })
 })
 

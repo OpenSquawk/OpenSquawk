@@ -1,5 +1,5 @@
 import { createBaseScenario, createScenarioSeries, digitsToWords, formatTemp, lettersToNato } from '~~/shared/learn/scenario'
-import type { Lesson, ModuleDef, Scenario } from '~~/shared/learn/types'
+import type { Lesson, LessonField, ModuleDef, Scenario } from '~~/shared/learn/types'
 
 function gradientArt(colors: string[]): string {
   const stops = colors
@@ -3308,34 +3308,726 @@ const fullFlightLessons: Lesson[] = [
   }
 ]
 
+const copyLessonIds = new Set(['icao-alphabet', 'icao-marathon', 'atis', 'metar'])
+const situationLessonIds = new Set([
+  'radio-check',
+  'clearance-contact',
+  'pushback-ready',
+  'taxi-request',
+  'lineup-request',
+  'departure-checkin',
+  'unable-direct',
+  'alt-accept',
+  'alt-reject',
+  'approach-established',
+  'taxi-in-request',
+  'mayday',
+  'pan-pan',
+  'go-around',
+  'tcas-ra',
+  'tcas-resume',
+  'full-clearance-contact',
+  'full-departure-checkin',
+  'full-pushback-request',
+  'full-taxi-request',
+  'full-approach-checkin',
+  'full-established-report',
+])
+
+const operationalFieldPattern =
+  /call\s?sign|runway|heading|direction|altitude|level|speed|qnh|squawk|frequency|channel|route|taxi|hold|sid|star|approach/i
+
+function curateField(field: LessonField, promptKind: 'atc' | 'situation' | 'copy'): LessonField {
+  const safetyCritical = promptKind !== 'copy' && operationalFieldPattern.test(`${field.key} ${field.label}`)
+  return {
+    ...field,
+    required: field.required ?? true,
+    safetyCritical: field.safetyCritical ?? safetyCritical,
+    matching: field.matching ?? (safetyCritical ? 'controlled' : 'exact'),
+  }
+}
+
+function approachWithoutRunway(scenario: Scenario): string {
+  return scenario.approach
+    .replace(new RegExp(`\\s+${scenario.arrivalRunway}$`, 'i'), '')
+    .trim()
+}
+
+function callsignAlternatives(scenario: Scenario): string[] {
+  return [
+    scenario.radioCall,
+    `${scenario.airlineCall} ${scenario.flightNumber}`,
+    `${scenario.airlineCall} ${scenario.flightNumberWords}`,
+    scenario.callsign,
+  ]
+}
+
+const situationPrompts: Partial<Record<string, (scenario: Scenario) => string>> = {
+  'clearance-contact': scenario =>
+    `You are at stand ${scenario.stand} with information ${scenario.atisCodeWord}. Request IFR clearance to ${scenario.destination.city} from ${scenario.airport.city} Delivery.`,
+  'pushback-ready': scenario =>
+    `You are ready at stand ${scenario.stand}. Request pushback and start from ${scenario.airport.city} Ground.`,
+  'taxi-request': scenario =>
+    `Pushback is complete at stand ${scenario.stand}. Request taxi from ${scenario.airport.city} Ground.`,
+  'lineup-request': scenario =>
+    `You are holding short of runway ${scenario.runway} and ready for departure. Advise ${scenario.airport.city} Tower.`,
+  'unable-direct': scenario =>
+    `ATC offers direct ${scenario.transition}, but you cannot accept it. State UNABLE and continue the assigned ${scenario.sid}.`,
+  'approach-established': scenario =>
+    `You are established on the localizer for runway ${scenario.arrivalRunway}. Make the requested report.`,
+  'taxi-in-request': scenario =>
+    `You have vacated runway ${scenario.arrivalRunway}. Request taxi to stand ${scenario.arrivalStand} from ${scenario.destination.city} Ground.`,
+  'standby': () =>
+    'ATC asks a non-urgent question, but you need a short moment before answering. Ask ATC to stand by.',
+  'full-clearance-contact': scenario =>
+    `You are at stand ${scenario.stand} with information ${scenario.atisCodeWord}. Request IFR clearance to ${scenario.destination.city} from ${scenario.airport.city} Delivery.`,
+}
+
+function clearanceWithoutWind(lesson: Lesson, landing: boolean): Lesson {
+  const prefix = lesson.id.startsWith('full-') ? 'full-' : ''
+  const runwayKey = landing ? `${prefix}landing-runway` : `${prefix}tko-runway`
+  const callsignKey = landing ? `${prefix}landing-callsign` : `${prefix}tko-callsign`
+  const fields = lesson.fields.filter(field => !/wind/i.test(`${field.key} ${field.label}`))
+  return {
+    ...lesson,
+    hints: [
+      `Read back the runway, ${landing ? 'landing' : 'take-off'} clearance, and callsign.`,
+      'Wind is information and is not a mandatory readback item.',
+    ],
+    fields,
+    readback: [
+      { type: 'text', text: 'Runway ' },
+      { type: 'field', key: runwayKey, width: 'sm' },
+      { type: 'text', text: landing ? ', cleared to land, ' : ', cleared for take-off, ' },
+      { type: 'field', key: callsignKey, width: 'lg' },
+    ],
+  }
+}
+
+function curateLesson(source: Lesson): Lesson {
+  let lesson = { ...source, fields: [...source.fields], readback: [...source.readback] }
+
+  if (lesson.id === 'radio-check') {
+    lesson = {
+      ...lesson,
+      title: 'Request a Radio Check',
+      desc: 'Make a complete radio-check transmission and understand readability 1–5',
+      hints: [
+        'Call the station, identify yourself, say “RADIO CHECK”, then state the channel.',
+        'The reply uses one exact readability value: 1 unreadable, 2 readable now and then, 3 readable with difficulty, 4 readable, 5 perfectly readable.',
+      ],
+      fields: [
+        {
+          key: 'rc-station',
+          label: 'Station',
+          expected: scenario => `${scenario.airport.city} Ground`,
+          alternatives: scenario => [`${scenario.airport.icao} Ground`, `${scenario.airport.name} Ground`],
+          width: 'lg',
+        },
+        {
+          key: 'rc-callsign',
+          label: 'Callsign',
+          expected: scenario => scenario.radioCall,
+          alternatives: callsignAlternatives,
+          width: 'lg',
+        },
+        {
+          key: 'rc-frequency',
+          label: 'Channel',
+          expected: scenario => scenario.groundFreq,
+          alternatives: scenario => [scenario.groundFreq.replace('.', ''), scenario.frequencyWords.GND],
+          width: 'md',
+        },
+      ],
+      readback: [
+        { type: 'field', key: 'rc-station', width: 'lg' },
+        { type: 'text', text: ', ' },
+        { type: 'field', key: 'rc-callsign', width: 'lg' },
+        { type: 'text', text: ', radio check ' },
+        { type: 'field', key: 'rc-frequency', width: 'md' },
+      ],
+      phrase: scenario => `You have selected ${scenario.groundFreq}. Request a radio check from ${scenario.airport.city} Ground.`,
+      info: scenario => [
+        `Channel: ${scenario.groundFreq} (${scenario.frequencyWords.GND})`,
+        'Readability scale: 1 unreadable · 2 readable now and then · 3 readable with difficulty · 4 readable · 5 perfectly readable',
+      ],
+    }
+  }
+
+  if (['clearance-contact', 'full-clearance-contact'].includes(lesson.id)) {
+    const prefix = lesson.id.startsWith('full-') ? 'full-' : ''
+    const callsignKey = `${prefix}clearance-contact-callsign`
+    lesson = {
+      ...lesson,
+      hints: [
+        'Address the unit, use your full callsign, then give ATIS, destination, stand, and request.',
+        'Transmit the ATIS identifier as its ICAO spelling word, for example “information Papa”.',
+      ],
+      fields: [
+        {
+          key: callsignKey,
+          label: 'Callsign',
+          expected: scenario => scenario.radioCall,
+          alternatives: callsignAlternatives,
+          width: 'lg',
+        },
+        ...lesson.fields,
+      ],
+      readback: [
+        { type: 'text', text: scenario => `${scenario.airport.city} Delivery, ` },
+        { type: 'field', key: callsignKey, width: 'lg' },
+        { type: 'text', text: ', information ' },
+        ...lesson.readback.slice(1),
+      ],
+    }
+  }
+
+  if (['takeoff', 'full-takeoff'].includes(lesson.id)) lesson = clearanceWithoutWind(lesson, false)
+  if (['landing-clearance', 'full-landing'].includes(lesson.id)) lesson = clearanceWithoutWind(lesson, true)
+
+  if (['lineup', 'full-lineup'].includes(lesson.id)) {
+    lesson.hints = [
+      'Read back the runway, “line up and wait”, and your callsign.',
+      'Keep the clearance elements in the order in which they were issued.',
+    ]
+  }
+
+  if (['tower-contact', 'full-tower-contact'].includes(lesson.id)) {
+    lesson = {
+      ...lesson,
+      desc: 'Confirm the transfer to tower',
+      hints: ['Read back the tower channel and your callsign.'],
+      readback: lesson.readback.filter(segment =>
+        segment.type !== 'text' || !segment.text.toString().includes('when number one')),
+      phrase: scenario => `${scenario.radioCall}, contact Tower ${scenario.towerFreq}.`,
+    }
+  }
+
+  if (lesson.id === 'clearance-amendment') {
+    lesson = {
+      ...lesson,
+      title: 'Reclearance',
+      hints: ['Start with “RECLEARED”, then repeat every changed clearance element and your callsign.'],
+      phrase: scenario => `${scenario.radioCall}, recleared via ${scenario.sid} ${scenario.transition}, runway ${scenario.runway}.`,
+      readback: lesson.readback.map(segment =>
+        segment.type === 'text' && typeof segment.text === 'string' && /amended/i.test(segment.text)
+          ? { ...segment, text: segment.text.replace(/amended clearance:?/i, 'RECLEARED') }
+          : segment),
+    }
+  }
+
+  if (['pushback', 'full-pushback'].includes(lesson.id)) {
+    const callsignField = lesson.fields.find(field => /callsign/i.test(field.key))
+    if (callsignField) {
+      lesson = {
+        ...lesson,
+        title: 'Pushback Clearance',
+        desc: 'Acknowledge a standard pushback approval',
+        hints: ['Read back “pushback approved” and your callsign. Start-up is a separate clearance when required.'],
+        fields: [callsignField],
+        readback: [
+          { type: 'text', text: 'Pushback approved, ' },
+          { type: 'field', key: callsignField.key, width: 'lg' },
+        ],
+        phrase: scenario => `${scenario.radioCall}, pushback approved.`,
+      }
+    }
+  }
+
+  if (lesson.id === 'pushback-delay') {
+    lesson = {
+      ...lesson,
+      title: 'Pushback Delay',
+      desc: 'Acknowledge an expected pushback delay',
+      hints: ['A delay is not a pushback approval. Do not start moving until approval is issued.'],
+      phrase: scenario => `${scenario.radioCall}, expect ${scenario.pushDelayWords} delay due traffic.`,
+    }
+  }
+
+  if (['approach-vector'].includes(lesson.id)) {
+    lesson = {
+      ...lesson,
+      fields: [
+        {
+          key: 'vector-direction',
+          label: 'Turn direction',
+          expected: () => 'left',
+          alternatives: () => ['left turn'],
+          width: 'sm',
+        },
+        ...lesson.fields,
+      ],
+      readback: [
+        { type: 'text', text: 'Turn ' },
+        { type: 'field', key: 'vector-direction', width: 'sm' },
+        { type: 'text', text: ', heading ' },
+        ...lesson.readback.slice(1),
+      ],
+      hints: ['Turn direction, heading, level, speed, then callsign. Every assigned value is mandatory.'],
+    }
+  }
+
+  if (['descent-clearance', 'full-descent'].includes(lesson.id)) {
+    const prefix = lesson.id.startsWith('full-') ? 'full-' : ''
+    const levelKey = `${prefix}descent-level`
+    lesson = {
+      ...lesson,
+      desc: 'Read back the assigned descent level, arrival clearance, QNH, and callsign',
+      fields: [
+        {
+          key: levelKey,
+          label: 'Assigned level',
+          expected: scenario => scenario.altitudes.initialWords,
+          alternatives: scenario => [scenario.altitudes.initial.toString(), `${scenario.altitudes.initial} feet`],
+          width: 'md',
+        },
+        ...lesson.fields,
+      ],
+      readback: [
+        { type: 'text', text: 'Descend to ' },
+        { type: 'field', key: levelKey, width: 'md' },
+        { type: 'text', text: ', via ' },
+        ...lesson.readback.slice(1),
+      ],
+      phrase: scenario =>
+        `${scenario.radioCall}, descend to ${scenario.altitudes.initial} feet via ${scenario.arrivalStar} ${scenario.arrivalTransition}, QNH ${scenario.arrivalQnh}.`,
+    }
+  }
+
+  if (['approach-clearance', 'full-approach'].includes(lesson.id)) {
+    lesson = {
+      ...lesson,
+      fields: lesson.fields.map(field =>
+        /app-type/.test(field.key) ? { ...field, expected: approachWithoutRunway } : field),
+      phrase: scenario =>
+        `${scenario.radioCall}, cleared ${approachWithoutRunway(scenario)} approach runway ${scenario.arrivalRunway}, report established.`,
+    }
+  }
+
+  if (lesson.id === 'alt-accept') {
+    lesson = {
+      ...lesson,
+      title: 'Say Again',
+      desc: 'Request a repeat when a transmission is not understood',
+      hints: ['Use “SAY AGAIN” instead of guessing a safety-critical instruction.'],
+      fields: [{
+        key: 'say-again-callsign',
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: callsignAlternatives,
+        width: 'lg',
+      }],
+      readback: [
+        { type: 'field', key: 'say-again-callsign', width: 'lg' },
+        { type: 'text', text: ', say again.' },
+      ],
+      phrase: () => 'A controller transmission was blocked by interference. Ask for it again.',
+      info: () => ['Never invent or assume a clearance you did not understand.'],
+    }
+  }
+
+  if (lesson.id === 'alt-reject') {
+    lesson = {
+      ...lesson,
+      title: 'Unable: Reason and Request',
+      desc: 'Decline an instruction and offer a safe alternative',
+      hints: ['State “UNABLE”, give a concise reason, then request an alternative.'],
+      fields: [
+        {
+          key: 'unable-reason',
+          label: 'Reason',
+          expected: scenario => scenario.emergencyProblem,
+          width: 'lg',
+        },
+        {
+          key: 'unable-request',
+          label: 'Alternative request',
+          expected: scenario => scenario.emergencyIntent,
+          width: 'lg',
+        },
+        {
+          key: 'unable-callsign',
+          label: 'Callsign',
+          expected: scenario => scenario.radioCall,
+          alternatives: callsignAlternatives,
+          width: 'lg',
+        },
+      ],
+      readback: [
+        { type: 'text', text: 'Unable due ' },
+        { type: 'field', key: 'unable-reason', width: 'lg' },
+        { type: 'text', text: ', request ' },
+        { type: 'field', key: 'unable-request', width: 'lg' },
+        { type: 'text', text: ', ' },
+        { type: 'field', key: 'unable-callsign', width: 'lg' },
+      ],
+      phrase: scenario =>
+        `You cannot comply because of ${scenario.emergencyProblem}. Request to ${scenario.emergencyIntent}.`,
+      info: () => ['UNABLE is not a rejection without context: give the operational reason and a workable request.'],
+    }
+  }
+
+  if (['departure-checkin', 'full-departure-checkin'].includes(lesson.id)) {
+    const prefix = lesson.id.startsWith('full-') ? 'full-' : ''
+    const callsign = lesson.fields.find(field => /callsign/i.test(field.key))
+    const passingKey = `${prefix}depcheck-passing`
+    const clearedKey = `${prefix}depcheck-cleared`
+    if (callsign) {
+      lesson = {
+        ...lesson,
+        desc: 'Make the required initial call after changing to departure',
+        hints: [
+          'State the unit, full callsign, passing level, and cleared level.',
+          'Add an assigned speed only when ATC has issued one.',
+        ],
+        fields: [
+          callsign,
+          {
+            key: passingKey,
+            label: 'Passing level',
+            expected: scenario => scenario.altitudes.initialWords,
+            alternatives: scenario => [scenario.altitudes.initial.toString(), `${scenario.altitudes.initial} feet`],
+            width: 'md',
+          },
+          {
+            key: clearedKey,
+            label: 'Cleared level',
+            expected: scenario => scenario.altitudes.climbWords,
+            alternatives: scenario => [scenario.altitudes.climb.toString(), `${scenario.altitudes.climb} feet`],
+            width: 'md',
+          },
+        ],
+        readback: [
+          { type: 'text', text: scenario => `${scenario.airport.city} Departure, ` },
+          { type: 'field', key: callsign.key, width: 'lg' },
+          { type: 'text', text: ', passing ' },
+          { type: 'field', key: passingKey, width: 'md' },
+          { type: 'text', text: ', cleared ' },
+          { type: 'field', key: clearedKey, width: 'md' },
+        ],
+        phrase: scenario =>
+          `You have changed to ${scenario.airport.city} Departure. You are passing ${scenario.altitudes.initial} feet, cleared to ${scenario.altitudes.climb} feet.`,
+      }
+    }
+  }
+
+  if (['mayday', 'pan-pan'].includes(lesson.id)) {
+    const distress = lesson.id === 'mayday'
+    const prefix = distress ? 'mayday' : 'pan'
+    lesson = {
+      ...lesson,
+      title: distress ? 'MAYDAY Declaration' : 'PAN PAN Declaration',
+      desc: distress
+        ? 'Build a complete distress transmission'
+        : 'Build a complete urgency transmission',
+      hints: [
+        `${distress ? 'MAYDAY' : 'PAN PAN'} is preferably transmitted three times.`,
+        'Include station, callsign, nature, intention, position, level, and heading.',
+      ],
+      fields: [
+        {
+          key: `${prefix}-callsign`,
+          label: 'Callsign',
+          expected: scenario => scenario.radioCall,
+          alternatives: callsignAlternatives,
+          width: 'lg',
+        },
+        {
+          key: `${prefix}-nature`,
+          label: 'Nature',
+          expected: scenario => scenario.emergencyProblem,
+          width: 'lg',
+        },
+        {
+          key: `${prefix}-intention`,
+          label: 'Intention',
+          expected: scenario => scenario.emergencyIntent,
+          width: 'lg',
+        },
+        {
+          key: `${prefix}-position`,
+          label: 'Position',
+          expected: scenario => scenario.airport.city,
+          alternatives: scenario => [scenario.airport.icao, scenario.airport.name],
+          width: 'md',
+        },
+        {
+          key: `${prefix}-level`,
+          label: 'Level',
+          expected: scenario => scenario.altitudes.initialWords,
+          alternatives: scenario => [scenario.altitudes.initial.toString(), `${scenario.altitudes.initial} feet`],
+          width: 'md',
+        },
+        {
+          key: `${prefix}-heading`,
+          label: 'Heading',
+          expected: scenario => scenario.emergencyHeading,
+          alternatives: scenario => [scenario.emergencyHeadingWords],
+          width: 'md',
+        },
+      ],
+      readback: [
+        {
+          type: 'text',
+          text: scenario =>
+            `${scenario.airport.city} Control, ${distress ? 'MAYDAY MAYDAY MAYDAY' : 'PAN PAN PAN PAN PAN PAN'}, `,
+        },
+        { type: 'field', key: `${prefix}-callsign`, width: 'lg' },
+        { type: 'text', text: ', ' },
+        { type: 'field', key: `${prefix}-nature`, width: 'lg' },
+        { type: 'text', text: ', intend to ' },
+        { type: 'field', key: `${prefix}-intention`, width: 'lg' },
+        { type: 'text', text: ', position ' },
+        { type: 'field', key: `${prefix}-position`, width: 'md' },
+        { type: 'text', text: ', level ' },
+        { type: 'field', key: `${prefix}-level`, width: 'md' },
+        { type: 'text', text: ', heading ' },
+        { type: 'field', key: `${prefix}-heading`, width: 'md' },
+      ],
+      phrase: scenario =>
+        `${distress ? 'A grave and imminent danger exists' : 'An urgent situation exists'}: ${scenario.emergencyProblem}. You intend to ${scenario.emergencyIntent}. Build the complete transmission.`,
+      info: () => [
+        distress
+          ? 'Use MAYDAY for grave and imminent danger requiring immediate assistance.'
+          : 'Use PAN PAN for an urgent situation that does not require immediate assistance.',
+      ],
+      standard: 'SERA.14095',
+    }
+  }
+
+  if (lesson.id === 'continue-approach') {
+    lesson = {
+      ...lesson,
+      whyItMatters: '“Continue approach” allows the approach to continue but is not a clearance to land.',
+      hints: ['Acknowledge the instruction. Do not treat it as a landing clearance.'],
+    }
+  }
+
+  if (lesson.id === 'standby') {
+    lesson = {
+      ...lesson,
+      whyItMatters: '“STANDBY” only asks for time. It is not an approval, denial, clearance, or substitute for a mandatory safety readback.',
+      hints: ['Use it only for a brief delay in a non-urgent exchange.'],
+    }
+  }
+
+  const situationPrompt = situationPrompts[lesson.id]
+  if (situationPrompt) {
+    lesson = { ...lesson, phrase: situationPrompt }
+  }
+
+  if (lesson.id === 'go-around') {
+    const callsignField = lesson.fields.find(field => /callsign/i.test(field.key))
+    if (callsignField) {
+      lesson = {
+        ...lesson,
+        fields: [callsignField],
+        readback: [
+          { type: 'field', key: callsignField.key, width: 'lg' },
+          { type: 'text', text: ', going around.' },
+        ],
+        phrase: () => 'You discontinue the approach. Make the immediate pilot report; ATC instructions follow separately.',
+        hints: ['Transmit your callsign and “GOING AROUND”. Do not combine an assumed missed-approach clearance.'],
+      }
+    }
+  }
+
+  if (lesson.id === 'tcas-ra') {
+    const callsignKey = 'tcas-ra-callsign'
+    lesson = {
+      ...lesson,
+      fields: [{
+        key: callsignKey,
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: callsignAlternatives,
+        width: 'lg',
+      }],
+      readback: [
+        { type: 'field', key: callsignKey, width: 'lg' },
+        { type: 'text', text: ', TCAS RA.' },
+      ],
+      phrase: () => 'A resolution advisory is active. Report it immediately.',
+      hints: ['Use the exact concise report “TCAS RA”. Follow the RA even if it conflicts with an ATC instruction.'],
+    }
+  }
+
+  if (lesson.id === 'tcas-resume') {
+    const callsignKey = 'tcas-resume-callsign'
+    lesson = {
+      ...lesson,
+      fields: [{
+        key: callsignKey,
+        label: 'Callsign',
+        expected: scenario => scenario.radioCall,
+        alternatives: callsignAlternatives,
+        width: 'lg',
+      }],
+      readback: [
+        { type: 'field', key: callsignKey, width: 'lg' },
+        { type: 'text', text: ', clear of conflict, returning to assigned clearance.' },
+      ],
+      phrase: () => 'The resolution advisory has ended and you are returning to the assigned clearance.',
+      hints: ['Report “CLEAR OF CONFLICT, RETURNING TO ASSIGNED CLEARANCE”.'],
+    }
+  }
+
+  const promptKind = copyLessonIds.has(lesson.id)
+    ? 'copy'
+    : situationLessonIds.has(lesson.id)
+      ? 'situation'
+      : 'atc'
+  const responseLabel = promptKind === 'copy'
+    ? (lesson.id === 'atis' || lesson.id === 'metar' ? 'Decoded values' : 'Your copy')
+    : promptKind === 'situation'
+      ? 'Pilot call'
+      : 'Pilot readback'
+
+  return {
+    ...lesson,
+    prompt: { kind: promptKind, text: lesson.phrase },
+    responseLabel,
+    standard: lesson.standard ?? (
+      promptKind === 'copy'
+        ? 'ICAO Annex 10 / SERA.14070'
+        : 'SERA.8015 and Appendix 1 to AMC1 SERA.14001'
+    ),
+    whyItMatters: lesson.whyItMatters ?? (
+      promptKind === 'copy'
+        ? 'Accurate copying prevents identifiers and operational values from being confused.'
+        : 'The highlighted elements carry the clearance or operational intent and must not be guessed.'
+    ),
+    fields: lesson.fields.map(field => curateField(field, promptKind)),
+  }
+}
+
+function fullFlightCallLesson(
+  id: string,
+  title: string,
+  desc: string,
+  build: (scenario: Scenario) => { situation: string; text: string },
+): Lesson {
+  const callsignKey = `${id}-callsign`
+  return {
+    id,
+    title,
+    desc,
+    keywords: ['Guided flight', 'Pilot call'],
+    hints: ['Address the unit first, use your full callsign, then state the operational request or report.'],
+    fields: [{
+      key: callsignKey,
+      label: 'Callsign',
+      expected: scenario => scenario.radioCall,
+      alternatives: callsignAlternatives,
+      width: 'lg',
+      required: true,
+      safetyCritical: true,
+      matching: 'controlled',
+    }],
+    readback: [
+      { type: 'text', text: scenario => build(scenario).text.split(scenario.radioCall)[0] ?? '' },
+      { type: 'field', key: callsignKey, width: 'lg' },
+      { type: 'text', text: scenario => build(scenario).text.split(scenario.radioCall).slice(1).join(scenario.radioCall) },
+    ],
+    phrase: scenario => build(scenario).situation,
+    prompt: { kind: 'situation', text: scenario => build(scenario).situation },
+    responseLabel: 'Pilot call',
+    standard: 'Appendix 1 to AMC1 SERA.14001',
+    whyItMatters: 'A concise initial call gives ATC the aircraft identity and the information needed for the next instruction.',
+    info: () => ['Synthetic training sequence — not for operational use.'],
+    generate: makeFullFlightGenerator(),
+  }
+}
+
+const fullFlightAdditions: Record<string, Lesson> = {
+  'full-pushback-request': fullFlightCallLesson(
+    'full-pushback-request',
+    'Pushback Request',
+    'Request pushback and start from the assigned stand',
+    scenario => ({
+      situation: `You are ready at stand ${scenario.stand}. Request pushback and start from ${scenario.airport.city} Ground.`,
+      text: `${scenario.airport.city} Ground, ${scenario.radioCall}, stand ${scenario.stand}, request pushback and start.`,
+    }),
+  ),
+  'full-taxi-request': fullFlightCallLesson(
+    'full-taxi-request',
+    'Taxi Request',
+    'Call ground when ready to taxi',
+    scenario => ({
+      situation: `Pushback is complete at stand ${scenario.stand}. Request taxi from ${scenario.airport.city} Ground.`,
+      text: `${scenario.airport.city} Ground, ${scenario.radioCall}, stand ${scenario.stand}, request taxi.`,
+    }),
+  ),
+  'full-approach-checkin': fullFlightCallLesson(
+    'full-approach-checkin',
+    'Approach Initial Call',
+    'Check in after the approach channel change',
+    scenario => ({
+      situation: `You have changed to ${scenario.destination.city} Approach. You are passing ${scenario.altitudes.climb} feet, cleared to ${scenario.altitudes.initial} feet.`,
+      text: `${scenario.destination.city} Approach, ${scenario.radioCall}, passing ${scenario.altitudes.climbWords}, cleared ${scenario.altitudes.initialWords}.`,
+    }),
+  ),
+  'full-established-report': fullFlightCallLesson(
+    'full-established-report',
+    'Established Report',
+    'Report established when instructed',
+    scenario => ({
+      situation: `You are established on the ${approachWithoutRunway(scenario)} approach runway ${scenario.arrivalRunway}. Report established.`,
+      text: `${scenario.destination.city} Approach, ${scenario.radioCall}, established runway ${scenario.arrivalRunway}.`,
+    }),
+  ),
+  'full-vacate-transfer': fullFlightCallLesson(
+    'full-vacate-transfer',
+    'Runway Vacated and Ground Transfer',
+    'Report clear of the runway after changing to ground',
+    scenario => ({
+      situation: `You have vacated runway ${scenario.arrivalRunway} via ${scenario.arrivalTaxiRoute} and changed to Ground.`,
+      text: `${scenario.destination.city} Ground, ${scenario.radioCall}, runway vacated via ${scenario.arrivalTaxiRoute}.`,
+    }),
+  ),
+}
+
+const curatedFullFlightLessons = fullFlightLessons
+  .filter(lesson => !['full-tower-contact', 'full-departure-handoff'].includes(lesson.id))
+  .flatMap(lesson => {
+    const additions: Lesson[] = []
+    if (lesson.id === 'full-pushback') additions.push(fullFlightAdditions['full-pushback-request']!)
+    if (lesson.id === 'full-taxi') additions.push(fullFlightAdditions['full-taxi-request']!)
+    if (lesson.id === 'full-descent') additions.push(fullFlightAdditions['full-approach-checkin']!)
+    if (lesson.id === 'full-landing') additions.push(fullFlightAdditions['full-established-report']!)
+    if (lesson.id === 'full-taxi-in') additions.push(fullFlightAdditions['full-vacate-transfer']!)
+    return [...additions, lesson]
+  })
+  .map(curateLesson)
+
 export const learnModules: ModuleDef[] = [
   {
     id: 'normalize',
-    title: 'Fundamentals · Basics',
-    subtitle: 'Alphabet, Call Signs, ATIS & METAR',
+    title: 'Foundations',
+    subtitle: 'Numbers, callsigns, ATIS/METAR, radio checks, and channels',
     art: '/img/learn/modules/img14.jpeg',
-    lessons: fundamentalsLessons
+    lessons: fundamentalsLessons.map(curateLesson)
   },
   {
     id: 'arc',
-    title: 'Readbacks · Essential Calls',
-    subtitle: 'Clearances, taxi, approach & landing',
+    title: 'Mandatory Readbacks',
+    subtitle: 'Route, runway, QNH, squawk, level, heading, speed, and channels',
     art: '/img/learn/modules/img11.jpeg',
-    lessons: readbackLessons
+    lessons: readbackLessons.map(curateLesson)
   },
   {
     id: 'decision-tree',
-    title: 'ATC · Advanced Calls',
-    subtitle: 'Requests, contingencies & interrupts',
+    title: 'Pilot Calls & Abnormal Situations',
+    subtitle: 'Initial calls, unable, corrections, go-around, emergencies, and TCAS',
     art: '/img/learn/modules/img10.jpeg',
-    lessons: decisionTreeLessons
+    lessons: decisionTreeLessons.map(curateLesson)
   },
   {
     id: 'full-flight',
-    title: 'Full Flight · Gate to Gate',
-    subtitle: 'One linked scenario from clearance to taxi-in',
+    title: 'Guided Flight Sequence',
+    subtitle: 'One consistent 17-step training flight from clearance to taxi-in',
     art: '/img/learn/modules/img6.jpeg',
-    lessons: fullFlightLessons,
+    lessons: curatedFullFlightLessons,
     meta: {
       flightPlan: true,
       briefingArt: '/img/learn/missions/full-flight/briefing-hero.png'
