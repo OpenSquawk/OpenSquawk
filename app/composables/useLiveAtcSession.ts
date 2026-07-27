@@ -92,6 +92,7 @@ export function useLiveAtcSession(
     expectedFrequencyForState, acceptedFrequenciesForState,
     runwayInUse, informationLetter, atisReport,
     fetchAirportFrequencies, setActiveFrequencyFromList,
+    fetchDestinationFrequencies, applyDerivedPosition,
   } = freq
 
   const {
@@ -336,6 +337,10 @@ export function useLiveAtcSession(
       completedScenario.value = activeScenario.value
       currentScreen.value = 'complete'
     }
+
+    // Position-derived distances, used to work out which ground stations are
+    // still within VHF range. Absent without a bridge — then nothing is ranged.
+    applyDerivedPosition((response as any).derived_position)
 
     // Re-arm (or clear) the silence auto-advance for whatever state we're now on.
     armSilenceTimer()
@@ -629,6 +634,13 @@ export function useLiveAtcSession(
     // Fetch real airport frequencies BEFORE building backendVariables so that
     // all freq vars are resolved from live VATSIM/OpenAIP data.
     await fetchAirportFrequencies(scenarioIcao)
+    // The other end of the flight, so its stations can be dialled ahead of time.
+    // Best-effort and not awaited on the critical path: the flight is entirely
+    // flyable without them.
+    const otherIcao = scenario.airport === 'arr'
+      ? (flightPlan.dep || flightPlan.departure)
+      : (flightPlan.arr || flightPlan.arrival)
+    void fetchDestinationFrequencies(otherIcao)
 
     // Runway and information letter from the resolved ATIS (the flight plan
     // carries neither). The report always has a letter, and has a runway

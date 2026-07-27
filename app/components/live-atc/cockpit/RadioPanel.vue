@@ -52,6 +52,14 @@ const stationFor = (frequency: string): string => {
 const activeStation = computed(() => stationFor(props.active))
 const standbyStation = computed(() => stationFor(props.standby))
 
+/** Tooltip: role, frequency, which airport, and whether it is in range. */
+const channelTitle = (entry: DisplayAirportFrequencyEntry): string => {
+  const parts = [`${channelLabel(entry)} · ${entry.frequency}`]
+  if (entry.airportIcao) parts.push(entry.airportIcao)
+  if (entry.reachable === false) parts.push('out of VHF range from your position')
+  return parts.join(' · ')
+}
+
 const isTuned = (entry: DisplayAirportFrequencyEntry) =>
   Boolean(props.active) && normalizedFrequencyValue(entry.frequency) === normalizedFrequencyValue(props.active)
 
@@ -193,11 +201,16 @@ const channelLabel = (entry: DisplayAirportFrequencyEntry) => FREQ_ROLE_LABEL[en
           :key="entry.displayKey"
           type="button"
           class="chan"
-          :class="{ on: isTuned(entry) }"
-          :title="`${channelLabel(entry)} · ${entry.frequency}`"
+          :class="{ on: isTuned(entry), 'chan--far': entry.airportRole === 'destination', 'chan--unreachable': entry.reachable === false }"
+          :title="channelTitle(entry)"
           @click="emit('select-channel', entry)"
       >
-        <span class="chan__role">{{ channelLabel(entry) }}</span>
+        <span class="chan__role">
+          {{ channelLabel(entry) }}
+          <span v-if="entry.airportRole === 'destination' && entry.airportIcao" class="chan__airport">
+            {{ entry.airportIcao }}
+          </span>
+        </span>
         <span class="chan__freq">{{ entry.frequency }}</span>
       </button>
     </div>
@@ -366,6 +379,23 @@ const channelLabel = (entry: DisplayAirportFrequencyEntry) => FREQ_ROLE_LABEL[en
 .chan:hover {
   border-color: rgba(34, 211, 238, 0.5);
   background: rgba(34, 211, 238, 0.08);
+}
+
+/* The far end of the flight: available to dial ahead, but visibly not here. */
+.chan--far {
+  border-style: dashed;
+}
+
+/* Beyond VHF line of sight from the reported position. Dimmed rather than
+   removed — it becomes workable again as the aircraft climbs or closes in. */
+.chan--unreachable {
+  opacity: 0.45;
+}
+
+.chan__airport {
+  margin-left: 4px;
+  opacity: 0.65;
+  letter-spacing: 0.08em;
 }
 
 .chan__role {

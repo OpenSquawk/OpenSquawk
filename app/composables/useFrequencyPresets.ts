@@ -2,6 +2,11 @@ import { ref, computed } from 'vue'
 import { useApi } from '~/composables/useApi'
 import useCommunicationsEngine from '../../shared/utils/communicationsEngine'
 import { normalizeManualFreq, normalizedFrequencyValue } from '../../shared/utils/frequency'
+import {
+  offeredAirports,
+  stationReachable,
+  type AirportRole,
+} from '../../shared/utils/stationAvailability'
 import type { AtisReport, AtisStation } from '../../shared/utils/atisReport'
 
 export type AirportFrequencyEntry = {
@@ -19,6 +24,14 @@ export type DisplayAirportFrequencyEntry = AirportFrequencyEntry & {
   displayKey: string
   sourceList: Array<'vatsim' | 'openaip'>
   sourceLabel: string
+  /** Which airport of the flight this station belongs to. */
+  airportIcao?: string
+  airportRole?: AirportRole
+  /**
+   * False only when the position proves the station is beyond VHF line of
+   * sight. Unknown position means true — see stationAvailability.
+   */
+  reachable: boolean
 }
 
 export type FrequencyVariableUpdate = Partial<Record<'atis_freq' | 'delivery_freq' | 'ground_freq' | 'tower_freq' | 'departure_freq' | 'approach_freq' | 'handoff_freq', string>>
@@ -254,10 +267,23 @@ export function useFrequencyPresets(
   const displayAirportFrequencies = computed<DisplayAirportFrequencyEntry[]>(() => {
     const grouped = new Map<string, DisplayAirportFrequencyEntry>()
 
-    for (const entry of airportFrequencies.value) {
+    // The airport being flown first, then the other end of the flight. Both are
+    // listed: a pilot has to be able to dial ahead to the destination, and on
+    // the way home the departure field's Ground is what they will need again.
+    const home = activeAirportIcao.value?.trim().toUpperCase()
+    const tagged: Array<{ entry: AirportFrequencyEntry; icao?: string; role?: AirportRole }> = [
+      ...airportFrequencies.value.map(entry => ({
+        entry, icao: home, role: 'departure' as AirportRole,
+      })),
+      ...destinationFrequencies.value.map(entry => ({
+        entry, icao: destinationIcao.value, role: 'destination' as AirportRole,
+      })),
+    ]
+
+    for (const { entry, icao, role } of tagged) {
       if (!entry.frequency || entry.frequency === FREQUENCY_PLACEHOLDER) continue
 
-      const key = frequencyDisplayKey(entry)
+      const key = `${icao ?? ''}::${frequencyDisplayKey(entry)}`
       const existing = grouped.get(key)
 
       if (!existing) {
@@ -266,6 +292,14 @@ export function useFrequencyPresets(
           displayKey: key,
           sourceList: [entry.source],
           sourceLabel: sourceLabel([entry.source]),
+          airportIcao: icao,
+          airportRole: role,
+          reachable: stationReachable({
+            distanceNm: role === 'destination'
+              ? distanceToDestinationNm.value
+              : distanceToDepartureNm.value,
+            altitudeFt: altitudeFt.value,
+          }),
         })
         continue
       }
@@ -280,6 +314,10 @@ export function useFrequencyPresets(
     }
 
     return [...grouped.values()].sort((a, b) => {
+      // The airport being flown stays at the top; the far end follows.
+      const aFar = a.airportRole === 'destination' ? 1 : 0
+      const bFar = b.airportRole === 'destination' ? 1 : 0
+      if (aFar !== bFar) return aFar - bFar
       const aRoleIndex = FREQ_ROLE_ORDER.includes(a.type) ? FREQ_ROLE_ORDER.indexOf(a.type) : Number.MAX_SAFE_INTEGER
       const bRoleIndex = FREQ_ROLE_ORDER.includes(b.type) ? FREQ_ROLE_ORDER.indexOf(b.type) : Number.MAX_SAFE_INTEGER
       const roleDiff = aRoleIndex - bRoleIndex
@@ -356,6 +394,49 @@ export function useFrequencyPresets(
       if (options.syncRadio !== false) {
         syncLocalFrequenciesWithEngine(updates)
       }
+    }
+  }
+
+  // The destination's stations are kept in their own list rather than merged
+  // into airportFrequencies. Everything that resolves *which frequency this
+  // phase expects* — airportFreqMap, expectedFrequencyForState, the
+  // wrong-frequency gate, the ATIS wiring — reads the primary list, and folding
+  // a second airport's Tower into it would let the gate accept the wrong field's
+  // frequency. The two are only brought together for display.
+  const destinationIcao = ref<string | undefined>(undefined)
+  const destinationFrequencies = ref<AirportFrequencyEntry[]>([])
+
+  // Position-derived values from the backend's telemetry response — it already
+  // holds the airport coordinates, so the browser does not need its own copy.
+  // Undefined without a bridge, which stationReachable reads as "range unknown"
+  // and therefore reachable.
+  const distanceToDepartureNm = ref<number | undefined>(undefined)
+  const distanceToDestinationNm = ref<number | undefined>(undefined)
+  const altitudeFt = ref<number | undefined>(undefined)
+
+  /** Apply the derived_position block of a backend decision response. */
+  const applyDerivedPosition = (derived: Record<string, number> | undefined | null) => {
+    if (!derived) return
+    const read = (key: string) => (typeof derived[key] === 'number' ? derived[key] : undefined)
+    distanceToDepartureNm.value = read('distance_to_dep_nm')
+    distanceToDestinationNm.value = read('distance_to_dest_nm')
+    altitudeFt.value = read('altitude_ft')
+  }
+
+  const fetchDestinationFrequencies = async (icao: string | undefined) => {
+    destinationIcao.value = icao?.trim().toUpperCase() || undefined
+    destinationFrequencies.value = []
+    if (!destinationIcao.value) return
+    if (destinationIcao.value === activeAirportIcao.value?.trim().toUpperCase()) return
+    try {
+      const response = await api.get(`/api/airports/${encodeURIComponent(destinationIcao.value)}/frequencies`)
+      destinationFrequencies.value = Array.isArray(response?.frequencies)
+        ? response.frequencies as AirportFrequencyEntry[]
+        : []
+    } catch (err) {
+      // Best-effort: the destination's stations are a convenience, and the
+      // flight is entirely flyable without them.
+      console.error('Failed to load destination frequencies:', err)
     }
   }
 
@@ -549,6 +630,9 @@ export function useFrequencyPresets(
     syncLocalFrequenciesWithEngine,
     applyFrequencyVariablesFromList,
     fetchAirportFrequencies,
+    fetchDestinationFrequencies,
+    destinationFrequencies,
+    applyDerivedPosition,
     setActiveFrequencyFromList,
     setStandbyFrequencyFromList,
     swapFrequencies,
