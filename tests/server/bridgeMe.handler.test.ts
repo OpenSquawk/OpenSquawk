@@ -33,14 +33,14 @@ describe('/api/bridge/me handler', () => {
     const mod = await import('~~/server/api/bridge/me.get')
     const handler = mod.default
 
+    // The handler no longer populates: it reads the raw reference and resolves
+    // it through resolveBridgeUser (AppUser mirror, see server/utils/bridge.ts).
     const originalFindOne = (BridgeToken as any).findOne
-    ;(BridgeToken as any).findOne = () => ({
-      populate: async () => ({
-        token: 'bridge-token-abc',
-        user: null,
-        connectedAt: new Date('2025-01-01T10:00:00.000Z'),
-        lastStatusAt: null,
-      }),
+    ;(BridgeToken as any).findOne = async () => ({
+      token: 'bridge-token-abc',
+      user: null,
+      connectedAt: new Date('2025-01-01T10:00:00.000Z'),
+      lastStatusAt: null,
     })
 
     try {
@@ -64,21 +64,21 @@ describe('/api/bridge/me handler', () => {
     const mod = await import('~~/server/api/bridge/me.get')
     const handler = mod.default
 
+    // An already-resolved user object (as an AppUser document would be) is
+    // passed straight through by resolveBridgeUser — no DB round trip.
     const originalFindOne = (BridgeToken as any).findOne
-    ;(BridgeToken as any).findOne = () => ({
-      populate: async () => ({
-        token: 'bridge-token-live',
-        user: {
-          _id: '507f1f77bcf86cd799439055',
-          email: 'pilot@example.com',
-          name: 'Pilot',
-        },
-        simConnected: true,
-        flightActive: true,
-        connectedAt: undefined,
-        updatedAt: new Date('2025-01-01T11:00:00.000Z'),
-        lastStatusAt: new Date('2025-01-01T11:02:00.000Z'),
-      }),
+    ;(BridgeToken as any).findOne = async () => ({
+      token: 'bridge-token-live',
+      user: {
+        _id: '507f1f77bcf86cd799439055',
+        email: 'pilot@example.com',
+        name: 'Pilot',
+      },
+      simConnected: true,
+      flightActive: true,
+      connectedAt: undefined,
+      updatedAt: new Date('2025-01-01T11:00:00.000Z'),
+      lastStatusAt: new Date('2025-01-01T11:02:00.000Z'),
     })
 
     try {

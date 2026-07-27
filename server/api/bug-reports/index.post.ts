@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { requireUserSession } from '../../utils/auth'
 import { BugReport, type BugReportSource } from '../../models/BugReport'
 import { sendMail } from '../../utils/notifications'
+import { emit as emitTelemetry } from '../../utils/telemetry'
 
 const SOURCE_LABELS: Record<BugReportSource, string> = {
   'live-atc': 'Live ATC',
@@ -27,6 +28,9 @@ export default defineEventHandler(async (event) => {
   // the mail so it can be pasted straight into the commit message.
   const code = randomUUID()
 
+  // Local DB first — this instance's own data. The mirror is what makes the
+  // report show up in the hosted admin view; the write path does not depend on
+  // it, and a self-hosted instance keeps its reports to itself.
   const report = await BugReport.create({
     code,
     source,
@@ -37,6 +41,25 @@ export default defineEventHandler(async (event) => {
     pmState: body?.pmState || undefined,
   })
 
+  emitTelemetry('bug-report', {
+    code,
+    source,
+    comment: comment.slice(0, 4000),
+    contact,
+    userId: String(user._id),
+    screenshot: body?.screenshot || undefined,
+    pmState: body?.pmState || undefined,
+    createdAt: report.createdAt,
+  })
+
+  // Opt-in and unset by default: a foreign instance must not mail its users'
+  // bug reports to us. The hosted service sets BUG_REPORT_NOTIFY_EMAIL; a
+  // self-hosted one keeps its reports in its own database and nowhere else.
+  const notifyEmail = (process.env.BUG_REPORT_NOTIFY_EMAIL || '').trim()
+  if (!notifyEmail) {
+    return { success: true, id: String(report._id), code }
+  }
+
   const adminUrl = `${process.env.APP_URL || 'https://app.opensquawk.de'}/admin`
   const sourceLabel = SOURCE_LABELS[source]
   const stateInfo = body?.pmState?.currentStateId
@@ -44,7 +67,7 @@ export default defineEventHandler(async (event) => {
     : ''
 
   await sendMail({
-    to: 'emanuel@faktorxmensch.com',
+    to: notifyEmail,
     subject: `[OpenSquawk Bug · ${sourceLabel}] ${contact}`,
     html: `<h2>Neuer Bug Report</h2>
 <p><strong>Bereich:</strong> ${sourceLabel}</p>

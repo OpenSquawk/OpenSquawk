@@ -8,6 +8,7 @@ import { execFile } from "node:child_process";
 import { getOpenAIClient } from "../../utils/openai";
 import { createReadStream } from "node:fs";
 import { TransmissionLog } from "../../models/TransmissionLog";
+import { emit as emitTelemetry } from "../../utils/telemetry";
 import { getUserFromEvent } from "../../utils/auth";
 import { enforceRateLimit, getClientIp } from "../../utils/rateLimit";
 import { recordUsage } from "../../utils/usage";
@@ -215,22 +216,32 @@ export default defineEventHandler(async (event) => {
             await rm(tmpAudioWav).catch(() => {});
         }
 
+        const transmission = {
+            user: user?._id,
+            role: "pilot",
+            channel: "ptt",
+            direction: "incoming",
+            text: transcribedText,
+            sessionId,
+            metadata: {
+                moduleId: body.moduleId,
+                lessonId: body.lessonId,
+            },
+        };
+
         try {
-            await TransmissionLog.create({
-                user: user?._id,
-                role: "pilot",
-                channel: "ptt",
-                direction: "incoming",
-                text: transcribedText,
-                sessionId,
-                metadata: {
-                    moduleId: body.moduleId,
-                    lessonId: body.lessonId,
-                },
-            });
+            // Local DB first — this instance's own data, always written.
+            await TransmissionLog.create(transmission);
         } catch (logError) {
             console.warn("Transmission logging failed", logError);
         }
+
+        // Mirrored to the hosted service only if this instance is configured
+        // for it. Fire-and-forget: never awaited, never able to fail the request.
+        emitTelemetry('transmission-log', {
+            ...transmission,
+            user: user?._id ? String(user._id) : undefined,
+        });
 
         return { success: true, transcription: transcribedText } satisfies PTTResponse;
 

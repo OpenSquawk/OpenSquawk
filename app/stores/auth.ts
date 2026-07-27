@@ -51,7 +51,10 @@ export const useAuthStore = defineStore('auth', {
     initialized: false,
   }),
   getters: {
-    isAuthenticated: (state) => Boolean(state.accessToken),
+    // A session can exist without a bearer token in hand: in AUTH_MODE=open
+    // there is never one, and in sso mode the durable session is an httpOnly
+    // cookie that JS cannot see. Once the user is loaded, we are authenticated.
+    isAuthenticated: (state) => Boolean(state.accessToken || state.user),
   },
   actions: {
     setAccessToken(token: string) {
@@ -79,9 +82,23 @@ export const useAuthStore = defineStore('auth', {
       this.setUser(response.user)
       return response.user
     },
+    // PHASE 1 (app repo): login() and register() go away with the login page —
+    // the app never owns credentials. fetchUser/tryRefresh/logout stay.
+    async ssoCallback(code: string) {
+      const response = await $fetch<{ accessToken: string; user: AuthUser }>('/api/auth/sso/callback', {
+        method: 'POST',
+        body: { code },
+      })
+      this.setAccessToken(response.accessToken)
+      this.setUser(response.user)
+      this.initialized = true
+      return response.user
+    },
     async tryRefresh() {
       try {
-        const response = await $fetch<{ accessToken: string }>('/api/service/auth/refresh', {
+        // One endpoint for every mode — the server decides what a session is
+        // (local identity, app cookie, or the website's refresh cookie).
+        const response = await $fetch<{ accessToken: string }>('/api/auth/refresh', {
           method: 'POST',
         })
         this.setAccessToken(response.accessToken)
@@ -92,20 +109,22 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     async fetchUser() {
-      if (!this.accessToken) {
-        this.setUser(null)
-        this.initialized = true
-        return null
-      }
       try {
+        // No bearer token is not the same as no session: the app's session
+        // cookie and AUTH_MODE=open both authenticate without one, so ask the
+        // server instead of deciding here.
         const user = await $fetch<AuthUser>('/api/auth/me', {
-          headers: { Authorization: `Bearer ${this.accessToken}` },
+          headers: this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : undefined,
         })
         this.setUser(user)
         this.initialized = true
         return user
       } catch (err) {
-        console.warn('Failed to load user session', err)
+        // A 401 for a visitor who never had a session is the expected answer,
+        // not a fault worth logging.
+        if (this.accessToken) {
+          console.warn('Failed to load user session', err)
+        }
         this.setAccessToken('')
         this.setUser(null)
         this.initialized = true
@@ -114,12 +133,11 @@ export const useAuthStore = defineStore('auth', {
     },
     async logout() {
       try {
-        if (this.accessToken) {
-          await $fetch('/api/auth/logout', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${this.accessToken}` },
-          })
-        }
+        // Called unconditionally: the session may be a cookie we cannot see.
+        await $fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : undefined,
+        })
       } catch (err) {
         console.warn('Logout failed', err)
       } finally {

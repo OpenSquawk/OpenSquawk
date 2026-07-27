@@ -1,8 +1,7 @@
 import { createError } from 'h3'
 import { BridgeToken } from '../../models/BridgeToken'
-import { getBridgeTokenFromHeader } from '../../utils/bridge'
+import { getBridgeTokenFromHeader, resolveBridgeUser } from '../../utils/bridge'
 import { logBridgeEvent } from '../../utils/bridgeLog'
-import type { UserDocument } from '../../models/User'
 
 export default defineEventHandler(async (event) => {
   const token = getBridgeTokenFromHeader(event)
@@ -17,9 +16,10 @@ export default defineEventHandler(async (event) => {
 
   console.info(`\x1b[36m[bridge:me]\x1b[0m token=\x1b[96m${token.slice(0, 6)}...\x1b[0m request received`)
 
-  const document = await BridgeToken.findOne({ token }).populate('user', 'name email')
+  const document = await BridgeToken.findOne({ token })
+  const bridgeUser = await resolveBridgeUser(document?.user)
 
-  if (!document || !document.user) {
+  if (!document || !bridgeUser) {
     const result = {
       token,
       connected: false,
@@ -40,8 +40,6 @@ export default defineEventHandler(async (event) => {
 
     return result
   }
-
-  const bridgeUser = document.user as UserDocument
 
   const result = {
     token: document.token,

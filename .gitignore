@@ -32,3 +32,7 @@ storage/**
 
 # Worktrees
 .worktrees
+.claude/worktrees
+
+# Lokaler Zwei-DB-Teststack (scripts/dev-local-stack.sh)
+.local-stack

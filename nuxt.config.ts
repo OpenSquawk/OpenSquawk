@@ -1,4 +1,12 @@
 // nuxt.config.ts
+
+// Analytics is opt-in and belongs to whoever runs the instance. The module
+// itself is inert — it only registers a composable — so it stays loaded for the
+// auto-import; what matters is that without HOTJAR_ID there is no ID to
+// initialize with, and app.vue never starts it. A self-hosted deployment can
+// therefore not silently ship its users' sessions to somebody else's account.
+const hotjarId = Number(process.env.HOTJAR_ID || 0)
+
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
     devtools: {enabled: false},
@@ -28,7 +36,8 @@ export default defineNuxtConfig({
       'nuxt-module-hotjar',
     ],
     hotjar: {
-        hotjarId: 6522897,
+        // No default: an unset HOTJAR_ID leaves analytics off entirely.
+        hotjarId,
         scriptVersion: 6,
         debug: process.env.NODE_ENV !== 'production',
     },
@@ -37,6 +46,7 @@ export default defineNuxtConfig({
     routeRules: {
         '/app/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
         '/admin/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+        '/auth/callback': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
         '/bridge/connect': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
         '/classroom/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
         '/classroom-introduction': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
@@ -68,7 +78,10 @@ export default defineNuxtConfig({
         useSpeaches: process.env.USE_SPEACHES,
         speachesBaseUrl: process.env.SPEACHES_BASE_URL,
         speechModelId: process.env.SPEECH_MODEL_ID,
-        domeLightWebhookUrl: process.env.DOME_LIGHT_WEBHOOK_URL || 'https://home.io.faktorxmensch.com/api/webhook/lidl_stab_3modi_8492',
+        // No default: this forwards cockpit telemetry to a third-party webhook.
+        // Empty means the forwarding is off, which is what a foreign instance
+        // must get.
+        domeLightWebhookUrl: process.env.DOME_LIGHT_WEBHOOK_URL || '',
         jwtSecret: process.env.JWT_SECRET,
         jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
         manualInvitePassword: process.env.MANUAL_INVITE_PASSWORD,
@@ -77,6 +90,12 @@ export default defineNuxtConfig({
             options: {},
         },
         public: {
+            // 'open' = self-hosted, no login at all. 'sso' = identity handed
+            // over by authIssuer. Server-side source of truth is
+            // server/utils/authMode.ts; this mirror is what the client
+            // middleware and auth store branch on.
+            authMode: process.env.AUTH_MODE || 'sso',
+            authIssuer: process.env.NUXT_PUBLIC_AUTH_ISSUER || '',
             apiDocumentationUrl: '/api-docs',
             radioBackendUrl: process.env.NUXT_PUBLIC_RADIO_BACKEND_URL || 'http://127.0.0.1:8000',
             // Minimum word count for a voice (PTT) transmission to be used. Below

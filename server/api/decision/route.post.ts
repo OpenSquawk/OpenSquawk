@@ -15,6 +15,7 @@ import {
   type LlmRoutingCandidate,
   type LlmRoutingStatus,
 } from '../../models/LlmRoutingDecision'
+import { emit as emitTelemetry } from '../../utils/telemetry'
 
 interface RouteRequestBody {
   sessionId: string
@@ -148,28 +149,32 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Always persist the routing-review record, including timeouts/errors.
+  const decision = {
+    sessionId: body.sessionId,
+    flowSlug: body.flowSlug,
+    stateId: body.stateId,
+    transcript: body.transcript,
+    expectedPhrase: body.expectedPhrase,
+    candidates: body.candidates,
+    chosen,
+    reason,
+    status,
+    model: ROUTER_MODEL,
+    timeoutMs,
+    latencyMs,
+    inputTokens,
+    outputTokens,
+    costUsd,
+  }
+
+  // Always persist the routing-review record locally, including timeouts/errors.
   try {
-    await LlmRoutingDecision.create({
-      sessionId: body.sessionId,
-      flowSlug: body.flowSlug,
-      stateId: body.stateId,
-      transcript: body.transcript,
-      expectedPhrase: body.expectedPhrase,
-      candidates: body.candidates,
-      chosen,
-      reason,
-      status,
-      model: ROUTER_MODEL,
-      timeoutMs,
-      latencyMs,
-      inputTokens,
-      outputTokens,
-      costUsd,
-    })
+    await LlmRoutingDecision.create(decision)
   } catch (e) {
     console.warn('[decision/route] persisting routing decision failed', e)
   }
+
+  emitTelemetry('llm-routing-decision', decision)
 
   return { chosen, reason, status, latencyMs, timeoutMs, model: ROUTER_MODEL }
 })

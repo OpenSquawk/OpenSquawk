@@ -1,8 +1,7 @@
 import { createError, readBody } from 'h3'
 import { BridgeToken } from '../../models/BridgeToken'
-import { getBridgeTokenFromHeader } from '../../utils/bridge'
+import { getBridgeTokenFromHeader, resolveBridgeUser } from '../../utils/bridge'
 import { logBridgeEvent } from '../../utils/bridgeLog'
-import type { UserDocument } from '../../models/User'
 
 interface StatusBody {
   simConnected?: boolean
@@ -39,13 +38,13 @@ export default defineEventHandler(async (event) => {
       $setOnInsert: { token },
     },
     { new: true, upsert: true, runValidators: true },
-  ).populate('user', 'name email')
+  )
 
   if (!document) {
     throw createError({ statusCode: 500, statusMessage: 'Status konnte nicht aktualisiert werden.' })
   }
 
-  const user = document.user as UserDocument | undefined
+  const user = await resolveBridgeUser(document.user)
 
   const result = {
     token: document.token,

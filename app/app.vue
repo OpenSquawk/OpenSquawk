@@ -6,7 +6,7 @@
 </template>
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, watch } from 'vue';
-import { useHead, useHotjar, useRoute, useState } from '#imports';
+import { useHead, useHotjar, useRoute, useRuntimeConfig, useState } from '#imports';
 import { useAuthStore } from '~/stores/auth';
 import { HOTJAR_LOCAL_STORAGE_KEY, useCookieConsent } from '~/composables/useCookieConsent';
 import {
@@ -128,6 +128,13 @@ const persistLocalPreference = (value: 'granted' | 'denied' | null) => {
 };
 
 const scheduleHotjarInitialization = () => {
+  // No HOTJAR_ID configured means analytics is off for this instance —
+  // initialize() would throw, and a self-hosted deployment must not be sending
+  // sessions anywhere in the first place.
+  if (!useRuntimeConfig().public.hotjar?.hotjarId) {
+    return;
+  }
+
   if (hotjarInitialized.value || typeof window === 'undefined') {
     return;
   }
@@ -164,7 +171,7 @@ const flushProductSession = () => {
     headers.Authorization = `Bearer ${authStore.accessToken}`;
   }
 
-  fetch('/api/service/analytics/product-session', {
+  fetch('/api/analytics/product-session', {
     method: 'POST',
     headers,
     body: JSON.stringify({

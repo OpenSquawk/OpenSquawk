@@ -8,8 +8,6 @@ import type {FlightLabTelemetryState} from '../../../shared/data/flightlab/types
 
 type DomeLightMode = 'off' | 'white' | 'amber'
 
-const DOME_LIGHT_WEBHOOK_FALLBACK_URL = 'https://home.io.faktorxmensch.com/api/webhook/lidl_stab_3modi_8492'
-
 const lastDomeLightModeByToken = new Map<string, DomeLightMode | null>()
 
 /**
@@ -155,8 +153,13 @@ export default defineEventHandler(async (event) => {
     console.table( telemetryKeys.reduce((acc, key) => { acc[key] = telemetry[key]; return acc }, {} as Record<string, any>) )
 
     const runtimeConfig = useRuntimeConfig()
-    const domeLightWebhookUrl = String(runtimeConfig.domeLightWebhookUrl || '').trim() || DOME_LIGHT_WEBHOOK_FALLBACK_URL
-    await forwardDomeLightToWebhook(telemetry, domeLightWebhookUrl, bridgeToken)
+    // Opt-in only: no DOME_LIGHT_WEBHOOK_URL, no outbound request. There is
+    // deliberately no fallback URL — a foreign instance must never post cockpit
+    // telemetry to somebody else's home automation.
+    const domeLightWebhookUrl = String(runtimeConfig.domeLightWebhookUrl || '').trim()
+    if (domeLightWebhookUrl) {
+        await forwardDomeLightToWebhook(telemetry, domeLightWebhookUrl, bridgeToken)
+    }
 
     // Map raw bridge fields to FlightLab format and store
     const mapped = mapBridgeTelemetry(telemetry)

@@ -7,6 +7,7 @@ import {normalize, TTS_MODEL, normalizeATC} from "../../utils/normalize";
 import { getServerRuntimeConfig } from "../../utils/runtimeConfig";
 import {request} from "node:http";
 import { TransmissionLog } from "../../models/TransmissionLog";
+import { emit as emitTelemetry } from "../../utils/telemetry";
 import { requireUserSession } from "../../utils/auth";
 import { enforceRateLimit } from "../../utils/rateLimit";
 import { recordUsage } from "../../utils/usage";
@@ -376,34 +377,41 @@ export default defineEventHandler(async (event) => {
             characters: normalized.length,
         });
 
-        try {
-            await TransmissionLog.create({
-                user: user._id,
-                role: "atc",
-                channel: "say",
-                direction: "outgoing",
-                text: raw,
-                normalized,
-                sessionId,
-                metadata: {
-                    level,
-                    voice,
-                    speed,
-                    moduleId: body?.moduleId || null,
-                    lessonId: body?.lessonId || null,
-                    tag: body?.tag || null,
-                    radioQuality: radioQuality.description,
-                    tts: {
-                        provider: ttsProvider,
-                        model: modelUsed,
-                        format: actualMime,
-                        extension: outputExt
-                    }
+        const transmission = {
+            user: user._id,
+            role: "atc",
+            channel: "say",
+            direction: "outgoing",
+            text: raw,
+            normalized,
+            sessionId,
+            metadata: {
+                level,
+                voice,
+                speed,
+                moduleId: body?.moduleId || null,
+                lessonId: body?.lessonId || null,
+                tag: body?.tag || null,
+                radioQuality: radioQuality.description,
+                tts: {
+                    provider: ttsProvider,
+                    model: modelUsed,
+                    format: actualMime,
+                    extension: outputExt
                 }
-            })
+            }
+        }
+
+        try {
+            // Local DB first — this instance's own data, always written.
+            await TransmissionLog.create(transmission)
         } catch (logError) {
             console.warn("Transmission logging failed", logError)
         }
+
+        // Mirrored to the hosted service only if this instance is configured
+        // for it. Fire-and-forget: never awaited, never able to fail the request.
+        emitTelemetry('transmission-log', { ...transmission, user: String(user._id) })
 
         return {
             success: true,

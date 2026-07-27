@@ -1,9 +1,13 @@
 import { createError, getHeader, H3Event, setCookie, deleteCookie } from 'h3'
 import { useRuntimeConfig } from '#imports'
-import { createHmac, randomBytes, timingSafeEqual, scrypt as _scrypt } from 'node:crypto'
+import { randomBytes, timingSafeEqual, scrypt as _scrypt } from 'node:crypto'
 import { promisify } from 'node:util'
 import type { UserDocument } from '../models/User'
 import { User } from '../models/User'
+import { AppUser } from '../models/AppUser'
+import { createJwtToken, verifyJwtToken } from './jwt'
+import { getAuthMode, getLocalAppUser, mirrorAppUser } from './authMode'
+import { readAppSession, verifyAppAccessToken } from './session'
 
 const scrypt = promisify(_scrypt) as (password: string | Buffer, salt: string | Buffer, keylen: number) => Promise<Buffer>
 
@@ -22,49 +26,6 @@ function getSecrets() {
     accessSecret: config.jwtSecret as string,
     refreshSecret: (config.jwtRefreshSecret as string) || (config.jwtSecret as string),
   }
-}
-
-function base64url(buffer: Buffer) {
-  return buffer.toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-}
-
-function fromBase64url(input: string) {
-  let sanitized = input.replace(/-/g, '+').replace(/_/g, '/')
-  const pad = sanitized.length % 4
-  if (pad === 2) sanitized += '=='
-  else if (pad === 3) sanitized += '='
-  else if (pad !== 0) sanitized += '===' 
-  return Buffer.from(sanitized, 'base64')
-}
-
-function createJwtToken(payload: Record<string, any>, secret: string, ttlSeconds: number) {
-  const header = { alg: 'HS256', typ: 'JWT' }
-  const now = Math.floor(Date.now() / 1000)
-  const body = { ...payload, iat: now, exp: now + ttlSeconds }
-  const encodedHeader = base64url(Buffer.from(JSON.stringify(header)))
-  const encodedPayload = base64url(Buffer.from(JSON.stringify(body)))
-  const data = `${encodedHeader}.${encodedPayload}`
-  const signature = createHmac('sha256', secret).update(data).digest()
-  return `${data}.${base64url(signature)}`
-}
-
-function verifyJwtToken(token: string, secret: string) {
-  const parts = token.split('.')
-  if (parts.length !== 3) throw new Error('Malformed token')
-  const [encodedHeader, encodedPayload, signature] = parts
-  const data = `${encodedHeader}.${encodedPayload}`
-  const expectedSignature = createHmac('sha256', secret).update(data).digest()
-  const receivedSignature = fromBase64url(signature)
-  if (receivedSignature.length !== expectedSignature.length || !timingSafeEqual(receivedSignature, expectedSignature)) {
-    throw new Error('Invalid signature')
-  }
-  const header = JSON.parse(fromBase64url(encodedHeader).toString('utf8'))
-  if (header.alg !== 'HS256') throw new Error('Unsupported algorithm')
-  const payload = JSON.parse(fromBase64url(encodedPayload).toString('utf8'))
-  if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) {
-    throw new Error('Token expired')
-  }
-  return payload as Record<string, any>
 }
 
 export async function hashPassword(password: string) {
@@ -155,21 +116,61 @@ export function getDevBypassUser(): UserDocument {
   } as unknown as UserDocument
 }
 
+/** Resolve an identity from the app's own mirror — no `User` lookup involved. */
+async function resolveAppUser(sub: string) {
+  const appUser = await AppUser.findById(sub)
+  if (!appUser) return null
+  return appUser as unknown as UserDocument
+}
+
 export async function resolveUserFromToken(event: H3Event) {
+  // 1. The app's own session cookie — the only path that survives the split.
+  const session = readAppSession(event)
+  if (session) {
+    const appUser = await resolveAppUser(session.sub)
+    if (appUser) return appUser
+  }
+
   const token = parseAuthorizationHeader(event)
   if (!token) return null
+
+  // 2. An app-minted bearer token (same session, carried in the header).
+  const appToken = verifyAppAccessToken(token)
+  if (appToken) {
+    return await resolveAppUser(appToken.sub)
+  }
+
+  // 3. PHASE 1 (app repo): everything below goes away together with the `User`
+  // collection. While website and app share one deployment, a website access
+  // token is still a valid way in — it is how every existing user is logged in
+  // today. Each such request also refreshes the AppUser mirror (rate-limited
+  // internally), so app-side data is already keyed correctly when the split
+  // happens.
   try {
     const { accessSecret } = getSecrets()
     const payload = verifyJwtToken(token, accessSecret)
     if (!payload?.sub) return null
     if (payload.sub === DEV_BYPASS_USER_ID && process.env.NODE_ENV !== 'production') {
-      return getDevBypassUser()
+      const devUser = getDevBypassUser()
+      await mirrorAppUser({
+        subject: DEV_BYPASS_USER_ID,
+        email: devUser.email,
+        name: devUser.name,
+        role: 'user',
+      }).catch(() => null)
+      return devUser
     }
     const user = await User.findById(payload.sub)
     if (!user) return null
     if (typeof payload.version === 'number' && payload.version !== user.tokenVersion) {
       return null
     }
+    await mirrorAppUser({
+      subject: String(user._id),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    }).catch(() => null)
     return user
   } catch {
     return null
@@ -180,6 +181,15 @@ export async function requireUserSession(event: H3Event) {
   if (event.context?.user) {
     return event.context.user as UserDocument
   }
+
+  // AUTH_MODE=open: a self-hosted instance has no login. Every request is the
+  // one local identity, resolved without ever touching the `User` collection.
+  if (getAuthMode() === 'open') {
+    const localUser = await getLocalAppUser() as unknown as UserDocument
+    event.context.user = localUser
+    return localUser
+  }
+
   const user = await resolveUserFromToken(event)
   if (!user) {
     throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
@@ -190,6 +200,11 @@ export async function requireUserSession(event: H3Event) {
 
 export async function getUserFromEvent(event: H3Event) {
   if (event.context?.user) return event.context.user as UserDocument
+  if (getAuthMode() === 'open') {
+    const localUser = await getLocalAppUser() as unknown as UserDocument
+    event.context.user = localUser
+    return localUser
+  }
   const user = await resolveUserFromToken(event)
   if (user) {
     event.context.user = user
@@ -202,6 +217,13 @@ export function hasAdminRole(user: UserDocument | null | undefined) {
 }
 
 export async function requireAdmin(event: H3Event) {
+  // PHASE 1 (app repo): delete this guard together with the admin surface.
+  // The local AUTH_MODE=open identity is an admin *of its own instance*, which
+  // is correct once /api/admin/** no longer lives here. For as long as it does,
+  // an unauthenticated open-mode request must never reach it.
+  if (getAuthMode() === 'open') {
+    throw createError({ statusCode: 404, statusMessage: 'Not found' })
+  }
   const user = await requireUserSession(event)
   if (!hasAdminRole(user)) {
     throw createError({ statusCode: 403, statusMessage: 'Administratorrechte erforderlich' })
