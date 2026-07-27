@@ -384,6 +384,18 @@ const openManager = () => {
   color: var(--accent);
 }
 
+@media (max-width: 767px) {
+  .cookie-manage-button {
+    position: static;
+    display: block;
+    width: fit-content;
+    margin: 0.75rem;
+    margin-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0));
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+  }
+}
+
 .cookie-fade-enter-active,
 .cookie-fade-leave-active {
   transition: opacity 0.25s ease;
