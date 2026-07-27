@@ -36,6 +36,7 @@
   },
   "packageManager": "yarn@4.9.4",
   "devDependencies": {
+    "@types/node": "^26.1.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10",
