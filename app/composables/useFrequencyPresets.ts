@@ -20,6 +20,19 @@ export type AirportFrequencyEntry = {
   lastUpdated?: string
 }
 
+/**
+ * Shape of `GET /api/airports/:icao/frequencies`.
+ *
+ * Stated explicitly because `api.get()` is generic over the response and
+ * cannot infer it from a template-literal path.
+ */
+type AirportFrequenciesResponse = {
+  icao: string
+  airportName?: string
+  sources: { vatsim: boolean; openaip: boolean }
+  frequencies: AirportFrequencyEntry[]
+}
+
 export type DisplayAirportFrequencyEntry = AirportFrequencyEntry & {
   displayKey: string
   sourceList: Array<'vatsim' | 'openaip'>
@@ -429,7 +442,7 @@ export function useFrequencyPresets(
     if (!destinationIcao.value) return
     if (destinationIcao.value === activeAirportIcao.value?.trim().toUpperCase()) return
     try {
-      const response = await api.get(`/api/airports/${encodeURIComponent(destinationIcao.value)}/frequencies`)
+      const response = await api.get<AirportFrequenciesResponse>(`/api/airports/${encodeURIComponent(destinationIcao.value)}/frequencies`)
       destinationFrequencies.value = Array.isArray(response?.frequencies)
         ? response.frequencies as AirportFrequencyEntry[]
         : []
@@ -457,7 +470,7 @@ export function useFrequencyPresets(
       // broadcast text onto the frequency entries, so a partial load would show
       // an ATIS station with no information letter.
       const [response, report] = await Promise.all([
-        api.get(`/api/airports/${encodeURIComponent(icao)}/frequencies`),
+        api.get<AirportFrequenciesResponse>(`/api/airports/${encodeURIComponent(icao)}/frequencies`),
         api.get(`/api/airports/${encodeURIComponent(icao)}/atis`).catch((err: unknown) => {
           console.error('Failed to load ATIS report:', err)
           return null

@@ -15,5 +15,8 @@ export function useRuntimeConfig() {
         useSpeaches: process.env.USE_SPEACHES ?? false,
         speachesBaseUrl: process.env.SPEACHES_BASE_URL || '',
         speechModelId: process.env.SPEECH_MODEL_ID || 'speaches-ai/piper-en_US-ryan-low',
+        public: {
+            radioBackendUrl: process.env.NUXT_PUBLIC_RADIO_BACKEND_URL || 'http://127.0.0.1:8000',
+        },
     }
 }
