@@ -1017,30 +1017,37 @@
                     </div>
                   </div>
                 </div>
-                <div class="hints">
-                  <div class="hint standard">
-                    <v-icon size="16">mdi-shield-check-outline</v-icon>
-                    {{ activeLesson.standard }}
+                <div
+                    v-if="lessonEssentialValues.length"
+                    class="lesson-values"
+                    :class="{ 'audio-blur': audioContentHidden }"
+                    :aria-hidden="audioContentHidden ? 'true' : 'false'"
+                >
+                  <div class="lesson-values-title">
+                    <v-icon size="17">mdi-card-account-details-outline</v-icon>
+                    Use these values
                   </div>
-                  <div class="hint secondary">
-                    <v-icon size="16">mdi-information-outline</v-icon>
-                    {{ activeLesson.whyItMatters }}
-                  </div>
-                  <div v-for="hint in activeLesson.hints" :key="hint" class="hint">
-                    <v-icon size="16">mdi-lightbulb-on-outline</v-icon>
-                    {{ hint }}
-                  </div>
-                  <div
-                      v-for="info in lessonInfo"
-                      :key="info"
-                      :class="['hint', 'secondary', { 'audio-blur': audioContentHidden }]"
-                      :aria-hidden="audioContentHidden ? 'true' : 'false'"
-                  >
-                    <v-icon size="16">mdi-information-outline</v-icon>
-                    {{ info }}
+                  <div class="lesson-values-grid">
+                    <div
+                        v-for="entry in lessonEssentialValues"
+                        :key="entry.label"
+                        class="lesson-value"
+                        :class="{ 'is-callsign': entry.isCallsign }"
+                    >
+                      <span>{{ entry.label }}</span>
+                      <strong>{{ entry.value }}</strong>
+                      <small v-if="entry.note">{{ entry.note }}</small>
+                    </div>
                   </div>
                 </div>
-                <div v-if="lessonReference.length" class="reference-section">
+                <div v-if="primaryLessonHint" class="lesson-guidance">
+                  <v-icon size="17">mdi-lightbulb-on-outline</v-icon>
+                  <div>
+                    <strong>Response pattern</strong>
+                    <span>{{ primaryLessonHint }}</span>
+                  </div>
+                </div>
+                <div v-if="hasLessonDetails" class="reference-section">
                   <button
                       class="reference-toggle"
                       type="button"
@@ -1048,12 +1055,26 @@
                       :aria-expanded="referenceOpen ? 'true' : 'false'"
                   >
                     <v-icon size="16">{{ referenceOpen ? 'mdi-chevron-down' : 'mdi-chevron-right' }}</v-icon>
-                    <span class="reference-toggle-label">Reference data</span>
+                    <span class="reference-toggle-label">Why &amp; reference</span>
                   </button>
-                  <div v-if="referenceOpen" class="reference-table" :class="{ 'audio-blur': audioContentHidden }">
-                    <div v-for="entry in lessonReference" :key="entry.label" class="reference-row">
-                      <span class="reference-label">{{ entry.label }}</span>
-                      <span class="reference-value">{{ entry.value }}</span>
+                  <div v-if="referenceOpen" class="lesson-details">
+                    <div class="lesson-detail-standard">
+                      <v-icon size="16">mdi-shield-check-outline</v-icon>
+                      <span>{{ activeLesson.standard }}</span>
+                    </div>
+                    <p>{{ activeLesson.whyItMatters }}</p>
+                    <ul v-if="additionalLessonNotes.length">
+                      <li v-for="note in additionalLessonNotes" :key="note">{{ note }}</li>
+                    </ul>
+                    <div
+                        v-if="lessonReferenceDetails.length"
+                        class="reference-table"
+                        :class="{ 'audio-blur': audioContentHidden }"
+                    >
+                      <div v-for="entry in lessonReferenceDetails" :key="entry.label" class="reference-row">
+                        <span class="reference-label">{{ entry.label }}</span>
+                        <span class="reference-value">{{ entry.value }}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3348,6 +3369,54 @@ const clozeGroups = computed<ClozeGroup[]>(() => {
 
 const lessonInfo = computed(() => (activeLesson.value && scenario.value ? activeLesson.value.info(scenario.value) : []))
 
+type LessonValue = {
+  label: string
+  value: string
+  note?: string
+  isCallsign?: boolean
+}
+
+function splitLessonInfo(info: string): { label: string; value: string } | null {
+  const separator = info.indexOf(':')
+  if (separator <= 0) return null
+  const label = info.slice(0, separator).trim()
+  const value = info.slice(separator + 1).trim()
+  if (!label || !value || value.length > 80) return null
+  return { label, value }
+}
+
+const lessonHasCallsign = computed(() => Boolean(activeLesson.value?.fields.some(field =>
+  field.label.trim().toLowerCase() === 'callsign' || field.key.toLowerCase().includes('callsign')
+)))
+
+const lessonEssentialValues = computed<LessonValue[]>(() => {
+  if (!activeLesson.value || !scenario.value) return []
+  const entries: LessonValue[] = []
+  if (lessonHasCallsign.value) {
+    entries.push({
+      label: 'Your callsign',
+      value: scenario.value.radioCall,
+      note: `Flight ID ${scenario.value.callsign}`,
+      isCallsign: true,
+    })
+  }
+  for (const info of lessonInfo.value) {
+    const parsed = splitLessonInfo(info)
+    if (!parsed || entries.some(entry => entry.label.toLowerCase() === parsed.label.toLowerCase())) continue
+    entries.push(parsed)
+  }
+  return entries
+})
+
+const primaryLessonHint = computed(() => activeLesson.value?.hints[0] ?? '')
+
+const additionalLessonNotes = computed(() => {
+  if (!activeLesson.value) return []
+  const extraHints = activeLesson.value.hints.slice(1)
+  const additionalInfo = lessonInfo.value.filter(info => !splitLessonInfo(info))
+  return Array.from(new Set([...extraHints, ...additionalInfo]))
+})
+
 const lessonReference = computed(() => {
   if (!activeLesson.value || !scenario.value) return []
   const lesson = activeLesson.value
@@ -3386,6 +3455,23 @@ const lessonReference = computed(() => {
   }
   return entries
 })
+
+const lessonReferenceDetails = computed(() => {
+  const visibleLabels = new Set(
+    lessonEssentialValues.value.map(entry => entry.label.replace(/\s*·.*$/, '').trim().toLowerCase())
+  )
+  return lessonReference.value.filter(entry => {
+    const label = entry.label.trim().toLowerCase()
+    return !visibleLabels.has(label) && !['callsign', 'radio call', 'flight identification'].includes(label)
+  })
+})
+
+const hasLessonDetails = computed(() => Boolean(
+  activeLesson.value?.standard
+  || activeLesson.value?.whyItMatters
+  || additionalLessonNotes.value.length
+  || lessonReferenceDetails.value.length
+))
 const showScenarioPracticeHint = computed(() => {
   if (!current.value || !activeLesson.value) return false
   const index = modules.value.findIndex(module => module.id === current.value?.id)
@@ -3558,6 +3644,7 @@ const previousActionLabel = computed(() => {
 const hasPreviousAction = computed(() => Boolean(prevLessonMeta.value || prevMissionMeta.value))
 
 watch(activeLesson, lesson => {
+  referenceOpen.value = false
   if (lesson) {
     if (moduleStage.value === 'lessons') {
       rollScenario(true)
@@ -6751,10 +6838,107 @@ onMounted(() => {
   color: color-mix(in srgb, var(--accent) 78%, var(--text));
 }
 
+.lesson-values {
+  margin-top: 14px;
+}
+
+.lesson-values-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 7px;
+  color: color-mix(in srgb, var(--accent) 82%, var(--text));
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.lesson-values-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lesson-value {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.lesson-value span,
+.lesson-value strong,
+.lesson-value small {
+  display: block;
+}
+
+.lesson-value span {
+  margin-bottom: 3px;
+  color: var(--t3);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.lesson-value strong {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.lesson-value small {
+  margin-top: 3px;
+  color: var(--t3);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.lesson-value.is-callsign {
+  flex: 1 1 185px;
+  max-width: 260px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+}
+
+.lesson-guidance {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  color: var(--t2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.lesson-guidance .v-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--accent);
+}
+
+.lesson-guidance strong,
+.lesson-guidance span {
+  display: block;
+}
+
+.lesson-guidance strong {
+  margin-bottom: 2px;
+  color: var(--text);
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
 .reference-section {
-  margin-top: 8px;
+  margin-top: 2px;
   border-top: 1px solid var(--b2, rgba(255, 255, 255, 0.08));
-  padding-top: 6px;
+  padding-top: 8px;
 }
 
 .reference-toggle {
@@ -6789,6 +6973,10 @@ onMounted(() => {
   line-height: 1.6;
 }
 
+.reference-row {
+  display: contents;
+}
+
 .reference-label {
   color: var(--t2, rgba(255, 255, 255, 0.6));
   white-space: nowrap;
@@ -6797,6 +6985,44 @@ onMounted(() => {
 .reference-value {
   color: var(--t1, rgba(255, 255, 255, 0.9));
   font-family: var(--font-mono, monospace);
+}
+
+.lesson-details {
+  padding: 8px 0 4px 20px;
+  color: var(--t2);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.lesson-details p {
+  margin: 7px 0;
+}
+
+.lesson-details ul {
+  margin: 7px 0;
+  padding-left: 18px;
+}
+
+.lesson-detail-standard {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: color-mix(in srgb, var(--accent) 78%, var(--text));
+}
+
+@media (max-width: 640px) {
+  .lesson-values-grid {
+    gap: 6px;
+  }
+
+  .lesson-value.is-callsign {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .lesson-details {
+    padding-left: 0;
+  }
 }
 
 .audio-blur {
