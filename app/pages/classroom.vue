@@ -990,7 +990,7 @@
                         <v-icon size="16" :class="{ spin: ttsLoading }">
                           {{ ttsLoading ? 'mdi-loading' : 'mdi-volume-high' }}
                         </v-icon>
-                        {{ hasSpokenTarget ? 'Play again' : 'Play ATC' }}
+                        {{ playPromptLabel }}
                       </button>
                       <button
                           v-if="canPlayPrompt && isSpeaking"
@@ -2958,14 +2958,20 @@ const progress = ref<LearnProgress>({})
 const unlockedModules = ref<string[]>([])
 
 const canPlayPrompt = computed(() => {
-  const kind = activeLesson.value?.prompt?.kind
-  return kind === 'atc' || kind === 'copy'
+  return Boolean(activeLesson.value?.prompt)
 })
 const promptLabel = computed(() => {
   const kind = activeLesson.value?.prompt?.kind
   if (kind === 'situation') return 'Situation'
   if (kind === 'copy') return 'Copy / decode'
   return 'ATC prompt'
+})
+const playPromptLabel = computed(() => {
+  if (hasSpokenTarget.value) return 'Play again'
+  const kind = activeLesson.value?.prompt?.kind
+  if (kind === 'atc') return 'Play ATC'
+  if (kind === 'copy') return 'Play audio'
+  return 'Play prompt'
 })
 const audioContentHidden = computed(() => canPlayPrompt.value && cfg.value.audioChallenge && !audioReveal.value)
 const audioSpeedDisplay = computed(() => (cfg.value.audioSpeed ?? 1).toFixed(2))
