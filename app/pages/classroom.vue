@@ -1356,6 +1356,26 @@
       </div>
     </v-dialog>
 
+    <v-dialog v-model="showReplaySpeedHint" max-width="540">
+      <div class="panel dialog">
+        <p class="eyebrow">Playback help</p>
+        <h3 class="h3">Is the prompt too fast?</h3>
+        <p class="muted">
+          You have replayed this prompt a few times. You can slow the ATC speaking speed down in Settings whenever
+          you need a calmer pace.
+        </p>
+        <div class="row end">
+          <button class="btn ghost" type="button" @click="dismissReplaySpeedHint">
+            Keep current speed
+          </button>
+          <button class="btn primary" type="button" @click="openReplaySpeedSettings">
+            <v-icon size="18">mdi-tune</v-icon>
+            Open settings
+          </button>
+        </div>
+      </div>
+    </v-dialog>
+
     <v-dialog v-model="showSpeechServerWarning" max-width="620" persistent>
       <div class="panel dialog speech-server-dialog">
         <div class="speech-server-icon">
@@ -1465,6 +1485,7 @@ import {
   classroomVoiceFor,
 } from '~~/shared/utils/voicePool'
 import {DEFAULT_AIRLINE_TELEPHONY, normalizeRadioPhrase, normalizeMetarPhrase} from '~~/shared/utils/radioSpeech'
+import {denormalizeSpokenAtc, looksLikeCallsignKey, normalizeForMatch} from '~~/shared/utils/sttMatch'
 import {useBugReport} from '~/composables/useBugReport'
 import BugReportDialog from '~/components/BugReportDialog.vue'
 
@@ -1544,6 +1565,33 @@ function tightenedThreshold(length: number, base: number): number {
   if (length >= 24) return Math.max(base, 0.92)
   if (length >= 16) return Math.max(base, 0.94)
   return Math.max(base, 0.97)
+}
+
+function compactReadbackComparable(value: string): string {
+  return value.replace(/\s+/g, '')
+}
+
+function buildReadbackComparableForms(value: string): string[] {
+  const forms = new Set<string>()
+  const trimmed = value.trim()
+
+  if (!trimmed) return []
+
+  const add = (candidate: string) => {
+    const normalized = normalizeForMatch(candidate)
+    if (!normalized) return
+    forms.add(normalized)
+    forms.add(compactReadbackComparable(normalized))
+  }
+
+  add(trimmed)
+  add(denormalizeSpokenAtc(trimmed))
+
+  return Array.from(forms).filter(Boolean)
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 const modules = shallowRef<ModuleDef[]>(learnModules)
@@ -1752,7 +1800,15 @@ const pendingLessonId = ref<string | null>(null)
 
 function displayCallsign(value?: string | null, source?: CallsignContext | null): string {
   if (!value) return ''
-  return value
+  const context = source ?? scenario.value
+  const radioCall = context?.radioCall?.trim()
+  const callsign = context?.callsign?.trim()
+
+  if (!radioCall || !callsign) {
+    return value
+  }
+
+  return value.replace(new RegExp(escapeRegExp(radioCall), 'ig'), callsign)
 }
 
 const showLessonActions = computed(
@@ -2789,6 +2845,9 @@ const toast = ref({show: false, text: ''})
 const showSettings = ref(false)
 const showSpeechServerWarning = ref(false)
 const showOnlineTtsSuggestion = ref(false)
+const showReplaySpeedHint = ref(false)
+const promptReplayCount = ref(0)
+const replaySpeedHintSeen = ref(false)
 
 const api = useApi()
 const isClient = typeof window !== 'undefined'
@@ -2879,6 +2938,27 @@ function enableBrowserTtsFromWarning() {
 function enableOnlineTtsFromSuggestion() {
   cfg.value.tts = false
   showOnlineTtsSuggestion.value = false
+}
+
+function dismissReplaySpeedHint() {
+  showReplaySpeedHint.value = false
+}
+
+function openReplaySpeedSettings() {
+  showReplaySpeedHint.value = false
+  showSettings.value = true
+}
+
+function resetPromptReplayTracking() {
+  promptReplayCount.value = 0
+  showReplaySpeedHint.value = false
+}
+
+function maybeSuggestSlowerPlayback() {
+  if (replaySpeedHintSeen.value) return
+  if (promptReplayCount.value < 3) return
+  replaySpeedHintSeen.value = true
+  showReplaySpeedHint.value = true
 }
 
 function loadLocalAtcSettings(): LearnConfigPatch | null {
@@ -3242,41 +3322,48 @@ const fieldStates = computed<Record<string, FieldState>>(() => {
     const expected = field.expected(scenario.value).trim()
     const answer = (userAnswers[field.key] ?? '').trim()
     const alternatives = field.alternatives?.(scenario.value) ?? []
-    const options = [expected, ...alternatives].map(norm).filter(Boolean)
-    const normalizedAnswer = norm(answer)
+    const options = [expected, ...alternatives].flatMap(buildReadbackComparableForms)
+    const answerForms = buildReadbackComparableForms(answer)
+    const allowFuzzy = field.matching === 'fuzzy' || field.matching === 'controlled' || looksLikeCallsignKey(field.key, field.label)
 
     let best = 0
     let pass = false
 
-    if (answer && options.length) {
-      for (const option of options) {
-        if (!option) continue
-        if (normalizedAnswer === option) {
-          best = 1
-          pass = true
-          break
-        }
+    if (answerForms.length && options.length) {
+      outer:
+      for (const answerForm of answerForms) {
+        if (!answerForm) continue
+        for (const option of options) {
+          if (!option) continue
+          if (answerForm === option) {
+            best = 1
+            pass = true
+            break outer
+          }
 
-        if (field.matching !== 'fuzzy') continue
+          const distance = lev(answerForm, option)
+          const span = Math.max(option.length, answerForm.length, 1)
+          const score = 1 - distance / span
+          if (score > best) {
+            best = score
+          }
 
-        const distance = lev(normalizedAnswer, option)
-        const span = Math.max(option.length, normalizedAnswer.length, 1)
-        const score = 1 - distance / span
-        if (score > best) {
-          best = score
-        }
+          if (!allowFuzzy) continue
 
-        const allowance = allowedDistance(span)
-        if (allowance <= 0) continue
+          const allowance = allowedDistance(span)
+          if (allowance <= 0) continue
 
-        const threshold = tightenedThreshold(span, field.threshold ?? 0.82)
-        if (distance <= allowance && score >= threshold) {
-          pass = true
+          const threshold = tightenedThreshold(span, field.threshold ?? 0.82)
+          if (distance <= allowance && score >= threshold) {
+            pass = true
+          }
         }
       }
 
       if (!pass && !best && options.length) {
-        best = Math.max(...options.map(option => similarity(normalizedAnswer, option)))
+        best = Math.max(
+          ...answerForms.flatMap(answerForm => options.map(option => similarity(answerForm, option)))
+        )
       }
     }
 
@@ -3697,8 +3784,15 @@ watch(lessonSearchAnchor, anchor => {
 
 watch(scenario, newScenario => {
   hasSpokenTarget.value = false
+  resetPromptReplayTracking()
   if (!newScenario) {
     pendingAutoSay.value = false
+  }
+})
+
+watch(showSettings, open => {
+  if (open) {
+    showReplaySpeedHint.value = false
   }
 })
 
@@ -3730,10 +3824,15 @@ async function speakTarget(auto = false) {
   const phrase = targetPhrase.value?.trim()
   if (!phrase) return
   if (ttsLoading.value) return
+  const replay = !auto && hasSpokenTarget.value
   if (!auto) {
     pendingAutoSay.value = false
   }
   hasSpokenTarget.value = true
+  if (replay) {
+    promptReplayCount.value += 1
+    maybeSuggestSlowerPlayback()
+  }
   if (auto) {
     focusFirstReadbackField()
   }
