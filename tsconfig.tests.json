@@ -1,13 +1,21 @@
 {
-  "extends": "./tsconfig.scripts.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
     "paths": {
       "#imports": ["./tests/stubs/nuxt-imports.ts"],
       "~~/*": ["./*"],
       "@@/*": ["./*"],
       "~/\*": ["./app/*"],
       "@/*": ["./app/*"]
-    }
+    },
+    "types": ["node"]
   },
   "include": ["server/**/*.ts", "shared/**/*.ts", "tests/**/*.ts"]
 }
