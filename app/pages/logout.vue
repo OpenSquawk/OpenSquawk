@@ -21,6 +21,7 @@ import { useAuthStore } from '~/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
+const config = useRuntimeConfig()
 
 useHead({
   title: 'Logout – OpenSquawk',
@@ -31,7 +32,17 @@ useHead({
 
 onMounted(async () => {
   await auth.logout()
-  router.replace('/login')
+
+  // Sign out at the issuer too. Sending the user to the app's own /login would
+  // only forward them back to an issuer where they are still signed in — they
+  // would be handed a fresh code and land straight back inside, which is not
+  // what "log out" means.
+  const issuer = String(config.public.authIssuer || '').replace(/\/+$/, '')
+  if (issuer) {
+    return navigateTo(`${issuer}/logout`, { external: true })
+  }
+
+  router.replace('/')
 })
 </script>
 
