@@ -1,5 +1,6 @@
 import { defineNuxtRouteMiddleware, navigateTo, useRuntimeConfig } from '#app'
 import { useAuthStore } from '~/stores/auth'
+import { buildIssuerLoginUrl } from '~~/shared/utils/ssoHandoff'
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const config = useRuntimeConfig()
@@ -31,10 +32,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return navigateTo(`/login?redirect=${encodeURIComponent(target)}`)
   }
 
-  // The issuer needs an absolute URL to come back to, and it will only accept
-  // one whose origin is on its allowlist.
-  const redirect = new URL(target, window.location.origin).toString()
-  return navigateTo(`${issuer}/login?redirect=${encodeURIComponent(redirect)}`, {
+  return navigateTo(buildIssuerLoginUrl(issuer, window.location.origin, target), {
     external: true,
   })
 })

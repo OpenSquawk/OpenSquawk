@@ -18,6 +18,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter, useRuntimeConfig, navigateTo } from '#app'
 import { useAuthStore } from '~/stores/auth'
+import { buildIssuerLoginUrl } from '~~/shared/utils/ssoHandoff'
 
 // Consumer end of the SSO handoff: the issuer sent the browser here with a
 // one-time code. Redeeming it happens server-side (the code alone is useless
@@ -41,11 +42,12 @@ function safeRedirectTarget(): string {
 
 function retry() {
   const issuer = String(config.public.authIssuer || '').replace(/\/+$/, '')
-  const target = new URL(safeRedirectTarget(), window.location.origin).toString()
   if (!issuer) {
     return router.replace(`/login?redirect=${encodeURIComponent(safeRedirectTarget())}`)
   }
-  return navigateTo(`${issuer}/login?redirect=${encodeURIComponent(target)}`, { external: true })
+  return navigateTo(buildIssuerLoginUrl(issuer, window.location.origin, safeRedirectTarget()), {
+    external: true,
+  })
 }
 
 onMounted(async () => {
