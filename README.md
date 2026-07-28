@@ -6,14 +6,14 @@ and optional simulator/cockpit bridge integration.
 
 This repository contains the Nuxt application and its H3 API. Live ATC routing
 and authoritative session state are provided by the separate
-[`OpenSquawk-LiveATC-api`](https://github.com/OpenSquawk/OpenSquawk-LiveATC-api)
+[`OpenSquawk-API`](https://github.com/OpenSquawk/OpenSquawk-API)
 service.
 
 ## Requirements
 
 - Node.js 22 and Yarn 4
 - MongoDB
-- Python 3.12 and Poetry for `OpenSquawk-LiveATC-api`
+- Python 3.12 and Poetry for `OpenSquawk-API`
 - An OpenAI-compatible service for cloud STT/TTS, or a configured local speech
   provider
 
@@ -33,7 +33,7 @@ Generate strong values for `JWT_SECRET`, `APP_JWT_SECRET`, and
 `SERVICE_SECRET`. Keep `AUTH_MODE=open` for a self-hosted instance without a
 login. Configure the speech provider variables required by your setup.
 
-In a separate checkout of `OpenSquawk-LiveATC-api`, start the decision backend:
+In a separate checkout of `OpenSquawk-API`, start the decision backend:
 
 ```bash
 poetry install
@@ -60,7 +60,7 @@ when `TELEMETRY_URL` is empty.
 
 ## Services
 
-- `OpenSquawk-LiveATC-api`: decision flows, routing, and Live ATC session state
+- `OpenSquawk-API`: decision flows, routing, and Live ATC session state
 - MongoDB: application identities, progress, reports, and logs
 - OpenAI-compatible or local speech service: transcription and controller audio
 - Optional bridge: simulator and cockpit integration

@@ -5,7 +5,7 @@
 - **H3 server** handlers in `/server`
 - **Shared types/utils** in `/shared`
 - MongoDB models in `/server/models`
-- **Python backend** (`OpenSquawk-LiveATC-api`) — owns PM session state and routing decisions; runs on `http://127.0.0.1:8000`
+- **Python backend** (`OpenSquawk-API`) — owns PM session state and routing decisions; runs on `http://127.0.0.1:8000`
 
 ## Key Files
 - `/shared/utils/communicationsEngine.ts` — Core state machine composable (used by `/pm` live ATC). Drives local cursor and TTS; Python backend owns the authoritative state.
@@ -41,4 +41,4 @@ Transitions: `next`, `ok_next`, `bad_next`, `timer_next`, `auto_transitions`.
 
 ## Commands
 - `bun run dev` — dev server (Nuxt)
-- Python backend: see `OpenSquawk-LiveATC-api/README.md`
+- Python backend: see `OpenSquawk-API/README.md`

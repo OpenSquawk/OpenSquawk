@@ -4,7 +4,7 @@
 
 This repository is the self-hostable OpenSquawk application. It contains the
 browser UI and its H3 API. It does not own the authoritative Live ATC decision
-state; that belongs to the separate `OpenSquawk-LiveATC-api` service.
+state; that belongs to the separate `OpenSquawk-API` service.
 
 ## Architecture
 
@@ -35,7 +35,7 @@ with the configured `NUXT_PUBLIC_AUTH_ISSUER`; the app then owns its session.
 
 ## Live ATC Flow
 
-1. The frontend loads a runtime flow from `OpenSquawk-LiveATC-api`.
+1. The frontend loads a runtime flow from `OpenSquawk-API`.
 2. It creates an authoritative radio session in the Python backend.
 3. PTT audio is transcribed through `POST /api/atc/ptt`; text input skips STT.
 4. The transmission is sent to the Python session.
@@ -65,7 +65,7 @@ yarn test
 yarn typecheck
 ```
 
-Start `OpenSquawk-LiveATC-api` separately with:
+Start `OpenSquawk-API` separately with:
 
 ```bash
 poetry run uvicorn main:app --reload
