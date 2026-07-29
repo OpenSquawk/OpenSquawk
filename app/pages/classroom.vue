@@ -1325,6 +1325,17 @@
           </div>
 
           <div class="set-row">
+            <div class="set-info">
+              <span>Local Bridge</span>
+              <small class="muted">Speech requests use a Bridge running on this device when detected, otherwise the cloud service.</small>
+            </div>
+            <span class="bridge-status" :class="{connected: localBridgeConnected}">
+              <span class="bridge-dot"/>
+              {{ localBridgeConnected ? 'Connected' : 'Not detected' }}
+            </span>
+          </div>
+
+          <div class="set-row">
             <span>Test TTS</span>
             <div class="row">
               <button class="btn soft" @click="say('Frankfurt Ground, Lufthansa one two three, request taxi.')">
@@ -2851,7 +2862,8 @@ const promptReplayCount = ref(0)
 const replaySpeedHintSeen = ref(false)
 
 const api = useApi()
-const {localUrl} = useLocalSpeechBridge()
+const {localUrl, localBase} = useLocalSpeechBridge()
+const localBridgeConnected = computed(() => Boolean(localBase.value))
 const isClient = typeof window !== 'undefined'
 const auth = useAuthStore()
 
@@ -7201,6 +7213,30 @@ onMounted(() => {
   flex-direction: column;
   gap: 4px;
   max-width: 70%;
+}
+
+.bridge-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--t3);
+  white-space: nowrap;
+}
+
+.bridge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--t3);
+}
+
+.bridge-status.connected {
+  color: var(--accent);
+}
+
+.bridge-status.connected .bridge-dot {
+  background: var(--accent);
 }
 
 .speech-server-dialog {
