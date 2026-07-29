@@ -1487,6 +1487,7 @@ import {
 import {DEFAULT_AIRLINE_TELEPHONY, normalizeRadioPhrase, normalizeMetarPhrase} from '~~/shared/utils/radioSpeech'
 import {denormalizeSpokenAtc, looksLikeCallsignKey, normalizeForMatch} from '~~/shared/utils/sttMatch'
 import {useBugReport} from '~/composables/useBugReport'
+import {postWithLocalFallback, useLocalSpeechBridge} from '~/composables/useLocalSpeechBridge'
 import BugReportDialog from '~/components/BugReportDialog.vue'
 
 definePageMeta({middleware: ['require-auth', 'require-classroom-intro']})
@@ -2850,6 +2851,7 @@ const promptReplayCount = ref(0)
 const replaySpeedHintSeen = ref(false)
 
 const api = useApi()
+const {localUrl} = useLocalSpeechBridge()
 const isClient = typeof window !== 'undefined'
 const auth = useAuthStore()
 
@@ -4327,7 +4329,11 @@ async function requestSayAudio(cacheKey: string, payload: Record<string, unknown
   }
 
   const request = (async () => {
-    const response: any = await api.post('/api/atc/say', payload)
+    const response: any = await postWithLocalFallback(
+      localUrl('/api/atc/say'),
+      payload,
+      () => api.post('/api/atc/say', payload),
+    )
     const audioData = response?.audio
     if (!audioData?.base64) {
       throw new Error('Missing audio data')
