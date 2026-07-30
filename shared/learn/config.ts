@@ -3,6 +3,11 @@ export interface LessonProgress {
   done: boolean
   assessmentVersion?: number
   successfulVariants?: number
+  /**
+   * Signatures of the rolled scenarios already passed for this lesson, so the
+   * same variation cannot be counted twice — not even across page reloads.
+   */
+  variantSignatures?: string[]
 }
 
 export type LearnProgress = Record<string, Record<string, LessonProgress>>
@@ -25,7 +30,24 @@ export interface LearnState {
 }
 
 export const CLASSROOM_ASSESSMENT_VERSION = 2
-export const CLASSROOM_VARIANTS_FOR_MASTERY = 2
+
+/**
+ * Clean variations required before a lesson counts as mastered. Short drills
+ * need less repetition than a full scenario, so the bar rises with module
+ * complexity. Every lesson rolls a fresh scenario, so the material is there.
+ */
+export const CLASSROOM_VARIANTS_BY_MODULE: Record<string, number> = {
+  'normalize': 3,
+  'arc': 4,
+  'decision-tree': 4,
+  'full-flight': 5,
+}
+
+export const CLASSROOM_VARIANTS_DEFAULT = 3
+
+export function variantsForModule(moduleId: string): number {
+  return CLASSROOM_VARIANTS_BY_MODULE[moduleId] ?? CLASSROOM_VARIANTS_DEFAULT
+}
 
 export const LEARN_CONFIG_DEFAULTS: LearnConfig = {
   tts: false,

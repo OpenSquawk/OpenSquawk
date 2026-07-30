@@ -159,55 +159,80 @@
       <div class="hub-head">
         <h2 class="h2">Build the radio patterns before Live ATC</h2>
         <div class="muted">Start with Foundations, master the mandatory elements, then practise a complete guided flight.</div>
-        <div class="training-data-notice" role="note">
-          <v-icon size="18">mdi-flask-outline</v-icon>
-          Synthetic training data — not for operational use
+        <div class="curriculum-stats">
+          <span class="curriculum-stat"><strong>{{ curriculumStats.modules }}</strong> modules</span>
+          <span class="curriculum-stat"><strong>{{ curriculumStats.lessons }}</strong> lessons</span>
+          <span class="curriculum-stat"><strong>{{ curriculumStats.variations }}</strong> practice variations</span>
+          <span class="curriculum-stat is-accent"><strong>{{ curriculumStats.masteredPct }}%</strong> mastered</span>
+          <span class="curriculum-stat is-warn" role="note">
+            <v-icon size="14">mdi-flask-outline</v-icon>
+            Synthetic training data
+          </span>
         </div>
       </div>
 
-      <div class="tiles">
-        <div
+      <div class="module-sections">
+        <section
             v-for="m in modules"
             :key="m.id"
-            class="tile"
+            class="module-section"
             :class="tileClass(m.id)"
-            @click="isModuleUnlocked(m.id) && handleModulePrimary(m.id)"
         >
-          <div class="tile-media"
-               :style="{ backgroundImage: `url(${m.art})` }">
-            <span class="tile-badge">
-              <v-icon size="16">mdi-format-list-numbered</v-icon>
-              Step {{ moduleNumber(m.id) }} · Recommended order
-            </span>
-          </div>
-          <div class="tile-body">
-            <div class="tile-top">
-              <div class="tile-title">
+          <div class="module-section-head">
+            <div class="module-section-art" :style="{ backgroundImage: `url(${m.art})` }" aria-hidden="true"></div>
+            <div class="module-section-meta">
+              <span class="module-section-step">
+                <v-icon size="14">mdi-format-list-numbered</v-icon>
+                Step {{ moduleNumber(m.id) }} · Recommended order
+              </span>
+              <h3 class="module-section-title">
                 <v-icon size="18">mdi-flag-checkered</v-icon>
                 {{ m.title }}
+              </h3>
+              <div class="muted small">{{ m.subtitle }}</div>
+              <div v-if="pct(m.id) > 0" class="line">
+                <div class="line-fill" :style="{ width: pct(m.id)+'%' }"></div>
               </div>
-
+              <div class="module-section-counts">
+                <span>{{ doneCount(m.id) }}/{{ m.lessons.length }} mastered</span>
+                <span>{{ practisingCount(m.id) }} practising</span>
+                <span>{{ variantsForModule(m.id) }} clean variations each</span>
+              </div>
             </div>
-            <div class="muted small">{{ m.subtitle }}</div>
-            <div class="line">
-              <div class="line-fill" :style="{ width: pct(m.id)+'%' }"></div>
-            </div>
-            <div class="tile-progress-meta">
-              <span>{{ doneCount(m.id) }}/{{ m.lessons.length }} mastered</span>
-              <span>{{ practisingCount(m.id) }} practising</span>
-            </div>
-            <div class="tile-actions">
-              <button
-                  class="btn primary"
-                  @click="handleModulePrimary(m.id)"
-              >
-                <v-icon size="18">{{ modulePrimaryIcon(m.id) }}</v-icon>
-                {{ modulePrimaryLabel(m.id) }}
-              </button>
-
-            </div>
+            <button class="btn primary module-section-cta" @click="handleModulePrimary(m.id)">
+              <v-icon size="18">{{ modulePrimaryIcon(m.id) }}</v-icon>
+              {{ modulePrimaryLabel(m.id) }}
+            </button>
           </div>
-        </div>
+
+          <ul class="lesson-chips">
+            <li v-for="(les, index) in m.lessons" :key="les.id">
+              <button
+                  class="lesson-chip"
+                  :class="lessonScoreClass(m.id, les.id)"
+                  :title="`${les.title} — ${lessonScoreLabel(m.id, les.id)}`"
+                  @click="openLessonFromSearch(m.id, les.id)"
+              >
+                <v-icon class="lesson-chip-icon" size="16">{{ lessonScoreIcon(m.id, les.id) }}</v-icon>
+                <span class="lesson-chip-body">
+                  <span class="lesson-chip-title">{{ les.title }}</span>
+                  <span class="lesson-chip-sub">{{ moduleNumber(m.id) }}.{{ index + 1 }} · {{ lessonScoreLabel(m.id, les.id) }}</span>
+                </span>
+                <span
+                    class="lesson-chip-dots"
+                    :aria-label="`${lessonVariantCount(m.id, les.id)} of ${variantsForModule(m.id)} clean variations`"
+                >
+                  <i
+                      v-for="n in variantsForModule(m.id)"
+                      :key="n"
+                      class="variant-dot"
+                      :class="{ 'is-on': n <= lessonVariantCount(m.id, les.id) }"
+                  ></i>
+                </span>
+              </button>
+            </li>
+          </ul>
+        </section>
       </div>
     </main>
 
@@ -1467,8 +1492,8 @@ import {useApi} from '~/composables/useApi'
 import {useAuthStore} from '~/stores/auth'
 import {
   CLASSROOM_ASSESSMENT_VERSION,
-  CLASSROOM_VARIANTS_FOR_MASTERY,
   createDefaultLearnConfig,
+  variantsForModule,
 } from '~~/shared/learn/config'
 import type {LearnConfig, LearnProgress, LearnState} from '~~/shared/learn/config'
 import {
@@ -1476,6 +1501,7 @@ import {
   isCurrentMastery,
   updateMasteryProgress,
 } from '~~/shared/learn/assessment'
+import {lessonVariantSignature} from '~~/shared/learn/variantSignature'
 import {learnModules, seedFullFlightScenario} from '~~/shared/data/learnModules'
 import {
   createBaseScenario,
@@ -2818,7 +2844,6 @@ const readbackFieldRefs = new Map<string, HTMLInputElement>()
 const result = ref<ScoreResult | null>(null)
 const evaluating = ref(false)
 const modelAnswerRevealed = ref(false)
-const variantCounted = ref(false)
 
 // First-run nudge: after the very first readback is checked, highlight the
 // footer's primary button so learners realise they continue from there. Shown
@@ -3071,13 +3096,14 @@ const audioContentHidden = computed(() => canPlayPrompt.value && cfg.value.audio
 const audioSpeedDisplay = computed(() => (cfg.value.audioSpeed ?? 1).toFixed(2))
 const currentVariantProgressLabel = computed(() => {
   if (!current.value || !activeLesson.value) return 'Practising'
+  const threshold = variantsForModule(current.value.id)
   const entry = progress.value[current.value.id]?.[activeLesson.value.id]
   const variants = entry?.assessmentVersion === CLASSROOM_ASSESSMENT_VERSION
-    ? Math.min(CLASSROOM_VARIANTS_FOR_MASTERY, entry.successfulVariants || 0)
+    ? Math.min(threshold, entry.successfulVariants || 0)
     : 0
-  return variants >= CLASSROOM_VARIANTS_FOR_MASTERY
+  return isCurrentMastery(entry)
     ? 'Mastered'
-    : `${variants} of ${CLASSROOM_VARIANTS_FOR_MASTERY} clean variations`
+    : `${variants} of ${threshold} clean variations`
 })
 
 const instructorVoiceOptions = [
@@ -3870,7 +3896,6 @@ function rollScenario(clear = false) {
   resetAnswers(true)
   resetAudioReveal()
   modelAnswerRevealed.value = false
-  variantCounted.value = false
   if (clear) {
     result.value = null
   }
@@ -4026,10 +4051,10 @@ function evaluate() {
       passed: summary.passed,
     }, {
       modelAnswerRevealed: modelAnswerRevealed.value,
-      variantAlreadyCounted: variantCounted.value,
+      signature: lessonVariantSignature(activeLesson.value, scenario.value),
+      threshold: variantsForModule(modId),
     })
 
-    if (update.counted) variantCounted.value = true
     progress.value[modId][lesId] = update.progress
   } finally {
     evaluating.value = false
@@ -4133,6 +4158,12 @@ function isLessonMastered(modId: string, lesId: string): boolean {
   return isCurrentMastery(progress.value[modId]?.[lesId])
 }
 
+function lessonVariantCount(modId: string, lesId: string): number {
+  const entry = progress.value[modId]?.[lesId]
+  if (entry?.assessmentVersion !== CLASSROOM_ASSESSMENT_VERSION) return 0
+  return Math.min(variantsForModule(modId), entry.successfulVariants || 0)
+}
+
 function isLessonPractising(modId: string, lesId: string): boolean {
   const entry = progress.value[modId]?.[lesId]
   if (!entry) return false
@@ -4151,6 +4182,24 @@ function pct(modId: string) {
   if (!module) return 0
   return Math.round((doneCount(modId) / module.lessons.length) * 100)
 }
+
+/** Scope figures for the hub header, derived from the curriculum itself. */
+const curriculumStats = computed(() => {
+  const list = modules.value
+  const lessons = list.reduce((sum, module) => sum + module.lessons.length, 0)
+  const variations = list.reduce(
+    (sum, module) => sum + module.lessons.length * variantsForModule(module.id),
+    0,
+  )
+  const mastered = list.reduce((sum, module) => sum + doneCount(module.id), 0)
+
+  return {
+    modules: list.length,
+    lessons,
+    variations,
+    masteredPct: lessons ? Math.round((mastered / lessons) * 100) : 0,
+  }
+})
 
 function moduleNumber(modId: string): number {
   const index = modules.value.findIndex(module => module.id === modId)
@@ -5703,224 +5752,261 @@ onMounted(() => {
   font-weight: 700;
 }
 
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  align-items: stretch
+.curriculum-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 
-.tile {
+.curriculum-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 11px;
   border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  color: var(--t3);
+  font-size: 12px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.curriculum-stat strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.curriculum-stat.is-accent {
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.curriculum-stat.is-accent strong {
+  color: var(--accent);
+}
+
+.curriculum-stat.is-warn {
+  gap: 5px;
+  border-color: color-mix(in srgb, #fbbf24 26%, transparent);
+  background: color-mix(in srgb, #fbbf24 8%, transparent);
+  color: color-mix(in srgb, #fcd34d 82%, var(--text));
+  font-weight: 650;
+}
+
+.module-sections {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+  /* The footer is position: fixed — keep the last lesson chip clear of it. */
+  padding-bottom: 72px;
+}
+
+.module-section {
+  border: 1px solid var(--border);
   border-radius: 18px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, .22);
   overflow: hidden;
-  box-shadow: 0 12px 26px rgba(0, 0, 0, .25);
-  transition: transform .25s ease, box-shadow .25s ease;
-  position: relative;
-  min-height: 360px
 }
 
-.tile.is-fresh {
-  border-color: color-mix(in srgb, var(--accent) 32%, transparent)
+.module-section.is-fresh {
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
-.tile.is-active {
-  border-color: color-mix(in srgb, #fbbf24 28%, transparent)
+.module-section.is-active {
+  border-color: color-mix(in srgb, #fbbf24 28%, transparent);
 }
 
-.tile.is-complete {
-  border-color: color-mix(in srgb, #22c55e 32%, transparent)
+.module-section.is-complete {
+  border-color: color-mix(in srgb, #22c55e 32%, transparent);
 }
 
-.tile.is-locked {
-  filter: saturate(.7) brightness(.9)
+.module-section.is-locked {
+  filter: saturate(.7) brightness(.9);
 }
 
-.tile:hover {
-  box-shadow: 0 18px 40px rgba(0, 0, 0, .3)
+.module-section-head {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
 }
 
-.tile-media {
-  height: 140px;
+.module-section-art {
+  height: 96px;
+  border-radius: 14px;
   background-size: cover;
   background-position: center;
-  position: relative
 }
 
-.tile-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 65%, transparent), color-mix(in srgb, var(--accent2) 65%, transparent));
-  color: #f8fafc;
-  font-size: 12px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  box-shadow: 0 6px 18px rgba(2, 6, 23, .4)
-}
-
-.tile-body {
-  padding: 14px;
+.module-section-meta {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  flex: 1
+  gap: 6px;
+  min-width: 0;
 }
 
-.tile-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px
-}
-
-.tile-title {
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px
-}
-
-.tile-status {
+.module-section-step {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
-  color: var(--t3)
-}
-
-.tile-status.is-fresh {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent)
-}
-
-.tile-status.is-active {
-  color: #fbbf24;
-  border-color: color-mix(in srgb, #fbbf24 40%, transparent);
-  background: color-mix(in srgb, #fbbf24 12%, transparent)
-}
-
-.tile-status.is-complete {
-  color: #22c55e;
-  border-color: color-mix(in srgb, #22c55e 40%, transparent);
-  background: color-mix(in srgb, #22c55e 14%, transparent)
-}
-
-.tile-status.is-locked {
+  gap: 5px;
   color: var(--t3);
-  border-color: color-mix(in srgb, var(--text) 14%, transparent);
-  background: color-mix(in srgb, var(--text) 4%, transparent)
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
 }
 
-.tile-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(6, 12, 34, .82);
-  color: #f8fafc;
+.module-section-title {
   display: flex;
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 28px;
-  backdrop-filter: blur(4px);
-  pointer-events: none
+  gap: 8px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
 }
 
-.tile-overlay-inner {
+/* A full-width bar at 0% just reads as a divider — keep it short and paired
+   with the counts it describes. */
+.module-section-meta .line {
+  max-width: 260px;
+  height: 6px;
+  margin-top: 2px;
+}
+
+.module-section-counts {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  max-width: 240px
-}
-
-.tile-overlay-title {
-  font-weight: 600;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--t3);
+  font-size: 11px;
   letter-spacing: .08em;
-  text-transform: uppercase
+  text-transform: uppercase;
 }
 
-.tile-overlay-sub {
-  font-size: 14px;
-  color: rgba(248, 250, 252, .75)
+.module-section-cta {
+  grid-column: 1 / -1;
+  justify-content: center;
 }
 
-.tile-overlay-link {
-  pointer-events: auto;
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0 2px;
-  font: inherit;
-  color: inherit;
+.lesson-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 14px;
+  list-style: none;
+}
+
+.lesson-chip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  color: var(--text);
+  text-align: left;
   cursor: pointer;
-  text-decoration: none;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
 }
 
-.tile-overlay-link:hover,
-.tile-overlay-link:focus-visible {
-  text-decoration: underline;
-  color: #f8fafc;
+.lesson-chip:hover,
+.lesson-chip:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 44%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  transform: translateY(-1px);
   outline: none;
 }
 
-.line {
-  height: 8px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--text) 8%, transparent);
-  border-radius: 999px;
-  overflow: hidden
-}
-
-.line-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent2))
-}
-
-.tile-progress-meta {
-  display: flex;
-  justify-content: space-between;
+.lesson-chip-icon {
+  flex: none;
   color: var(--t3);
-  font-size: 12px;
-  letter-spacing: .08em;
-  text-transform: uppercase
 }
 
-.tile-actions {
+.lesson-chip.is-great .lesson-chip-icon {
+  color: #22c55e;
+}
+
+.lesson-chip.is-progress .lesson-chip-icon {
+  color: #fbbf24;
+}
+
+.lesson-chip-body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  align-items: stretch;
-  margin-top: auto
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
-.tile-actions .btn {
-  width: 100%;
-  justify-content: center;
+.lesson-chip-title {
+  font-size: 13px;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lesson-chip-sub {
+  color: var(--t3);
+  font-size: 10px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.lesson-chip-dots {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 4px;
+}
+
+.variant-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text) 24%, transparent);
+  background: transparent;
+}
+
+.variant-dot.is-on {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.lesson-chip.is-great .variant-dot.is-on {
+  border-color: #22c55e;
+  background: #22c55e;
 }
 
 @media (min-width: 720px) {
-  .tile-actions {
-    flex-direction: row;
-    flex-wrap: wrap;
+  .module-section-head {
+    grid-template-columns: 120px minmax(0, 1fr) auto;
   }
 
-  .tile-actions .btn {
-    flex: 1 1 50%;
+  .module-section-cta {
+    grid-column: auto;
+    align-self: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .module-section-head {
+    grid-template-columns: 1fr;
+  }
+
+  .module-section-art {
+    height: 120px;
   }
 }
 
@@ -7408,7 +7494,7 @@ onMounted(() => {
     animation: none !important;
   }
 
-  .tile,
+  .lesson-chip,
   .lesson,
   .challenge-card,
   .hero-orb,

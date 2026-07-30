@@ -1,6 +1,5 @@
 import {
   CLASSROOM_ASSESSMENT_VERSION,
-  CLASSROOM_VARIANTS_FOR_MASTERY,
   type LessonProgress,
 } from './config'
 
@@ -43,13 +42,21 @@ export type ProgressUpdate = {
 export function updateMasteryProgress(
   previous: LessonProgress | undefined,
   assessment: AssessmentSummary,
-  options: { modelAnswerRevealed: boolean; variantAlreadyCounted: boolean },
+  options: { modelAnswerRevealed: boolean; signature: string; threshold: number },
 ): ProgressUpdate {
   const currentVersion = previous?.assessmentVersion === CLASSROOM_ASSESSMENT_VERSION
   const previousVariants = currentVersion ? (previous?.successfulVariants || 0) : 0
-  const counted = assessment.passed && !options.modelAnswerRevealed && !options.variantAlreadyCounted
+  const previousSignatures = currentVersion ? (previous?.variantSignatures || []) : []
+
+  const counted = assessment.passed
+    && !options.modelAnswerRevealed
+    && !previousSignatures.includes(options.signature)
+
+  const variantSignatures = counted
+    ? [...previousSignatures, options.signature]
+    : previousSignatures
   const successfulVariants = Math.min(
-    CLASSROOM_VARIANTS_FOR_MASTERY,
+    options.threshold,
     previousVariants + (counted ? 1 : 0),
   )
 
@@ -57,17 +64,24 @@ export function updateMasteryProgress(
     counted,
     progress: {
       best: Math.max(previous?.best || 0, assessment.score),
-      done: successfulVariants >= CLASSROOM_VARIANTS_FOR_MASTERY,
+      // Sticky: raising the threshold must never revoke a check mark someone
+      // already earned under the old bar.
+      done: (currentVersion && previous?.done === true) || successfulVariants >= options.threshold,
       assessmentVersion: CLASSROOM_ASSESSMENT_VERSION,
       successfulVariants,
+      variantSignatures,
     },
   }
 }
 
+/**
+ * `done` already encodes the module threshold that applied when it was set, so
+ * it is the single source of truth. Entries from before the versioned
+ * assessment still need a review pass.
+ */
 export function isCurrentMastery(progress: LessonProgress | undefined): boolean {
   return Boolean(
     progress?.assessmentVersion === CLASSROOM_ASSESSMENT_VERSION
-    && progress.done
-    && (progress.successfulVariants || 0) >= CLASSROOM_VARIANTS_FOR_MASTERY,
+    && progress.done,
   )
 }

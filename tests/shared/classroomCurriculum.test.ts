@@ -7,7 +7,12 @@ import {
   isCurrentMastery,
   updateMasteryProgress,
 } from '~~/shared/learn/assessment'
-import { CLASSROOM_ASSESSMENT_VERSION } from '~~/shared/learn/config'
+import {
+  CLASSROOM_ASSESSMENT_VERSION,
+  CLASSROOM_VARIANTS_BY_MODULE,
+  CLASSROOM_VARIANTS_DEFAULT,
+  variantsForModule,
+} from '~~/shared/learn/config'
 
 describe('Classroom curriculum contract', () => {
   it('exposes the four goal-led modules and a 17-step guided flight', () => {
@@ -126,45 +131,96 @@ describe('Classroom assessment', () => {
     assert.equal(summary?.passed, false)
   })
 
-  it('requires two unrevealed variations for current mastery', () => {
+  it('requires the module threshold in distinct unrevealed variations', () => {
     const passed = { score: 100, hits: 2, required: 2, similarity: 1, passed: true }
     const first = updateMasteryProgress(undefined, passed, {
       modelAnswerRevealed: false,
-      variantAlreadyCounted: false,
+      signature: 'aaa',
+      threshold: 3,
     })
+    assert.equal(first.counted, true)
     assert.equal(first.progress.done, false)
     assert.equal(first.progress.successfulVariants, 1)
+    assert.deepEqual(first.progress.variantSignatures, ['aaa'])
 
     const duplicate = updateMasteryProgress(first.progress, passed, {
       modelAnswerRevealed: false,
-      variantAlreadyCounted: true,
+      signature: 'aaa',
+      threshold: 3,
     })
+    assert.equal(duplicate.counted, false)
     assert.equal(duplicate.progress.successfulVariants, 1)
 
     const revealed = updateMasteryProgress(first.progress, passed, {
       modelAnswerRevealed: true,
-      variantAlreadyCounted: false,
+      signature: 'bbb',
+      threshold: 3,
     })
     assert.equal(revealed.progress.successfulVariants, 1)
 
     const second = updateMasteryProgress(first.progress, passed, {
       modelAnswerRevealed: false,
-      variantAlreadyCounted: false,
+      signature: 'bbb',
+      threshold: 3,
     })
-    assert.equal(second.progress.done, true)
-    assert.equal(isCurrentMastery(second.progress), true)
+    assert.equal(second.progress.done, false)
+
+    const third = updateMasteryProgress(second.progress, passed, {
+      modelAnswerRevealed: false,
+      signature: 'ccc',
+      threshold: 3,
+    })
+    assert.equal(third.progress.done, true)
+    assert.equal(isCurrentMastery(third.progress), true)
   })
 
-  it('treats legacy completion as review needed rather than current mastery', () => {
+  it('does not count a failed attempt', () => {
+    const failed = { score: 40, hits: 1, required: 2, similarity: 0.4, passed: false }
+    const update = updateMasteryProgress(undefined, failed, {
+      modelAnswerRevealed: false,
+      signature: 'aaa',
+      threshold: 3,
+    })
+    assert.equal(update.counted, false)
+    assert.equal(update.progress.successfulVariants, 0)
+    assert.equal(update.progress.best, 40)
+  })
+
+  it('keeps mastery earned under the old two-variation bar', () => {
+    const legacy = {
+      best: 100,
+      done: true,
+      assessmentVersion: CLASSROOM_ASSESSMENT_VERSION,
+      successfulVariants: 2,
+    }
+    assert.equal(isCurrentMastery(legacy), true)
+
+    const passed = { score: 100, hits: 2, required: 2, similarity: 1, passed: true }
+    const next = updateMasteryProgress(legacy, passed, {
+      modelAnswerRevealed: false,
+      signature: 'aaa',
+      threshold: 4,
+    })
+    assert.equal(next.progress.done, true, 'raising the bar must not revoke a check mark')
+    assert.equal(next.progress.successfulVariants, 3)
+  })
+
+  it('treats pre-version-2 completion as review needed rather than current mastery', () => {
     assert.equal(isCurrentMastery({ best: 100, done: true }), false)
-    assert.equal(
-      isCurrentMastery({
-        best: 100,
-        done: true,
-        assessmentVersion: CLASSROOM_ASSESSMENT_VERSION,
-        successfulVariants: 2,
-      }),
-      true,
-    )
+  })
+
+  it('resolves per-module thresholds and falls back for unknown modules', () => {
+    assert.equal(variantsForModule('normalize'), 3)
+    assert.equal(variantsForModule('full-flight'), 5)
+    assert.equal(variantsForModule('nope'), CLASSROOM_VARIANTS_DEFAULT)
+  })
+
+  it('covers every shipped module with an explicit threshold', () => {
+    for (const module of learnModules) {
+      assert.ok(
+        CLASSROOM_VARIANTS_BY_MODULE[module.id],
+        `${module.id} has no explicit variant threshold`,
+      )
+    }
   })
 })
