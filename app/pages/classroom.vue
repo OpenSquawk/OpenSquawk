@@ -32,7 +32,7 @@
                 <v-icon size="16" class="experience-option-check">mdi-check</v-icon>
               </div>
               <NuxtLink
-                  to="/live-atc"
+                  to="/bridge"
                   role="menuitemradio"
                   class="experience-option"
                   aria-checked="false"

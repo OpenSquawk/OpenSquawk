@@ -250,7 +250,7 @@ onMounted(() => {
               location="bottom"
           >
             <template #activator="{ props: tip }">
-              <NuxtLink class="bridge-connect-hint" to="/bridge" v-bind="tip">
+              <NuxtLink class="bridge-connect-hint" to="/bridge/connect" v-bind="tip">
                 <v-icon size="15">mdi-bridge</v-icon>
                 <span class="bridge-connect-hint-label">Connect simulator</span>
               </NuxtLink>

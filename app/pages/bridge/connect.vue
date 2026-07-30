@@ -326,7 +326,7 @@ const token = computed(() => {
 
 const hasToken = computed(() => token.value.length >= 6)
 const manualTokenReady = computed(() => manualTokenInput.value.length === 6)
-const loginTarget = computed(() => `/login?redirect=${encodeURIComponent(route.fullPath || '/bridge')}`)
+const loginTarget = computed(() => `/login?redirect=${encodeURIComponent(route.fullPath || '/bridge/connect')}`)
 
 const authDisplayName = computed(() => {
   if (!user.value) return ''

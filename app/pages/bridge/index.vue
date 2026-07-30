@@ -1,14 +1,17 @@
 <script setup lang="ts">
-// /bridge is the address everything points at — the Live ATC card on the front
-// page, the cockpit's "connect a bridge" hint, and the post-login redirect the
-// pairing screen builds for itself. The page behind it is /bridge/connect, so
-// the bare path resolved to nothing and every one of those links 404'd.
+// /bridge is where the app sends anyone who does not have the desktop Bridge
+// yet — the Live ATC card on the front page and the experience switcher in the
+// classroom. There is no page for it here (only /bridge/connect, which pairs an
+// already-installed Bridge with a code), so the bare path resolved to nothing
+// and those links 404'd. The download lives on the website, so forward there.
+const BRIDGE_DOWNLOAD_URL = 'https://opensquawk.de/bridge'
+
 definePageMeta({
   layout: false,
   // Redirect from middleware, not from setup: an `await navigateTo()` in setup
   // suspends the first render and the navigation aborts it, leaving the URL
   // changed and the screen blank until a reload (see /start and /login).
-  middleware: [to => navigateTo({ path: '/bridge/connect', query: to.query }, { replace: true })],
+  middleware: [() => navigateTo(BRIDGE_DOWNLOAD_URL, { external: true, replace: true })],
 })
 </script>
 
