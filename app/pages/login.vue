@@ -8,21 +8,33 @@ import { buildIssuerLoginUrl } from '~~/shared/utils/ssoHandoff'
  * monorepo that path resolved to the website's login form. Since the split it
  * resolved to nothing, so signing out dropped the user on a 404.
  */
-const route = useRoute()
-const config = useRuntimeConfig()
+definePageMeta({
+  layout: false,
+  // Forwarding from middleware, not from setup: an `await navigateTo()` in
+  // setup aborts the render it suspends, which leaves a cold load sitting on a
+  // blank page instead of moving it along.
+  middleware: [
+    (to) => {
+      const config = useRuntimeConfig()
+      const issuer = String(config.public.authIssuer || '').replace(/\/+$/, '')
+      const raw = String(to.query.redirect || '/')
+      // Only same-origin paths — never bounce onward to an absolute URL from the query.
+      const target = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
 
-definePageMeta({ layout: false })
+      if (issuer) {
+        return navigateTo(buildIssuerLoginUrl(issuer, window.location.origin, target), {
+          external: true,
+        })
+      }
 
-const issuer = String(config.public.authIssuer || '').replace(/\/+$/, '')
-const raw = String(route.query.redirect || '/')
-// Only same-origin paths — never bounce onward to an absolute URL from the query.
-const target = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
-
-if (issuer) {
-  await navigateTo(buildIssuerLoginUrl(issuer, window.location.origin, target), { external: true })
-}
-else {
-  // AUTH_MODE=open: no login exists at all, every request is the local identity.
-  await navigateTo(target, { replace: true })
-}
+      // AUTH_MODE=open: no login exists at all, every request is the local identity.
+      return navigateTo(target, { replace: true })
+    },
+  ],
+})
 </script>
+
+<template>
+  <!-- Never seen: the middleware above forwards before this page renders. -->
+  <div />
+</template>
