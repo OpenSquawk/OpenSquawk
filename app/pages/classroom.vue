@@ -241,7 +241,6 @@
     <section
         v-if="panel==='module' && current"
         class="container play"
-        :class="{ 'has-mission-footer': showLessonActions }"
         aria-label="Module"
     >
       <div class="play-head">
@@ -1199,7 +1198,7 @@
 
     <!-- FOOTER -->
     <footer
-        class="footer footer-fixed"
+        class="footer"
         role="contentinfo"
         :class="{ 'is-mission': showLessonActions }"
     >
@@ -5801,8 +5800,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  /* The footer is position: fixed — keep the last lesson chip clear of it. */
-  padding-bottom: 72px;
 }
 
 .module-section {
@@ -6008,11 +6005,6 @@ onMounted(() => {
   .module-section-art {
     height: 120px;
   }
-}
-
-/* Play */
-.play.has-mission-footer {
-  padding-bottom: 160px;
 }
 
 .play .play-head {
@@ -7460,10 +7452,6 @@ onMounted(() => {
     min-height: 44px;
   }
 
-  .play.has-mission-footer {
-    padding-bottom: calc(84px + env(safe-area-inset-bottom));
-  }
-
   .next-coach {
     right: 0;
     max-width: min(280px, calc(100vw - 32px));
@@ -8586,17 +8574,6 @@ onMounted(() => {
   .briefing-sidebar {
     position: static;
   }
-}
-
-.footer-fixed {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: var(--bg);
-  border-top: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
-  box-shadow: 0 -4px 12px rgba(2, 6, 23, .1);
-  z-index: 50;
 }
 
 /* In Webseite enthaltenes Stil-Dokument | http://localhost:3000/classroom */
