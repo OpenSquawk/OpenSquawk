@@ -67,5 +67,14 @@ when `TELEMETRY_URL` is empty.
 
 ## License
 
-OpenSquawk is licensed under the
-[OpenSquawk Community Source License 1.0](./LICENSE).
+OpenSquawk is source-available for personal self-hosting. Individuals may use
+and modify it privately, and may share source code and public forks under the
+same license. A running instance may only be used by the individual who hosts
+it. Providing functionality to anyone else is prohibited, whether paid or
+free of charge; this includes SaaS, shared instances, and hosting for clubs or
+other organizations. Commercial and organizational use requires an express
+written exception or separate license from the applicable copyright holder.
+
+Contributions are welcome under the contribution grant in section 6 of the
+[OpenSquawk Community Source License](./LICENSE). OpenSquawk is not open-source
+software as defined by the Open Source Initiative.
